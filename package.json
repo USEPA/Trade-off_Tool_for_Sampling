@@ -7,7 +7,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
     "@emotion/core": "10.0.22",
@@ -24,7 +25,9 @@
     "@types/react-dom": "16.9.3",
     "husky": "3.0.9",
     "lint-staged": "9.4.2",
-    "prettier": "1.18.2"
+    "prettier": "1.18.2",
+    "stylelint": "11.1.1",
+    "stylelint-config-standard": "19.0.0"
   },
   "husky": {
     "hooks": {
@@ -34,6 +37,7 @@
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
       "prettier --write",
+      "npm run lint:css",
       "git add"
     ]
   },
