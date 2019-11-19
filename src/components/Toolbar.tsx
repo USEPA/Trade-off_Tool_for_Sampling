@@ -1,16 +1,17 @@
-import React from 'react';
-import styled from '@emotion/styled/macro';
+/** @jsx jsx */
 
-const ToolbarContainer = styled.div`
-  padding: 0.5rem;
-  border: 1px solid #ccc;
+import { jsx, css } from '@emotion/core';
+
+const toolbarStyles = css`
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
 `;
 
 function Toolbar() {
   return (
-    <ToolbarContainer>
+    <div css={toolbarStyles}>
       <small>(Toolbar)</small>
-    </ToolbarContainer>
+    </div>
   );
 }
 

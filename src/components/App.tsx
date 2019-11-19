@@ -7,7 +7,7 @@ import { Global, jsx, css } from '@emotion/core';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
 
-const styles = css`
+const gloablStyles = css`
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
@@ -18,12 +18,22 @@ const styles = css`
   }
 `;
 
+const appStyles = css`
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ccc;
+  height: calc(100vh - 32px);
+  max-height: 600px;
+`;
+
 function App() {
   return (
     <React.Fragment>
-      <Global styles={styles} />
-      <Toolbar />
-      <Map />
+      <Global styles={gloablStyles} />
+      <div css={appStyles}>
+        <Toolbar />
+        <Map />
+      </div>
     </React.Fragment>
   );
 }

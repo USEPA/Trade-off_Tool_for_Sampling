@@ -1,5 +1,7 @@
+/** @jsx jsx */
+
 import React from 'react';
-import styled from '@emotion/styled/macro';
+import { jsx, css } from '@emotion/core';
 import { loadModules } from 'esri-loader';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
@@ -8,10 +10,8 @@ type EsriModules = [
   typeof import('esri/views/MapView'),
 ];
 
-const MapContainer = styled.div`
-  border: 1px solid #ccc;
-  border-top: none;
-  height: 400px;
+const mapStyles = css`
+  height: 100%;
   background-color: whitesmoke;
 `;
 
@@ -42,7 +42,7 @@ function Map() {
       });
   }, []);
 
-  return <MapContainer ref={mapRef} />;
+  return <div ref={mapRef} css={mapStyles} />;
 }
 
 export default Map;
