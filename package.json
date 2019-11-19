@@ -14,6 +14,7 @@
   "dependencies": {
     "@emotion/core": "10.0.22",
     "@emotion/styled": "10.0.23",
+    "esri-loader": "2.12.0",
     "react": "16.12.0",
     "react-app-polyfill": "1.0.4",
     "react-dom": "16.12.0",
@@ -24,6 +25,7 @@
     "@testing-library/cypress": "5.0.2",
     "@testing-library/jest-dom": "4.2.4",
     "@testing-library/react": "9.3.2",
+    "@types/arcgis-js-api": "4.13.0",
     "@types/jest": "24.0.23",
     "@types/node": "12.12.9",
     "@types/react": "16.9.11",
