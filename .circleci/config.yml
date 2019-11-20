@@ -26,6 +26,9 @@ jobs:
   deploy:
     <<: *set-container
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - 'c7:02:65:a5:eb:45:ae:86:14:94:74:41:9d:5a:53:c0'
       - run:
           name: Deploy to ERG server
           command: |
