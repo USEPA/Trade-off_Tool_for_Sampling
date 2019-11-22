@@ -28,7 +28,8 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - 'c7:02:65:a5:eb:45:ae:86:14:94:74:41:9d:5a:53:c0'
+            - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
+      - run: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
       - run:
           name: Deploy to ERG server
           command: |
