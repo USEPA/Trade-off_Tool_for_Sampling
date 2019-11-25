@@ -1,14 +1,10 @@
 version: 2
 
-references:
-  set-container: &set-container
+jobs:
+  deploy:
     docker:
       - image: circleci/node:erbium-buster # node 12 on debian 10
     working_directory: ~/repo
-
-jobs:
-  build:
-    <<: *set-container
     steps:
       - checkout
       - restore_cache:
@@ -22,27 +18,20 @@ jobs:
           key: deps-{{ checksum "package.json" }}
       - run: npm test
       - run: npm run build
-
-  deploy:
-    <<: *set-container
-    steps:
       - add_ssh_keys:
           fingerprints:
             - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
       - run: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
       - run:
-          name: Deploy to ERG server
+          name: Deploy to server
           command: |
             scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/tots
 
 workflows:
   version: 2
-  build-and-deploy:
+  deploy-to-server:
     jobs:
-      - build
       - deploy:
-          requires:
-            - build
           filters:
             branches:
               only: master
