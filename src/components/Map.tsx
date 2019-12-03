@@ -2,13 +2,10 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-import { loadModules } from 'esri-loader';
-
-// map types from @types/arcgis-js-api to our use of esri-loader's loadModules
-type EsriModules = [
-  typeof import('esri/Map'),
-  typeof import('esri/views/MapView'),
-];
+// components
+import MapWidgets from 'components/MapWidgets';
+// contexts
+import { EsriModulesContext } from 'contexts/EsriModules';
 
 const mapStyles = css`
   height: 100%;
@@ -18,31 +15,52 @@ const mapStyles = css`
 function Map() {
   const mapRef = React.useRef<HTMLDivElement>(null);
 
+  const { EsriMap, GraphicsLayer, MapView } = React.useContext(
+    EsriModulesContext,
+  );
+
+  const [layers, setLayers] = React.useState<any[]>([]);
   React.useEffect(() => {
-    (loadModules(['esri/Map', 'esri/views/MapView'], {
-      version: '4.13',
-      css: true,
-    }) as Promise<EsriModules>)
-      .then(([EsriMap, MapView]) => {
-        if (!mapRef.current) return;
+    if (!GraphicsLayer || layers.length > 0) return;
 
-        const map = new EsriMap({
-          basemap: 'gray-vector',
-        });
+    const sketchLayer = new GraphicsLayer({
+      id: 'sketchLayer',
+      title: 'Sketch Layer',
+    });
 
-        new MapView({
-          container: mapRef.current,
-          map,
-          center: [-95, 37],
-          zoom: 3,
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
+    setLayers([sketchLayer]);
+  }, [GraphicsLayer, layers]);
 
-  return <div ref={mapRef} css={mapStyles} />;
+  const [mapView, setMapView] = React.useState<any>(null);
+  React.useEffect(() => {
+    if (
+      !mapRef.current ||
+      !EsriMap ||
+      !MapView ||
+      layers.length === 0 ||
+      mapView
+    )
+      return;
+
+    const map = new EsriMap({
+      basemap: 'gray-vector',
+      layers,
+    });
+
+    const view = new MapView({
+      container: mapRef.current,
+      map,
+      center: [-95, 37],
+      zoom: 3,
+    });
+    setMapView(view);
+  }, [EsriMap, MapView, mapView, layers]);
+
+  return (
+    <div ref={mapRef} css={mapStyles}>
+      <MapWidgets mapView={mapView} />
+    </div>
+  );
 }
 
 export default Map;

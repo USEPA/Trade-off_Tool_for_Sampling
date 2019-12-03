@@ -6,6 +6,8 @@ import { Global, jsx, css } from '@emotion/core';
 // components
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
+// contexts
+import { EsriModulesProvider, EsriModulesContext } from 'contexts/EsriModules';
 
 const gloablStyles = css`
   body {
@@ -27,6 +29,10 @@ const appStyles = css`
 `;
 
 function App() {
+  const { modulesLoaded } = React.useContext(EsriModulesContext);
+
+  if (!modulesLoaded) return <span>Loading...</span>;
+
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
@@ -38,4 +44,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppContainer() {
+  return (
+    <EsriModulesProvider>
+      <App />
+    </EsriModulesProvider>
+  );
+}
