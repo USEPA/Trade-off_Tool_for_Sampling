@@ -156,9 +156,10 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, SketchViewModel, sketchLayer, sketchVM]);
 
   // Creates the sketchVM events for placing the graphic on the map
-  const [sketchEventsInitialized, setsketchEventsInitialized] = React.useState(
-    false,
-  );
+  const [
+    sketchEventsInitialized,
+    setsketchEventsInitialized, //
+  ] = React.useState(false);
   React.useEffect(() => {
     if (
       !mapView ||
@@ -220,6 +221,19 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
+    sketchVM.on('update', (event: any) => {
+      let numSelectedGraphics = 0;
+      if (event.state !== 'cancel' && event.graphics) {
+        numSelectedGraphics = event.graphics.length;
+      }
+
+      const deleteButton = document.getElementById('Delete');
+      if (deleteButton) {
+        deleteButton.style.display =
+          numSelectedGraphics === 0 ? 'none' : 'table-cell';
+      }
+    });
+
     setsketchEventsInitialized(true);
   }, [sketchVM, mapView, sketchEventsInitialized, Graphic, Polygon]);
 
@@ -255,6 +269,14 @@ function MapWidgets({ mapView }: Props) {
       }
       if (type === 'Swab') {
         sketchVM.create('point');
+      }
+      if (type === 'Delete') {
+        if (sketchVM.activeComponent && sketchVM.activeComponent.graphics) {
+          sketchVM.layer.removeMany(sketchVM.activeComponent.graphics);
+        }
+      }
+      if (type === 'Delete All') {
+        sketchVM.layer.removeAll();
       }
     };
 
@@ -299,6 +321,10 @@ const Container = css`
     background-color: #f0f0f0;
     cursor: pointer;
   }
+
+  .sketch-button-hidden {
+    display: none;
+  }
 `;
 
 const ButtonStyle = css`
@@ -324,12 +350,16 @@ function SketchTool({ sketchVM, onClick = () => {} }: SketchToolProps) {
   if (!sketchVM) return null;
 
   // builds the sketch button
-  const sketchButton = (type: string, label: string) => {
+  const sketchButton = (
+    type: string,
+    label: any,
+    initiallyHidden: boolean = false,
+  ) => {
     return (
       <div
         id={type}
         title={type}
-        className={'sketch-button'}
+        className={initiallyHidden ? 'sketch-button-hidden' : 'sketch-button'}
         css={ButtonStyle}
         onClick={(ev) => onClick(ev, type)}
       >
@@ -346,6 +376,8 @@ function SketchTool({ sketchVM, onClick = () => {} }: SketchToolProps) {
       {sketchButton('Robot', 'R')}
       {sketchButton('Aggressive Air', 'A')}
       {sketchButton('Swab', 'Sw')}
+      {sketchButton('Delete', <i className="fas fa-trash-alt"></i>, true)}
+      {sketchButton('Delete All', <i className="fas fa-window-close"></i>)}
     </div>
   );
 }
