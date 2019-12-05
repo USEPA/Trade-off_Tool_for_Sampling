@@ -16,6 +16,7 @@
     "@emotion/core": "10.0.22",
     "@emotion/styled": "10.0.23",
     "esri-loader": "2.12.0",
+    "font-awesome": "^4.7.0",
     "react": "16.12.0",
     "react-app-polyfill": "1.0.4",
     "react-dom": "16.12.0",
