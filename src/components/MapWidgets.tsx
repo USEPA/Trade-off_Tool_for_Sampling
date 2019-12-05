@@ -290,26 +290,6 @@ function MapWidgets({ mapView }: Props) {
     setSketchTool(sketchToolContainer);
   }, [mapView, sketchTool, sketchVM]);
 
-  // Creates and adds the custom sketch widget to the map
-  const [toolbar, setToolbar] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || toolbar) return;
-
-    const handleClick = (type: string) => {
-      if (type === 'vsp') {
-        alert('TODO: Convert VSP file');
-      }
-      if (type === 'run') {
-        alert('TODO: Run TOTS');
-      }
-    };
-
-    const toolbarContainer = document.createElement('div');
-    mapView.ui.add(toolbarContainer, 'bottom-right');
-    ReactDOM.render(<Toolbar onClick={handleClick} />, toolbarContainer);
-    setToolbar(toolbarContainer);
-  }, [mapView, toolbar]);
-
   return <React.Fragment />;
 }
 
@@ -370,35 +350,14 @@ function SketchTool({ sketchVM, onClick = () => {} }: SketchToolProps) {
 
   return (
     <div css={Container}>
+      {sketchButton('Delete', <i className="fas fa-trash-alt"></i>, true)}
       {sketchButton('Sponge', 'Sp')}
       {sketchButton('Micro Vac', 'M')}
       {sketchButton('Wet Vac', 'W')}
       {sketchButton('Robot', 'R')}
       {sketchButton('Aggressive Air', 'A')}
       {sketchButton('Swab', 'Sw')}
-      {sketchButton('Delete', <i className="fas fa-trash-alt"></i>, true)}
       {sketchButton('Delete All', <i className="fas fa-window-close"></i>)}
-    </div>
-  );
-}
-
-type ToolbarProps = {
-  onClick: Function;
-};
-
-function Toolbar({ onClick = () => {} }: ToolbarProps) {
-  return (
-    <div css={Container}>
-      <div
-        title="VSP Convert"
-        css={ButtonStyle}
-        onClick={(ev) => onClick('vsp')}
-      >
-        VSP
-      </div>
-      <div title="Run" css={ButtonStyle} onClick={(ev) => onClick('run')}>
-        Run
-      </div>
     </div>
   );
 }
