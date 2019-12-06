@@ -12,6 +12,33 @@ const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
 
+const basemapNames = [
+  'Streets',
+  'Imagery',
+  'Imagery Hybrid',
+  'Topographic',
+  'Terrain with Labels',
+  'Light Gray Canvas',
+  'Dark Gray Canvas',
+  // 'Navigation',
+  // 'Streets (Night)',
+  // 'Oceans',
+  // 'National Geographic Style Map',
+  // 'OpenStreetMap',
+  // 'Charted Territory Map',
+  // 'Community Map',
+  // 'Navigation (Dark Mode)',
+  // 'Newspaper Map',
+  // 'Human Geography Map',
+  // 'Human Geography Dark Map',
+  // 'Modern Antique Map',
+  // 'Mid-Century Map',
+  // 'Nova Map',
+  // 'Colored Pencil Map',
+  // 'Firefly Imagery Hybrid',
+  // 'USA Topo Maps',
+];
+
 function deactivateButtons() {
   const buttons = document.getElementsByClassName('sketch-button');
 
@@ -30,9 +57,86 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
-  const { Graphic, Polygon, SketchViewModel } = React.useContext(
-    EsriModulesContext,
-  );
+  const {
+    BasemapGallery,
+    Expand,
+    Graphic,
+    Home,
+    Polygon,
+    PortalBasemapsSource,
+    Search,
+    SketchViewModel,
+  } = React.useContext(EsriModulesContext);
+
+  // Creates and adds the home widget to the map
+  const [searchWidget, setSearchWidget] = React.useState<any>(null);
+  React.useEffect(() => {
+    if (!mapView || !Search || searchWidget) return;
+
+    // create the home widget
+    const newSearchWidget = new Search({ view: mapView });
+    // index of 0 puts this above the search widget above the zoom buttons that are automatically added
+    mapView.ui.add(newSearchWidget, { position: 'top-left', index: 0 });
+    setSearchWidget(newSearchWidget);
+  }, [mapView, Search, searchWidget]);
+
+  // Creates and adds the home widget to the map
+  const [homeWidget, setHomeWidget] = React.useState<any>(null);
+  React.useEffect(() => {
+    if (!mapView || !Home || homeWidget) return;
+
+    // create the home widget
+    const newHomeWidget = new Home({ view: mapView });
+    mapView.ui.add(newHomeWidget, { position: 'top-left', index: 2 });
+    setHomeWidget(newHomeWidget);
+  }, [mapView, Home, homeWidget]);
+
+  // Creates and adds the basemap/layer list widget to the map
+  const [basemapWidget, setBasemapWidget] = React.useState<any>(null);
+  React.useEffect(() => {
+    if (
+      !mapView ||
+      !BasemapGallery ||
+      !Expand ||
+      !PortalBasemapsSource ||
+      basemapWidget
+    )
+      return;
+
+    // create the basemap/layers widget
+    const basemapsSource = new PortalBasemapsSource({
+      filterFunction: function(basemap: any) {
+        return basemapNames.indexOf(basemap.portalItem.title) !== -1;
+      },
+      updateBasemapsCallback: function(originalBasemaps: any) {
+        // sort the basemaps based on the ordering of basemapNames
+        return originalBasemaps.sort(
+          (a: any, b: any) =>
+            basemapNames.indexOf(a.portalItem.title) -
+            basemapNames.indexOf(b.portalItem.title),
+        );
+      },
+    });
+
+    // basemaps
+    const basemapContainer = document.createElement('div');
+    new BasemapGallery({
+      container: basemapContainer,
+      view: mapView,
+      source: basemapsSource,
+    });
+
+    const expandWidget = new Expand({
+      expandIconClass: 'esri-icon-layers',
+      view: mapView,
+      mode: 'floating',
+      autoCollapse: true,
+      content: basemapContainer,
+    });
+
+    mapView.ui.add(expandWidget, { position: 'top-right', index: 0 });
+    setBasemapWidget(expandWidget);
+  }, [mapView, BasemapGallery, Expand, PortalBasemapsSource, basemapWidget]);
 
   // Get the graphics layer for drawing on
   const [sketchLayer, setSketchLayer] = React.useState<any>(null);

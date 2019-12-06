@@ -11,6 +11,11 @@ type EsriModules = [
   typeof import('esri/geometry/Polygon'),
   typeof import('esri/layers/GraphicsLayer'),
   typeof import('esri/views/MapView'),
+  typeof import('esri/widgets/BasemapGallery'),
+  typeof import('esri/widgets/BasemapGallery/support/PortalBasemapsSource'),
+  typeof import('esri/widgets/Expand'),
+  typeof import('esri/widgets/Home'),
+  typeof import('esri/widgets/Search'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
 ];
 
@@ -21,6 +26,13 @@ type EsriModulesObj = {
   Polygon: typeof import('esri/geometry/Polygon') | null;
   GraphicsLayer: typeof import('esri/layers/GraphicsLayer') | null;
   MapView: typeof import('esri/views/MapView') | null;
+  BasemapGallery: typeof import('esri/widgets/BasemapGallery') | null;
+  PortalBasemapsSource:
+    | typeof import('esri/widgets/BasemapGallery/support/PortalBasemapsSource')
+    | null;
+  Expand: typeof import('esri/widgets/Expand') | null;
+  Home: typeof import('esri/widgets/Home') | null;
+  Search: typeof import('esri/widgets/Search') | null;
   SketchViewModel: typeof import('esri/widgets/Sketch/SketchViewModel') | null;
 };
 
@@ -32,6 +44,11 @@ export const EsriModulesContext = React.createContext<EsriModulesObj>({
   Polygon: null,
   GraphicsLayer: null,
   MapView: null,
+  BasemapGallery: null,
+  PortalBasemapsSource: null,
+  Expand: null,
+  Home: null,
+  Search: null,
   SketchViewModel: null,
 });
 
@@ -45,6 +62,11 @@ export function EsriModulesProvider({ children }: Props) {
     Polygon: null,
     GraphicsLayer: null,
     MapView: null,
+    BasemapGallery: null,
+    PortalBasemapsSource: null,
+    Expand: null,
+    Home: null,
+    Search: null,
     SketchViewModel: null,
   });
 
@@ -56,6 +78,11 @@ export function EsriModulesProvider({ children }: Props) {
         'esri/geometry/Polygon',
         'esri/layers/GraphicsLayer',
         'esri/views/MapView',
+        'esri/widgets/BasemapGallery',
+        'esri/widgets/BasemapGallery/support/PortalBasemapsSource',
+        'esri/widgets/Expand',
+        'esri/widgets/Home',
+        'esri/widgets/Search',
         'esri/widgets/Sketch/SketchViewModel',
       ],
       {
@@ -69,6 +96,11 @@ export function EsriModulesProvider({ children }: Props) {
         Polygon,
         GraphicsLayer,
         MapView,
+        BasemapGallery,
+        PortalBasemapsSource,
+        Expand,
+        Home,
+        Search,
         SketchViewModel,
       ]) => {
         setModules({
@@ -78,6 +110,11 @@ export function EsriModulesProvider({ children }: Props) {
           Polygon,
           GraphicsLayer,
           MapView,
+          BasemapGallery,
+          PortalBasemapsSource,
+          Expand,
+          Home,
+          Search,
           SketchViewModel,
         });
       },
