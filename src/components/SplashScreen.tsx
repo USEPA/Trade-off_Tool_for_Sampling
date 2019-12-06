@@ -102,7 +102,10 @@ function SplashScreen() {
   React.useEffect(() => {
     if (!cookies) return;
 
-    cookies.set('tots_splashdisabled', preventSplashScreen, { path: '/' });
+    cookies.set('tots_splashdisabled', preventSplashScreen, {
+      path: '/',
+      sameSite: 'strict',
+    });
   }, [cookies, preventSplashScreen]);
 
   return (
