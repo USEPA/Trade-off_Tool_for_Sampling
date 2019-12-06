@@ -4,6 +4,7 @@
 import React from 'react';
 import { Global, jsx, css } from '@emotion/core';
 // components
+import LoginBar from 'components/LoginBar';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
 // contexts
@@ -36,6 +37,7 @@ function App() {
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
+      <LoginBar />
       <div css={appStyles}>
         <Toolbar />
         <Map />

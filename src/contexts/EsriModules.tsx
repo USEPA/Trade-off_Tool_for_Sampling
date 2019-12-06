@@ -9,6 +9,8 @@ type EsriModules = [
   typeof import('esri/Graphic'),
   typeof import('esri/Map'),
   typeof import('esri/geometry/Polygon'),
+  typeof import('esri/identity/IdentityManager'),
+  typeof import('esri/identity/OAuthInfo'),
   typeof import('esri/layers/GraphicsLayer'),
   typeof import('esri/views/MapView'),
   typeof import('esri/widgets/BasemapGallery'),
@@ -24,6 +26,8 @@ type EsriModulesObj = {
   Graphic: typeof import('esri/Graphic') | null;
   EsriMap: typeof import('esri/Map') | null;
   Polygon: typeof import('esri/geometry/Polygon') | null;
+  IdentityManager: typeof import('esri/identity/IdentityManager') | null;
+  OAuthInfo: typeof import('esri/identity/OAuthInfo') | null;
   GraphicsLayer: typeof import('esri/layers/GraphicsLayer') | null;
   MapView: typeof import('esri/views/MapView') | null;
   BasemapGallery: typeof import('esri/widgets/BasemapGallery') | null;
@@ -42,6 +46,8 @@ export const EsriModulesContext = React.createContext<EsriModulesObj>({
   Graphic: null,
   EsriMap: null,
   Polygon: null,
+  IdentityManager: null,
+  OAuthInfo: null,
   GraphicsLayer: null,
   MapView: null,
   BasemapGallery: null,
@@ -60,6 +66,8 @@ export function EsriModulesProvider({ children }: Props) {
     Graphic: null,
     EsriMap: null,
     Polygon: null,
+    IdentityManager: null,
+    OAuthInfo: null,
     GraphicsLayer: null,
     MapView: null,
     BasemapGallery: null,
@@ -76,6 +84,8 @@ export function EsriModulesProvider({ children }: Props) {
         'esri/Graphic',
         'esri/Map',
         'esri/geometry/Polygon',
+        'esri/identity/IdentityManager',
+        'esri/identity/OAuthInfo',
         'esri/layers/GraphicsLayer',
         'esri/views/MapView',
         'esri/widgets/BasemapGallery',
@@ -94,6 +104,8 @@ export function EsriModulesProvider({ children }: Props) {
         Graphic,
         EsriMap,
         Polygon,
+        IdentityManager,
+        OAuthInfo,
         GraphicsLayer,
         MapView,
         BasemapGallery,
@@ -108,6 +120,8 @@ export function EsriModulesProvider({ children }: Props) {
           Graphic,
           EsriMap,
           Polygon,
+          IdentityManager,
+          OAuthInfo,
           GraphicsLayer,
           MapView,
           BasemapGallery,
