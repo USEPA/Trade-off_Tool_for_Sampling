@@ -8,6 +8,7 @@ import LoginBar from 'components/LoginBar';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
 // contexts
+import { AuthenticationProvider } from 'contexts/Authentication';
 import { EsriModulesProvider, EsriModulesContext } from 'contexts/EsriModules';
 
 const gloablStyles = css`
@@ -49,7 +50,9 @@ function App() {
 export default function AppContainer() {
   return (
     <EsriModulesProvider>
-      <App />
+      <AuthenticationProvider>
+        <App />
+      </AuthenticationProvider>
     </EsriModulesProvider>
   );
 }

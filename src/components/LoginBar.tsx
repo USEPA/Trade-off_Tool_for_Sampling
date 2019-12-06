@@ -3,6 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { EsriModulesContext } from 'contexts/EsriModules';
 
 const loginBarStyles = css`
@@ -30,9 +31,14 @@ const loginButtonStyles = css`
 
 function LoginBar() {
   const { IdentityManager, OAuthInfo } = React.useContext(EsriModulesContext);
+  const {
+    signedIn,
+    setSignedIn,
+    oAuthInfo,
+    setOAuthInfo, //
+  } = React.useContext(AuthenticationContext);
 
   // Initialize the OAuth
-  const [oAuthInfo, setOAuthInfo] = React.useState<any>(null);
   React.useEffect(() => {
     if (!IdentityManager || !OAuthInfo || oAuthInfo) return;
 
@@ -49,13 +55,12 @@ function LoginBar() {
     IdentityManager.registerOAuthInfos([info]);
 
     setOAuthInfo(info);
-  }, [IdentityManager, OAuthInfo, oAuthInfo]);
+  }, [IdentityManager, OAuthInfo, setOAuthInfo, oAuthInfo]);
 
   // Check the user's sign in status
   const [hasCheckedSignInStatus, setHasCheckedSignInStatus] = React.useState(
     false,
   );
-  const [signedIn, setSignedIn] = React.useState(false);
   React.useEffect(() => {
     if (!IdentityManager || !oAuthInfo || hasCheckedSignInStatus) return;
 
@@ -67,7 +72,7 @@ function LoginBar() {
       .catch(() => {
         setSignedIn(false);
       });
-  }, [IdentityManager, oAuthInfo, hasCheckedSignInStatus]);
+  }, [IdentityManager, oAuthInfo, setSignedIn, hasCheckedSignInStatus]);
 
   return (
     <div css={loginBarStyles}>
