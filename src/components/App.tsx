@@ -6,6 +6,7 @@ import { Global, jsx, css } from '@emotion/core';
 // components
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
+import SplashScreen from 'components/SplashScreen';
 
 const gloablStyles = css`
   body {
@@ -30,6 +31,7 @@ function App() {
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
+      <SplashScreen />
       <div css={appStyles}>
         <Toolbar />
         <Map />
