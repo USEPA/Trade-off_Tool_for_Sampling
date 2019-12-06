@@ -127,7 +127,7 @@ function MapWidgets({ mapView }: Props) {
     });
 
     const expandWidget = new Expand({
-      expandIconClass: 'esri-icon-layers',
+      expandIconClass: 'esri-icon-basemap',
       view: mapView,
       mode: 'floating',
       autoCollapse: true,
