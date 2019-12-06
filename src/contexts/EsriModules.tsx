@@ -6,33 +6,33 @@ import { loadModules } from 'esri-loader';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriModules = [
+  typeof import('esri/Graphic'),
   typeof import('esri/Map'),
+  typeof import('esri/geometry/Polygon'),
+  typeof import('esri/layers/GraphicsLayer'),
   typeof import('esri/views/MapView'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
-  typeof import('esri/layers/GraphicsLayer'),
-  typeof import('esri/Graphic'),
-  typeof import('esri/geometry/Polygon'),
 ];
 
 type EsriModulesObj = {
   modulesLoaded: boolean;
+  Graphic: typeof import('esri/Graphic') | null;
   EsriMap: typeof import('esri/Map') | null;
+  Polygon: typeof import('esri/geometry/Polygon') | null;
+  GraphicsLayer: typeof import('esri/layers/GraphicsLayer') | null;
   MapView: typeof import('esri/views/MapView') | null;
   SketchViewModel: typeof import('esri/widgets/Sketch/SketchViewModel') | null;
-  GraphicsLayer: typeof import('esri/layers/GraphicsLayer') | null;
-  Graphic: typeof import('esri/Graphic') | null;
-  Polygon: typeof import('esri/geometry/Polygon') | null;
 };
 
 // --- components ---
 export const EsriModulesContext = React.createContext<EsriModulesObj>({
   modulesLoaded: false,
+  Graphic: null,
   EsriMap: null,
+  Polygon: null,
+  GraphicsLayer: null,
   MapView: null,
   SketchViewModel: null,
-  GraphicsLayer: null,
-  Graphic: null,
-  Polygon: null,
 });
 
 type Props = { children: ReactNode };
@@ -40,23 +40,23 @@ type Props = { children: ReactNode };
 export function EsriModulesProvider({ children }: Props) {
   const [modules, setModules] = React.useState<EsriModulesObj>({
     modulesLoaded: false,
+    Graphic: null,
     EsriMap: null,
+    Polygon: null,
+    GraphicsLayer: null,
     MapView: null,
     SketchViewModel: null,
-    GraphicsLayer: null,
-    Graphic: null,
-    Polygon: null,
   });
 
   React.useEffect(() => {
     (loadModules(
       [
+        'esri/Graphic',
         'esri/Map',
+        'esri/geometry/Polygon',
+        'esri/layers/GraphicsLayer',
         'esri/views/MapView',
         'esri/widgets/Sketch/SketchViewModel',
-        'esri/layers/GraphicsLayer',
-        'esri/Graphic',
-        'esri/geometry/Polygon',
       ],
       {
         version: '4.13',
@@ -64,21 +64,21 @@ export function EsriModulesProvider({ children }: Props) {
       },
     ) as Promise<EsriModules>).then(
       ([
+        Graphic,
         EsriMap,
+        Polygon,
+        GraphicsLayer,
         MapView,
         SketchViewModel,
-        GraphicsLayer,
-        Graphic,
-        Polygon,
       ]) => {
         setModules({
           modulesLoaded: true,
+          Graphic,
           EsriMap,
+          Polygon,
+          GraphicsLayer,
           MapView,
           SketchViewModel,
-          GraphicsLayer,
-          Graphic,
-          Polygon,
         });
       },
     );
