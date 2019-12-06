@@ -107,7 +107,10 @@ function SplashScreen() {
 
   return (
     <DialogOverlay css={OverlayStyles} isOpen={isOpen}>
-      <DialogContent css={DialogStyles}>
+      <DialogContent
+        css={DialogStyles}
+        aria-label="Welcome to EPA's Trade-off Tool for Sampling (TOTS)"
+      >
         <p>
           <img src={epaLogo} alt="" />
         </p>
