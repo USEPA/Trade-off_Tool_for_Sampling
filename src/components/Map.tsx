@@ -43,7 +43,7 @@ function Map() {
       return;
 
     const map = new EsriMap({
-      basemap: 'gray-vector',
+      basemap: 'streets',
       layers,
     });
 
