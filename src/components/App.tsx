@@ -7,7 +7,10 @@ import { Global, jsx, css } from '@emotion/core';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
 // contexts
-import { EsriModulesProvider, EsriModulesContext } from 'contexts/EsriModules';
+import {
+  EsriModulesProvider,
+  useEsriModulesContext,
+} from 'contexts/EsriModules';
 
 const gloablStyles = css`
   body {
@@ -29,9 +32,9 @@ const appStyles = css`
 `;
 
 function App() {
-  const { modulesLoaded } = React.useContext(EsriModulesContext);
+  const { modulesLoaded } = useEsriModulesContext();
 
-  if (!modulesLoaded) return <span>Loading...</span>;
+  if (!modulesLoaded) return <p>Loading...</p>;
 
   return (
     <React.Fragment>

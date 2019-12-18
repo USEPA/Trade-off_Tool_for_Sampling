@@ -5,7 +5,7 @@ import { jsx, css } from '@emotion/core';
 // components
 import MapWidgets from 'components/MapWidgets';
 // contexts
-import { EsriModulesContext } from 'contexts/EsriModules';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 
 const mapStyles = css`
   height: 100%;
@@ -13,15 +13,15 @@ const mapStyles = css`
 `;
 
 function Map() {
+  const { EsriMap, GraphicsLayer, MapView } = useEsriModulesContext();
+
   const mapRef = React.useRef<HTMLDivElement>(null);
 
-  const { EsriMap, GraphicsLayer, MapView } = React.useContext(
-    EsriModulesContext,
-  );
+  const [layers, setLayers] = React.useState<__esri.GraphicsLayer[]>([]);
 
-  const [layers, setLayers] = React.useState<any[]>([]);
   React.useEffect(() => {
-    if (!GraphicsLayer || layers.length > 0) return;
+    if (!GraphicsLayer) return;
+    if (layers.length > 0) return;
 
     const sketchLayer = new GraphicsLayer({
       id: 'sketchLayer',
@@ -31,16 +31,13 @@ function Map() {
     setLayers([sketchLayer]);
   }, [GraphicsLayer, layers]);
 
-  const [mapView, setMapView] = React.useState<any>(null);
+  const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
+
   React.useEffect(() => {
-    if (
-      !mapRef.current ||
-      !EsriMap ||
-      !MapView ||
-      layers.length === 0 ||
-      mapView
-    )
-      return;
+    if (!EsriMap || !MapView) return;
+    if (!mapRef.current) return;
+    if (layers.length === 0) return;
+    if (mapView) return;
 
     const map = new EsriMap({
       basemap: 'streets',
@@ -53,12 +50,13 @@ function Map() {
       center: [-95, 37],
       zoom: 3,
     });
+
     setMapView(view);
-  }, [EsriMap, MapView, mapView, layers]);
+  }, [EsriMap, MapView, layers, mapView]);
 
   return (
     <div ref={mapRef} css={mapStyles}>
-      <MapWidgets mapView={mapView} />
+      {mapView && <MapWidgets mapView={mapView} />}
     </div>
   );
 }
