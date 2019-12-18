@@ -1,11 +1,8 @@
-/** @jsx jsx */
-
-import React, { ReactNode } from 'react';
-import { jsx } from '@emotion/core';
+import React from 'react';
 import { loadModules } from 'esri-loader';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
-type EsriModules = [
+type EsriConstructors = [
   typeof import('esri/Graphic'),
   typeof import('esri/Map'),
   typeof import('esri/geometry/Polygon'),
@@ -19,43 +16,27 @@ type EsriModules = [
   typeof import('esri/widgets/Sketch/SketchViewModel'),
 ];
 
-type EsriModulesObj = {
+type Props = { children: React.ReactNode };
+
+type State = {
   modulesLoaded: boolean;
-  Graphic: typeof import('esri/Graphic') | null;
-  EsriMap: typeof import('esri/Map') | null;
-  Polygon: typeof import('esri/geometry/Polygon') | null;
-  GraphicsLayer: typeof import('esri/layers/GraphicsLayer') | null;
-  MapView: typeof import('esri/views/MapView') | null;
-  BasemapGallery: typeof import('esri/widgets/BasemapGallery') | null;
-  PortalBasemapsSource:
-    | typeof import('esri/widgets/BasemapGallery/support/PortalBasemapsSource')
-    | null;
-  Expand: typeof import('esri/widgets/Expand') | null;
-  Home: typeof import('esri/widgets/Home') | null;
-  Search: typeof import('esri/widgets/Search') | null;
-  SketchViewModel: typeof import('esri/widgets/Sketch/SketchViewModel') | null;
+  Graphic: EsriConstructors[0] | null;
+  EsriMap: EsriConstructors[1] | null;
+  Polygon: EsriConstructors[2] | null;
+  GraphicsLayer: EsriConstructors[3] | null;
+  MapView: EsriConstructors[4] | null;
+  BasemapGallery: EsriConstructors[5] | null;
+  PortalBasemapsSource: EsriConstructors[6] | null;
+  Expand: EsriConstructors[7] | null;
+  Home: EsriConstructors[8] | null;
+  Search: EsriConstructors[9] | null;
+  SketchViewModel: EsriConstructors[10] | null;
 };
 
-// --- components ---
-export const EsriModulesContext = React.createContext<EsriModulesObj>({
-  modulesLoaded: false,
-  Graphic: null,
-  EsriMap: null,
-  Polygon: null,
-  GraphicsLayer: null,
-  MapView: null,
-  BasemapGallery: null,
-  PortalBasemapsSource: null,
-  Expand: null,
-  Home: null,
-  Search: null,
-  SketchViewModel: null,
-});
+const EsriModulesContext = React.createContext<State | undefined>(undefined);
 
-type Props = { children: ReactNode };
-
-export function EsriModulesProvider({ children }: Props) {
-  const [modules, setModules] = React.useState<EsriModulesObj>({
+function EsriModulesProvider({ children }: Props) {
+  const [modules, setModules] = React.useState<State>({
     modulesLoaded: false,
     Graphic: null,
     EsriMap: null,
@@ -89,7 +70,7 @@ export function EsriModulesProvider({ children }: Props) {
         version: '4.13',
         css: true,
       },
-    ) as Promise<EsriModules>).then(
+    ) as Promise<EsriConstructors>).then(
       ([
         Graphic,
         EsriMap,
@@ -127,3 +108,15 @@ export function EsriModulesProvider({ children }: Props) {
     </EsriModulesContext.Provider>
   );
 }
+
+function useEsriModulesContext() {
+  const context = React.useContext(EsriModulesContext);
+  if (context === undefined) {
+    throw new Error(
+      'useEsriModulesContext must be used within a EsriModulesProvider',
+    );
+  }
+  return context;
+}
+
+export { EsriModulesProvider, useEsriModulesContext };
