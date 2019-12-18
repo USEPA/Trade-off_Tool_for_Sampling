@@ -4,11 +4,18 @@
 import React from 'react';
 import { Global, jsx, css } from '@emotion/core';
 // components
+import SplashScreen from 'components/SplashScreen';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
-import SplashScreen from 'components/SplashScreen';
+// styles
+import '@reach/dialog/styles.css';
 
 const gloablStyles = css`
+  html {
+    /* overwrite EPA's html font-size so rem units are based on 16px */
+    font-size: 100%;
+  }
+
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
@@ -16,6 +23,14 @@ const gloablStyles = css`
       'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    /* re-apply EPA's html element font-size, just scoped to the body element */
+    font-size: 106.25%;
+  }
+
+  .tots {
+    /* revert back to 16px font-size on our application code itself */
+    font-size: 1rem;
   }
 `;
 
@@ -31,10 +46,14 @@ function App() {
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
-      <SplashScreen />
-      <div css={appStyles}>
-        <Toolbar />
-        <Map />
+
+      <div className="tots">
+        <SplashScreen />
+
+        <div css={appStyles}>
+          <Toolbar />
+          <Map />
+        </div>
       </div>
     </React.Fragment>
   );
