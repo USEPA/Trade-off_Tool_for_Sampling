@@ -4,26 +4,26 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 import Cookies from 'universal-cookie';
+// styles
+import { colors } from 'styles';
 // images
 import epaLogo from 'images/epaLogo.png';
-// styles
-import '@reach/dialog/styles.css';
 
-const OverlayStyles = css`
+const overlayStyles = css`
   &[data-reach-dialog-overlay] {
     z-index: 1000;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: ${colors.black(0.75)};
   }
 `;
 
-const DialogStyles = css`
-  color: white;
-  background-color: #0a71b9;
+const dialogStyles = css`
+  color: ${colors.white()};
+  background-color: ${colors.epaBlue};
 
   &[data-reach-dialog-content] {
     position: relative;
-    left: 50%;
     top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     margin: 0;
     padding: 1.5rem;
@@ -44,29 +44,31 @@ const DialogStyles = css`
   }
 `;
 
-const okButtonContainerStyles = css`
-  display: flex;
-  justify-content: flex-end;
+const logoStyles = css`
+  display: block;
+  margin-bottom: 1rem;
 `;
 
-const okButtonStyles = css`
+const headingStyles = css`
+  text-align: center;
+`;
+
+const footerStyles = css`
+  display: flex;
+  justify-content: space-between;
+`;
+
+const buttonStyles = css`
   margin: 0;
-  padding: 0.5882em 1.1765em;
-  color: black;
-  background-color: #f1f1f1;
+  padding: 0.625rem 1.25rem;
   border: 0;
   border-radius: 3px;
   font-family: inherit;
   font-weight: bold;
+  font-size: 0.875rem;
   line-height: 1;
-  text-decoration: none;
-  text-align: center;
-  vertical-align: baseline;
-  white-space: normal;
-  font-size: 100%;
-  max-width: 100%;
-  width: auto;
-  overflow: visible;
+  color: ${colors.black()};
+  background-color: ${colors.white(0.875)};
   cursor: pointer;
 `;
 
@@ -88,7 +90,7 @@ function SplashScreen() {
 
     // Read the splash disabled cookie.
     // Note: Pre-pendeded 'tots_' to quickly distinguish between tots and esri cookies
-    const ssdValue = cookies.get('tots_splashdisabled');
+    const ssdValue = cookies.get('tots_splash_disabled');
 
     // Cookies always come back as strings so truthy checks don't work here
     const splashScreenDisabled = ssdValue === 'true' ? true : false;
@@ -102,29 +104,24 @@ function SplashScreen() {
   React.useEffect(() => {
     if (!cookies) return;
 
-    cookies.set('tots_splashdisabled', preventSplashScreen, {
+    cookies.set('tots_splash_disabled', preventSplashScreen, {
       path: '/',
       sameSite: 'strict',
     });
   }, [cookies, preventSplashScreen]);
 
   return (
-    <DialogOverlay css={OverlayStyles} isOpen={isOpen}>
+    <DialogOverlay css={overlayStyles} isOpen={isOpen}>
       <DialogContent
-        css={DialogStyles}
-        aria-label="Welcome to EPA's Trade-off Tool for Sampling (TOTS)"
+        css={dialogStyles}
+        aria-label="Welcome to EPA’s Trade-off Tool for Sampling (TOTS)"
       >
-        <p>
-          <img src={epaLogo} alt="" />
-        </p>
-        <br />
-        <h4
-          css={css`
-            text-align: center;
-          `}
-        >
-          Welcome to EPA's Trade-off Tool for Sampling (TOTS)
+        <img css={logoStyles} src={epaLogo} alt="" />
+
+        <h4 css={headingStyles}>
+          Welcome to EPA’s Trade-off Tool for Sampling (TOTS)
         </h4>
+
         <p>
           A large-scale release of a biological or radiological (BR) agent can
           result in contamination of a wide area and would require significant
@@ -135,6 +132,7 @@ function SplashScreen() {
           sampling campaigns, EPA’s Homeland Security Research Program (HSRP)
           developed the Trade-Off Tool for Sampling (TOTS).
         </p>
+
         <p>
           TOTS is a GIS-based tool available to support developing sampling
           designs and estimating the associated resource demand. TOTS provides
@@ -149,31 +147,35 @@ function SplashScreen() {
           approaches (i.e., traditional vs. innovative sampling methods), and
           sampling coverage.
         </p>
+
         <p>
           Users are welcome to <a href="{CONTACT URL}">Contact Us</a> to ask a
           question, provide feedback, or report a problem.
         </p>
+
         <br />
-        <div>
-          <input
-            id="splash-screen-toggle"
-            type="checkbox"
-            checked={preventSplashScreen}
-            onChange={(ev) => setPreventSplashScreen(!preventSplashScreen)}
-          />
-          <label htmlFor="splash-screen-toggle">
-            Do not show this welcome screen again.
-          </label>
-        </div>
-        <div css={okButtonContainerStyles}>
+
+        <p css={footerStyles}>
+          <span>
+            <input
+              id="splash-screen-toggle"
+              type="checkbox"
+              checked={preventSplashScreen}
+              onChange={(ev) => setPreventSplashScreen(!preventSplashScreen)}
+            />
+            <label htmlFor="splash-screen-toggle">
+              Do not show this welcome screen again.
+            </label>
+          </span>
+
           <button
             className="btn"
-            css={okButtonStyles}
+            css={buttonStyles}
             onClick={(ev) => setIsOpen(false)}
           >
             OK
           </button>
-        </div>
+        </p>
       </DialogContent>
     </DialogOverlay>
   );
