@@ -6,7 +6,7 @@ import { jsx, css } from '@emotion/core';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 // config
-import { typeAttributes } from 'config/typeAttributes';
+import { SampleType, sampleAttributes } from 'config/sampleAttributes';
 
 const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
@@ -274,11 +274,11 @@ function MapWidgets({ mapView }: Props) {
       if (event.state === 'complete') {
         // get the button and it's id
         const button = document.querySelector('.sketch-button-selected');
-        const id = button && button.id;
+        const id = button && (button.id as SampleType);
 
         deactivateButtons();
 
-        graphic.attributes = id && typeAttributes[id];
+        graphic.attributes = id && sampleAttributes[id];
 
         // predefined boxes
         if (id === 'Sponge' || id === 'Micro Vac' || id === 'Swab') {
@@ -309,7 +309,7 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
-    sketchVM.on('update', (event: any) => {
+    sketchVM.on('update', (event) => {
       let numSelectedGraphics = 0;
       if (event.state !== 'cancel' && event.graphics) {
         numSelectedGraphics = event.graphics.length;
