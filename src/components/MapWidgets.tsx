@@ -170,7 +170,11 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, Home, homeWidget]);
 
   // add the basemap/layer list widget to the map
-  const [basemapWidget, setBasemapWidget] = React.useState<any>(null);
+  const [
+    basemapWidget,
+    setBasemapWidget, //
+  ] = React.useState<__esri.Expand | null>(null);
+
   React.useEffect(() => {
     if (!PortalBasemapsSource || !BasemapGallery || !Expand) return;
     if (basemapWidget) return;
@@ -327,7 +331,10 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, Graphic, Polygon, sketchVM, sketchEventsInitialized]);
 
   // Creates and adds the custom sketch widget to the map
-  const [sketchTool, setSketchTool] = React.useState<any>(null);
+  const [
+    sketchTool,
+    setSketchTool, //
+  ] = React.useState<React.ReactElement | null>(null);
 
   React.useEffect(() => {
     if (!sketchVM) return;
