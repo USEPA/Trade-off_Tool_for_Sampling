@@ -259,7 +259,7 @@ function MapWidgets({ mapView }: Props) {
   // Creates the sketchVM events for placing the graphic on the map
   const [
     sketchEventsInitialized,
-    setsketchEventsInitialized, //
+    setSketchEventsInitialized, //
   ] = React.useState(false);
 
   React.useEffect(() => {
@@ -323,7 +323,7 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
-    setsketchEventsInitialized(true);
+    setSketchEventsInitialized(true);
   }, [mapView, Graphic, Polygon, sketchVM, sketchEventsInitialized]);
 
   // Creates and adds the custom sketch widget to the map
