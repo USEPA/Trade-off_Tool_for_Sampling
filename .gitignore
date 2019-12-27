@@ -24,3 +24,8 @@ yarn-error.log*
 
 # other_resources
 other_resources/**/*.gdb
+other_resources/**/*.ags
+other_resources/**/*.sde
+other_resources/**/Index
+other_resources/**/scratch
+other_resources/**/ImportLog

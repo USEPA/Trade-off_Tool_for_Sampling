@@ -1,6 +1,6 @@
 import arcpy
 import sys,os
-import csv
+import csv,uuid
 
 ###############################################################################
 class Toolbox(object):
@@ -34,7 +34,7 @@ class AddNotes(object):
       param0 = arcpy.Parameter(
           displayName   = "Input Sampling Layer"
          ,name          = "Input_Sampling_Layer"
-         ,datatype      = "DEFeatureClass"
+         ,datatype      = "GPFeatureLayer"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -65,7 +65,7 @@ class AddNotes(object):
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
-         ,parameterType = "Required"
+         ,parameterType = "Derived"
          ,direction     = "Output"
       );
 
@@ -105,7 +105,7 @@ class AddNotes(object):
       
       #########################################################################
       scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "Output"
+          prefix    = "AddNotes"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
@@ -119,19 +119,10 @@ class AddNotes(object):
       );
       
       #########################################################################
-      if len(arcpy.ListFields(scratch_full_o,"Notes")) == 0:
-         arcpy.AddField_management(
-             in_table       = scratch_full_o
-            ,field_name     = "Notes"
-            ,field_type     = "TEXT"
-            ,field_length   = 200
-         );
-         
-      #########################################################################
       int_cnt = 0;
       with arcpy.da.UpdateCursor(
           in_table    = scratch_full_o
-         ,field_names = ["OID@","Notes"]
+         ,field_names = ["OID@","NOTES"]
       ) as cursor:
       
          for row in cursor:
@@ -187,7 +178,7 @@ class GenerateRandom(object):
       param2 = arcpy.Parameter(
           displayName   = "Area of Interest Mask"
          ,name          = "Area_of_Interest_Mask"
-         ,datatype      = "DEFeatureClass"
+         ,datatype      = "GPFeatureLayer"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -198,7 +189,7 @@ class GenerateRandom(object):
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
-         ,parameterType = "Required"
+         ,parameterType = "Derived"
          ,direction     = "Output"
       );
 
@@ -252,20 +243,26 @@ class GenerateRandom(object):
       scratch_path_b,scratch_name_b = os.path.split(scratch_full_b);
       
       scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "Output"
+          prefix    = "GenerateRandom"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
       scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
-
+      
       #########################################################################
+      sr = arcpy.Describe(fc_aoi_mask).spatialReference;
+      
+      #########################################################################
+      # Licensing information
+      # Basic: Requires 3D Analyst or Spatial Analyst
+      # Standard: Requires 3D Analyst or Spatial Analyst
+      # Advanced: Yes
       arcpy.AddMessage("Generating Points...");
       arcpy.CreateRandomPoints_management(
           out_path                   = scratch_path_p
          ,out_name                   = scratch_name_p
          ,constraining_feature_class = fc_aoi_mask 
-         ,constraining_extent        = ""
          ,number_of_points_or_field  = int_number_samples
          ,minimum_allowed_distance   = "0 Meters"
          ,create_multipoint_output   = "POINT"
@@ -303,7 +300,7 @@ class GenerateRandom(object):
          ,dissolve_field           = ""
          ,method                   = "PLANAR"
       );
-
+      
       #########################################################################
       arcpy.MinimumBoundingGeometry_management(
           in_features       = scratch_full_b
@@ -313,130 +310,142 @@ class GenerateRandom(object):
          ,group_field       = ""
          ,mbg_fields_option = "NO_MBG_FIELDS"
       );
+      
+      #########################################################################
+      flds = arcpy.ListFields(scratch_full_o);
+      fldnms = [];
+      
+      for field in flds:
+         if not field.required:
+            fldnms.append(field.name);
+      
+      arcpy.DeleteField_management(scratch_full_o,fldnms);
 
       #########################################################################
       arcpy.AddMessage("Populating Sampling Metrics...");
-
-      fields = [
-          ("TYPE"   ,"STRING","0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTPK"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTA"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("LOD_P"  ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("LOD_NON","FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("MCPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TCPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("WVPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("WWPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("SA"     ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AA"     ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AC"     ,"LONG"  ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("ITER"   ,"LONG"  ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("Notes"  ,"STRING","0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("ALC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AMC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-      ];
-
-      for field in fields:
-         arcpy.AddField_management(*(scratch_full_o,) + field);
+      dz_addfields(
+          in_table = scratch_full_o
+         ,field_description = [
+             ["GLOBALID","GUID"    ,"GlobalID",None,None,'']
+            ,["TYPE"    ,"TEXT"    ,"Type"    ,255 ,None,'']
+            ,["TTPK"    ,"DOUBLE"  ,"TTPK"    ,None,None,'']
+            ,["TTC"     ,"DOUBLE"  ,"TTC"     ,None,None,'']
+            ,["TTA"     ,"DOUBLE"  ,"TTA"     ,None,None,'']
+            ,["TTPS"    ,"DOUBLE"  ,"TTPS"    ,None,None,'']
+            ,["LOD_P"   ,"DOUBLE"  ,"LOD_P"   ,None,None,'']
+            ,["LOD_NON" ,"DOUBLE"  ,"LOD_NON" ,None,None,'']
+            ,["MCPS"    ,"DOUBLE"  ,"MCPS"    ,None,None,'']
+            ,["TCPS"    ,"DOUBLE"  ,"TCPS"    ,None,None,'']
+            ,["WVPS"    ,"DOUBLE"  ,"WVPS"    ,None,None,'']
+            ,["WWPS"    ,"DOUBLE"  ,"WWPS"    ,None,None,'']
+            ,["SA"      ,"DOUBLE"  ,"SA"      ,None,None,'']
+            ,["AA"      ,"DOUBLE"  ,"AA"      ,None,None,'']
+            ,["AC"      ,"LONG"    ,"AC"      ,None,None,'']
+            ,["ITER"    ,"LONG"    ,"ITER"    ,None,None,'']
+            ,["NOTES"   ,"TEXT"    ,"Notes"   ,2000,None,'']
+            ,["ALC"     ,"DOUBLE"  ,"ALC"     ,None,None,'']
+            ,["AMC"     ,"DOUBLE"  ,"AMC"     ,None,None,'']
+         ]
+      );
 
       #########################################################################
-      fields_in_cursor = ["TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
+      fields = ["GLOBALID","TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
 
-      with arcpy.da.UpdateCursor(scratch_full_o,fields_in_cursor) as cursor:
+      with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
 
          for row in cursor:
 
             if str_sample_type == 'Micro Vac':
-               row[0] = "Micro Vac"
-               row[1] = "0.18"
-               row[2] = "0.15"
-               row[3] = "0.8"
-               row[4] = "1.21"
-               row[5] = "34.28"
-               row[6] = "395.84"
-               row[7] = "0.02"
-               row[8] = "4.3"
-               row[9] = "144"
-               row[10] = "151"
-               row[11] = "288"
-               cursor.updateRow(row);
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Micro Vac";
+               row[2]  = 0.18;
+               row[3]  = 0.15;
+               row[4]  = 0.8;
+               row[5]  = 1.21;
+               row[6]  = 34.28;
+               row[7]  = 395.84;
+               row[8]  = 0.02;
+               row[9]  = 4.3;
+               row[10] = 144;
+               row[11] = 151;
+               row[12] = 288;
+               
             elif str_sample_type == "Wet Vac":
-               row[0] = "Wet Vac"
-               row[1] = "0.33"
-               row[2] = "0.13"
-               row[3] = "0.8"
-               row[4] = "1.07"
-               row[5] = "167"
-               row[6] = "220"
-               row[7] = "5"
-               row[8] = "28.5"
-               row[9] = "28800"
-               row[10] = "151"
-               row[11] = "200"
-               cursor.updateRow(row)
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Wet Vac";
+               row[2]  = 0.33;
+               row[3]  = 0.13;
+               row[4]  = 0.8;
+               row[5]  = 1.07;
+               row[6]  = 167;
+               row[7]  = 220;
+               row[8]  = 5;
+               row[9]  = 28.5;
+               row[10] = 28800;
+               row[11] = 151;
+               row[12] = 200;
+               
             elif str_sample_type == "Sponge":
-               row[0] = "Sponge"
-               row[1] = "0.12"
-               row[2] = "0.09"
-               row[3] = "0.7"
-               row[4] = "0.99"
-               row[5] = "46.87"
-               row[6] = "343.03"
-               row[7] = "0.1"
-               row[8] = "4.3"
-               row[9] = "100"
-               row[10] = "118"
-               row[11] = "239"
-               cursor.updateRow(row)
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Sponge";
+               row[2]  = 0.12;
+               row[3]  = 0.09;
+               row[4]  = 0.7;
+               row[5]  = 0.99;
+               row[6]  = 46.87;
+               row[7]  = 343.03;
+               row[8]  = 0.1;
+               row[9]  = 4.3;
+               row[10] = 100;
+               row[11] = 118;
+               row[12] = 239;
+               
             elif str_sample_type == "Robot":
-               row[0] = "Robot"
-               row[1] = "0.33"
-               row[2] = "0.3"
-               row[3] = "0.7"
-               row[4] = "1.12"
-               row[5] = "400"
-               row[6] = "267"
-               row[7] = "0.5"
-               row[8] = "10.5"
-               row[9] = "144000"
-               row[10] = "200"
-               row[11] = "288"
-               cursor.updateRow(row)
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Robot";
+               row[2]  = 0.33;
+               row[3]  = 0.3;
+               row[4]  = 0.7;
+               row[5]  = 1.12;
+               row[6]  = 400;
+               row[7]  = 267;
+               row[8]  = 0.5;
+               row[9]  = 10.5;
+               row[10] = 144000;
+               row[11] = 200;
+               row[12] = 288;
+               
             elif str_sample_type == "Aggressive Air":
-               row[0] = "Aggressive Air"
-               row[1] = "0.33"
-               row[2] = "0.6"
-               row[3] = "0.5"
-               row[4] = "1.12"
-               row[5] = "207"
-               row[6] = "267"
-               row[7] = "0.1"
-               row[8] = "5"
-               row[9] = "12000"
-               row[10] = "118"
-               row[11] = "239"
-               cursor.updateRow(row)
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Aggressive Air";
+               row[2]  = 0.33;
+               row[3]  = 0.6;
+               row[4]  = 0.5;
+               row[5]  = 1.12;
+               row[6]  = 207;
+               row[7]  = 267;
+               row[8]  = 0.1;
+               row[9]  = 5;
+               row[10] = 12000;
+               row[11] = 118;
+               row[12] = 239;
+               
             elif str_sample_type == "Swab":
-               row[0] = "Swab"
-               row[1] = "0.12"
-               row[2] = "0.07"
-               row[3] = "0.7"
-               row[4] = "0.89"
-               row[5] = "21"
-               row[6] = "219"
-               row[7] = "0.01"
-               row[8] = "2"
-               row[9] = "4"
-               row[10] = "118"
-               row[11] = "239"
-               cursor.updateRow(row);
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Swab";
+               row[2]  = 0.12;
+               row[3]  = 0.07;
+               row[4]  = 0.7;
+               row[5]  = 0.89;
+               row[6]  = 21;
+               row[7]  = 219;
+               row[8]  = 0.01;
+               row[9]  = 2;
+               row[10] = 4;
+               row[11] = 118;
+               row[12] = 239;
+            
+            cursor.updateRow(row);
 
       #########################################################################
       arcpy.SetParameterAsText(3,scratch_full_o); 
@@ -460,7 +469,7 @@ class VSPImport(object):
       param0 = arcpy.Parameter(
           displayName   = "Input VSP"
          ,name          = "Input_VSP"
-         ,datatype      = "DEFeatureClass"
+         ,datatype      = "GPFeatureLayer"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -483,7 +492,7 @@ class VSPImport(object):
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
-         ,parameterType = "Required"
+         ,parameterType = "Derived"
          ,direction     = "Output"
       );
 
@@ -519,7 +528,7 @@ class VSPImport(object):
       
       #########################################################################
       scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "Output"
+          prefix    = "VSPImport"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
@@ -527,7 +536,7 @@ class VSPImport(object):
       scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
       
       scratch_full_v = arcpy.CreateScratchName(
-          prefix    = "VSP"
+          prefix    = "VSPTemp"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
@@ -541,144 +550,147 @@ class VSPImport(object):
       );
       
       #########################################################################
-      flds = arcpy.ListFields(scratch_full_v);
-      fldnms = [];
-      
-      for field in flds:
-         if not field.required:
-            fldnms.append(field.name);
-      
-      arcpy.DeleteField_management(scratch_full_v,fldnms);
-
-      #########################################################################
       # Use the FeatureToPolygon function to form new areas
       arcpy.FeatureToPolygon_management(
           in_features       = scratch_full_v
          ,out_feature_class = scratch_full_o
          ,attributes        = "NO_ATTRIBUTES"
       );
+      
+      #########################################################################
+      flds = arcpy.ListFields(scratch_full_o);
+      fldnms = [];
+      
+      for field in flds:
+         if not field.required:
+            fldnms.append(field.name);
+      
+      arcpy.DeleteField_management(scratch_full_o,fldnms);
 
       #########################################################################
-      fields = [
-          ("TYPE"   ,"STRING","0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTPK"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTA"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TTPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("LOD_P"  ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("LOD_NON","FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("MCPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("TCPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("WVPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("WWPS"   ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("SA"     ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AA"     ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AC"     ,"LONG"  ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("ITER"   ,"LONG"  ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("Notes"  ,"STRING","0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("ALC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-         ,("AMC"    ,"FLOAT" ,"0","0","","","NULLABLE","NON_REQUIRED","")
-      ];
-
-      for field in fields:
-         arcpy.AddField_management(*(scratch_full_o,) + field);
+      dz_addfields(
+          in_table = scratch_full_o
+         ,field_description = [
+             ["GLOBALID","GUID"    ,"GlobalID",None,None,'']
+            ,["TYPE"    ,"TEXT"    ,"Type"    ,255 ,None,'']
+            ,["TTPK"    ,"DOUBLE"  ,"TTPK"    ,None,None,'']
+            ,["TTC"     ,"DOUBLE"  ,"TTC"     ,None,None,'']
+            ,["TTA"     ,"DOUBLE"  ,"TTA"     ,None,None,'']
+            ,["TTPS"    ,"DOUBLE"  ,"TTPS"    ,None,None,'']
+            ,["LOD_P"   ,"DOUBLE"  ,"LOD_P"   ,None,None,'']
+            ,["LOD_NON" ,"DOUBLE"  ,"LOD_NON" ,None,None,'']
+            ,["MCPS"    ,"DOUBLE"  ,"MCPS"    ,None,None,'']
+            ,["TCPS"    ,"DOUBLE"  ,"TCPS"    ,None,None,'']
+            ,["WVPS"    ,"DOUBLE"  ,"WVPS"    ,None,None,'']
+            ,["WWPS"    ,"DOUBLE"  ,"WWPS"    ,None,None,'']
+            ,["SA"      ,"DOUBLE"  ,"SA"      ,None,None,'']
+            ,["AA"      ,"DOUBLE"  ,"AA"      ,None,None,'']
+            ,["AC"      ,"LONG"    ,"AC"      ,None,None,'']
+            ,["ITER"    ,"LONG"    ,"ITER"    ,None,None,'']
+            ,["NOTES"   ,"TEXT"    ,"Notes"   ,2000,None,'']
+            ,["ALC"     ,"DOUBLE"  ,"ALC"     ,None,None,'']
+            ,["AMC"     ,"DOUBLE"  ,"AMC"     ,None,None,'']
+         ]
+      );
 
       #########################################################################
-      fields = ["TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
+      fields = ["GLOBALID","TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
 
       with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
 
          for row in cursor:
 
             if str_sample_type == 'Micro Vac':
-               row[0]  = "Micro Vac";
-               row[1]  = "0.18";
-               row[2]  = "0.15";
-               row[3]  = "0.8";
-               row[4]  = "1.21";
-               row[5]  = "34.28";
-               row[6]  = "395.84";
-               row[7]  = "0.02";
-               row[8]  = "4.3";
-               row[9]  = "144";
-               row[10] = "151";
-               row[11] = "288";
-               cursor.updateRow(row);
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Micro Vac";
+               row[2]  = 0.18;
+               row[3]  = 0.15;
+               row[4]  = 0.8;
+               row[5]  = 1.21;
+               row[6]  = 34.28;
+               row[7]  = 395.84;
+               row[8]  = 0.02;
+               row[9]  = 4.3;
+               row[10] = 144;
+               row[11] = 151;
+               row[12] = 288;
 
             elif str_sample_type == "Wet Vac":
-               row[0]  = "Wet Vac";
-               row[1]  = "0.33";
-               row[2]  = "0.13";
-               row[3]  = "0.8";
-               row[4]  = "1.07";
-               row[5]  = "167";
-               row[6]  = "220";
-               row[7]  = "5";
-               row[8]  = "28.5";
-               row[9]  = "28800";
-               row[10] = "151";
-               row[11] = "200";
-               cursor.updateRow(row);
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Wet Vac";
+               row[2]  = 0.33;
+               row[3]  = 0.13;
+               row[4]  = 0.8;
+               row[5]  = 1.07;
+               row[6]  = 167;
+               row[7]  = 220;
+               row[8]  = 5;
+               row[9]  = 28.5;
+               row[10] = 28800;
+               row[11] = 151;
+               row[12] = 200;
+               
             elif str_sample_type == "Sponge":
-               row[0]  = "Sponge";
-               row[1]  = "0.12";
-               row[2]  = "0.09";
-               row[3]  = "0.7";
-               row[4]  = "0.99";
-               row[5]  = "46.87";
-               row[6]  = "343.03";
-               row[7]  = "0.1";
-               row[8]  = "4.3";
-               row[9]  = "100";
-               row[10] = "118";
-               row[11] = "239";
-               cursor.updateRow(row);
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Sponge";
+               row[2]  = 0.12;
+               row[3]  = 0.09;
+               row[4]  = 0.7;
+               row[5]  = 0.99;
+               row[6]  = 46.87;
+               row[7]  = 343.03;
+               row[8]  = 0.1;
+               row[9]  = 4.3;
+               row[10] = 100;
+               row[11] = 118;
+               row[12] = 239;
+               
             elif str_sample_type == "Robot":
-               row[0]  = "Robot";
-               row[1]  = "0.33";
-               row[2]  = "0.3";
-               row[3]  = "0.7";
-               row[4]  = "1.12";
-               row[5]  = "400";
-               row[6]  = "267";
-               row[7]  = "0.5";
-               row[8]  = "10.5";
-               row[9]  = "144000";
-               row[10] = "200";
-               row[11] = "288";
-               cursor.updateRow(row);
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Robot";
+               row[2]  = 0.33;
+               row[3]  = 0.3;
+               row[4]  = 0.7;
+               row[5]  = 1.12;
+               row[6]  = 400;
+               row[7]  = 267;
+               row[8]  = 0.5;
+               row[9]  = 10.5;
+               row[10] = 144000;
+               row[11] = 200;
+               row[12] = 288;
+               
             elif str_sample_type == "Aggressive Air":
-               row[0]  = "Aggressive Air";
-               row[1]  = "0.33";
-               row[2]  = "0.6";
-               row[3]  = "0.5";
-               row[4]  = "1.12";
-               row[5]  = "207";
-               row[6]  = "267";
-               row[7]  = "0.1";
-               row[8]  = "5";
-               row[9]  = "12000";
-               row[10] = "118";
-               row[11] = "239";
-               cursor.updateRow(row);
-
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Aggressive Air";
+               row[2]  = 0.33;
+               row[3]  = 0.6;
+               row[4]  = 0.5;
+               row[5]  = 1.12;
+               row[6]  = 207;
+               row[7]  = 267;
+               row[8]  = 0.1;
+               row[9]  = 5;
+               row[10] = 12000;
+               row[11] = 118;
+               row[12] = 239;
+               
             elif str_sample_type == "Swab":
-               row[0]  = "Swab";
-               row[1]  = "0.12";
-               row[2]  = "0.07";
-               row[3]  = "0.7";
-               row[4]  = "0.89";
-               row[5]  = "21";
-               row[6]  = "219";
-               row[7]  = "0.01";
-               row[8]  = "2";
-               row[9]  = "4";
-               row[10] = "118";
-               row[11] = "239";
-               cursor.updateRow(row);
+               row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = "Swab";
+               row[2]  = 0.12;
+               row[3]  = 0.07;
+               row[4]  = 0.7;
+               row[5]  = 0.89;
+               row[6]  = 21;
+               row[7]  = 219;
+               row[8]  = 0.01;
+               row[9]  = 2;
+               row[10] = 4;
+               row[11] = 118;
+               row[12] = 239;
+            
+            cursor.updateRow(row);
 
       #########################################################################
       arcpy.SetParameterAsText(2,scratch_full_o); 
@@ -701,7 +713,7 @@ class Main(object):
       #########################################################################
       param0 = arcpy.Parameter(
           displayName   = "Scenario Name"
-         ,name          = "str_scenario_name"
+         ,name          = "Scenario_Name"
          ,datatype      = "GPString"
          ,parameterType = "Required"
          ,direction     = "Input"
@@ -712,7 +724,7 @@ class Main(object):
       param1 = arcpy.Parameter(
           displayName   = "Input Sampling Unit"
          ,name          = "Input_Sampling_Unit"
-         ,datatype      = "DEFeatureClass"
+         ,datatype      = "GPFeatureLayer"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -722,7 +734,7 @@ class Main(object):
       param2 = arcpy.Parameter(
           displayName   = "Contamination Map"
          ,name          = "Contamination_Map"
-         ,datatype      = "DEFeatureClass"
+         ,datatype      = "GPFeatureLayer"
          ,parameterType = "Optional"
          ,direction     = "Input"
          ,enabled       = True
@@ -741,7 +753,7 @@ class Main(object):
       #########################################################################
       param4 = arcpy.Parameter(
           displayName   = "Number of Available Teams for Sampling"
-         ,name          = "Number_of_int_available_teams_for_Sampling"
+         ,name          = "Number_of_Available_Teams_for_Sampling"
          ,datatype      = "GPLong"
          ,parameterType = "Required"
          ,direction     = "Input"
@@ -761,7 +773,7 @@ class Main(object):
       #########################################################################
       param6 = arcpy.Parameter(
           displayName   = "Sampling Team Hours per Shift"
-         ,name          = "Sampling_Team_num_hours_per_shift"
+         ,name          = "Sampling_Team_Hours_per_Shift"
          ,datatype      = "GPDouble"
          ,parameterType = "Required"
          ,direction     = "Input"
@@ -771,7 +783,7 @@ class Main(object):
       #########################################################################
       param7 = arcpy.Parameter(
           displayName   = "Sampling Team Shifts per Day"
-         ,name          = "Sampling_Team_num_shifts_per_day"
+         ,name          = "Sampling_Team_Shifts_per_Day"
          ,datatype      = "GPDouble"
          ,parameterType = "Required"
          ,direction     = "Input"
@@ -781,7 +793,7 @@ class Main(object):
       #########################################################################
       param8 = arcpy.Parameter(
           displayName   = "Sampling Team Labor Cost"
-         ,name          = "Sampling_Team_num_labor_cost"
+         ,name          = "Sampling_Team_Labor_Cost"
          ,datatype      = "GPDouble"
          ,parameterType = "Required"
          ,direction     = "Input"
@@ -812,6 +824,7 @@ class Main(object):
       param11 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
+         ,parameterType = "Derived"
          ,datatype      = "DEFile"
          ,direction     = "Output"
       );
@@ -874,7 +887,7 @@ class Main(object):
       scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
       
       scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "Output"
+          prefix    = "TOTSResults"
          ,suffix    = ".csv"
          ,data_type = "Dataset"
          ,workspace = arcpy.env.scratchFolder
@@ -884,6 +897,7 @@ class Main(object):
       #########################################################################
       # Contaminaton results join
       if fc_contamination_map:
+      
          arcpy.SpatialJoin_analysis(
              target_features   = fc_samples_in
             ,join_features     = fc_contamination_map
@@ -973,20 +987,47 @@ class Main(object):
       with arcpy.da.SearchCursor(fc_samples_in,fields) as cursor:
 
          for row in cursor:
-            num_ttpk_total    += row[0];
-            num_ttc_total     += row[1];
-            num_tta_total     += row[2];
-            num_ttps_total    += row[3];
-            num_lod_p_total   += row[4];
-            num_lod_non_total += row[5];
-            num_mcps_total    += row[6];
-            num_tcps_total    += row[7];
-            num_wvps_total    += row[8];
-            num_wwps_total    += row[9];
-            num_sa_total      += row[10];
-            num_alc_total     += row[11];
-            num_amc_total     += row[12];
-            num_ac_total      += row[13];
+            if row[0] is not None:
+               num_ttpk_total    += row[0];
+            
+            if row[1] is not None:
+               num_ttc_total     += row[1];
+            
+            if row[2] is not None:
+               num_tta_total     += row[2];
+            
+            if row[3] is not None:
+               num_ttps_total    += row[3];
+            
+            if row[4] is not None:
+               num_lod_p_total   += row[4];
+            
+            if row[5] is not None:
+               num_lod_non_total += row[5];
+            
+            if row[6] is not None:
+               num_mcps_total    += row[6];
+            
+            if row[7] is not None:
+               num_tcps_total    += row[7];
+            
+            if row[8] is not None:
+               num_wvps_total    += row[8];
+            
+            if row[9] is not None:
+               num_wwps_total    += row[9];
+            
+            if row[10] is not None:
+               num_sa_total      += row[10];
+            
+            if row[11] is not None:
+               num_alc_total     += row[11];
+            
+            if row[12] is not None:
+               num_amc_total     += row[12];
+            
+            if row[13] is not None:
+               num_ac_total      += row[13];
 
       #########################################################################
       int_sampling_hours                = int(int_available_teams) * int(num_hours_per_shift) * int(num_shifts_per_day);
@@ -1124,21 +1165,21 @@ class Main(object):
          # Contamination results join
          # Write data depending on availability of contamination map
          if fc_contamination_map:
-            fields = ['FID','TYPE','CFU','Notes'];
+            fields = ['OID@','GLOBALID','TYPE','CFU','NOTES'];
 
             arcpy.AddMessage("-- Sampling Results --");
             with arcpy.da.SearchCursor(scratch_full_c,fields) as q:
 
                for row in q:
 
-                  if row[2] > 0:
+                  if row[3] > 0:
                      num_cfu_count += 1;
-                     arcpy.AddMessage("Sample ID: " + str(row[0]) + ", Sample Type: " + str(row[1]) + ", CFU: " + str(row[2]));
+                     arcpy.AddMessage("Sample ID: " + str(row[0]) + ", Sample Type: " + str(row[2]) + ", CFU: " + str(row[3]));
 
             arcpy.AddMessage(" ");
             arcpy.AddMessage(str(num_cfu_count) + " of " + str(arcpy.GetCount_management(fc_samples_in).getOutput(0)) + " Samples Were Positive Detects");
 
-            fields_com = ['Sample ID','Sample Type','CFU','Notes']
+            fields_com = ['Sample ID','GlobalID','Sample Type','CFU','Notes']
             csvwriter.writerow(fields_com)
 
             with arcpy.da.SearchCursor(scratch_full_c,fields) as s_cursor:
@@ -1147,8 +1188,8 @@ class Main(object):
                   csvwriter.writerow(row)
 
          else:
-            fields     = ['FID','Notes'];
-            fields_com = ['Sample ID','Notes'];
+            fields     = ['OID@','GLOBALID','NOTES'];
+            fields_com = ['Sample ID','GlobalID','Notes'];
             csvwriter.writerow(fields_com);
 
             with arcpy.da.SearchCursor(fc_samples_in,fields) as cursor:
@@ -1159,3 +1200,23 @@ class Main(object):
       #########################################################################
       arcpy.SetParameterAsText(11,scratch_full_o);
 
+###############################################################################
+def dz_addfields(in_table,field_description):
+
+   if (sys.version_info > (3,0)):
+      arcpy.management.AddFields(
+          in_table = in_table
+         ,field_description = field_description
+      );
+   
+   else:
+      for fld in field_description:      
+         arcpy.AddField_management(
+             in_table     = in_table
+            ,field_name   = fld[0]
+            ,field_type   = fld[1]
+            ,field_alias  = fld[2]
+            ,field_length = fld[3]
+            ,field_domain = fld[5]
+         );
+   
