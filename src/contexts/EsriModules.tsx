@@ -20,36 +20,23 @@ type Props = { children: React.ReactNode };
 
 type State = {
   modulesLoaded: boolean;
-  Graphic: EsriConstructors[0] | null;
-  EsriMap: EsriConstructors[1] | null;
-  Polygon: EsriConstructors[2] | null;
-  GraphicsLayer: EsriConstructors[3] | null;
-  MapView: EsriConstructors[4] | null;
-  BasemapGallery: EsriConstructors[5] | null;
-  PortalBasemapsSource: EsriConstructors[6] | null;
-  Expand: EsriConstructors[7] | null;
-  Home: EsriConstructors[8] | null;
-  Search: EsriConstructors[9] | null;
-  SketchViewModel: EsriConstructors[10] | null;
+  Graphic: EsriConstructors[0];
+  EsriMap: EsriConstructors[1];
+  Polygon: EsriConstructors[2];
+  GraphicsLayer: EsriConstructors[3];
+  MapView: EsriConstructors[4];
+  BasemapGallery: EsriConstructors[5];
+  PortalBasemapsSource: EsriConstructors[6];
+  Expand: EsriConstructors[7];
+  Home: EsriConstructors[8];
+  Search: EsriConstructors[9];
+  SketchViewModel: EsriConstructors[10];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
 
 function EsriModulesProvider({ children }: Props) {
-  const [modules, setModules] = React.useState<State>({
-    modulesLoaded: false,
-    Graphic: null,
-    EsriMap: null,
-    Polygon: null,
-    GraphicsLayer: null,
-    MapView: null,
-    BasemapGallery: null,
-    PortalBasemapsSource: null,
-    Expand: null,
-    Home: null,
-    Search: null,
-    SketchViewModel: null,
-  });
+  const [modules, setModules] = React.useState<State | null>(null);
 
   React.useEffect(() => {
     (loadModules(
@@ -101,6 +88,8 @@ function EsriModulesProvider({ children }: Props) {
       },
     );
   }, []);
+
+  if (!modules) return null;
 
   return (
     <EsriModulesContext.Provider value={modules}>

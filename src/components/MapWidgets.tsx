@@ -145,7 +145,6 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<__esri.widgetsSearch | null>(null);
 
   React.useEffect(() => {
-    if (!Search) return;
     if (searchWidget) return;
 
     const widget = new Search({ view: mapView });
@@ -159,7 +158,6 @@ function MapWidgets({ mapView }: Props) {
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
 
   React.useEffect(() => {
-    if (!Home) return;
     if (homeWidget) return;
 
     const widget = new Home({ view: mapView });
@@ -176,7 +174,6 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<__esri.Expand | null>(null);
 
   React.useEffect(() => {
-    if (!PortalBasemapsSource || !BasemapGallery || !Expand) return;
     if (basemapWidget) return;
 
     const basemapsSource = new PortalBasemapsSource({
@@ -236,7 +233,6 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<__esri.SketchViewModel | null>(null);
 
   React.useEffect(() => {
-    if (!SketchViewModel) return;
     if (!sketchLayer) return;
     if (sketchVM) return;
 
@@ -267,7 +263,6 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState(false);
 
   React.useEffect(() => {
-    if (!Graphic || !Polygon) return;
     if (!sketchVM) return;
     if (sketchEventsInitialized) return;
 

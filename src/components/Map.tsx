@@ -20,7 +20,6 @@ function Map() {
   const [layers, setLayers] = React.useState<__esri.GraphicsLayer[]>([]);
 
   React.useEffect(() => {
-    if (!GraphicsLayer) return;
     if (layers.length > 0) return;
 
     const sketchLayer = new GraphicsLayer({
@@ -34,7 +33,6 @@ function Map() {
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
 
   React.useEffect(() => {
-    if (!EsriMap || !MapView) return;
     if (!mapRef.current) return;
     if (layers.length === 0) return;
     if (mapView) return;
