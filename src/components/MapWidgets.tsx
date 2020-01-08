@@ -334,7 +334,7 @@ function MapWidgets({ mapView }: Props) {
   const [
     sketchTool,
     setSketchTool, //
-  ] = React.useState<React.ReactElement | null>(null);
+  ] = React.useState<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!sketchVM) return;
