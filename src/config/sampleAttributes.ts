@@ -1,4 +1,32 @@
-export const typeAttributes: any = {
+export type SampleType =
+  | 'Sponge'
+  | 'Micro Vac'
+  | 'Wet Vac'
+  | 'Robot'
+  | 'Aggressive Air'
+  | 'Swab';
+
+type SampleProperties =
+  | 'TYPE'
+  | 'SA'
+  | 'TTPK'
+  | 'TTC'
+  | 'TTA'
+  | 'TTPS'
+  | 'LOD_P'
+  | 'LOD_NON'
+  | 'MCPS'
+  | 'TCPS'
+  | 'WVPS'
+  | 'WWPS';
+
+type Attributes = {
+  [key in SampleType]: {
+    [key in SampleProperties]: string;
+  };
+};
+
+const sampleAttributes: Attributes = {
   Sponge: {
     TYPE: 'Sponge',
     SA: '100',
@@ -84,3 +112,5 @@ export const typeAttributes: any = {
     WWPS: '0',
   },
 };
+
+export { sampleAttributes };

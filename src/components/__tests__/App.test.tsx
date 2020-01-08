@@ -5,6 +5,7 @@ import App from '../App';
 
 it('renders the placeholder text', () => {
   const { getByText } = render(<App />);
-  expect(getByText('(Toolbar)')).toBeInTheDocument();
+  expect(getByText('Loading...')).toBeInTheDocument();
+  // expect(getByText('(Toolbar)')).toBeInTheDocument();
   // expect(getByText('(Map)')).toBeInTheDocument();
 });

@@ -4,7 +4,7 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
-import { EsriModulesContext } from 'contexts/EsriModules';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 
 const loginBarStyles = css`
   display: flex;
@@ -30,7 +30,7 @@ const loginButtonStyles = css`
 `;
 
 function LoginBar() {
-  const { IdentityManager, OAuthInfo } = React.useContext(EsriModulesContext);
+  const { IdentityManager, OAuthInfo } = useEsriModulesContext();
   const {
     signedIn,
     setSignedIn,

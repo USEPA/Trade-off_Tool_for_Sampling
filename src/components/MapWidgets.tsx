@@ -4,9 +4,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { jsx, css } from '@emotion/core';
 // contexts
-import { EsriModulesContext } from 'contexts/EsriModules';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 // config
-import { typeAttributes } from 'config/typeAttributes';
+import { SampleType, sampleAttributes } from 'config/sampleAttributes';
 
 const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
@@ -40,279 +40,14 @@ const basemapNames = [
 ];
 
 function deactivateButtons() {
-  const buttons = document.getElementsByClassName('sketch-button');
+  const buttons = document.querySelectorAll('.sketch-button');
 
   for (let i = 0; i < buttons.length; i++) {
-    const button = buttons[i];
-    button.classList.remove('sketch-button-selected');
+    buttons[i].classList.remove('sketch-button-selected');
   }
 }
 
-// --- styled components ---
-
-// --- components ---
-
-type Props = {
-  mapView: any;
-};
-
-function MapWidgets({ mapView }: Props) {
-  const {
-    BasemapGallery,
-    Expand,
-    Graphic,
-    Home,
-    Polygon,
-    PortalBasemapsSource,
-    Search,
-    SketchViewModel,
-  } = React.useContext(EsriModulesContext);
-
-  // Creates and adds the home widget to the map
-  const [searchWidget, setSearchWidget] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || !Search || searchWidget) return;
-
-    // create the home widget
-    const newSearchWidget = new Search({ view: mapView });
-    // index of 0 puts this above the search widget above the zoom buttons that are automatically added
-    mapView.ui.add(newSearchWidget, { position: 'top-left', index: 0 });
-    setSearchWidget(newSearchWidget);
-  }, [mapView, Search, searchWidget]);
-
-  // Creates and adds the home widget to the map
-  const [homeWidget, setHomeWidget] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || !Home || homeWidget) return;
-
-    // create the home widget
-    const newHomeWidget = new Home({ view: mapView });
-    mapView.ui.add(newHomeWidget, { position: 'top-left', index: 2 });
-    setHomeWidget(newHomeWidget);
-  }, [mapView, Home, homeWidget]);
-
-  // Creates and adds the basemap/layer list widget to the map
-  const [basemapWidget, setBasemapWidget] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (
-      !mapView ||
-      !BasemapGallery ||
-      !Expand ||
-      !PortalBasemapsSource ||
-      basemapWidget
-    )
-      return;
-
-    // create the basemap/layers widget
-    const basemapsSource = new PortalBasemapsSource({
-      filterFunction: function(basemap: any) {
-        return basemapNames.indexOf(basemap.portalItem.title) !== -1;
-      },
-      updateBasemapsCallback: function(originalBasemaps: any) {
-        // sort the basemaps based on the ordering of basemapNames
-        return originalBasemaps.sort(
-          (a: any, b: any) =>
-            basemapNames.indexOf(a.portalItem.title) -
-            basemapNames.indexOf(b.portalItem.title),
-        );
-      },
-    });
-
-    // basemaps
-    const basemapContainer = document.createElement('div');
-    new BasemapGallery({
-      container: basemapContainer,
-      view: mapView,
-      source: basemapsSource,
-    });
-
-    const expandWidget = new Expand({
-      expandIconClass: 'esri-icon-layers',
-      view: mapView,
-      mode: 'floating',
-      autoCollapse: true,
-      content: basemapContainer,
-    });
-
-    mapView.ui.add(expandWidget, { position: 'top-right', index: 0 });
-    setBasemapWidget(expandWidget);
-  }, [mapView, BasemapGallery, Expand, PortalBasemapsSource, basemapWidget]);
-
-  // Get the graphics layer for drawing on
-  const [sketchLayer, setSketchLayer] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || sketchLayer) return;
-
-    mapView.map.layers.forEach((layer: any) => {
-      if (layer.id === 'sketchLayer') {
-        setSketchLayer(layer);
-      }
-    });
-  }, [mapView, sketchLayer]);
-
-  // Create the sketch view model for handling the drawing
-  const [sketchVM, setSketchVM] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || !SketchViewModel || !sketchLayer || sketchVM) return;
-
-    // symbol used for polygons and points. Points are converted to polygons
-    const polygonSymbol = {
-      type: 'simple-fill',
-      color: [150, 150, 150, 0.2],
-      outline: {
-        color: [50, 50, 50],
-        width: 2,
-      },
-    };
-
-    const newSketchVM = new SketchViewModel({
-      layer: sketchLayer,
-      view: mapView,
-      polygonSymbol,
-      pointSymbol: polygonSymbol,
-    });
-    setSketchVM(newSketchVM);
-  }, [mapView, SketchViewModel, sketchLayer, sketchVM]);
-
-  // Creates the sketchVM events for placing the graphic on the map
-  const [
-    sketchEventsInitialized,
-    setsketchEventsInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (
-      !mapView ||
-      !sketchVM ||
-      !Graphic ||
-      !Polygon ||
-      sketchEventsInitialized
-    )
-      return;
-
-    sketchVM.on('create', (event: any) => {
-      // place the graphic on the map when the drawing is complete
-      if (event.state === 'complete') {
-        // get the button and it's id
-        const button = document.getElementsByClassName(
-          'sketch-button-selected',
-        )[0];
-        const id = button.id;
-
-        deactivateButtons();
-
-        const attributes = typeAttributes[id];
-
-        // user drawn graphics
-        if (id === 'Wet Vac' || id === 'Robot' || id === 'Aggressive Air') {
-          const graphic = event.graphic;
-          graphic.attributes = attributes;
-          sketchVM.update(graphic);
-        }
-
-        // predefined boxes
-        if (id === 'Sponge' || id === 'Micro Vac' || id === 'Swab') {
-          let halfWidth = 0;
-          if (id === 'Sponge') halfWidth = sponge_SA;
-          if (id === 'Micro Vac') halfWidth = vac_SA;
-          if (id === 'Swab') halfWidth = swab_SA;
-
-          // create the graphic
-          const graphic = event.graphic;
-          const oldGeometry = graphic.geometry;
-
-          const geometry = new Polygon({
-            spatialReference: oldGeometry.spatialReference,
-            centroid: oldGeometry,
-            rings: [
-              [oldGeometry.x - halfWidth, oldGeometry.y - halfWidth],
-              [oldGeometry.x - halfWidth, oldGeometry.y + halfWidth],
-              [oldGeometry.x + halfWidth, oldGeometry.y + halfWidth],
-              [oldGeometry.x + halfWidth, oldGeometry.y - halfWidth],
-            ],
-          });
-
-          graphic.geometry = geometry;
-          graphic.attributes = attributes;
-
-          // save the graphic
-          sketchVM.update(graphic);
-        }
-      }
-    });
-
-    sketchVM.on('update', (event: any) => {
-      let numSelectedGraphics = 0;
-      if (event.state !== 'cancel' && event.graphics) {
-        numSelectedGraphics = event.graphics.length;
-      }
-
-      const deleteButton = document.getElementById('Delete');
-      if (deleteButton) {
-        deleteButton.style.display =
-          numSelectedGraphics === 0 ? 'none' : 'table-cell';
-      }
-    });
-
-    setsketchEventsInitialized(true);
-  }, [sketchVM, mapView, sketchEventsInitialized, Graphic, Polygon]);
-
-  // Creates and adds the custom sketch widget to the map
-  const [sketchTool, setSketchTool] = React.useState<any>(null);
-  React.useEffect(() => {
-    if (!mapView || !sketchVM || sketchTool) return;
-
-    // handles the sketch button clicks
-    const handleClick = (event: any, type: string) => {
-      if (!sketchVM) return;
-
-      // set the clicked button as active until the drawing is complete
-      deactivateButtons();
-      event.target.classList.add('sketch-button-selected');
-
-      // tell the sketchVM what type of graphic is being drawn on the map.
-      // Points will be converted to predefined polygons.
-      if (type === 'Sponge') {
-        sketchVM.create('point');
-      }
-      if (type === 'Micro Vac') {
-        sketchVM.create('point');
-      }
-      if (type === 'Wet Vac') {
-        sketchVM.create('polygon');
-      }
-      if (type === 'Robot') {
-        sketchVM.create('polygon');
-      }
-      if (type === 'Aggressive Air') {
-        sketchVM.create('polygon');
-      }
-      if (type === 'Swab') {
-        sketchVM.create('point');
-      }
-      if (type === 'Delete') {
-        if (sketchVM.activeComponent && sketchVM.activeComponent.graphics) {
-          sketchVM.layer.removeMany(sketchVM.activeComponent.graphics);
-        }
-      }
-      if (type === 'Delete All') {
-        sketchVM.layer.removeAll();
-      }
-    };
-
-    // Put the sketch toolbar on the map
-    const sketchToolContainer = document.createElement('div');
-    mapView.ui.add(sketchToolContainer, 'bottom-right');
-    ReactDOM.render(
-      <SketchTool sketchVM={sketchVM} onClick={handleClick} />,
-      sketchToolContainer,
-    );
-    setSketchTool(sketchToolContainer);
-  }, [mapView, sketchTool, sketchVM]);
-
-  return <React.Fragment />;
-}
-
-const Container = css`
+const containerStyles = css`
   padding: 6px;
   background-color: white;
 
@@ -326,59 +61,344 @@ const Container = css`
   }
 `;
 
-const ButtonStyle = css`
+const buttonStyles = css`
+  display: table-cell;
+  vertical-align: middle;
   height: 32px;
   width: 32px;
   background-color: white;
-  display: table-cell;
   text-align: center;
-  vertical-align: middle;
+  cursor: pointer;
 
-  &:hover {
+  &:hover,
+  &:focus {
     background-color: #f0f0f0;
-    cursor: pointer;
   }
 `;
 
 type SketchToolProps = {
-  sketchVM: any;
-  onClick: Function;
+  sketchVM: __esri.SketchViewModel;
+  onClick: (ev: React.MouseEvent<HTMLDivElement>, type: string) => void;
 };
 
-function SketchTool({ sketchVM, onClick = () => {} }: SketchToolProps) {
-  if (!sketchVM) return null;
+type ButtonProps = {
+  type: string;
+  label: React.ReactNode;
+  initiallyHidden?: boolean;
+};
 
-  // builds the sketch button
-  const sketchButton = (
-    type: string,
-    label: any,
-    initiallyHidden: boolean = false,
-  ) => {
+function SketchTool({ sketchVM, onClick }: SketchToolProps) {
+  function Button({ type, label, initiallyHidden = false }: ButtonProps) {
     return (
       <div
         id={type}
         title={type}
         className={initiallyHidden ? 'sketch-button-hidden' : 'sketch-button'}
-        css={ButtonStyle}
         onClick={(ev) => onClick(ev, type)}
+        css={buttonStyles}
       >
         {label}
       </div>
     );
-  };
+  }
+
+  if (!sketchVM) return null;
 
   return (
-    <div css={Container}>
-      {sketchButton('Delete', <i className="fas fa-trash-alt"></i>, true)}
-      {sketchButton('Sponge', 'Sp')}
-      {sketchButton('Micro Vac', 'M')}
-      {sketchButton('Wet Vac', 'W')}
-      {sketchButton('Robot', 'R')}
-      {sketchButton('Aggressive Air', 'A')}
-      {sketchButton('Swab', 'Sw')}
-      {sketchButton('Delete All', <i className="fas fa-window-close"></i>)}
+    <div css={containerStyles}>
+      <Button
+        type="Delete"
+        label={<i className="fas fa-trash-alt" />}
+        initiallyHidden={true}
+      />
+      <Button type="Sponge" label="Sp" />
+      <Button type="Micro Vac" label="M" />
+      <Button type="Wet Vac" label="W" />
+      <Button type="Robot" label="R" />
+      <Button type="Aggressive Air" label="A" />
+      <Button type="Swab" label="Sw" />
+      <Button type="Delete All" label={<i className="fas fa-window-close" />} />
     </div>
   );
+}
+
+type Props = {
+  mapView: __esri.MapView;
+};
+
+function MapWidgets({ mapView }: Props) {
+  const {
+    BasemapGallery,
+    Expand,
+    Graphic,
+    Home,
+    Polygon,
+    PortalBasemapsSource,
+    Search,
+    SketchViewModel,
+  } = useEsriModulesContext();
+
+  // add the search widget to the map
+  const [
+    searchWidget,
+    setSearchWidget,
+  ] = React.useState<__esri.widgetsSearch | null>(null);
+
+  React.useEffect(() => {
+    if (searchWidget) return;
+
+    const widget = new Search({ view: mapView });
+
+    mapView.ui.add(widget, { position: 'top-left', index: 0 });
+
+    setSearchWidget(widget);
+  }, [mapView, Search, searchWidget]);
+
+  // add the home widget to the map
+  const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
+
+  React.useEffect(() => {
+    if (homeWidget) return;
+
+    const widget = new Home({ view: mapView });
+
+    mapView.ui.add(widget, { position: 'top-left', index: 2 });
+
+    setHomeWidget(widget);
+  }, [mapView, Home, homeWidget]);
+
+  // add the basemap/layer list widget to the map
+  const [
+    basemapWidget,
+    setBasemapWidget, //
+  ] = React.useState<__esri.Expand | null>(null);
+
+  React.useEffect(() => {
+    if (basemapWidget) return;
+
+    const basemapsSource = new PortalBasemapsSource({
+      filterFunction: (basemap: __esri.Basemap) => {
+        return basemapNames.indexOf(basemap.portalItem.title) !== -1;
+      },
+      updateBasemapsCallback: (basemaps: __esri.Collection<__esri.Basemap>) => {
+        // sort the basemaps based on the ordering of basemapNames
+        return basemaps.sort((a, b) => {
+          return (
+            basemapNames.indexOf(a.portalItem.title) -
+            basemapNames.indexOf(b.portalItem.title)
+          );
+        });
+      },
+    });
+
+    const container = document.createElement('div');
+
+    new BasemapGallery({
+      container,
+      view: mapView,
+      source: basemapsSource,
+    });
+
+    const widget = new Expand({
+      expandIconClass: 'esri-icon-basemap',
+      view: mapView,
+      mode: 'floating',
+      autoCollapse: true,
+      content: container,
+    });
+
+    mapView.ui.add(widget, { position: 'top-right', index: 0 });
+
+    setBasemapWidget(widget);
+  }, [mapView, PortalBasemapsSource, BasemapGallery, Expand, basemapWidget]);
+
+  // Get the graphics layer for drawing on
+  const [
+    sketchLayer,
+    setSketchLayer, //
+  ] = React.useState<__esri.Layer | null>(null);
+
+  React.useEffect(() => {
+    if (sketchLayer) return;
+
+    mapView.map.layers.forEach((layer) => {
+      if (layer.id === 'sketchLayer') setSketchLayer(layer);
+    });
+  }, [mapView, sketchLayer]);
+
+  // Create the sketch view model for handling the drawing
+  const [
+    sketchVM,
+    setSketchVM, //
+  ] = React.useState<__esri.SketchViewModel | null>(null);
+
+  React.useEffect(() => {
+    if (!sketchLayer) return;
+    if (sketchVM) return;
+
+    // symbol used for polygons and points. Points are converted to polygons
+    const polygonSymbol = {
+      type: 'simple-fill',
+      color: [150, 150, 150, 0.2],
+      outline: {
+        color: [50, 50, 50],
+        width: 2,
+      },
+    };
+
+    const svm = new SketchViewModel({
+      layer: sketchLayer,
+      view: mapView,
+      polygonSymbol,
+      pointSymbol: polygonSymbol,
+    });
+
+    setSketchVM(svm);
+  }, [mapView, SketchViewModel, sketchLayer, sketchVM]);
+
+  // Creates the sketchVM events for placing the graphic on the map
+  const [
+    sketchEventsInitialized,
+    setSketchEventsInitialized, //
+  ] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!sketchVM) return;
+    if (sketchEventsInitialized) return;
+
+    sketchVM.on('create', (event) => {
+      const { graphic } = event;
+
+      // place the graphic on the map when the drawing is complete
+      if (event.state === 'complete') {
+        // get the button and it's id
+        const button = document.querySelector('.sketch-button-selected');
+        const id = button && (button.id as SampleType);
+
+        deactivateButtons();
+
+        graphic.attributes = id && sampleAttributes[id];
+
+        // predefined boxes
+        if (id === 'Sponge' || id === 'Micro Vac' || id === 'Swab') {
+          let halfWidth = 0;
+          if (id === 'Sponge') halfWidth = sponge_SA;
+          if (id === 'Micro Vac') halfWidth = vac_SA;
+          if (id === 'Swab') halfWidth = swab_SA;
+
+          // create the graphic
+          const prevGeo = graphic.geometry as __esri.Point;
+
+          graphic.geometry = new Polygon({
+            spatialReference: prevGeo.spatialReference,
+            centroid: prevGeo,
+            rings: [
+              [
+                [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
+                [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
+                [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
+                [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
+              ],
+            ],
+          });
+        }
+
+        // save the graphic
+        sketchVM.update(graphic);
+      }
+    });
+
+    sketchVM.on('update', (event) => {
+      let numSelectedGraphics = 0;
+      if (event.state !== 'cancel' && event.graphics) {
+        numSelectedGraphics = event.graphics.length;
+      }
+
+      const deleteButton = document.getElementById('Delete');
+
+      if (deleteButton) {
+        deleteButton.style.display =
+          numSelectedGraphics === 0 ? 'none' : 'table-cell';
+      }
+    });
+
+    setSketchEventsInitialized(true);
+  }, [mapView, Graphic, Polygon, sketchVM, sketchEventsInitialized]);
+
+  // Creates and adds the custom sketch widget to the map
+  const [
+    sketchTool,
+    setSketchTool, //
+  ] = React.useState<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!sketchVM) return;
+    if (sketchTool) return;
+
+    // handles the sketch button clicks
+    const handleClick = (ev: React.MouseEvent<HTMLElement>, type: string) => {
+      if (!sketchVM) return;
+
+      // set the clicked button as active until the drawing is complete
+      deactivateButtons();
+
+      const target = ev.target as HTMLElement;
+      target.classList.add('sketch-button-selected');
+
+      // tell the sketchVM what type of graphic is being drawn on the map.
+      // Points will be converted to predefined polygons.
+      if (type === 'Sponge') {
+        sketchVM.create('point');
+      }
+
+      if (type === 'Micro Vac') {
+        sketchVM.create('point');
+      }
+
+      if (type === 'Wet Vac') {
+        sketchVM.create('polygon');
+      }
+
+      if (type === 'Robot') {
+        sketchVM.create('polygon');
+      }
+
+      if (type === 'Aggressive Air') {
+        sketchVM.create('polygon');
+      }
+
+      if (type === 'Swab') {
+        sketchVM.create('point');
+      }
+
+      if (type === 'Delete') {
+        // TODO: activeComponent isn't in JS API docs?
+        const svm = sketchVM as any;
+
+        if (svm.activeComponent && svm.activeComponent.graphics) {
+          sketchVM.layer.removeMany(svm.activeComponent.graphics);
+        }
+      }
+
+      if (type === 'Delete All') {
+        sketchVM.layer.removeAll();
+      }
+    };
+
+    // Put the sketch toolbar on the map
+    const container = document.createElement('div');
+
+    mapView.ui.add(container, 'bottom-right');
+
+    ReactDOM.render(
+      <SketchTool sketchVM={sketchVM} onClick={handleClick} />,
+      container,
+    );
+
+    setSketchTool(container);
+  }, [mapView, sketchTool, sketchVM]);
+
+  return null;
 }
 
 export default MapWidgets;
