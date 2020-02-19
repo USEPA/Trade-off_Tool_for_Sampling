@@ -7,6 +7,11 @@ import { Global, jsx, css } from '@emotion/core';
 import SplashScreen from 'components/SplashScreen';
 import Toolbar from 'components/Toolbar';
 import Map from 'components/Map';
+// contexts
+import {
+  EsriModulesProvider,
+  useEsriModulesContext,
+} from 'contexts/EsriModules';
 // styles
 import '@reach/dialog/styles.css';
 
@@ -43,6 +48,10 @@ const appStyles = css`
 `;
 
 function App() {
+  const { modulesLoaded } = useEsriModulesContext();
+
+  if (!modulesLoaded) return <p>Loading...</p>;
+
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
@@ -59,4 +68,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppContainer() {
+  return (
+    <EsriModulesProvider>
+      <App />
+    </EsriModulesProvider>
+  );
+}
