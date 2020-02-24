@@ -1,19 +1,40 @@
 import React from 'react';
 import { loadModules } from 'esri-loader';
+// components
+import LoadingSpinner from 'components/LoadingSpinner';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriConstructors = [
   typeof import('esri/Graphic'),
   typeof import('esri/Map'),
+  typeof import('esri/Viewpoint'),
+  typeof import('esri/core/watchUtils'),
   typeof import('esri/geometry/Polygon'),
+  typeof import('esri/geometry/SpatialReference'),
+  typeof import('esri/geometry/support/jsonUtils'),
   typeof import('esri/identity/IdentityManager'),
   typeof import('esri/identity/OAuthInfo'),
+  typeof import('esri/layers/CSVLayer'),
+  typeof import('esri/layers/FeatureLayer'),
+  typeof import('esri/layers/GeoRSSLayer'),
   typeof import('esri/layers/GraphicsLayer'),
+  typeof import('esri/layers/KMLLayer'),
+  typeof import('esri/layers/Layer'),
+  typeof import('esri/layers/WMSLayer'),
+  typeof import('esri/layers/WMTSLayer'),
+  typeof import('esri/layers/support/Field'),
+  typeof import('esri/portal/Portal'),
+  typeof import('esri/portal/PortalItem'),
+  typeof import('esri/renderers/support/jsonUtils'),
+  typeof import('esri/tasks/Geoprocessor'),
+  typeof import('esri/tasks/support/FeatureSet'),
   typeof import('esri/views/MapView'),
   typeof import('esri/widgets/BasemapGallery'),
   typeof import('esri/widgets/BasemapGallery/support/PortalBasemapsSource'),
-  typeof import('esri/widgets/Expand'),
   typeof import('esri/widgets/Home'),
+  typeof import('esri/widgets/LayerList'),
+  typeof import('esri/widgets/Legend'),
+  typeof import('esri/widgets/Locate'),
   typeof import('esri/widgets/Search'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
 ];
@@ -24,37 +45,74 @@ type State = {
   modulesLoaded: boolean;
   Graphic: EsriConstructors[0];
   EsriMap: EsriConstructors[1];
-  Polygon: EsriConstructors[2];
-  IdentityManager: EsriConstructors[3];
-  OAuthInfo: EsriConstructors[4];
-  GraphicsLayer: EsriConstructors[5];
-  MapView: EsriConstructors[6];
-  BasemapGallery: EsriConstructors[7];
-  PortalBasemapsSource: EsriConstructors[8];
-  Expand: EsriConstructors[9];
-  Home: EsriConstructors[10];
-  Search: EsriConstructors[11];
-  SketchViewModel: EsriConstructors[12];
+  Viewpoint: EsriConstructors[2];
+  watchUtils: EsriConstructors[3];
+  Polygon: EsriConstructors[4];
+  SpatialReference: EsriConstructors[5];
+  geometryJsonUtils: EsriConstructors[6];
+  IdentityManager: EsriConstructors[7];
+  OAuthInfo: EsriConstructors[8];
+  CSVLayer: EsriConstructors[9];
+  FeatureLayer: EsriConstructors[10];
+  GeoRSSLayer: EsriConstructors[11];
+  GraphicsLayer: EsriConstructors[12];
+  KMLLayer: EsriConstructors[13];
+  Layer: EsriConstructors[14];
+  WMSLayer: EsriConstructors[15];
+  WMTSLayer: EsriConstructors[16];
+  Field: EsriConstructors[17];
+  Portal: EsriConstructors[18];
+  PortalItem: EsriConstructors[19];
+  rendererJsonUtils: EsriConstructors[20];
+  Geoprocessor: EsriConstructors[21];
+  FeatureSet: EsriConstructors[22];
+  MapView: EsriConstructors[23];
+  BasemapGallery: EsriConstructors[24];
+  PortalBasemapsSource: EsriConstructors[25];
+  Home: EsriConstructors[26];
+  LayerList: EsriConstructors[27];
+  Legend: EsriConstructors[28];
+  Locate: EsriConstructors[29];
+  Search: EsriConstructors[30];
+  SketchViewModel: EsriConstructors[31];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
 function EsriModulesProvider({ children }: Props) {
   const [modules, setModules] = React.useState<State | null>(null);
-
   React.useEffect(() => {
     (loadModules(
       [
         'esri/Graphic',
         'esri/Map',
+        'esri/Viewpoint',
+        'esri/core/watchUtils',
         'esri/geometry/Polygon',
+        'esri/geometry/SpatialReference',
+        'esri/geometry/support/jsonUtils',
         'esri/identity/IdentityManager',
         'esri/identity/OAuthInfo',
+        'esri/layers/CSVLayer',
+        'esri/layers/FeatureLayer',
+        'esri/layers/GeoRSSLayer',
         'esri/layers/GraphicsLayer',
+        'esri/layers/KMLLayer',
+        'esri/layers/Layer',
+        'esri/layers/WMSLayer',
+        'esri/layers/WMTSLayer',
+        'esri/layers/support/Field',
+        'esri/portal/Portal',
+        'esri/portal/PortalItem',
+        'esri/renderers/support/jsonUtils',
+        'esri/tasks/Geoprocessor',
+        'esri/tasks/support/FeatureSet',
         'esri/views/MapView',
         'esri/widgets/BasemapGallery',
         'esri/widgets/BasemapGallery/support/PortalBasemapsSource',
-        'esri/widgets/Expand',
         'esri/widgets/Home',
+        'esri/widgets/LayerList',
+        'esri/widgets/Legend',
+        'esri/widgets/Locate',
         'esri/widgets/Search',
         'esri/widgets/Sketch/SketchViewModel',
       ],
@@ -66,15 +124,34 @@ function EsriModulesProvider({ children }: Props) {
       ([
         Graphic,
         EsriMap,
+        Viewpoint,
+        watchUtils,
         Polygon,
+        SpatialReference,
+        geometryJsonUtils,
         IdentityManager,
         OAuthInfo,
+        CSVLayer,
+        FeatureLayer,
+        GeoRSSLayer,
         GraphicsLayer,
+        KMLLayer,
+        Layer,
+        WMSLayer,
+        WMTSLayer,
+        Field,
+        Portal,
+        PortalItem,
+        rendererJsonUtils,
+        Geoprocessor,
+        FeatureSet,
         MapView,
         BasemapGallery,
         PortalBasemapsSource,
-        Expand,
         Home,
+        LayerList,
+        Legend,
+        Locate,
         Search,
         SketchViewModel,
       ]) => {
@@ -82,15 +159,34 @@ function EsriModulesProvider({ children }: Props) {
           modulesLoaded: true,
           Graphic,
           EsriMap,
+          Viewpoint,
+          watchUtils,
           Polygon,
+          SpatialReference,
+          geometryJsonUtils,
           IdentityManager,
           OAuthInfo,
+          CSVLayer,
+          FeatureLayer,
+          GeoRSSLayer,
           GraphicsLayer,
+          KMLLayer,
+          Layer,
+          WMSLayer,
+          WMTSLayer,
+          Field,
+          Portal,
+          PortalItem,
+          rendererJsonUtils,
+          Geoprocessor,
+          FeatureSet,
           MapView,
           BasemapGallery,
           PortalBasemapsSource,
-          Expand,
           Home,
+          LayerList,
+          Legend,
+          Locate,
           Search,
           SketchViewModel,
         });
@@ -98,7 +194,7 @@ function EsriModulesProvider({ children }: Props) {
     );
   }, []);
 
-  if (!modules) return null;
+  if (!modules) return <LoadingSpinner />;
 
   return (
     <EsriModulesContext.Provider value={modules}>
