@@ -22,25 +22,17 @@ type Props = {
 };
 
 function Map({ height }: Props) {
-  const {
-    EsriMap,
-    // GraphicsLayer,
-    MapView,
-    Viewpoint,
-  } = useEsriModulesContext();
+  const { EsriMap, MapView, Viewpoint } = useEsriModulesContext();
 
   const mapRef = React.useRef<HTMLDivElement>(null);
 
   const {
     homeWidget,
-    // layers,
-    // setLayers,
     map,
     setMap,
     mapView,
     setMapView,
     sketchLayer,
-    // setSketchLayer,
   } = React.useContext(SketchContext);
 
   // Creates the map and view

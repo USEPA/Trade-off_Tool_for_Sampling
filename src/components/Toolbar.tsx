@@ -7,8 +7,6 @@ import { jsx, css } from '@emotion/core';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
-// utilities
-// import { getFeatureService } from 'utils/arcGisRestUtils';
 // config
 import { polygonSymbol } from 'config/symbols';
 
@@ -115,7 +113,6 @@ function Toolbar() {
   const {
     BasemapGallery,
     IdentityManager,
-    //Legend,
     LayerList,
     OAuthInfo,
     Portal,
@@ -124,12 +121,8 @@ function Toolbar() {
   const {
     edits,
     setEdits,
-    // layers,
     map,
     mapView,
-    // setLayers,
-    // setFeatureService,
-    // setFeatureServiceUrl,
     portalLayers,
     setPortalLayers,
     referenceLayers,
@@ -143,7 +136,6 @@ function Toolbar() {
     oAuthInfo,
     setOAuthInfo,
     setPortal,
-    // portal,
   } = React.useContext(AuthenticationContext);
 
   // Initialize the OAuth
@@ -195,53 +187,6 @@ function Toolbar() {
     setPortal,
     hasCheckedSignInStatus,
   ]);
-
-  /* // Get data associated with the portal
-  const [hasPortalData, setHasPortalData] = React.useState(false);
-  React.useEffect(() => {
-    if (!portal || hasPortalData) return;
-    setHasPortalData(true);
-
-    // get/create the feature service
-    getFeatureService(portal)
-      .then((service: any) => {
-        const { portalService, featureService } = service;
-
-        setFeatureService(featureService);
-        setFeatureServiceUrl(portalService.url);
-
-        // // build the layers object
-        // const newLayers: any[] = [];
-        // featureService.layers.forEach((layer: any) => {
-        //   // if this layer isn't in edits then add it
-        //   const hasEdit = edits.edits.findIndex((edit: any) =>
-        //     edit.id === layer.id
-        //   ) !== -1;
-
-        //   if(!hasEdit) {
-        //     newLayers.push({
-        //       ...layer,
-        //       label: layer.name,
-        //       value: `${layer.id} - ${layer.name}`,
-        //       queried: false,
-        //       sketchLayer: null,
-        //     });
-        //   }
-        // });
-        // setLayers([...layers, ...newLayers]);
-      })
-      .catch((err: any) => console.error(err));
-
-    // get the layers on the feature service
-  }, [
-    portal,
-    setFeatureService,
-    setFeatureServiceUrl,
-    edits,
-    layers,
-    setLayers,
-    hasPortalData,
-  ]); */
 
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = React.useState(false);

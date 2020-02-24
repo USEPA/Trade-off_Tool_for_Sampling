@@ -265,27 +265,6 @@ function LocateSamples() {
 
     const url = `${totsGPServer}/Generate%20Random/execute`;
 
-    // // convert the map view's extent into a graphic
-    // const xmin = mapView.extent.xmin;
-    // const ymin = mapView.extent.ymin;
-    // const xmax = mapView.extent.xmax;
-    // const ymax = mapView.extent.ymax;
-    // const extentPolygon = new Polygon({
-    //   spatialReference: mapView.extent.spatialReference,
-    //   rings: [
-    //     [
-    //       [xmin, ymin],
-    //       [xmin, ymax],
-    //       [xmax, ymax],
-    //       [xmax, ymin],
-    //       [xmin, ymin],
-    //     ],
-    //   ],
-    // });
-    // const extentGraphic: any = new Graphic({
-    //   geometry: extentPolygon,
-    // });
-
     // create a feature set for communicating with the GPServer
     const featureSet = new FeatureSet({
       displayFieldName: '',

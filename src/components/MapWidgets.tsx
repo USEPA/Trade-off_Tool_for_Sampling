@@ -352,7 +352,6 @@ function MapWidgets({ mapView }: Props) {
       }
 
       // get the number of selected graphics
-      //let numSelectedGraphics = 0;
       let selectedGraphicsIds: Array<string> = [];
       if (event.state !== 'cancel' && event.graphics) {
         event.graphics.forEach((graphic) => {
