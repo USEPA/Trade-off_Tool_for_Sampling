@@ -100,14 +100,7 @@ function FeatureTool({
     }
 
     // Get the note from the graphics attributes
-    if (
-      sketchVM &&
-      sketchVM.activeComponent &&
-      sketchVM.activeComponent.graphics &&
-      sketchVM.activeComponent.graphics.length > 0 &&
-      sketchVM.activeComponent.graphics[0] &&
-      sketchVM.activeComponent.graphics[0].attributes
-    ) {
+    if (sketchVM?.activeComponent?.graphics?.[0]?.attributes) {
       const newNote = sketchVM.activeComponent.graphics[0].attributes.NOTES;
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
@@ -149,10 +142,7 @@ function FeatureTool({
               css={saveButtonStyles}
               disabled={note === graphicNote}
               onClick={() => {
-                if (
-                  sketchVM.activeComponent &&
-                  sketchVM.activeComponent.graphics
-                ) {
+                if (sketchVM.activeComponent?.graphics) {
                   const firstGraphic = sketchVM.activeComponent.graphics[0];
                   firstGraphic.attributes['NOTES'] = note;
                   setGraphicNote(note);
@@ -435,10 +425,7 @@ function MapWidgets({ mapView }: Props) {
       if (type === 'Delete') {
         // Workaround for activeComponent not existing on the SketchViewModel type.
         const tempSketchVM = sketchVM as any;
-        if (
-          tempSketchVM.activeComponent &&
-          tempSketchVM.activeComponent.graphics
-        ) {
+        if (tempSketchVM.activeComponent?.graphics) {
           // make a copy of the edits context variable
           const editsCopy = updateLayerEdits({
             edits,

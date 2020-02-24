@@ -190,7 +190,7 @@ function FilePanel() {
 
     // get batch geocode services
     const newBatchGeocodeServices: any[] = [];
-    if (portal && portal.helperServices && portal.helperServices.geocode) {
+    if (portal?.helperServices?.geocode) {
       // workaround for accessing portal.user.privileges since privileges doesn't exist on
       // the type definition.
       const user = portal.user as any;
@@ -452,8 +452,7 @@ function FilePanel() {
     if (!map || !mapView || !layerType || !file || featuresAdded) return;
     if (layerType.value === 'Reference Layer') return;
     if (
-      !generateResponse ||
-      !generateResponse.featureCollection ||
+      !generateResponse?.featureCollection?.layers ||
       generateResponse.featureCollection.layers.length === 0
     ) {
       return;
@@ -465,9 +464,7 @@ function FilePanel() {
     const graphics: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
-        !layer ||
-        !layer.featureSet ||
-        !layer.featureSet.features ||
+        !layer?.featureSet?.features ||
         layer.featureSet.features.length === 0
       ) {
         return;
@@ -475,7 +472,10 @@ function FilePanel() {
 
       // get the features from the response and add the correct type value
       layer.featureSet.features.forEach((feature: any) => {
-        if (!feature.geometry.spatialReference && file.esriFileType === 'kml') {
+        if (
+          !feature?.geometry?.spatialReference &&
+          file.esriFileType === 'kml'
+        ) {
           feature.geometry['spatialReference'] =
             generateResponse.lookAtExtent.spatialReference;
         }
@@ -484,7 +484,9 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
-        if (graphic.geometry.type === 'polygon') graphic.symbol = polygonSymbol;
+        if (graphic?.geometry?.type === 'polygon') {
+          graphic.symbol = polygonSymbol;
+        }
         graphics.push(graphic);
       });
     });
@@ -551,8 +553,7 @@ function FilePanel() {
     if (!map || !mapView || !layerType || !file || featuresAdded) return;
     if (layerType.value !== 'Reference Layer') return;
     if (
-      !generateResponse ||
-      !generateResponse.featureCollection ||
+      !generateResponse?.featureCollection?.layers ||
       generateResponse.featureCollection.layers.length === 0
     ) {
       return;
@@ -566,9 +567,7 @@ function FilePanel() {
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
-        !layer ||
-        !layer.featureSet ||
-        !layer.featureSet.features ||
+        !layer?.featureSet?.features ||
         layer.featureSet.features.length === 0
       ) {
         return;
@@ -587,7 +586,10 @@ function FilePanel() {
       // get the features from the response and add the correct type value
       const features: __esri.Graphic[] = [];
       layer.featureSet.features.forEach((feature: any) => {
-        if (!feature.geometry.spatialReference && file.esriFileType === 'kml') {
+        if (
+          !feature?.geometry?.spatialReference &&
+          file.esriFileType === 'kml'
+        ) {
           feature.geometry['spatialReference'] =
             generateResponse.lookAtExtent.spatialReference;
         }

@@ -113,7 +113,7 @@ export function updateLayerEdits({
   if (type === 'update') {
     changes.forEach((change) => {
       // all updates should have a graphicid
-      if (!change || !change.attributes || !change.attributes.OBJECTID) return;
+      if (!change?.attributes?.OBJECTID) return;
 
       // attempt to find the graphic in edits.adds
       const addChangeIndex = layerToEdit.adds.findIndex(

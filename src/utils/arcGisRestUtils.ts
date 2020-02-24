@@ -337,8 +337,9 @@ export function applyEdits({
         // loop through and find any graphics without objectids
         if (layerToSearch && layerToSearch.sketchLayer) {
           layerToSearch.sketchLayer.graphics.items.forEach((graphic: any) => {
-            if (graphic && graphic.attributes && graphic.attributes.OBJECTID)
+            if (graphic?.attributes?.OBJECTID) {
               return;
+            }
 
             const formattedGraphic = convertToSimpleGraphic(graphic);
             adds.push(formattedGraphic);

@@ -187,7 +187,7 @@ function SearchPanel() {
 
     // where to search ArcGISOnline is the default
     if (location.value === 'My Content') {
-      if (!tmpPortal || !tmpPortal.user || !tmpPortal.user.username) {
+      if (!tmpPortal?.user?.username) {
         setSearchResults(null);
         return;
       }
@@ -197,7 +197,7 @@ function SearchPanel() {
       );
     }
     if (location.value === 'My Organization') {
-      if (!tmpPortal || !tmpPortal.user || !tmpPortal.user.username) {
+      if (!tmpPortal?.user?.username) {
         setSearchResults(null);
         return;
       }

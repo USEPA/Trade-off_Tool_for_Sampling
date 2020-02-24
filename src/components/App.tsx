@@ -73,7 +73,7 @@ function App() {
   const [contentHeight, setContentHeight] = React.useState(0);
   const mapRef: any = React.useRef();
   React.useEffect(() => {
-    if (!mapRef || !mapRef.current) return;
+    if (!mapRef?.current) return;
 
     const mapHeight = mapRef.current.getBoundingClientRect().height;
     if (contentHeight !== mapHeight) setContentHeight(mapHeight);
@@ -83,7 +83,7 @@ function App() {
   const [toolbarHeight, setToolbarHeight] = React.useState(0);
   const toolbarRef: any = React.useRef();
   React.useEffect(() => {
-    if (!toolbarRef || !toolbarRef.current) return;
+    if (!toolbarRef?.current) return;
 
     const barHeight = toolbarRef.current.getBoundingClientRect().height;
     if (toolbarHeight !== barHeight) setToolbarHeight(barHeight);

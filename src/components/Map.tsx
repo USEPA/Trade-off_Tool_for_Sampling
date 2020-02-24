@@ -110,7 +110,7 @@ function Map({ height }: Props) {
   // Zooms to the graphics whenever the sketchLayer changes
   React.useEffect(() => {
     if (!map || !mapView || !homeWidget) return;
-    if (!sketchLayer || !sketchLayer.sketchLayer) return;
+    if (!sketchLayer?.sketchLayer) return;
 
     const zoomGraphics = sketchLayer.sketchLayer.graphics.items;
 
