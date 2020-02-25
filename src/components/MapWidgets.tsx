@@ -266,10 +266,11 @@ function MapWidgets({ mapView }: Props) {
         }
 
         // get the predefined attributes using the id of the clicked button
-        const attributes = sampleAttributes[id];
-        attributes.OBJECTID = nextId.toString();
-        nextId += 1;
-        graphic.attributes = attributes;
+        graphic.attributes = {
+          ...sampleAttributes[id],
+          OBJECTID: nextId.toString(),
+        };
+        nextId = nextId + 1;
 
         // predefined boxes (sponge, micro vac and swab) need to be
         // converted to a box of a specific size.
