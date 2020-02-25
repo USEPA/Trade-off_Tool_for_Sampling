@@ -5,13 +5,14 @@ import { jsx, css } from '@emotion/core';
 import Select from 'react-select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { totsGPServer } from 'config/webService';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
 
-// --- styles (LabelValue) ---
+// --- styles (Calculate) ---
 const inputStyles = css`
   width: 100%;
   height: 36px;
@@ -25,29 +26,18 @@ const submitButtonStyles = css`
   margin-top: 10px;
 `;
 
-// --- components (LabelValue) ---
-type LabelValueProps = {
-  label: string;
-  value: string;
-};
-
-function LabelValue({ label, value }: LabelValueProps) {
-  return (
-    <div>
-      <label>{label}</label>: {Number(value).toLocaleString()}
-    </div>
-  );
-}
-
-// --- styles (Calculate) ---
 const panelContainer = css`
   padding: 20px;
 `;
 
-// --- styles (Calculate) ---
+// --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet } = useEsriModulesContext();
   const { layers } = React.useContext(SketchContext);
+  const {
+    calculateResults,
+    setCalculateResults, //
+  } = React.useContext(CalculateContext);
 
   const [surfaceArea, setSurfaceArea] = React.useState('7400');
   const [numSamplingTeams, setNumSamplingTeams] = React.useState('1');
@@ -59,8 +49,6 @@ function Calculate() {
   const [numLabHours, setNumLabHours] = React.useState('24');
 
   const [contaminationMap, setContaminationMap] = React.useState<any>(null);
-  const [results, setResults] = React.useState<any>(null);
-  const [calculatingStatus, setCalculatingStatus] = React.useState('');
   function runCalculation() {
     const sampleLayers = layers.filter(
       (layer: any) =>
@@ -68,7 +56,10 @@ function Calculate() {
     );
     if (sampleLayers.length === 0) return;
 
-    setCalculatingStatus('calculating');
+    setCalculateResults({
+      status: 'fetching',
+      data: null,
+    });
 
     const url = `${totsGPServer}/Main/execute`;
 
@@ -98,7 +89,7 @@ function Calculate() {
     });
 
     if (sketchedGraphics.length === 0) {
-      setCalculatingStatus('no-graphics');
+      setCalculateResults({ status: 'no-graphics', data: null });
       return;
     }
 
@@ -250,7 +241,10 @@ function Calculate() {
           !res.results[0].value ||
           !res.results[0].value.features
         ) {
-          setCalculatingStatus('error');
+          setCalculateResults({
+            status: 'failure',
+            data: null,
+          });
           return;
         }
 
@@ -275,229 +269,119 @@ function Calculate() {
 
         console.log('resultObject: ', resultObject);
 
-        setResults(resultObject);
-        setCalculatingStatus('done');
+        setCalculateResults({
+          status: 'success',
+          data: resultObject,
+        });
       })
       .catch((err) => {
         console.error(err);
-        setCalculatingStatus('error');
+        setCalculateResults({
+          status: 'failure',
+          data: null,
+        });
       });
   }
 
   return (
     <div css={panelContainer}>
       <h2>Calculate</h2>
+      <label htmlFor="contamination-map-select">Contamination map</label>
       <div>
-        <label htmlFor="contamination-map-select">Contamination map</label>
-        <div>
-          <Select
-            inputId="contamination-map-select"
-            value={contaminationMap}
-            onChange={(ev) => setContaminationMap(ev)}
-            options={layers.filter(
-              (layer: any) => layer.layerType === 'Contamination Map',
-            )}
-          />
-        </div>
-
-        <label htmlFor="number-teams-input">
-          Number of Available Teams for Sampling
-        </label>
-        <input
-          id="number-teams-input"
-          css={inputStyles}
-          value={numSamplingTeams}
-          onChange={(ev) => setNumSamplingTeams(ev.target.value)}
-        />
-
-        <label htmlFor="personnel-per-team-input">
-          Personnel per Sampling Team
-        </label>
-        <input
-          id="personnel-per-team-input"
-          css={inputStyles}
-          value={numSamplingPersonnel}
-          onChange={(ev) => setNumSamplingPersonnel(ev.target.value)}
-        />
-
-        <label htmlFor="sampling-hours-input">
-          Sampling Team Hours per Shift
-        </label>
-        <input
-          id="sampling-hours-input"
-          css={inputStyles}
-          value={numSamplingHours}
-          onChange={(ev) => setNumSamplingHours(ev.target.value)}
-        />
-
-        <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
-        <input
-          id="shifts-per-input"
-          css={inputStyles}
-          value={numSamplingShifts}
-          onChange={(ev) => setNumSamplingShifts(ev.target.value)}
-        />
-
-        <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
-        <input
-          id="labor-cost-input"
-          css={inputStyles}
-          value={samplingLaborCost}
-          onChange={(ev) => setSamplingLaborCost(ev.target.value)}
-        />
-
-        <label htmlFor="number-of-labs-input">
-          Number of Available Labs for Analysis
-        </label>
-        <input
-          id="number-of-labs-input"
-          css={inputStyles}
-          value={numLabs}
-          onChange={(ev) => setNumLabs(ev.target.value)}
-        />
-
-        <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
-        <input
-          id="lab-hours-input"
-          css={inputStyles}
-          value={numLabHours}
-          onChange={(ev) => setNumLabHours(ev.target.value)}
-        />
-
-        <label htmlFor="surface-area-input">
-          Surface Area (ft<sup>2</sup>) (optional)
-        </label>
-        <input
-          id="surface-area-input"
-          css={inputStyles}
-          value={surfaceArea}
-          onChange={(ev) => setSurfaceArea(ev.target.value)}
-        />
-
-        <button css={submitButtonStyles} onClick={runCalculation}>
-          {calculatingStatus === 'calculating' ? (
-            <React.Fragment>
-              <i className="fas fa-spinner fa-pulse" />
-              &nbsp;&nbsp;Calculating...
-            </React.Fragment>
-          ) : (
-            <React.Fragment>Submit</React.Fragment>
+        <Select
+          inputId="contamination-map-select"
+          value={contaminationMap}
+          onChange={(ev) => setContaminationMap(ev)}
+          options={layers.filter(
+            (layer: any) => layer.layerType === 'Contamination Map',
           )}
-        </button>
+        />
       </div>
-      {calculatingStatus === 'error' && (
-        <p>An error occurred while calculating. Please try again.</p>
-      )}
-      {calculatingStatus === 'no-graphics' && (
-        <p>
-          There are no samples to run calculations on. Please add samples and
-          try again.
-        </p>
-      )}
-      {calculatingStatus === 'done' && results && (
-        <div>
-          <h3>Summary</h3>
-          <hr />
-          <LabelValue
-            label="Total number of samples"
-            value={results['Total Number of Samples']}
-          />
-          <LabelValue
-            label="Time to Prepare Kits (person hours)"
-            value={results['Time to Prepare Kits']}
-          />
-          <LabelValue
-            label="Time to Collect (person hours)"
-            value={results['Time to Collect']}
-          />
-          <LabelValue
-            label="Time to Analyze (person hours)"
-            value={results['Time to Analyze']}
-          />
-          <LabelValue
-            label="Total Time (pesron hours)(kits + collection + analysis + shipping + reporting)"
-            value={results['Total Time']}
-          />
-          <LabelValue label="Material Cost" value={results['Material Cost']} />
-          <LabelValue
-            label="Waste volume (L)"
-            value={results['Waste Volume']}
-          />
-          <LabelValue
-            label="Waste Weight (lbs)"
-            value={results['Waste Weight']}
-          />
 
-          <br />
-          <br />
-          <h3>Sampling</h3>
-          <hr />
-          <LabelValue
-            label="User Specified Number of Available Teams for Sampling"
-            value={
-              results['User Specified Number of Available Teams for Sampling']
-            }
-          />
-          <LabelValue
-            label="User Specified Personnel per Sampling Team"
-            value={results['User Specified Personnel per Sampling Team']}
-          />
-          <LabelValue
-            label="User Specified Sampling Team Hours per Shift"
-            value={results['User Specified Sampling Team Hours per Shift']}
-          />
-          <LabelValue
-            label="User Specified Sampling Team Shifts per Day"
-            value={results['User Specified Sampling Team Shifts per Day']}
-          />
-          <LabelValue
-            label="Sampling Hours per Day"
-            value={results['Sampling Hours per Day']}
-          />
-          <LabelValue
-            label="Sampling Personnel hours per Day"
-            value={results['Sampling Personnel hours per Day']}
-          />
-          <LabelValue
-            label="User Specified Sampling Team Labor Cost ($)"
-            value={results['User Specified Sampling Team Labor Cost']}
-          />
-          <LabelValue
-            label="Sampling Personnel Labor Cost ($)"
-            value={results['Sampling Personnel Labor Cost']}
-          />
-          <LabelValue
-            label="Time to Complete Sampling (days)"
-            value={results['Time to Complete Sampling']}
-          />
-          <LabelValue
-            label="Total Sampling Labor Cost ($)"
-            value={results['Total Sampling Labor Cost']}
-          />
+      <label htmlFor="number-teams-input">
+        Number of Available Teams for Sampling
+      </label>
+      <input
+        id="number-teams-input"
+        css={inputStyles}
+        value={numSamplingTeams}
+        onChange={(ev) => setNumSamplingTeams(ev.target.value)}
+      />
 
-          <br />
-          <br />
-          <h3>Analysis</h3>
-          <hr />
-          <LabelValue
-            label="User Specified Number of Available Labs for Analysis"
-            value={
-              results['User Specified Number of Available Labs for Analysis']
-            }
-          />
-          <LabelValue
-            label="User Specified Analysis Lab Hours per Day"
-            value={results['User Specified Analysis Lab Hours per Day']}
-          />
-          <LabelValue
-            label="Time to Complete Analyses (days)"
-            value={results['Time to Complete Analyses']}
-          />
-          <button onClick={() => alert('Feature coming soon.')}>
-            Download
-          </button>
-        </div>
-      )}
+      <label htmlFor="personnel-per-team-input">
+        Personnel per Sampling Team
+      </label>
+      <input
+        id="personnel-per-team-input"
+        css={inputStyles}
+        value={numSamplingPersonnel}
+        onChange={(ev) => setNumSamplingPersonnel(ev.target.value)}
+      />
+
+      <label htmlFor="sampling-hours-input">
+        Sampling Team Hours per Shift
+      </label>
+      <input
+        id="sampling-hours-input"
+        css={inputStyles}
+        value={numSamplingHours}
+        onChange={(ev) => setNumSamplingHours(ev.target.value)}
+      />
+
+      <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
+      <input
+        id="shifts-per-input"
+        css={inputStyles}
+        value={numSamplingShifts}
+        onChange={(ev) => setNumSamplingShifts(ev.target.value)}
+      />
+
+      <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
+      <input
+        id="labor-cost-input"
+        css={inputStyles}
+        value={samplingLaborCost}
+        onChange={(ev) => setSamplingLaborCost(ev.target.value)}
+      />
+
+      <label htmlFor="number-of-labs-input">
+        Number of Available Labs for Analysis
+      </label>
+      <input
+        id="number-of-labs-input"
+        css={inputStyles}
+        value={numLabs}
+        onChange={(ev) => setNumLabs(ev.target.value)}
+      />
+
+      <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
+      <input
+        id="lab-hours-input"
+        css={inputStyles}
+        value={numLabHours}
+        onChange={(ev) => setNumLabHours(ev.target.value)}
+      />
+
+      <label htmlFor="surface-area-input">
+        Surface Area (ft<sup>2</sup>) (optional)
+      </label>
+      <input
+        id="surface-area-input"
+        css={inputStyles}
+        value={surfaceArea}
+        onChange={(ev) => setSurfaceArea(ev.target.value)}
+      />
+
+      <button css={submitButtonStyles} onClick={runCalculation}>
+        {calculateResults.status === 'fetching' ? (
+          <React.Fragment>
+            <i className="fas fa-spinner fa-pulse" />
+            &nbsp;&nbsp;Calculating...
+          </React.Fragment>
+        ) : (
+          <React.Fragment>Calculate</React.Fragment>
+        )}
+      </button>
     </div>
   );
 }

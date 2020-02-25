@@ -6,10 +6,13 @@ import { jsx, css } from '@emotion/core';
 // components
 import AddData from 'components/AddData';
 import Calculate from 'components/Calculate';
+import CalculateResults from 'components/CalculateResults';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
 import Search from 'components/Search';
 import SplashScreenContent from 'components/SplashScreenContent';
+// contexts
+import { CalculateContext } from 'contexts/Calculate';
 // config
 import { navPanelWidth } from 'config/appConfig';
 // styles
@@ -17,7 +20,8 @@ import '@reach/dialog/styles.css';
 import { colors } from 'styles';
 
 const panelWidth = '325px';
-const panelCollapseButtonWidth = '10px';
+const resultsPanelWidth = '500px';
+const panelCollapseButtonWidth = '32px';
 
 type PanelType = {
   value: string;
@@ -190,25 +194,37 @@ const helpIconStyles = css`
   text-align: center;
 `;
 
-const floatPanelStyles = (height: number) => {
+const floatPanelStyles = (width: string, height: number, left: string) => {
   return css`
     z-index: 99;
     position: absolute;
     height: ${height}px;
-    left: ${navPanelWidth};
-    width: ${panelWidth};
+    left: ${left};
+    width: ${width};
+    pointer-events: none;
   `;
 };
 
 const floatPanelContentStyles = (expanded: boolean) => css`
-  background-color: white;
-  width: calc(${panelWidth} - ${panelCollapseButtonWidth});
-
   display: ${expanded ? 'inline' : 'none'};
   float: left;
   position: relative;
   height: 100%;
   overflow: auto;
+  pointer-events: all;
+
+  /* styles to be overridden */
+  width: ${panelWidth};
+  color: black;
+  background-color: white;
+`;
+
+const resultsFloatPanelContentStyles = (expanded: boolean) => css`
+  ${floatPanelContentStyles(expanded)}
+
+  width: ${resultsPanelWidth};
+  color: white;
+  background-color: black;
 `;
 
 const floatPanelButtonContainer = (expanded: boolean) => {
@@ -233,6 +249,7 @@ const floatPanelTableCellContainer = css`
 `;
 
 const collapsePanelButton = css`
+  margin-bottom: 10px !important;
   display: flex;
   justify-content: center;
   width: ${panelCollapseButtonWidth};
@@ -241,6 +258,19 @@ const collapsePanelButton = css`
   border-radius: 0;
   background-color: white;
   color: black;
+  pointer-events: all;
+`;
+
+const resultsCollapsePanelButton = css`
+  display: flex;
+  justify-content: center;
+  width: ${panelCollapseButtonWidth};
+  padding: 1.5em 1em;
+  margin: 0;
+  border-radius: 0;
+  background-color: black;
+  color: white;
+  pointer-events: all;
 `;
 
 // --- components (NavBar) ---
@@ -249,6 +279,7 @@ type Props = {
 };
 
 function NavBar({ height }: Props) {
+  const { calculateResults } = React.useContext(CalculateContext);
   const [
     currentPanel,
     setCurrentPanel, //
@@ -267,7 +298,34 @@ function NavBar({ height }: Props) {
     if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
   };
 
+  const [resultsExpanded, setResultsExpanded] = React.useState(false);
+  React.useEffect(() => {
+    if (calculateResults.status !== 'none') {
+      setResultsExpanded(true);
+    }
+  }, [calculateResults]);
+
   const [helpOpen, setHelpOpen] = React.useState(false);
+
+  // determine how far to the right the expand/collapse buttons should be
+  let expandLeft = navPanelWidth;
+  if (expanded) {
+    if (
+      currentPanel?.value !== 'calculate' ||
+      calculateResults.status === 'none' ||
+      !resultsExpanded
+    ) {
+      expandLeft = `calc(${navPanelWidth} + ${panelWidth})`;
+    } else {
+      expandLeft = `calc(${navPanelWidth} + ${panelWidth} + ${resultsPanelWidth})`;
+    }
+  } else if (
+    currentPanel?.value === 'calculate' &&
+    calculateResults.status !== 'none' &&
+    resultsExpanded
+  ) {
+    expandLeft = `calc(${navPanelWidth} + ${resultsPanelWidth})`;
+  }
 
   return (
     <React.Fragment>
@@ -302,19 +360,40 @@ function NavBar({ height }: Props) {
           Help
         </button>
       </div>
-      <div css={floatPanelStyles(height)}>
-        {currentPanel && (
-          <React.Fragment>
-            <div css={floatPanelContentStyles(expanded)}>
-              {currentPanel.value === 'search' && <Search />}
-              {currentPanel.value === 'addData' && <AddData />}
-              {currentPanel.value === 'locateSamples' && <LocateSamples />}
-              {currentPanel.value === 'calculate' && <Calculate />}
-              {currentPanel.value === 'publish' && <Publish />}
+      {currentPanel && expanded && (
+        <div css={floatPanelStyles(panelWidth, height, navPanelWidth)}>
+          <div css={floatPanelContentStyles(expanded)}>
+            {currentPanel.value === 'search' && <Search />}
+            {currentPanel.value === 'addData' && <AddData />}
+            {currentPanel.value === 'locateSamples' && <LocateSamples />}
+            {currentPanel.value === 'calculate' && <Calculate />}
+            {currentPanel.value === 'publish' && <Publish />}
+          </div>
+        </div>
+      )}
+      {currentPanel?.value === 'calculate' &&
+        calculateResults.status !== 'none' &&
+        resultsExpanded && (
+          <div
+            css={floatPanelStyles(
+              resultsPanelWidth,
+              height,
+              `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
+            )}
+          >
+            <div css={resultsFloatPanelContentStyles(resultsExpanded)}>
+              <CalculateResults />
             </div>
-            <div css={floatPanelButtonContainer(expanded)}>
-              <div css={floatPanelTableContainer}>
-                <div css={floatPanelTableCellContainer}>
+          </div>
+        )}
+      {(currentPanel || calculateResults.status !== 'none') && (
+        <div
+          css={floatPanelStyles(panelCollapseButtonWidth, height, expandLeft)}
+        >
+          <div css={floatPanelButtonContainer(expanded)}>
+            <div css={floatPanelTableContainer}>
+              <div css={floatPanelTableCellContainer}>
+                {currentPanel && (
                   <button
                     css={collapsePanelButton}
                     onClick={() => setExpanded(!expanded)}
@@ -325,12 +404,27 @@ function NavBar({ height }: Props) {
                       }
                     />
                   </button>
-                </div>
+                )}
+                {currentPanel?.value === 'calculate' &&
+                  calculateResults.status !== 'none' && (
+                    <button
+                      css={resultsCollapsePanelButton}
+                      onClick={() => setResultsExpanded(!resultsExpanded)}
+                    >
+                      <i
+                        className={
+                          resultsExpanded
+                            ? 'fas fa-angle-left'
+                            : 'fas fa-angle-right'
+                        }
+                      />
+                    </button>
+                  )}
               </div>
             </div>
-          </React.Fragment>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </React.Fragment>
   );
 }

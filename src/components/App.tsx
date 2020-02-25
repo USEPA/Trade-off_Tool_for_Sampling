@@ -12,6 +12,7 @@ import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
+import { CalculateProvider } from 'contexts/Calculate';
 import { SketchProvider } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
@@ -116,9 +117,11 @@ export default function AppContainer() {
   return (
     <EsriModulesProvider>
       <AuthenticationProvider>
-        <SketchProvider>
-          <App />
-        </SketchProvider>
+        <CalculateProvider>
+          <SketchProvider>
+            <App />
+          </SketchProvider>
+        </CalculateProvider>
       </AuthenticationProvider>
     </EsriModulesProvider>
   );
