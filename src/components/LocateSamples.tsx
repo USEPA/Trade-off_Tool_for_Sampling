@@ -198,7 +198,7 @@ function LocateSamples() {
       id: -1,
       value: 'sketchLayer',
       name: 'sketchLayer',
-      label: 'sketchLayer',
+      label: 'Default Sample Layer',
       layerType: 'Samples',
       parentLayerId: -1,
       defaultVisibility: true,
