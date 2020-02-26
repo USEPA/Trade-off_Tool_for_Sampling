@@ -197,7 +197,7 @@ function LocateSamples() {
     const tempSketchLayer = {
       id: -1,
       value: 'sketchLayer',
-      name: 'sketchLayer',
+      name: 'Default Sample Layer',
       label: 'Default Sample Layer',
       layerType: 'Samples',
       parentLayerId: -1,
