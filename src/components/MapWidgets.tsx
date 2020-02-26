@@ -179,11 +179,13 @@ function FeatureTool({
             <button
               css={saveButtonStyles(saveStatus)}
               disabled={note === graphicNote}
-              onClick={() => {
+              onClick={(ev: any) => {
                 if (sketchVM.activeComponent?.graphics) {
                   const firstGraphic = sketchVM.activeComponent.graphics[0];
                   firstGraphic.attributes['NOTES'] = note;
                   setGraphicNote(note);
+
+                  onClick(ev, 'Save');
                   setSaveStatus('success');
                 } else {
                   setSaveStatus('failure');
@@ -499,6 +501,21 @@ function MapWidgets({ mapView }: Props) {
           setEdits(editsCopy);
 
           sketchVM.layer.removeMany(tempSketchVM.activeComponent.graphics);
+        }
+      }
+      if (type === 'Save') {
+        // Workaround for activeComponent not existing on the SketchViewModel type.
+        const tempSketchVM = sketchVM as any;
+        if (tempSketchVM.activeComponent?.graphics) {
+          // make a copy of the edits context variable
+          const editsCopy = updateLayerEdits({
+            edits,
+            layer: sketchLayer,
+            type: 'update',
+            changes: tempSketchVM.activeComponent.graphics,
+          });
+
+          setEdits(editsCopy);
         }
       }
     };
