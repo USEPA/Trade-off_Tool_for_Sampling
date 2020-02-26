@@ -58,7 +58,6 @@ const containerStyles = css`
 `;
 
 const mapPanelStyles = css`
-  display: inline;
   float: right;
   position: relative;
   height: 100%;
