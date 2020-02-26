@@ -65,40 +65,37 @@ function Map({ height }: Props) {
     if (!map || watchInitialized) return;
 
     // whenever layers are added, reorder them
-    map.layers.on(
-      'change',
-      ({ target, added }: { target: any; added: any[] }) => {
-        if (added.length === 0) return;
+    map.layers.on('change', ({ added }) => {
+      if (added.length === 0) return;
 
-        // gets a layer type value used for sorting
-        function getLayerType(layer: __esri.Layer) {
-          const imageryTypes = ['imagery', 'tile', 'vector-tile'];
-          let type = 'other';
+      // gets a layer type value used for sorting
+      function getLayerType(layer: __esri.Layer) {
+        const imageryTypes = ['imagery', 'tile', 'vector-tile'];
+        let type = 'other';
 
-          if (layer.type === 'graphics') {
-            type = 'graphics';
-          } else if (layer.type === 'feature') {
-            type = 'feature';
-          } else if (imageryTypes.includes(type)) {
-            type = 'imagery';
-          }
-
-          return type;
+        if (layer.type === 'graphics') {
+          type = 'graphics';
+        } else if (layer.type === 'feature') {
+          type = 'feature';
+        } else if (imageryTypes.includes(type)) {
+          type = 'imagery';
         }
 
-        // the layers are ordered as follows:
-        // graphicsLayers (top)
-        // featureLayers
-        // otherLayers
-        // imageryLayers (bottom)
-        const sortBy = ['other', 'imagery', 'feature', 'graphics'];
-        map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
-          return (
-            sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))
-          );
-        });
-      },
-    );
+        return type;
+      }
+
+      // the layers are ordered as follows:
+      // graphicsLayers (top)
+      // featureLayers
+      // otherLayers
+      // imageryLayers (bottom)
+      const sortBy = ['other', 'imagery', 'feature', 'graphics'];
+      map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
+        return (
+          sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))
+        );
+      });
+    });
 
     setWatchInitialized(true);
   }, [map, watchInitialized]);
