@@ -101,6 +101,10 @@ const legendStyles = (legendVisible: boolean) => {
     /* Float the menu over the map */
     position: absolute;
     right: 60px;
+
+    .esri-layer-list__item-actions[hidden] {
+      display: none !important;
+    }
   `;
 };
 
