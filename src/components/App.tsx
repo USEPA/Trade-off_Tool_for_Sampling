@@ -71,7 +71,7 @@ function App() {
 
   // calculate height of div holding actions info
   const [contentHeight, setContentHeight] = React.useState(0);
-  const mapRef: any = React.useRef();
+  const mapRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!mapRef?.current) return;
 
@@ -81,7 +81,7 @@ function App() {
 
   // calculate height of div holding actions info
   const [toolbarHeight, setToolbarHeight] = React.useState(0);
-  const toolbarRef: any = React.useRef();
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!toolbarRef?.current) return;
 
