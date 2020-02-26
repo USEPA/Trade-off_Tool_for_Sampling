@@ -107,9 +107,9 @@ const saveButtonStyles = (status: string) => {
 
 // --- components (FeatureTool) ---
 type FeatureToolProps = {
-  sketchVM: any;
+  sketchVM: __esri.SketchViewModel;
   selectedGraphicsIds: Array<string>;
-  onClick: (ev: React.MouseEvent<HTMLDivElement>, type: string) => void;
+  onClick: (ev: React.MouseEvent<HTMLElement>, type: string) => void;
 };
 
 function FeatureTool({
@@ -131,9 +131,12 @@ function FeatureTool({
       return;
     }
 
+    // Workaround for activeComponent not existing on the SketchViewModel type.
+    const tempSketchVM = sketchVM as any;
+
     // Get the note from the graphics attributes
-    if (sketchVM?.activeComponent?.graphics?.[0]?.attributes) {
-      const newNote = sketchVM.activeComponent.graphics[0].attributes.NOTES;
+    if (tempSketchVM?.activeComponent?.graphics?.[0]?.attributes) {
+      const newNote = tempSketchVM.activeComponent.graphics[0].attributes.NOTES;
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
         setNote(newNote);
@@ -172,16 +175,20 @@ function FeatureTool({
               id="graphic-note"
               css={noteStyles}
               value={note}
-              onChange={(ev: any) => setNote(ev.target.value)}
+              onChange={(ev) => setNote(ev.target.value)}
             />
           </div>
           <div css={saveButtonContainerStyles}>
             <button
               css={saveButtonStyles(saveStatus)}
               disabled={note === graphicNote}
-              onClick={(ev: any) => {
-                if (sketchVM.activeComponent?.graphics) {
-                  const firstGraphic = sketchVM.activeComponent.graphics[0];
+              onClick={(ev) => {
+                // Workaround for activeComponent not existing on the SketchViewModel type.
+                const tempSketchVM = sketchVM as any;
+
+                // set the notes
+                if (tempSketchVM.activeComponent?.graphics) {
+                  const firstGraphic = tempSketchVM.activeComponent.graphics[0];
                   firstGraphic.attributes['NOTES'] = note;
                   setGraphicNote(note);
 
@@ -260,12 +267,12 @@ function MapWidgets({ mapView }: Props) {
     const widget = new Locate({ view: mapView });
 
     // show the locate icon on success
-    widget.on('locate', (event: any) => {
+    widget.on('locate', (event) => {
       replaceClassName('esri-icon-error2', 'esri-icon-locate');
     });
 
     // show the error icon on failure
-    widget.on('locate-error', (event: any) => {
+    widget.on('locate-error', (event) => {
       replaceClassName('esri-icon-locate', 'esri-icon-error2');
     });
 
