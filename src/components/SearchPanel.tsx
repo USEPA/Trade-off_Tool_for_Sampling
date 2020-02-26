@@ -126,7 +126,7 @@ type LocationType = {
 type SortByType = {
   value: string;
   label: string;
-  defaultSort: string;
+  defaultSort: 'asc' | 'desc';
 };
 
 function SearchPanel() {
@@ -152,15 +152,21 @@ function SearchPanel() {
   const [kml, setKml] = React.useState(false);
   const [wms, setWms] = React.useState(false);
 
-  const [searchResults, setSearchResults] = React.useState<any>(null);
-  const [currentExtent, setCurrentExtent] = React.useState(null);
+  const [
+    searchResults,
+    setSearchResults,
+  ] = React.useState<__esri.PortalQueryResult | null>(null);
+  const [
+    currentExtent,
+    setCurrentExtent,
+  ] = React.useState<__esri.Extent | null>(null);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [sortBy, setSortBy] = React.useState<SortByType>({
     value: '',
     label: 'Relevance',
     defaultSort: 'desc',
   });
-  const [sortOrder, setSortOrder] = React.useState('desc');
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
 
   // Builds and executes the search query on search button click
   React.useEffect(() => {
@@ -236,22 +242,24 @@ function SearchPanel() {
     else query = appendToQuery(query, defaultTypePart);
 
     // build the query parameters
-    const queryParams: any = {
+    let queryParams = {
       query,
-      extent: withinMap ? currentExtent : null,
       sortOrder,
-    };
+    } as __esri.PortalQueryParams;
+
+    if (withinMap && currentExtent) queryParams.extent = currentExtent;
+
     // if a sort by (other than relevance) is selected, add it to the query params
     if (sortBy.value) {
-      queryParams['sortField'] = sortBy.value;
+      queryParams.sortField = sortBy.value as any;
     } else {
       if (!withinMap) {
-        queryParams['sortField'] = 'numviews';
+        queryParams.sortField = 'num-views';
       }
     }
 
     // perform the query
-    tmpPortal.queryItems(queryParams).then((res: any) => {
+    tmpPortal.queryItems(queryParams).then((res: __esri.PortalQueryResult) => {
       if (res.total > 0) {
         setSearchResults(res);
         setPageNumber(1);
@@ -305,10 +313,10 @@ function SearchPanel() {
     const tmpPortal = portal ? portal : new Portal();
     tmpPortal
       .queryItems(queryParams)
-      .then((res: any) => {
+      .then((res) => {
         setSearchResults(res);
       })
-      .catch((err: any) => console.error(err));
+      .catch((err) => console.error(err));
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
@@ -481,7 +489,7 @@ function SearchPanel() {
       <div>
         {searchResults && searchResults.results && (
           <React.Fragment>
-            {searchResults.results.map((result: any, index: number) => {
+            {searchResults.results.map((result, index) => {
               return (
                 <React.Fragment key={index}>
                   <ResultCard result={result} />
@@ -593,7 +601,7 @@ function ResultCard({ result }: ResultCardProps) {
   const [added, setAdded] = React.useState(false);
   React.useEffect(() => {
     const added =
-      portalLayers.findIndex((portalId: any) => portalId === result.id) !== -1;
+      portalLayers.findIndex((portalId) => portalId === result.id) !== -1;
     setAdded(added);
   }, [portalLayers, result]);
 
@@ -646,7 +654,7 @@ function ResultCard({ result }: ResultCardProps) {
                         (loadStatus: string) => {
                           // set the status based on the load status
                           if (loadStatus === 'loaded') {
-                            setPortalLayers((portalLayers: any) => [
+                            setPortalLayers((portalLayers: string[]) => [
                               ...portalLayers,
                               result.id,
                             ]);
@@ -692,10 +700,8 @@ function ResultCard({ result }: ResultCardProps) {
                   // remove the layers from the map and session storage.
                   if (layersToRemove.length > 0) {
                     map.removeMany(layersToRemove.toArray());
-                    setPortalLayers((portalLayers: any) =>
-                      portalLayers.filter(
-                        (portalId: any) => portalId !== result.id,
-                      ),
+                    setPortalLayers((portalLayers: string[]) =>
+                      portalLayers.filter((portalId) => portalId !== result.id),
                     );
                   }
                 }}
