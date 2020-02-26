@@ -350,7 +350,7 @@ function FilePanel() {
           return;
         }
 
-        const features: any[] = [];
+        const features: __esri.Graphic[] = [];
         let layerDefinition: any;
         res.featureCollection.layers.forEach((layer: any) => {
           layerDefinition = layer.layerDefinition;
@@ -367,7 +367,7 @@ function FilePanel() {
 
         // get the list of fields
         let fields: __esri.Field[] = [];
-        layerDefinition.fields.forEach((field: any) => {
+        layerDefinition.fields.forEach((field: __esri.Field) => {
           // Using Field.fromJSON to convert the Rest fields to the ArcGIS JS fields
           fields.push(Field.fromJSON(field));
         });
@@ -577,7 +577,7 @@ function FilePanel() {
       let fields: __esri.Field[] = [];
       if (layerType.value === 'VSP') fields = layer.layerDefinition.fields;
       else {
-        layer.layerDefinition.fields.forEach((field: any) => {
+        layer.layerDefinition.fields.forEach((field: __esri.Field) => {
           // Using Field.fromJSON to convert the Rest fields to the ArcGIS JS fields
           fields.push(Field.fromJSON(field));
         });
@@ -622,7 +622,7 @@ function FilePanel() {
         popupTemplate,
       });
 
-      const layerProps: any = {
+      const layerProps: __esri.FeatureLayerProperties = {
         fields,
         objectIdField: layer.layerDefinition.objectIdField,
         outFields: ['*'],
@@ -635,10 +635,12 @@ function FilePanel() {
       // create the feature layer
       console.log('layerFromFile: ', layerProps);
       const layerToAdd = new FeatureLayer(layerProps);
-      layerProps['layerId'] = layerToAdd.id;
       featureLayers.push(layerToAdd);
 
-      setReferenceLayers([...referenceLayers, layerProps]);
+      setReferenceLayers([
+        ...referenceLayers,
+        { ...layerProps, layerId: layerToAdd.id },
+      ]);
 
       // add the layers, from the uploaded file, to the map
       layersAdded.push({
