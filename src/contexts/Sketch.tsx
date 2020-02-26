@@ -41,7 +41,7 @@ type SketchType = {
   setUrlLayers: Function;
   sketchLayer: any | null;
   setSketchLayer: Function;
-  map: any;
+  map: __esri.Map | null;
   setMap: Function;
   selectedLayer: any;
   setSelectedLayer: Function;

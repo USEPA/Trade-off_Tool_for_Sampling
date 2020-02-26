@@ -623,84 +623,87 @@ function ResultCard({ result }: ResultCardProps) {
           {status === 'loading' && 'Adding...'}
           {status === 'error' && 'Add Failed'}
         </span>
-        {!added && (
-          <button
-            css={cardButtonStyles}
-            disabled={status === 'loading'}
-            onClick={() => {
-              setStatus('loading');
+        {map && (
+          <React.Fragment>
+            {!added && (
+              <button
+                css={cardButtonStyles}
+                disabled={status === 'loading'}
+                onClick={() => {
+                  setStatus('loading');
 
-              // get the layer from the portal item
-              Layer.fromPortalItem({
-                portalItem: new PortalItem({
-                  id: result.id,
-                }),
-              })
-                .then((layer) => {
-                  // setup the watch event to see when the layer finishes loading
-                  const watcher = watchUtils.watch(
-                    layer,
-                    'loadStatus',
-                    (loadStatus: string) => {
-                      // set the status based on the load status
-                      if (loadStatus === 'loaded') {
-                        setPortalLayers((portalLayers: any) => [
-                          ...portalLayers,
-                          result.id,
-                        ]);
-                        setStatus('');
-                      } else if (loadStatus === 'failed') {
-                        setStatus('error');
-                      }
-                    },
-                  );
+                  // get the layer from the portal item
+                  Layer.fromPortalItem({
+                    portalItem: new PortalItem({
+                      id: result.id,
+                    }),
+                  })
+                    .then((layer) => {
+                      // setup the watch event to see when the layer finishes loading
+                      const watcher = watchUtils.watch(
+                        layer,
+                        'loadStatus',
+                        (loadStatus: string) => {
+                          // set the status based on the load status
+                          if (loadStatus === 'loaded') {
+                            setPortalLayers((portalLayers: any) => [
+                              ...portalLayers,
+                              result.id,
+                            ]);
+                            setStatus('');
+                          } else if (loadStatus === 'failed') {
+                            setStatus('error');
+                          }
+                        },
+                      );
 
-                  setWatcher(watcher);
+                      setWatcher(watcher);
 
-                  // add the layer to the map
-                  map.add(layer);
-                })
-                .catch((err) => {
-                  console.error(err);
-                  setStatus('error');
-                });
-            }}
-          >
-            Add
-          </button>
-        )}
-        {added && !status && (
-          <button
-            css={cardButtonStyles}
-            onClick={() => {
-              // get the layers to be removed
-              const layersToRemove = map.allLayers.items.filter(
-                (layer: any) => {
-                  if (
-                    layer &&
-                    layer.portalItem &&
-                    layer.portalItem.id === result.id
-                  ) {
-                    return true;
-                  } else {
-                    return false;
+                      // add the layer to the map
+                      map.add(layer);
+                    })
+                    .catch((err) => {
+                      console.error(err);
+                      setStatus('error');
+                    });
+                }}
+              >
+                Add
+              </button>
+            )}
+            {added && !status && (
+              <button
+                css={cardButtonStyles}
+                onClick={() => {
+                  // get the layers to be removed
+                  const layersToRemove = map.allLayers.filter((layer: any) => {
+                    // had to use any, since some layer types don't have portalItem
+                    if (
+                      layer &&
+                      layer.portalItem &&
+                      layer.portalItem.id === result.id
+                    ) {
+                      return true;
+                    } else {
+                      return false;
+                    }
+                  });
+
+                  // remove the layers from the map and session storage.
+                  if (layersToRemove.length > 0) {
+                    map.removeMany(layersToRemove.toArray());
+                    setPortalLayers((portalLayers: any) =>
+                      portalLayers.filter(
+                        (portalId: any) => portalId !== result.id,
+                      ),
+                    );
                   }
-                },
-              );
-
-              // remove the layers from the map and session storage.
-              if (layersToRemove.length > 0) {
-                map.removeMany(layersToRemove);
-                setPortalLayers((portalLayers: any) =>
-                  portalLayers.filter(
-                    (portalId: any) => portalId !== result.id,
-                  ),
-                );
-              }
-            }}
-          >
-            Remove
-          </button>
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </React.Fragment>
         )}
         <a
           css={cardButtonStyles}

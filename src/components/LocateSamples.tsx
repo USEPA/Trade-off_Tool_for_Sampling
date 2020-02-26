@@ -245,8 +245,9 @@ function LocateSamples() {
     // disable popups for the active sketch layer, so the user doesn't
     // get shape edit controls and a popup at the same time.
     if (map) {
-      map.layers.items.forEach((layer: any) => {
-        layer.popupEnabled = false;
+      map.layers.forEach((layer: any) => {
+        // had to use any, since some layer types don't have popupEnabled
+        if (layer.popupEnabled) layer.popupEnabled = false;
       });
     }
 

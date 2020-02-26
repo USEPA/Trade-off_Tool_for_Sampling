@@ -70,37 +70,33 @@ function Map({ height }: Props) {
       ({ target, added }: { target: any; added: any[] }) => {
         if (added.length === 0) return;
 
-        const graphicsLayers: __esri.GraphicsLayer[] = [];
-        const featureLayers: __esri.FeatureLayer[] = [];
-        const imageryLayers: any[] = [];
-        const otherLayers: any[] = [];
-
-        target.items.forEach((layer: any) => {
-          const { type } = layer;
+        // gets a layer type value used for sorting
+        function getLayerType(layer: __esri.Layer) {
           const imageryTypes = ['imagery', 'tile', 'vector-tile'];
+          let type = 'other';
 
-          if (type === 'graphics') {
-            graphicsLayers.push(layer);
-          } else if (type === 'feature') {
-            featureLayers.push(layer);
+          if (layer.type === 'graphics') {
+            type = 'graphics';
+          } else if (layer.type === 'feature') {
+            type = 'feature';
           } else if (imageryTypes.includes(type)) {
-            imageryLayers.push(layer);
-          } else {
-            otherLayers.push(layer);
+            type = 'imagery';
           }
-        });
+
+          return type;
+        }
 
         // the layers are ordered as follows:
         // graphicsLayers (top)
         // featureLayers
         // otherLayers
         // imageryLayers (bottom)
-        map.layers = [
-          ...imageryLayers,
-          ...otherLayers,
-          ...featureLayers,
-          ...graphicsLayers,
-        ];
+        const sortBy = ['other', 'imagery', 'feature', 'graphics'];
+        map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
+          return (
+            sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))
+          );
+        });
       },
     );
 

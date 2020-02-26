@@ -310,7 +310,7 @@ function MapWidgets({ mapView }: Props) {
 
     let nextId = 1;
 
-    sketchVM.on('create', (event: any) => {
+    sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
       const { graphic } = event;
 
       // place the graphic on the map when the drawing is complete
@@ -366,14 +366,15 @@ function MapWidgets({ mapView }: Props) {
 
         // re-enable layer popups
         if (map) {
-          map.layers.items.forEach((layer: any) => {
-            layer.popupEnabled = true;
+          map.layers.forEach((layer: any) => {
+            // had to use any, since some layer types don't have popupEnabled
+            if (layer.popupEnabled) layer.popupEnabled = false;
           });
         }
       }
     });
 
-    sketchVM.on('update', (event) => {
+    sketchVM.on('update', (event: __esri.SketchViewModelUpdateEvent) => {
       // the updates have completed add them to the edits variable
       if (event.state === 'complete' || event.state === 'cancel') {
         // fire the update event if event.state is complete.
@@ -381,8 +382,9 @@ function MapWidgets({ mapView }: Props) {
 
         // re-enable layer popups
         if (map) {
-          map.layers.items.forEach((layer: any) => {
-            layer.popupEnabled = true;
+          map.layers.forEach((layer: any) => {
+            // had to use any, since some layer types don't have popupEnabled
+            if (layer.popupEnabled) layer.popupEnabled = false;
           });
         }
       }
