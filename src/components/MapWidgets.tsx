@@ -29,6 +29,22 @@ function deactivateButtons() {
   }
 }
 
+// Replaces the prevClassName with nextClassName for all elements with
+// prevClassName on the DOM.
+function replaceClassName(prevClassName: string, nextClassName: string) {
+  // timeout is necessary to handle race condition of loading indicator classname vs prevClassName
+  setTimeout(() => {
+    // get all elements with prevClassName and replace it with nextClassName
+    const elms: HTMLCollectionOf<Element> = document.getElementsByClassName(
+      prevClassName,
+    );
+    for (let i = 0; i < elms.length; i++) {
+      const el = elms[i];
+      el.className = el.className.replace(prevClassName, nextClassName);
+    }
+  }, 100);
+}
+
 // --- styles (FeatureTool) ---
 const containerStyles = css`
   width: 160px;
@@ -205,6 +221,16 @@ function MapWidgets({ mapView }: Props) {
     if (!mapView || locateWidget) return;
 
     const widget = new Locate({ view: mapView });
+
+    // show the locate icon on success
+    widget.on('locate', (event: any) => {
+      replaceClassName('esri-icon-error2', 'esri-icon-locate');
+    });
+
+    // show the error icon on failure
+    widget.on('locate-error', (event: any) => {
+      replaceClassName('esri-icon-locate', 'esri-icon-error2');
+    });
 
     mapView.ui.add(widget, { position: 'top-right', index: 2 });
     setLocateWidget(widget);
