@@ -31,7 +31,7 @@ const buttonStyles = css`
 // --- components (SplashScreen) ---
 function SplashScreen() {
   // Initialize the cookies object
-  const [cookies, setCookies] = React.useState<any>(null);
+  const [cookies, setCookies] = React.useState<Cookies | null>(null);
   React.useEffect(() => {
     setCookies(new Cookies());
   }, []);
