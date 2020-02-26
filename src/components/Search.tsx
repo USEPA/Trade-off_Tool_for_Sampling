@@ -56,6 +56,7 @@ function Search() {
     new Search({
       view: mapView,
       container: 'search-container',
+      locationEnabled: false,
     });
 
     setSearchInitialized(true);
