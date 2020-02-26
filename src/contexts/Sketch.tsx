@@ -10,6 +10,7 @@ type FeatureEditsType = {
 
 type LayerEditsType = {
   id: number; // layer id
+  layerId: string; // id from esri layer
   name: string; // layer name
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
@@ -20,6 +21,11 @@ type LayerEditsType = {
 type EditsType = {
   count: number;
   edits: LayerEditsType[];
+};
+
+type UrlLayerType = {
+  url: string;
+  type: string;
 };
 
 type SketchType = {
@@ -37,7 +43,7 @@ type SketchType = {
   setPortalLayers: Function;
   referenceLayers: any[];
   setReferenceLayers: Function;
-  urlLayers: string[];
+  urlLayers: UrlLayerType[];
   setUrlLayers: Function;
   sketchLayer: any | null;
   setSketchLayer: Function;

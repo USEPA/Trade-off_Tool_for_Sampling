@@ -191,7 +191,10 @@ function Toolbar() {
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = React.useState(false);
   const [legendInitialized, setLegendInitialized] = React.useState(false);
-  const [layerToRemove, setLayerToRemove] = React.useState<any>(null);
+  const [
+    layerToRemove,
+    setLayerToRemove, //
+  ] = React.useState<__esri.Layer | null>(null);
   React.useEffect(() => {
     if (!mapView || legendInitialized) return;
 
@@ -200,7 +203,7 @@ function Toolbar() {
     const layerList = new LayerList({
       view: mapView,
       container: 'legend-container',
-      listItemCreatedFunction: function(event: any) {
+      listItemCreatedFunction: function(event) {
         const item = event.item;
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
@@ -272,7 +275,7 @@ function Toolbar() {
     });
 
     // add the delete layer button action
-    layerList.on('trigger-action', (event: any) => {
+    layerList.on('trigger-action', (event) => {
       const id = event.action.id;
 
       if (id === 'delete-layer') {
@@ -293,24 +296,30 @@ function Toolbar() {
     // remove it from the map
     map.remove(layerToRemove);
 
+    // Workaround for layer type specific properties
+    const tempLayerToRemove = layerToRemove as any;
+
     // remove the layer from the session variable
     if (layerToRemove.type === 'graphics') {
       // graphics layers are always put in edits
       setEdits({
         count: edits.count + 1,
         edits: edits.edits.filter(
-          (layer: any) => layer.layerId !== layerToRemove.id,
+          (layer) => layer.layerId !== layerToRemove.id,
         ),
       });
-    } else if (layerToRemove.portalItem && layerToRemove.portalItem.id) {
+    } else if (
+      tempLayerToRemove.portalItem &&
+      tempLayerToRemove.portalItem.id
+    ) {
       // this one was added via search panel, remove it from portalLayers
       setPortalLayers(
-        portalLayers.filter((id: any) => id !== layerToRemove.portalItem.id),
+        portalLayers.filter((id) => id !== tempLayerToRemove.portalItem.id),
       );
-    } else if (layerToRemove.url) {
+    } else if (tempLayerToRemove.url) {
       // this one was added via url panel, remove it from urlLayers
       setUrlLayers(
-        urlLayers.filter((layer: any) => layer.url !== layerToRemove.url),
+        urlLayers.filter((layer) => layer.url !== tempLayerToRemove.url),
       );
     } else {
       // everything else should be removed from referenceLayers
