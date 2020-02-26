@@ -14,6 +14,10 @@ const labelValueStyles = css`
   align-items: center;
 `;
 
+const valueStyles = css`
+  padding-left: 10px;
+`;
+
 // --- components (LabelValue) ---
 type LabelValueProps = {
   label: string;
@@ -24,7 +28,7 @@ function LabelValue({ label, value }: LabelValueProps) {
   return (
     <div css={labelValueStyles}>
       <label>{label}: </label>
-      {Number(value).toLocaleString()}
+      <span css={valueStyles}>{Number(value).toLocaleString()}</span>
     </div>
   );
 }
