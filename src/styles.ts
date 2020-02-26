@@ -5,6 +5,8 @@ const colors = {
   gold: (alpha: number = 1) => `rgba(252, 171, 83, ${alpha})`, // #fcab53,
   teal: (alpha: number = 1) => `rgba(80, 210, 194, ${alpha})`, // #50d2c2,
   magenta: (alpha: number = 1) => `rgba(255, 51, 102, ${alpha})`, // #ff3366,
+  green: (alpha: number = 1) => `rgba(40, 167, 69, ${alpha})`, // #28a745,
+  red: (alpha: number = 1) => `rgba(220, 53, 69, ${alpha})`, // #dc3545,
   epaBlue: '#0a71b9',
   gray6: '#666',
 };

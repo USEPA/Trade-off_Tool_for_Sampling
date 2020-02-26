@@ -15,6 +15,9 @@ import {
 import { polygonSymbol } from 'config/symbols';
 // utils
 import { updateLayerEdits } from 'utils/sketchUtils';
+// styles
+import { colors } from 'styles';
+
 const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
@@ -87,9 +90,20 @@ const saveButtonContainerStyles = css`
   justify-content: flex-end;
 `;
 
-const saveButtonStyles = css`
-  margin: 5px 0;
-`;
+const saveButtonStyles = (status: string) => {
+  let backgroundColor = '';
+  if (status === 'success') {
+    backgroundColor = `background-color: ${colors.green()};`;
+  }
+  if (status === 'failure') {
+    backgroundColor = `background-color: ${colors.red()};`;
+  }
+
+  return css`
+    margin: 5px 0;
+    ${backgroundColor}
+  `;
+};
 
 // --- components (FeatureTool) ---
 type FeatureToolProps = {
@@ -106,12 +120,14 @@ function FeatureTool({
   // initializes the note and graphicNote whenever the graphic selection changes
   const [graphicNote, setGraphicNote] = React.useState('');
   const [note, setNote] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState('');
   React.useEffect(() => {
     // Reset the note if either no graphics are selected or multiple graphics
     // are selected. The note field only works if one graphic is selected.
     if (selectedGraphicsIds.length !== 1) {
       if (graphicNote) setGraphicNote('');
       if (note) setNote('');
+      if (saveStatus) setSaveStatus('');
       return;
     }
 
@@ -121,9 +137,15 @@ function FeatureTool({
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
         setNote(newNote);
+        setSaveStatus('');
       }
     }
-  }, [graphicNote, note, sketchVM, selectedGraphicsIds]);
+  }, [graphicNote, note, saveStatus, sketchVM, selectedGraphicsIds]);
+
+  // Resets the save status if the user changes the note
+  React.useEffect(() => {
+    if (graphicNote !== note && saveStatus) setSaveStatus('');
+  }, [graphicNote, note, saveStatus]);
 
   if (!sketchVM || selectedGraphicsIds.length === 0) return null;
 
@@ -155,17 +177,30 @@ function FeatureTool({
           </div>
           <div css={saveButtonContainerStyles}>
             <button
-              css={saveButtonStyles}
+              css={saveButtonStyles(saveStatus)}
               disabled={note === graphicNote}
               onClick={() => {
                 if (sketchVM.activeComponent?.graphics) {
                   const firstGraphic = sketchVM.activeComponent.graphics[0];
                   firstGraphic.attributes['NOTES'] = note;
                   setGraphicNote(note);
+                  setSaveStatus('success');
+                } else {
+                  setSaveStatus('failure');
                 }
               }}
             >
-              Save
+              {!saveStatus && 'Save'}
+              {saveStatus === 'success' && (
+                <React.Fragment>
+                  <i className="fas fa-check" /> Saved
+                </React.Fragment>
+              )}
+              {saveStatus === 'failure' && (
+                <React.Fragment>
+                  <i className="fas fa-exclamation-triangle" /> Error
+                </React.Fragment>
+              )}
             </button>
           </div>
         </React.Fragment>
