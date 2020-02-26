@@ -1,3 +1,7 @@
+export const freeFormTypes = ['Wet Vac', 'Robot', 'Aggressive Air'];
+
+export const predefinedBoxTypes = ['Sponge', 'Micro Vac', 'Swab'];
+
 export type SampleType =
   | 'Sponge'
   | 'Micro Vac'
@@ -6,7 +10,22 @@ export type SampleType =
   | 'Aggressive Air'
   | 'Swab';
 
+export type SimpleSelectType = {
+  value: string;
+  label: string;
+};
+
+export const SampleSelectOptions: SimpleSelectType[] = [
+  { value: 'Sponge', label: 'Sponge' },
+  { value: 'Micro Vac', label: 'Micro Vac' },
+  { value: 'Wet Vac', label: 'Wet Vac' },
+  { value: 'Robot', label: 'Robot' },
+  { value: 'Aggressive Air', label: 'Aggressive Air' },
+  { value: 'Swab', label: 'Swab' },
+];
+
 type SampleProperties =
+  | 'OBJECTID'
   | 'TYPE'
   | 'SA'
   | 'TTPK'
@@ -18,7 +37,8 @@ type SampleProperties =
   | 'MCPS'
   | 'TCPS'
   | 'WVPS'
-  | 'WWPS';
+  | 'WWPS'
+  | 'NOTES';
 
 type Attributes = {
   [key in SampleType]: {
@@ -28,6 +48,7 @@ type Attributes = {
 
 const sampleAttributes: Attributes = {
   Sponge: {
+    OBJECTID: '-1',
     TYPE: 'Sponge',
     SA: '100',
     TTPK: '0.12',
@@ -40,8 +61,10 @@ const sampleAttributes: Attributes = {
     TCPS: '343.03',
     WVPS: '0',
     WWPS: '4.3',
+    NOTES: '',
   },
   'Micro Vac': {
+    OBJECTID: '-1',
     TYPE: 'Micro Vac',
     SA: '144',
     TTPK: '0.18',
@@ -54,8 +77,10 @@ const sampleAttributes: Attributes = {
     TCPS: '395.84',
     WVPS: '0',
     WWPS: '4.3',
+    NOTES: '',
   },
   'Wet Vac': {
+    OBJECTID: '-1',
     TYPE: 'Wet Vac',
     SA: '28800',
     TTPK: '0.33',
@@ -68,8 +93,10 @@ const sampleAttributes: Attributes = {
     TCPS: '220',
     WVPS: '5',
     WWPS: '28.5',
+    NOTES: '',
   },
   Robot: {
+    OBJECTID: '-1',
     TYPE: 'Robot',
     SA: '144000',
     TTPK: '0.17',
@@ -82,8 +109,10 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    NOTES: '',
   },
   'Aggressive Air': {
+    OBJECTID: '-1',
     TYPE: 'Aggressive Air',
     SA: '12000',
     TTPK: '0.17',
@@ -96,8 +125,10 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    NOTES: '',
   },
   Swab: {
+    OBJECTID: '-1',
     TYPE: 'Swab',
     SA: '4',
     TTPK: '0.12',
@@ -110,6 +141,7 @@ const sampleAttributes: Attributes = {
     TCPS: '219',
     WVPS: '0',
     WWPS: '0',
+    NOTES: '',
   },
 };
 

@@ -5,40 +5,25 @@ import ReactDOM from 'react-dom';
 import { jsx, css } from '@emotion/core';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { SketchContext } from 'contexts/Sketch';
 // config
-import { SampleType, sampleAttributes } from 'config/sampleAttributes';
+import {
+  predefinedBoxTypes,
+  SampleType,
+  sampleAttributes,
+} from 'config/sampleAttributes';
+import { polygonSymbol } from 'config/symbols';
+// utils
+import { updateLayerEdits } from 'utils/sketchUtils';
+// styles
+import { colors } from 'styles';
 
 const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
 
-const basemapNames = [
-  'Streets',
-  'Imagery',
-  'Imagery Hybrid',
-  'Topographic',
-  'Terrain with Labels',
-  'Light Gray Canvas',
-  'Dark Gray Canvas',
-  'Navigation',
-  'Streets (Night)',
-  'Oceans',
-  'National Geographic Style Map',
-  'OpenStreetMap',
-  'Charted Territory Map',
-  'Community Map',
-  'Navigation (Dark Mode)',
-  'Newspaper Map',
-  'Human Geography Map',
-  'Human Geography Dark Map',
-  'Modern Antique Map',
-  'Mid-Century Map',
-  'Nova Map',
-  'Colored Pencil Map',
-  'Firefly Imagery Hybrid',
-  'USA Topo Maps',
-];
-
+// Makes all sketch buttons no longer active by removing
+// the sketch-button-selected class.
 function deactivateButtons() {
   const buttons = document.querySelectorAll('.sketch-button');
 
@@ -47,7 +32,25 @@ function deactivateButtons() {
   }
 }
 
+// Replaces the prevClassName with nextClassName for all elements with
+// prevClassName on the DOM.
+function replaceClassName(prevClassName: string, nextClassName: string) {
+  // timeout is necessary to handle race condition of loading indicator classname vs prevClassName
+  setTimeout(() => {
+    // get all elements with prevClassName and replace it with nextClassName
+    const elms: HTMLCollectionOf<Element> = document.getElementsByClassName(
+      prevClassName,
+    );
+    for (let i = 0; i < elms.length; i++) {
+      const el = elms[i];
+      el.className = el.className.replace(prevClassName, nextClassName);
+    }
+  }, 100);
+}
+
+// --- styles (FeatureTool) ---
 const containerStyles = css`
+  width: 160px;
   padding: 6px;
   background-color: white;
 
@@ -61,13 +64,15 @@ const containerStyles = css`
   }
 `;
 
+const headerStyles = css`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
 const buttonStyles = css`
-  display: table-cell;
-  vertical-align: middle;
-  height: 32px;
-  width: 32px;
+  padding: 5px;
   background-color: white;
-  text-align: center;
   cursor: pointer;
 
   &:hover,
@@ -76,197 +81,243 @@ const buttonStyles = css`
   }
 `;
 
-type SketchToolProps = {
-  sketchVM: __esri.SketchViewModel;
-  onClick: (ev: React.MouseEvent<HTMLDivElement>, type: string) => void;
-};
+const noteStyles = css`
+  height: 75px;
+`;
 
-type ButtonProps = {
-  type: string;
-  label: React.ReactNode;
-  initiallyHidden?: boolean;
-};
+const saveButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
 
-function SketchTool({ sketchVM, onClick }: SketchToolProps) {
-  function Button({ type, label, initiallyHidden = false }: ButtonProps) {
-    return (
-      <div
-        id={type}
-        title={type}
-        className={initiallyHidden ? 'sketch-button-hidden' : 'sketch-button'}
-        onClick={(ev) => onClick(ev, type)}
-        css={buttonStyles}
-      >
-        {label}
-      </div>
-    );
+const saveButtonStyles = (status: string) => {
+  let backgroundColor = '';
+  if (status === 'success') {
+    backgroundColor = `background-color: ${colors.green()};`;
+  }
+  if (status === 'failure') {
+    backgroundColor = `background-color: ${colors.red()};`;
   }
 
-  if (!sketchVM) return null;
+  return css`
+    margin: 5px 0;
+    ${backgroundColor}
+  `;
+};
+
+// --- components (FeatureTool) ---
+type FeatureToolProps = {
+  sketchVM: __esri.SketchViewModel;
+  selectedGraphicsIds: Array<string>;
+  onClick: (ev: React.MouseEvent<HTMLElement>, type: string) => void;
+};
+
+function FeatureTool({
+  sketchVM,
+  selectedGraphicsIds,
+  onClick,
+}: FeatureToolProps) {
+  // initializes the note and graphicNote whenever the graphic selection changes
+  const [graphicNote, setGraphicNote] = React.useState('');
+  const [note, setNote] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState('');
+  React.useEffect(() => {
+    // Reset the note if either no graphics are selected or multiple graphics
+    // are selected. The note field only works if one graphic is selected.
+    if (selectedGraphicsIds.length !== 1) {
+      if (graphicNote) setGraphicNote('');
+      if (note) setNote('');
+      if (saveStatus) setSaveStatus('');
+      return;
+    }
+
+    // Workaround for activeComponent not existing on the SketchViewModel type.
+    const tempSketchVM = sketchVM as any;
+
+    // Get the note from the graphics attributes
+    if (tempSketchVM?.activeComponent?.graphics?.[0]?.attributes) {
+      const newNote = tempSketchVM.activeComponent.graphics[0].attributes.NOTES;
+      if (graphicNote !== newNote) {
+        setGraphicNote(newNote);
+        setNote(newNote);
+        setSaveStatus('');
+      }
+    }
+  }, [graphicNote, note, saveStatus, sketchVM, selectedGraphicsIds]);
+
+  // Resets the save status if the user changes the note
+  React.useEffect(() => {
+    if (graphicNote !== note && saveStatus) setSaveStatus('');
+  }, [graphicNote, note, saveStatus]);
+
+  if (!sketchVM || selectedGraphicsIds.length === 0) return null;
 
   return (
     <div css={containerStyles}>
-      <Button
-        type="Delete"
-        label={<i className="fas fa-trash-alt" />}
-        initiallyHidden={true}
-      />
-      <Button type="Sponge" label="Sp" />
-      <Button type="Micro Vac" label="M" />
-      <Button type="Wet Vac" label="W" />
-      <Button type="Robot" label="R" />
-      <Button type="Aggressive Air" label="A" />
-      <Button type="Swab" label="Sw" />
-      <Button type="Delete All" label={<i className="fas fa-window-close" />} />
+      <div css={headerStyles}>
+        {selectedGraphicsIds.length} Feature(s)
+        <div
+          id="Delete"
+          title="Delete"
+          className="sketch-button"
+          onClick={(ev) => onClick(ev, 'Delete')}
+          css={buttonStyles}
+        >
+          <i className="fas fa-trash-alt" />
+        </div>
+      </div>
+      {selectedGraphicsIds.length === 1 && (
+        <React.Fragment>
+          <div>
+            <label htmlFor="graphic-note">Note: </label>
+            <br />
+            <textarea
+              id="graphic-note"
+              css={noteStyles}
+              value={note}
+              onChange={(ev) => setNote(ev.target.value)}
+            />
+          </div>
+          <div css={saveButtonContainerStyles}>
+            <button
+              css={saveButtonStyles(saveStatus)}
+              disabled={note === graphicNote}
+              onClick={(ev) => {
+                // Workaround for activeComponent not existing on the SketchViewModel type.
+                const tempSketchVM = sketchVM as any;
+
+                // set the notes
+                if (tempSketchVM.activeComponent?.graphics) {
+                  const firstGraphic = tempSketchVM.activeComponent.graphics[0];
+                  firstGraphic.attributes['NOTES'] = note;
+                  setGraphicNote(note);
+
+                  onClick(ev, 'Save');
+                  setSaveStatus('success');
+                } else {
+                  setSaveStatus('failure');
+                }
+              }}
+            >
+              {!saveStatus && 'Save'}
+              {saveStatus === 'success' && (
+                <React.Fragment>
+                  <i className="fas fa-check" /> Saved
+                </React.Fragment>
+              )}
+              {saveStatus === 'failure' && (
+                <React.Fragment>
+                  <i className="fas fa-exclamation-triangle" /> Error
+                </React.Fragment>
+              )}
+            </button>
+          </div>
+        </React.Fragment>
+      )}
     </div>
   );
 }
 
+// --- components (MapWidgets) ---
 type Props = {
   mapView: __esri.MapView;
 };
 
 function MapWidgets({ mapView }: Props) {
   const {
-    BasemapGallery,
-    Expand,
+    edits,
+    setEdits,
+    homeWidget,
+    setHomeWidget,
+    selectedLayer,
+    sketchVM,
+    setSketchVM,
+    sketchLayer,
+    map,
+  } = React.useContext(SketchContext);
+  const {
     Graphic,
     Home,
+    Locate,
     Polygon,
-    PortalBasemapsSource,
-    Search,
     SketchViewModel,
   } = useEsriModulesContext();
 
-  // add the search widget to the map
-  const [
-    searchWidget,
-    setSearchWidget,
-  ] = React.useState<__esri.widgetsSearch | null>(null);
-
+  // Creates and adds the home widget to the map.
+  // Also moves the zoom widget to the top-right
   React.useEffect(() => {
-    if (searchWidget) return;
-
-    const widget = new Search({ view: mapView });
-
-    mapView.ui.add(widget, { position: 'top-left', index: 0 });
-
-    setSearchWidget(widget);
-  }, [mapView, Search, searchWidget]);
-
-  // add the home widget to the map
-  const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
-
-  React.useEffect(() => {
-    if (homeWidget) return;
+    if (!mapView || !setHomeWidget || homeWidget) return;
 
     const widget = new Home({ view: mapView });
 
-    mapView.ui.add(widget, { position: 'top-left', index: 2 });
+    mapView.ui.add(widget, { position: 'top-right', index: 1 });
+    mapView.ui.move('zoom', 'top-right');
 
     setHomeWidget(widget);
-  }, [mapView, Home, homeWidget]);
+  }, [mapView, Home, homeWidget, setHomeWidget]);
 
-  // add the basemap/layer list widget to the map
+  // Creates and adds the locate widget to the map.
   const [
-    basemapWidget,
-    setBasemapWidget, //
-  ] = React.useState<__esri.Expand | null>(null);
-
+    locateWidget,
+    setLocateWidget, //
+  ] = React.useState<__esri.Locate | null>(null);
   React.useEffect(() => {
-    if (basemapWidget) return;
+    if (!mapView || locateWidget) return;
 
-    const basemapsSource = new PortalBasemapsSource({
-      filterFunction: (basemap: __esri.Basemap) => {
-        return basemapNames.indexOf(basemap.portalItem.title) !== -1;
-      },
-      updateBasemapsCallback: (basemaps: __esri.Collection<__esri.Basemap>) => {
-        // sort the basemaps based on the ordering of basemapNames
-        return basemaps.sort((a, b) => {
-          return (
-            basemapNames.indexOf(a.portalItem.title) -
-            basemapNames.indexOf(b.portalItem.title)
-          );
-        });
-      },
+    const widget = new Locate({ view: mapView });
+
+    // show the locate icon on success
+    widget.on('locate', (event) => {
+      replaceClassName('esri-icon-error2', 'esri-icon-locate');
     });
 
-    const container = document.createElement('div');
-
-    new BasemapGallery({
-      container,
-      view: mapView,
-      source: basemapsSource,
+    // show the error icon on failure
+    widget.on('locate-error', (event) => {
+      replaceClassName('esri-icon-locate', 'esri-icon-error2');
     });
 
-    const widget = new Expand({
-      expandIconClass: 'esri-icon-basemap',
-      view: mapView,
-      mode: 'floating',
-      autoCollapse: true,
-      content: container,
-    });
+    mapView.ui.add(widget, { position: 'top-right', index: 2 });
+    setLocateWidget(widget);
+  }, [mapView, Locate, locateWidget]);
 
-    mapView.ui.add(widget, { position: 'top-right', index: 0 });
-
-    setBasemapWidget(widget);
-  }, [mapView, PortalBasemapsSource, BasemapGallery, Expand, basemapWidget]);
-
-  // Get the graphics layer for drawing on
-  const [
-    sketchLayer,
-    setSketchLayer, //
-  ] = React.useState<__esri.Layer | null>(null);
-
-  React.useEffect(() => {
-    if (sketchLayer) return;
-
-    mapView.map.layers.forEach((layer) => {
-      if (layer.id === 'sketchLayer') setSketchLayer(layer);
-    });
-  }, [mapView, sketchLayer]);
-
-  // Create the sketch view model for handling the drawing
-  const [
-    sketchVM,
-    setSketchVM, //
-  ] = React.useState<__esri.SketchViewModel | null>(null);
-
+  // Creates the SketchViewModel
   React.useEffect(() => {
     if (!sketchLayer) return;
     if (sketchVM) return;
-
-    // symbol used for polygons and points. Points are converted to polygons
-    const polygonSymbol = {
-      type: 'simple-fill',
-      color: [150, 150, 150, 0.2],
-      outline: {
-        color: [50, 50, 50],
-        width: 2,
-      },
-    };
-
     const svm = new SketchViewModel({
-      layer: sketchLayer,
+      layer: sketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol,
       pointSymbol: polygonSymbol,
     });
 
     setSketchVM(svm);
-  }, [mapView, SketchViewModel, sketchLayer, sketchVM]);
+  }, [SketchViewModel, mapView, sketchVM, setSketchVM, sketchLayer]);
+
+  // Updates the selected layer of the sketchViewModel
+  React.useEffect(() => {
+    if (!sketchVM || !sketchLayer) return;
+
+    sketchVM.layer = sketchLayer.sketchLayer;
+  }, [sketchVM, sketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const [
     sketchEventsInitialized,
     setSketchEventsInitialized, //
   ] = React.useState(false);
-
+  const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
+  const [
+    selectedGraphicsIds,
+    setSelectedGraphicsIds, //
+  ] = React.useState<Array<string>>([]);
   React.useEffect(() => {
     if (!sketchVM) return;
     if (sketchEventsInitialized) return;
 
-    sketchVM.on('create', (event) => {
+    let nextId = 1;
+
+    sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
       const { graphic } = event;
 
       // place the graphic on the map when the drawing is complete
@@ -274,13 +325,26 @@ function MapWidgets({ mapView }: Props) {
         // get the button and it's id
         const button = document.querySelector('.sketch-button-selected');
         const id = button && (button.id as SampleType);
-
         deactivateButtons();
 
-        graphic.attributes = id && sampleAttributes[id];
+        if (!id) {
+          // workaround for an error that said "target" does not exist on
+          // type 'SketchViewModelUpdateEvent'.
+          const tempEvent = event as any;
+          tempEvent.target.cancel();
+          return;
+        }
 
-        // predefined boxes
-        if (id === 'Sponge' || id === 'Micro Vac' || id === 'Swab') {
+        // get the predefined attributes using the id of the clicked button
+        graphic.attributes = {
+          ...sampleAttributes[id],
+          OBJECTID: nextId.toString(),
+        };
+        nextId = nextId + 1;
+
+        // predefined boxes (sponge, micro vac and swab) need to be
+        // converted to a box of a specific size.
+        if (predefinedBoxTypes.includes(id)) {
           let halfWidth = 0;
           if (id === 'Sponge') halfWidth = sponge_SA;
           if (id === 'Micro Vac') halfWidth = vac_SA;
@@ -305,39 +369,125 @@ function MapWidgets({ mapView }: Props) {
 
         // save the graphic
         sketchVM.update(graphic);
+        setUpdateSketchEvent(event);
+
+        // re-enable layer popups
+        if (map) {
+          map.layers.forEach((layer: any) => {
+            // had to use any, since some layer types don't have popupEnabled
+            if (layer.popupEnabled) layer.popupEnabled = false;
+          });
+        }
       }
     });
 
-    sketchVM.on('update', (event) => {
-      let numSelectedGraphics = 0;
+    sketchVM.on('update', (event: __esri.SketchViewModelUpdateEvent) => {
+      // the updates have completed add them to the edits variable
+      if (event.state === 'complete' || event.state === 'cancel') {
+        // fire the update event if event.state is complete.
+        if (event.state === 'complete') setUpdateSketchEvent(event);
+
+        // re-enable layer popups
+        if (map) {
+          map.layers.forEach((layer: any) => {
+            // had to use any, since some layer types don't have popupEnabled
+            if (layer.popupEnabled) layer.popupEnabled = false;
+          });
+        }
+      }
+
+      // Swab, Micro Vac, Wet Vac, etc.
+      const firstGraphicType =
+        event.graphics[0].attributes && event.graphics[0].attributes.TYPE;
+
+      const isShapeChange =
+        event.toolEventInfo &&
+        (event.toolEventInfo.type.includes('reshape') ||
+          event.toolEventInfo.type.includes('scale'));
+
+      // prevent scale and reshape changes on the predefined graphics
+      // allow moves and rotates
+      if (isShapeChange && predefinedBoxTypes.includes(firstGraphicType)) {
+        // workaround for an error that said "target" does not exist on
+        // type 'SketchViewModelUpdateEvent'.
+        const tempEvent = event as any;
+        tempEvent.target.cancel();
+      }
+
+      // get the number of selected graphics
+      let selectedGraphicsIds: Array<string> = [];
       if (event.state !== 'cancel' && event.graphics) {
-        numSelectedGraphics = event.graphics.length;
+        event.graphics.forEach((graphic) => {
+          selectedGraphicsIds.push(graphic.attributes.OBJECTID);
+        });
       }
+      setSelectedGraphicsIds(selectedGraphicsIds);
+    });
 
-      const deleteButton = document.getElementById('Delete');
-
-      if (deleteButton) {
-        deleteButton.style.display =
-          numSelectedGraphics === 0 ? 'none' : 'table-cell';
-      }
+    // handles deleting when the delete key is pressed
+    // Workaround for an error that said Argument of type '"delete"' is
+    // not assignable to parameter of type '"undo"'.
+    // This issue looks like the types haven't been updated, because delete
+    // is now an option.
+    const tempSketchVM = sketchVM as any;
+    tempSketchVM.on('delete', (event: any) => {
+      setUpdateSketchEvent(event);
     });
 
     setSketchEventsInitialized(true);
-  }, [mapView, Graphic, Polygon, sketchVM, sketchEventsInitialized]);
+  }, [
+    sketchVM,
+    map,
+    mapView,
+    setSketchEventsInitialized,
+    Graphic,
+    Polygon,
+    setEdits,
+    sketchEventsInitialized,
+  ]);
 
-  // Creates and adds the custom sketch widget to the map
-  const [
-    sketchTool,
-    setSketchTool, //
-  ] = React.useState<HTMLDivElement | null>(null);
-
+  // save the updated graphic to the edits data structure for later publishing
   React.useEffect(() => {
-    if (!sketchVM) return;
-    if (sketchTool) return;
+    if (!sketchLayer || !updateSketchEvent) return;
+    setUpdateSketchEvent(null);
+
+    const type =
+      updateSketchEvent.type === 'create' ? 'add' : updateSketchEvent.type;
+    const changes =
+      type === 'add' ? [updateSketchEvent.graphic] : updateSketchEvent.graphics;
+
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer: sketchLayer,
+      type,
+      changes,
+    });
+
+    // update the edits state
+    setEdits(editsCopy);
+  }, [edits, setEdits, updateSketchEvent, sketchLayer]);
+
+  // Adds a container for the feature tool to the map
+  const [
+    featureTool,
+    setFeatureTool, //
+  ] = React.useState<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!mapView || featureTool) return;
+    // Put the sketch toolbar on the map
+    const featureToolContainer = document.createElement('div');
+    mapView.ui.add(featureToolContainer, 'bottom-right');
+    setFeatureTool(featureToolContainer);
+  }, [mapView, featureTool]);
+
+  // Creates and adds the custom edit feature tool to the map.
+  React.useEffect(() => {
+    if (!featureTool || !sketchVM) return;
 
     // handles the sketch button clicks
     const handleClick = (ev: React.MouseEvent<HTMLElement>, type: string) => {
-      if (!sketchVM) return;
+      if (!sketchVM || !sketchLayer) return;
 
       // set the clicked button as active until the drawing is complete
       deactivateButtons();
@@ -345,59 +495,57 @@ function MapWidgets({ mapView }: Props) {
       const target = ev.target as HTMLElement;
       target.classList.add('sketch-button-selected');
 
-      // tell the sketchVM what type of graphic is being drawn on the map.
-      // Points will be converted to predefined polygons.
-      if (type === 'Sponge') {
-        sketchVM.create('point');
-      }
-
-      if (type === 'Micro Vac') {
-        sketchVM.create('point');
-      }
-
-      if (type === 'Wet Vac') {
-        sketchVM.create('polygon');
-      }
-
-      if (type === 'Robot') {
-        sketchVM.create('polygon');
-      }
-
-      if (type === 'Aggressive Air') {
-        sketchVM.create('polygon');
-      }
-
-      if (type === 'Swab') {
-        sketchVM.create('point');
-      }
-
       if (type === 'Delete') {
-        // TODO: activeComponent isn't in JS API docs?
-        const svm = sketchVM as any;
+        // Workaround for activeComponent not existing on the SketchViewModel type.
+        const tempSketchVM = sketchVM as any;
+        if (tempSketchVM.activeComponent?.graphics) {
+          // make a copy of the edits context variable
+          const editsCopy = updateLayerEdits({
+            edits,
+            layer: sketchLayer,
+            type: 'delete',
+            changes: tempSketchVM.activeComponent.graphics,
+          });
 
-        if (svm.activeComponent && svm.activeComponent.graphics) {
-          sketchVM.layer.removeMany(svm.activeComponent.graphics);
+          setEdits(editsCopy);
+
+          sketchVM.layer.removeMany(tempSketchVM.activeComponent.graphics);
         }
       }
+      if (type === 'Save') {
+        // Workaround for activeComponent not existing on the SketchViewModel type.
+        const tempSketchVM = sketchVM as any;
+        if (tempSketchVM.activeComponent?.graphics) {
+          // make a copy of the edits context variable
+          const editsCopy = updateLayerEdits({
+            edits,
+            layer: sketchLayer,
+            type: 'update',
+            changes: tempSketchVM.activeComponent.graphics,
+          });
 
-      if (type === 'Delete All') {
-        sketchVM.layer.removeAll();
+          setEdits(editsCopy);
+        }
       }
     };
 
-    // Put the sketch toolbar on the map
-    const container = document.createElement('div');
-
-    mapView.ui.add(container, 'bottom-right');
-
-    ReactDOM.render(
-      <SketchTool sketchVM={sketchVM} onClick={handleClick} />,
-      container,
+    let featureToolContent = (
+      <FeatureTool
+        sketchVM={sketchVM}
+        selectedGraphicsIds={selectedGraphicsIds}
+        onClick={handleClick}
+      />
     );
-
-    setSketchTool(container);
-  }, [mapView, sketchTool, sketchVM]);
-
+    ReactDOM.render(featureToolContent, featureTool);
+  }, [
+    featureTool,
+    sketchVM,
+    sketchLayer,
+    selectedGraphicsIds,
+    selectedLayer,
+    edits,
+    setEdits,
+  ]);
   return null;
 }
 

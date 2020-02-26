@@ -6,54 +6,119 @@ import { jsx, css } from '@emotion/core';
 import MapWidgets from 'components/MapWidgets';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { SketchContext } from 'contexts/Sketch';
 
-const mapStyles = css`
-  height: 100%;
-  background-color: whitesmoke;
-`;
+// --- styles (Map) ---
+const mapStyles = (height: number) => {
+  return css`
+    height: calc(100% - ${height}px);
+    background-color: whitesmoke;
+  `;
+};
 
-function Map() {
-  const { EsriMap, GraphicsLayer, MapView } = useEsriModulesContext();
+// --- components (Map) ---
+type Props = {
+  height: number;
+};
+
+function Map({ height }: Props) {
+  const { EsriMap, MapView, Viewpoint } = useEsriModulesContext();
 
   const mapRef = React.useRef<HTMLDivElement>(null);
 
-  const [layers, setLayers] = React.useState<__esri.GraphicsLayer[]>([]);
+  const {
+    homeWidget,
+    map,
+    setMap,
+    mapView,
+    setMapView,
+    sketchLayer,
+  } = React.useContext(SketchContext);
 
-  React.useEffect(() => {
-    if (layers.length > 0) return;
-
-    const sketchLayer = new GraphicsLayer({
-      id: 'sketchLayer',
-      title: 'Sketch Layer',
-    });
-
-    setLayers([sketchLayer]);
-  }, [GraphicsLayer, layers]);
-
-  const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
-
+  // Creates the map and view
   React.useEffect(() => {
     if (!mapRef.current) return;
-    if (layers.length === 0) return;
     if (mapView) return;
 
-    const map = new EsriMap({
+    const newMap = new EsriMap({
       basemap: 'streets',
-      layers,
+      layers: [],
     });
+    setMap(newMap);
 
     const view = new MapView({
       container: mapRef.current,
-      map,
+      map: newMap,
       center: [-95, 37],
       zoom: 3,
+      popup: {
+        defaultPopupTemplateEnabled: true,
+      },
     });
 
     setMapView(view);
-  }, [EsriMap, MapView, layers, mapView]);
+  }, [EsriMap, MapView, mapView, setMap, setMapView]);
+
+  // Creates a watch event that is used for reordering the layers
+  const [watchInitialized, setWatchInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (!map || watchInitialized) return;
+
+    // whenever layers are added, reorder them
+    map.layers.on('change', ({ added }) => {
+      if (added.length === 0) return;
+
+      // gets a layer type value used for sorting
+      function getLayerType(layer: __esri.Layer) {
+        const imageryTypes = ['imagery', 'tile', 'vector-tile'];
+        let type = 'other';
+
+        if (layer.type === 'graphics') {
+          type = 'graphics';
+        } else if (layer.type === 'feature') {
+          type = 'feature';
+        } else if (imageryTypes.includes(type)) {
+          type = 'imagery';
+        }
+
+        return type;
+      }
+
+      // the layers are ordered as follows:
+      // graphicsLayers (top)
+      // featureLayers
+      // otherLayers
+      // imageryLayers (bottom)
+      const sortBy = ['other', 'imagery', 'feature', 'graphics'];
+      map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
+        return (
+          sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))
+        );
+      });
+    });
+
+    setWatchInitialized(true);
+  }, [map, watchInitialized]);
+
+  // Zooms to the graphics whenever the sketchLayer changes
+  React.useEffect(() => {
+    if (!map || !mapView || !homeWidget) return;
+    if (!sketchLayer?.sketchLayer) return;
+
+    const zoomGraphics = sketchLayer.sketchLayer.graphics.items;
+
+    if (zoomGraphics.length > 0) {
+      mapView.goTo(zoomGraphics).then(() => {
+        // set map zoom and home widget's viewpoint
+        homeWidget.viewpoint = new Viewpoint({
+          targetGeometry: mapView.extent,
+        });
+      });
+    }
+  }, [map, mapView, sketchLayer, homeWidget, Viewpoint]);
 
   return (
-    <div ref={mapRef} css={mapStyles}>
+    <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
       {mapView && <MapWidgets mapView={mapView} />}
     </div>
   );

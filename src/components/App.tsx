@@ -3,18 +3,24 @@
 
 import React from 'react';
 import { Global, jsx, css } from '@emotion/core';
+import { useWindowSize } from '@reach/window-size';
 // components
-import SplashScreen from 'components/SplashScreen';
+import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
+import SplashScreen from 'components/SplashScreen';
+import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
 // contexts
-import {
-  EsriModulesProvider,
-  useEsriModulesContext,
-} from 'contexts/EsriModules';
+import { AuthenticationProvider } from 'contexts/Authentication';
+import { CalculateProvider } from 'contexts/Calculate';
+import { SketchProvider } from 'contexts/Sketch';
+import { EsriModulesProvider } from 'contexts/EsriModules';
+// utilities
+import { useSessionStorage } from 'utils/hooks';
+// config
+import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
-
 const gloablStyles = css`
   html {
     /* overwrite EPA's html font-size so rem units are based on 16px */
@@ -42,15 +48,46 @@ const gloablStyles = css`
 const appStyles = css`
   display: flex;
   flex-direction: column;
-  border: 1px solid #ccc;
-  height: calc(100vh - 32px);
-  max-height: 600px;
+  height: calc(100vh);
+  width: calc(100% + ${epaMarginOffset * 2 + 'px'});
+  margin-left: -${epaMarginOffset}px;
+`;
+
+const containerStyles = css`
+  height: 100%;
+`;
+
+const mapPanelStyles = css`
+  float: right;
+  position: relative;
+  height: 100%;
+  width: calc(100% - ${navPanelWidth});
 `;
 
 function App() {
-  const { modulesLoaded } = useEsriModulesContext();
+  useSessionStorage();
 
-  if (!modulesLoaded) return <p>Loading...</p>;
+  const { height, width } = useWindowSize();
+
+  // calculate height of div holding actions info
+  const [contentHeight, setContentHeight] = React.useState(0);
+  const mapRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!mapRef?.current) return;
+
+    const mapHeight = mapRef.current.getBoundingClientRect().height;
+    if (contentHeight !== mapHeight) setContentHeight(mapHeight);
+  }, [width, height, mapRef, contentHeight]);
+
+  // calculate height of div holding actions info
+  const [toolbarHeight, setToolbarHeight] = React.useState(0);
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!toolbarRef?.current) return;
+
+    const barHeight = toolbarRef.current.getBoundingClientRect().height;
+    if (toolbarHeight !== barHeight) setToolbarHeight(barHeight);
+  }, [width, height, toolbarRef, toolbarHeight]);
 
   return (
     <React.Fragment>
@@ -58,10 +95,17 @@ function App() {
 
       <div className="tots">
         <SplashScreen />
-
+        <TestingToolbar />
         <div css={appStyles}>
-          <Toolbar />
-          <Map />
+          <div css={containerStyles}>
+            <div ref={toolbarRef}>
+              <Toolbar />
+            </div>
+            <NavBar height={contentHeight - toolbarHeight} />
+            <div css={mapPanelStyles} ref={mapRef}>
+              {toolbarHeight && <Map height={toolbarHeight} />}
+            </div>
+          </div>
         </div>
       </div>
     </React.Fragment>
@@ -71,7 +115,13 @@ function App() {
 export default function AppContainer() {
   return (
     <EsriModulesProvider>
-      <App />
+      <AuthenticationProvider>
+        <CalculateProvider>
+          <SketchProvider>
+            <App />
+          </SketchProvider>
+        </CalculateProvider>
+      </AuthenticationProvider>
     </EsriModulesProvider>
   );
 }
