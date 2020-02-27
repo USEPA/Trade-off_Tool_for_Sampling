@@ -1,10 +1,12 @@
+// contexts
+import { EditsType, FeatureEditsType, LayerType } from 'contexts/Sketch';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { convertToSimpleGraphic } from 'utils/sketchUtils';
 
-const featureServiceName = 'EPA_TOTS_FS';
+const featureServiceName = 'EPA_TOTS_FS_jklj_test';
 
 /**
  * Attempts to get the hosted feature service and creates it if
@@ -13,19 +15,19 @@ const featureServiceName = 'EPA_TOTS_FS';
  * @param portal The portal object to retreive the hosted feature service from
  * @returns A promise that resolves to the hosted feature service object
  */
-export function getFeatureService(portal: any) {
+export function getFeatureService(portal: __esri.Portal) {
   return new Promise((resolve, reject) => {
     // check if the tots feature service already exists
     getFeatureServiceWrapped(portal)
-      .then((service: any) => {
+      .then((service) => {
         if (service) resolve(service);
         else {
           createFeatureService(portal)
             .then((service) => resolve(service))
-            .catch((err: any) => reject(err));
+            .catch((err) => reject(err));
         }
       })
-      .catch((err: any) => reject(err));
+      .catch((err) => reject(err));
   });
 }
 
@@ -37,17 +39,19 @@ export function getFeatureService(portal: any) {
  * @returns A promise that resolves to the hosted feature service object or
  *  null if the service does not exist
  */
-function getFeatureServiceWrapped(portal: any) {
+function getFeatureServiceWrapped(portal: __esri.Portal) {
   return new Promise((resolve, reject) => {
     // check if the tots feature service already exists
     portal
       .queryItems({ query: `name:${featureServiceName}` })
-      .then((res: any) => {
+      .then((res) => {
         if (res.results.length > 0) {
           const portalService = res.results[0];
 
+          // Workaround for esri.Portal not having credential
+          const tempPortal: any = portal;
           fetchCheck(
-            `${portalService.url}?f=json&token=${portal.credential.token}`,
+            `${portalService.url}?f=json&token=${tempPortal.credential.token}`,
           )
             .then((res) => {
               const returnValue = {
@@ -61,7 +65,7 @@ function getFeatureServiceWrapped(portal: any) {
           resolve(null);
         }
       })
-      .catch((err: any) => reject(err));
+      .catch((err) => reject(err));
   });
 }
 
@@ -71,22 +75,25 @@ function getFeatureServiceWrapped(portal: any) {
  * @param portal The portal object to create the hosted feature service on
  * @returns A promise that resolves to the hosted feature service object
  */
-export function createFeatureService(portal: any) {
+export function createFeatureService(portal: __esri.Portal) {
   return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
     // feature service creation parameters
     const folderParams = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       title: 'EPA_TOTS',
     };
     fetchPost(`${portal.user.userContentUrl}/createFolder`, folderParams)
-      .then((res: any) => console.log('res: ', res))
-      .catch((err: any) => console.error(err));
+      .then((res) => console.log('res: ', res))
+      .catch((err) => console.error(err));
 
     // feature service creation parameters
     const data = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       outputType: 'featureService',
       description: '<Add a description>',
       snippet: '<Add a summary>',
@@ -130,7 +137,7 @@ export function createFeatureService(portal: any) {
         // call to add metadata (tags in this case).
         const indata = {
           f: 'json',
-          token: portal.credential.token,
+          token: tempPortal.credential.token,
 
           // below are some examples on how we can add metadata for determining
           // whether a feature service has a sample layer vs just being a reference layer.
@@ -146,14 +153,14 @@ export function createFeatureService(portal: any) {
         fetchPost(
           `${portal.user.userContentUrl}/items/${res.itemId}/update`,
           indata,
-        ).then((res: any) => {
+        ).then((res) => {
           // get the feature service from the portal and return it
           getFeatureServiceWrapped(portal)
-            .then((service: any) => resolve(service))
-            .catch((err: any) => reject(err));
+            .then((service) => resolve(service))
+            .catch((err) => reject(err));
         });
       })
-      .catch((err: any) => reject(err));
+      .catch((err) => reject(err));
   });
 }
 
@@ -165,14 +172,14 @@ export function createFeatureService(portal: any) {
  * @returns A promise that resolves to the layers on the hosted
  *  feature service
  */
-export function getFeatureLayers(service: any, token: string) {
+export function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
-    fetchCheck(`${service.url}?f=json&token=${token}`)
+    fetchCheck(`${serviceUrl}?f=json&token=${token}`)
       .then((res: any) => {
         if (res) resolve(res.layers);
         else resolve([]);
       })
-      .catch((err: any) => reject(err));
+      .catch((err) => reject(err));
   });
 }
 
@@ -185,14 +192,14 @@ export function getFeatureLayers(service: any, token: string) {
  * @param id ID of the layer to retreive
  * @returns A promise that resolves to the requested layers
  */
-export function getFeatureLayer(service: any, token: string, id: number) {
+export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
-    getFeatureLayers(service, token)
+    getFeatureLayers(serviceUrl, token)
       .then((layers: any) => {
         const matchedLayer = layers.find((layer: any) => layer.id === id);
         resolve(matchedLayer);
       })
-      .catch((err: any) => reject(err));
+      .catch((err) => reject(err));
   });
 }
 
@@ -206,8 +213,8 @@ export function getFeatureLayer(service: any, token: string, id: number) {
  * @returns A promise that resolves to the layers that were saved
  */
 export function createFeatureLayers(
-  portal: any,
-  serviceUrl: any,
+  portal: __esri.Portal,
+  serviceUrl: string,
   layerNames: string[],
 ) {
   return new Promise((resolve, reject) => {
@@ -227,9 +234,11 @@ export function createFeatureLayers(
       });
     });
 
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
     const data = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       addToDefinition: {
         layers,
       },
@@ -241,8 +250,8 @@ export function createFeatureLayers(
       'rest/admin/services',
     );
     fetchPost(`${adminServiceUrl}/addToDefinition`, data)
-      .then((res: any) => resolve(res))
-      .catch((err: any) => reject(err));
+      .then((res) => resolve(res))
+      .catch((err) => reject(err));
   });
 }
 
@@ -255,11 +264,17 @@ export function createFeatureLayers(
  * @param id The ID of the layer to delete
  * @returns A promise that resolves to the layers that were deleted
  */
-export function deleteFeatureLayer(portal: any, servicUrl: any, id: number) {
+export function deleteFeatureLayer(
+  portal: __esri.Portal,
+  servicUrl: string,
+  id: number,
+) {
   return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
     const data = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       deleteFromDefinition: {
         layers: [{ id: id.toString() }],
       },
@@ -271,8 +286,8 @@ export function deleteFeatureLayer(portal: any, servicUrl: any, id: number) {
       'rest/admin/services',
     );
     fetchPost(`${adminServiceUrl}/deleteFromDefinition`, data)
-      .then((res: any) => resolve(res))
-      .catch((err: any) => reject(err));
+      .then((res) => resolve(res))
+      .catch((err) => reject(err));
   });
 }
 
@@ -284,11 +299,13 @@ export function deleteFeatureLayer(portal: any, servicUrl: any, id: number) {
  * @returns A promise that resolves to all of the features on the hosted
  *  feature service
  */
-export function getAllFeatures(portal: any, serviceUrl: any) {
+export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
   return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
     const data = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       where: '0=0',
       outFields: '*',
       returnGeometry: true,
@@ -318,16 +335,16 @@ export function applyEdits({
   layers,
   edits,
 }: {
-  portal: any;
+  portal: __esri.Portal;
   serviceUrl: string;
-  layers: any[];
-  edits: any;
+  layers: LayerType[];
+  edits: EditsType;
 }) {
   return new Promise((resolve, reject) => {
     const changes: any[] = [];
     // loop through the layers and build the payload
-    edits.edits.forEach((layerEdits: any) => {
-      const adds: any[] = [];
+    edits.edits.forEach((layerEdits) => {
+      const adds: FeatureEditsType[] = [];
       if (layerEdits.adds.length > 0) {
         // get the graphics layer
         const layerToSearch = layers.find(
@@ -335,9 +352,12 @@ export function applyEdits({
         );
 
         // loop through and find any graphics without objectids
-        if (layerToSearch && layerToSearch.sketchLayer) {
-          layerToSearch.sketchLayer.graphics.items.forEach((graphic: any) => {
-            if (graphic?.attributes?.OBJECTID) {
+        if (
+          layerToSearch?.sketchLayer &&
+          layerToSearch.sketchLayer.type === 'graphics'
+        ) {
+          layerToSearch.sketchLayer.graphics.forEach((graphic) => {
+            if (!graphic?.attributes?.OBJECTID) {
               return;
             }
 
@@ -356,10 +376,13 @@ export function applyEdits({
       });
     });
 
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
     // run the webserivce call to update ArcGIS Online
     const data = {
       f: 'json',
-      token: portal.credential.token,
+      token: tempPortal.credential.token,
       edits: changes,
       honorSequenceOfEdits: true,
     };
@@ -384,16 +407,16 @@ export function publish({
   layers,
   edits,
 }: {
-  portal: any;
-  layers: any[];
-  edits: any;
+  portal: __esri.Portal;
+  layers: LayerType[];
+  edits: EditsType;
 }) {
   return new Promise((resolve, reject) => {
     getFeatureService(portal)
       .then((service: any) => {
         // build a list of layers that need to be created
         const layerNames: string[] = [];
-        edits.edits.forEach((layer: any) => {
+        edits.edits.forEach((layer) => {
           if (layer.id < 0) layerNames.push(layer.name);
         });
 
@@ -404,17 +427,17 @@ export function publish({
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
               const layerEdits = edits.edits.find(
-                (layerEdit: any) =>
+                (layerEdit) =>
                   layerEdit.id === -1 && layerEdit.name === layer.name,
               );
 
               const mapLayer = layers.find(
-                (mapLayer: any) =>
+                (mapLayer) =>
                   mapLayer.id === -1 && mapLayer.name === layer.name,
               );
 
-              layerEdits.id = layer.id;
-              mapLayer.id = layer.id;
+              if (layerEdits) layerEdits.id = layer.id;
+              if (mapLayer) mapLayer.id = layer.id;
             });
 
             // publish the edits

@@ -3,27 +3,42 @@
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
 
-type FeatureEditsType = {
+export type FeatureEditsType = {
   attributes: any;
   geometry: any;
 };
 
-type LayerEditsType = {
+export type LayerEditsType = {
   id: number; // layer id
   layerId: string; // id from esri layer
   name: string; // layer name
+  layerType: string; // type of tots layer (sample, contamination, etc.)
+  addedFrom: string; // how the layer was added (file, url, etc.)
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
   deletes: FeatureEditsType[]; // features to delete
   splits: FeatureEditsType[]; // features to split
 };
 
-type EditsType = {
+export type EditsType = {
   count: number;
   edits: LayerEditsType[];
 };
 
-type UrlLayerType = {
+export type LayerType = {
+  id: number;
+  layerId?: string;
+  value: string;
+  name: string;
+  label: string;
+  layerType: string;
+  defaultVisibility: boolean;
+  geometryType: string;
+  addedFrom: string;
+  sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+};
+
+export type UrlLayerType = {
   url: string;
   type: string;
 };
@@ -37,7 +52,7 @@ type SketchType = {
   setFeatureServiceUrl: Function;
   homeWidget: __esri.Home | null;
   setHomeWidget: Function;
-  layers: any[];
+  layers: LayerType[];
   setLayers: Function;
   portalLayers: string[];
   setPortalLayers: Function;
@@ -45,7 +60,7 @@ type SketchType = {
   setReferenceLayers: Function;
   urlLayers: UrlLayerType[];
   setUrlLayers: Function;
-  sketchLayer: any | null;
+  sketchLayer: LayerType | null;
   setSketchLayer: Function;
   map: __esri.Map | null;
   setMap: Function;
@@ -92,7 +107,7 @@ export function SketchProvider({ children }: Props) {
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [featureService, setFeatureService] = React.useState<any>(null);
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
-  const [layers, setLayers] = React.useState([]);
+  const [layers, setLayers] = React.useState<LayerType[]>([]);
   const [portalLayers, setPortalLayers] = React.useState([]);
   const [referenceLayers, setReferenceLayers] = React.useState([]);
   const [urlLayers, setUrlLayers] = React.useState([]);

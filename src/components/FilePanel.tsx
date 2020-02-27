@@ -7,7 +7,7 @@ import Select from 'react-select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, LayerType } from 'contexts/Sketch';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
@@ -503,11 +503,7 @@ function FilePanel() {
       name: file.name,
       label: file.name,
       layerType: layerType.value,
-      parentLayerId: -1,
       defaultVisibility: true,
-      subLayerIds: null,
-      minScale: 0,
-      maxScale: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       sketchLayer: graphicsLayer,
@@ -562,7 +558,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
-    const layersAdded: any[] = [];
+    const layersAdded: LayerType[] = [];
     const featureLayers: __esri.FeatureLayer[] = [];
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -649,11 +645,7 @@ function FilePanel() {
         name: file.name,
         label: file.name,
         layerType: layerType.value,
-        parentLayerId: -1,
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: layer.layerDefinition.geometryType,
         addedFrom: 'file',
         sketchLayer: layerToAdd,

@@ -296,9 +296,11 @@ function MapWidgets({ mapView }: Props) {
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
-    if (!sketchVM || !sketchLayer) return;
+    if (!sketchVM || !sketchLayer?.sketchLayer) return;
 
-    sketchVM.layer = sketchLayer.sketchLayer;
+    if (sketchLayer.sketchLayer.type === 'graphics') {
+      sketchVM.layer = sketchLayer.sketchLayer;
+    }
   }, [sketchVM, sketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
@@ -381,7 +383,7 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
-    sketchVM.on('update', (event: __esri.SketchViewModelUpdateEvent) => {
+    sketchVM.on('update', (event) => {
       // the updates have completed add them to the edits variable
       if (event.state === 'complete' || event.state === 'cancel') {
         // fire the update event if event.state is complete.

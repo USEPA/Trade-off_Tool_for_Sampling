@@ -7,7 +7,7 @@ import Select from 'react-select';
 import { AccordionList, AccordionItem } from 'components/Accordion';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, LayerType } from 'contexts/Sketch';
 // config
 import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
@@ -17,8 +17,8 @@ import { updateLayerEdits } from 'utils/sketchUtils';
 import { fetchPost } from 'utils/fetchUtils';
 
 // gets an array of layers that can be used with the sketch widget.
-function getSketchableLayers(layers: any) {
-  return layers.filter((layer: any) => layer.layerType === 'Samples');
+function getSketchableLayers(layers: LayerType[]) {
+  return layers.filter((layer) => layer.layerType === 'Samples');
 }
 
 // --- styles (SketchButton) ---
@@ -169,7 +169,12 @@ function LocateSamples() {
     setSketchLayer,
     sketchVM,
   } = React.useContext(SketchContext);
-  const { FeatureSet, GraphicsLayer } = useEsriModulesContext();
+  const {
+    FeatureSet,
+    Graphic,
+    GraphicsLayer,
+    Polygon,
+  } = useEsriModulesContext();
 
   // resets the sketchLayer back to null when this panel is no longer active
   React.useEffect(() => {
@@ -194,17 +199,13 @@ function LocateSamples() {
     // no sketchable layers were available, create one
     const graphicsLayer = new GraphicsLayer({ title: 'Sketch Layer' });
 
-    const tempSketchLayer = {
+    const tempSketchLayer: LayerType = {
       id: -1,
       value: 'sketchLayer',
       name: 'Default Sample Layer',
       label: 'Default Sample Layer',
       layerType: 'Samples',
-      parentLayerId: -1,
       defaultVisibility: true,
-      subLayerIds: null,
-      minScale: 0,
-      maxScale: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
       sketchLayer: graphicsLayer,
@@ -260,11 +261,18 @@ function LocateSamples() {
   }
 
   // Handle a user generating random samples
-  const [aoiMaskLayer, setAoiMaskLayer] = React.useState<any>(null);
+  const [aoiMaskLayer, setAoiMaskLayer] = React.useState<LayerType | null>(
+    null,
+  );
   function randomSamples() {
     if (!sketchLayer) return;
 
     const url = `${totsGPServer}/Generate%20Random/execute`;
+
+    let graphics: __esri.GraphicProperties[] = [];
+    if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
+      graphics = aoiMaskLayer.sketchLayer.graphics.toArray();
+    }
 
     // create a feature set for communicating with the GPServer
     const featureSet = new FeatureSet({
@@ -280,7 +288,7 @@ function LocateSamples() {
           alias: 'OBJECTID',
         },
       ],
-      features: aoiMaskLayer.sketchLayer.graphics.items,
+      features: graphics,
     });
 
     const props = {
@@ -299,21 +307,24 @@ function LocateSamples() {
         const results = res.results[0].value;
 
         // build an array of graphics to draw on the map
-        const graphicsToAdd: any[] = [];
+        const graphicsToAdd: __esri.Graphic[] = [];
         results.features.forEach((feature: any) => {
-          graphicsToAdd.push({
-            attributes: feature.attributes,
-            symbol: polygonSymbol,
-            geometry: {
-              type: 'polygon',
-              rings: feature.geometry.rings,
-              spatialReference: results.spatialReference,
-            },
-          });
+          graphicsToAdd.push(
+            new Graphic({
+              attributes: feature.attributes,
+              symbol: polygonSymbol,
+              geometry: new Polygon({
+                rings: feature.geometry.rings,
+                spatialReference: results.spatialReference,
+              }),
+            }),
+          );
         });
 
         // put the graphics on the map
-        sketchLayer.sketchLayer.graphics.addMany(graphicsToAdd);
+        if (sketchLayer?.sketchLayer?.type === 'graphics') {
+          sketchLayer.sketchLayer.graphics.addMany(graphicsToAdd);
+        }
       })
       .catch((err) => console.error(err));
   }
@@ -426,9 +437,9 @@ function LocateSamples() {
             <Select
               inputId="aoi-mask-select"
               value={aoiMaskLayer}
-              onChange={(ev) => setAoiMaskLayer(ev)}
+              onChange={(ev) => setAoiMaskLayer(ev as LayerType)}
               options={layers.filter(
-                (layer: any) => layer.layerType === 'Area of Interest',
+                (layer) => layer.layerType === 'Area of Interest',
               )}
             />
             {numberRandomSamples && aoiMaskLayer && (

@@ -23,9 +23,10 @@ function Publish() {
   const { edits, setEdits, layers } = React.useContext(SketchContext);
 
   function runPublish() {
+    if (!portal) return;
+
     const sampleLayers = layers.filter(
-      (layer: any) =>
-        layer.layerType === 'Samples' || layer.layerType === 'VSP',
+      (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
     );
     if (sampleLayers.length === 0) return;
 
