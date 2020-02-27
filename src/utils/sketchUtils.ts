@@ -55,17 +55,17 @@ export function createLayerEditTemplate(layerToEdit: any) {
  * @param graphic The esri graphic to be stored
  * @returns simple graphic object with just attributes and geometry
  */
-export function convertToSimpleGraphic(graphic: any) {
+export function convertToSimpleGraphic(graphic: __esri.Graphic) {
+  let geometry: __esri.Polygon | object = {};
+  if (graphic?.geometry?.type === 'polygon') {
+    geometry = graphic.geometry as __esri.Polygon;
+  }
+
+  // currently we only have polygons
+  // in the future we may need to add code to handle different geometry types
   return {
     attributes: graphic.attributes ? graphic.attributes : {},
-    geometry:
-      graphic.geometry && graphic.geometry.rings
-        ? {
-            // currently we only have polygons
-            // in the future we may need to add code to handle different geometry types
-            rings: graphic.geometry.rings,
-          }
-        : {},
+    geometry: geometry,
   };
 }
 

@@ -5,7 +5,7 @@ import { jsx } from '@emotion/core';
 
 export type FeatureEditsType = {
   attributes: any;
-  geometry: any;
+  geometry: __esri.PolygonProperties;
 };
 
 export type LayerEditsType = {
@@ -64,9 +64,9 @@ type SketchType = {
   setSketchLayer: Function;
   map: __esri.Map | null;
   setMap: Function;
-  selectedLayer: any;
+  selectedLayer: LayerType | null;
   setSelectedLayer: Function;
-  mapView: any;
+  mapView: __esri.MapView | null;
   setMapView: Function;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: Function;
@@ -114,8 +114,11 @@ export function SketchProvider({ children }: Props) {
   const [sketchLayer, setSketchLayer] = React.useState(null);
   const [homeWidget, setHomeWidget] = React.useState(null);
   const [map, setMap] = React.useState(null);
-  const [selectedLayer, setSelectedLayer] = React.useState<any>(null);
   const [mapView, setMapView] = React.useState(null);
+  const [
+    selectedLayer,
+    setSelectedLayer, //
+  ] = React.useState<LayerType | null>(null);
   const [
     sketchVM,
     setSketchVM, //
