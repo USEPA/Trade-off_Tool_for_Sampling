@@ -224,7 +224,7 @@ const resultsFloatPanelContentStyles = (expanded: boolean) => css`
 
   width: ${resultsPanelWidth};
   color: white;
-  background-color: black;
+  background-color: #162E51;
 `;
 
 const floatPanelButtonContainer = (expanded: boolean) => {
@@ -268,7 +268,7 @@ const resultsCollapsePanelButton = css`
   padding: 1.5em 1em;
   margin: 0;
   border-radius: 0;
-  background-color: black;
+  background-color: #162e51;
   color: white;
   pointer-events: all;
 `;
