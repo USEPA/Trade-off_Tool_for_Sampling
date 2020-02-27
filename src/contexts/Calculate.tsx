@@ -35,11 +35,15 @@ type ResultsType = {
 type CalculateType = {
   calculateResults: ResultsType;
   setCalculateResults: Function;
+  contaminationMap: any; // TODO - Need to update this tab when other PR is merged
+  setContaminationMap: Function;
 };
 
 export const CalculateContext = React.createContext<CalculateType>({
   calculateResults: { status: 'none', data: null },
   setCalculateResults: () => {},
+  contaminationMap: null,
+  setContaminationMap: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -49,12 +53,18 @@ export function CalculateProvider({ children }: Props) {
     calculateResults,
     setCalculateResults, //
   ] = React.useState<ResultsType>({ status: 'none', data: null });
+  const [
+    contaminationMap,
+    setContaminationMap, //
+  ] = React.useState<any>(null); // TODO - Need to update this tab when other PR is merged
 
   return (
     <CalculateContext.Provider
       value={{
         calculateResults,
         setCalculateResults,
+        contaminationMap,
+        setContaminationMap,
       }}
     >
       {children}

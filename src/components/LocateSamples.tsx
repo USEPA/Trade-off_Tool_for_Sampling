@@ -7,6 +7,7 @@ import Select from 'react-select';
 import { AccordionList, AccordionItem } from 'components/Accordion';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
@@ -159,6 +160,10 @@ type SampleSelectionType = {
 };
 
 function LocateSamples() {
+  const {
+    contaminationMap,
+    setContaminationMap, //
+  } = React.useContext(CalculateContext);
   const {
     edits,
     setEdits,
@@ -436,6 +441,21 @@ function LocateSamples() {
                 Submit
               </button>
             )}
+          </div>
+        </AccordionItem>
+        <AccordionItem title={'Include Contamination Map (Optional)'}>
+          <div css={panelContainer}>
+            <label htmlFor="contamination-map-select">Contamination map</label>
+            <div>
+              <Select
+                inputId="contamination-map-select"
+                value={contaminationMap}
+                onChange={(ev) => setContaminationMap(ev)}
+                options={layers.filter(
+                  (layer: any) => layer.layerType === 'Contamination Map',
+                )}
+              />
+            </div>
           </div>
         </AccordionItem>
       </AccordionList>
