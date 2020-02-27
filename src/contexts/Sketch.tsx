@@ -2,46 +2,9 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
-
-export type FeatureEditsType = {
-  attributes: any;
-  geometry: __esri.PolygonProperties;
-};
-
-export type LayerEditsType = {
-  id: number; // layer id
-  layerId: string; // id from esri layer
-  name: string; // layer name
-  layerType: string; // type of tots layer (sample, contamination, etc.)
-  addedFrom: string; // how the layer was added (file, url, etc.)
-  adds: FeatureEditsType[]; // features to add
-  updates: FeatureEditsType[]; // features to update
-  deletes: FeatureEditsType[]; // features to delete
-  splits: FeatureEditsType[]; // features to split
-};
-
-export type EditsType = {
-  count: number;
-  edits: LayerEditsType[];
-};
-
-export type LayerType = {
-  id: number;
-  layerId?: string;
-  value: string;
-  name: string;
-  label: string;
-  layerType: string;
-  defaultVisibility: boolean;
-  geometryType: string;
-  addedFrom: string;
-  sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
-};
-
-export type UrlLayerType = {
-  url: string;
-  type: string;
-};
+// types
+import { EditsType } from 'types/Edits';
+import { LayerType, UrlLayerType } from 'types/Layer';
 
 type SketchType = {
   edits: EditsType;

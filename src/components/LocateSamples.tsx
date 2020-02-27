@@ -7,7 +7,9 @@ import Select from 'react-select';
 import { AccordionList, AccordionItem } from 'components/Accordion';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { SketchContext, LayerType } from 'contexts/Sketch';
+import { SketchContext } from 'contexts/Sketch';
+// types
+import { LayerType } from 'types/Layer';
 // config
 import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';

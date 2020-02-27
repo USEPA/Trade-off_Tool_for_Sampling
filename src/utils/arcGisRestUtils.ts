@@ -1,5 +1,6 @@
-// contexts
-import { EditsType, FeatureEditsType, LayerType } from 'contexts/Sketch';
+// types
+import { EditsType, FeatureEditsType } from 'types/Edits';
+import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 // utils

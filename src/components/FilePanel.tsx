@@ -7,10 +7,12 @@ import Select from 'react-select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { SketchContext, LayerType } from 'contexts/Sketch';
+import { SketchContext } from 'contexts/Sketch';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
+// types
+import { LayerType } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
 import { SimpleSelectType, SampleSelectOptions } from 'config/sampleAttributes';

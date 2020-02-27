@@ -1,5 +1,6 @@
-// contexts
-import { LayerType, LayerEditsType, EditsType } from 'contexts/Sketch';
+// types
+import { EditsType, LayerEditsType } from 'types/Edits';
+import { LayerType } from 'types/Layer';
 
 /**
  * This function performs a deep copy, exluding functions,

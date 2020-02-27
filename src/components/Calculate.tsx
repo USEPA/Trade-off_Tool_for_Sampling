@@ -6,9 +6,11 @@ import Select from 'react-select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
-import { SketchContext, LayerType } from 'contexts/Sketch';
+import { SketchContext } from 'contexts/Sketch';
 // config
 import { totsGPServer } from 'config/webService';
+// types
+import { LayerType } from 'types/Layer';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
 

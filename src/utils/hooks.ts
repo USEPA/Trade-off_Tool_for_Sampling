@@ -3,12 +3,10 @@
 import React from 'react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import {
-  SketchContext,
-  EditsType,
-  LayerType,
-  UrlLayerType,
-} from 'contexts/Sketch';
+import { SketchContext } from 'contexts/Sketch';
+// types
+import { EditsType } from 'types/Edits';
+import { LayerType, UrlLayerType } from 'types/Layer';
 // config
 import { polygonSymbol } from 'config/symbols';
 
