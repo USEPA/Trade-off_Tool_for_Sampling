@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-import Select from 'react-select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -36,7 +35,8 @@ function Calculate() {
   const { layers } = React.useContext(SketchContext);
   const {
     calculateResults,
-    setCalculateResults, //
+    setCalculateResults,
+    contaminationMap,
   } = React.useContext(CalculateContext);
 
   const [surfaceArea, setSurfaceArea] = React.useState('7400');
@@ -48,7 +48,6 @@ function Calculate() {
   const [numLabs, setNumLabs] = React.useState('1');
   const [numLabHours, setNumLabHours] = React.useState('24');
 
-  const [contaminationMap, setContaminationMap] = React.useState<any>(null);
   function runCalculation() {
     const sampleLayers = layers.filter(
       (layer: any) =>
@@ -286,17 +285,6 @@ function Calculate() {
   return (
     <div css={panelContainer}>
       <h2>Calculate</h2>
-      <label htmlFor="contamination-map-select">Contamination map</label>
-      <div>
-        <Select
-          inputId="contamination-map-select"
-          value={contaminationMap}
-          onChange={(ev) => setContaminationMap(ev)}
-          options={layers.filter(
-            (layer: any) => layer.layerType === 'Contamination Map',
-          )}
-        />
-      </div>
 
       <label htmlFor="number-teams-input">
         Number of Available Teams for Sampling
