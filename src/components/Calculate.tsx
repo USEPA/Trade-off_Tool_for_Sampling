@@ -21,8 +21,13 @@ const inputStyles = css`
   border-radius: 4px;
 `;
 
-const submitButtonStyles = css`
+const submitButtonContainerStyles = css`
   margin-top: 10px;
+`;
+
+const submitButtonStyles = css`
+  margin: 10px 0;
+  width: 100%;
 `;
 
 const panelContainer = css`
@@ -34,9 +39,8 @@ function Calculate() {
   const { FeatureSet } = useEsriModulesContext();
   const { layers } = React.useContext(SketchContext);
   const {
-    calculateResults,
-    setCalculateResults,
     contaminationMap,
+    setCalculateResults, //
   } = React.useContext(CalculateContext);
 
   const [surfaceArea, setSurfaceArea] = React.useState('7400');
@@ -286,90 +290,90 @@ function Calculate() {
     <div css={panelContainer}>
       <h2>Calculate</h2>
 
-      <label htmlFor="number-teams-input">
-        Number of Available Teams for Sampling
-      </label>
-      <input
-        id="number-teams-input"
-        css={inputStyles}
-        value={numSamplingTeams}
-        onChange={(ev) => setNumSamplingTeams(ev.target.value)}
-      />
+      <div>
+        <label htmlFor="number-teams-input">
+          Number of Available Teams for Sampling
+        </label>
+        <input
+          id="number-teams-input"
+          css={inputStyles}
+          value={numSamplingTeams}
+          onChange={(ev) => setNumSamplingTeams(ev.target.value)}
+        />
 
-      <label htmlFor="personnel-per-team-input">
-        Personnel per Sampling Team
-      </label>
-      <input
-        id="personnel-per-team-input"
-        css={inputStyles}
-        value={numSamplingPersonnel}
-        onChange={(ev) => setNumSamplingPersonnel(ev.target.value)}
-      />
+        <label htmlFor="personnel-per-team-input">
+          Personnel per Sampling Team
+        </label>
+        <input
+          id="personnel-per-team-input"
+          css={inputStyles}
+          value={numSamplingPersonnel}
+          onChange={(ev) => setNumSamplingPersonnel(ev.target.value)}
+        />
 
-      <label htmlFor="sampling-hours-input">
-        Sampling Team Hours per Shift
-      </label>
-      <input
-        id="sampling-hours-input"
-        css={inputStyles}
-        value={numSamplingHours}
-        onChange={(ev) => setNumSamplingHours(ev.target.value)}
-      />
+        <label htmlFor="sampling-hours-input">
+          Sampling Team Hours per Shift
+        </label>
+        <input
+          id="sampling-hours-input"
+          css={inputStyles}
+          value={numSamplingHours}
+          onChange={(ev) => setNumSamplingHours(ev.target.value)}
+        />
 
-      <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
-      <input
-        id="shifts-per-input"
-        css={inputStyles}
-        value={numSamplingShifts}
-        onChange={(ev) => setNumSamplingShifts(ev.target.value)}
-      />
+        <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
+        <input
+          id="shifts-per-input"
+          css={inputStyles}
+          value={numSamplingShifts}
+          onChange={(ev) => setNumSamplingShifts(ev.target.value)}
+        />
 
-      <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
-      <input
-        id="labor-cost-input"
-        css={inputStyles}
-        value={samplingLaborCost}
-        onChange={(ev) => setSamplingLaborCost(ev.target.value)}
-      />
+        <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
+        <input
+          id="labor-cost-input"
+          css={inputStyles}
+          value={samplingLaborCost}
+          onChange={(ev) => setSamplingLaborCost(ev.target.value)}
+        />
 
-      <label htmlFor="number-of-labs-input">
-        Number of Available Labs for Analysis
-      </label>
-      <input
-        id="number-of-labs-input"
-        css={inputStyles}
-        value={numLabs}
-        onChange={(ev) => setNumLabs(ev.target.value)}
-      />
+        <label htmlFor="number-of-labs-input">
+          Number of Available Labs for Analysis
+        </label>
+        <input
+          id="number-of-labs-input"
+          css={inputStyles}
+          value={numLabs}
+          onChange={(ev) => setNumLabs(ev.target.value)}
+        />
 
-      <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
-      <input
-        id="lab-hours-input"
-        css={inputStyles}
-        value={numLabHours}
-        onChange={(ev) => setNumLabHours(ev.target.value)}
-      />
+        <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
+        <input
+          id="lab-hours-input"
+          css={inputStyles}
+          value={numLabHours}
+          onChange={(ev) => setNumLabHours(ev.target.value)}
+        />
 
-      <label htmlFor="surface-area-input">
-        Surface Area (ft<sup>2</sup>) (optional)
-      </label>
-      <input
-        id="surface-area-input"
-        css={inputStyles}
-        value={surfaceArea}
-        onChange={(ev) => setSurfaceArea(ev.target.value)}
-      />
+        <label htmlFor="surface-area-input">
+          Surface Area (ft<sup>2</sup>) (optional)
+        </label>
+        <input
+          id="surface-area-input"
+          css={inputStyles}
+          value={surfaceArea}
+          onChange={(ev) => setSurfaceArea(ev.target.value)}
+        />
+      </div>
 
-      <button css={submitButtonStyles} onClick={runCalculation}>
-        {calculateResults.status === 'fetching' ? (
-          <React.Fragment>
-            <i className="fas fa-spinner fa-pulse" />
-            &nbsp;&nbsp;Calculating...
-          </React.Fragment>
-        ) : (
-          <React.Fragment>Calculate</React.Fragment>
-        )}
-      </button>
+      <div css={submitButtonContainerStyles}>
+        <button css={submitButtonStyles} onClick={runCalculation}>
+          View Detailed Results
+        </button>
+        <button css={submitButtonStyles} onClick={runCalculation}>
+          View Contamination Hits
+        </button>
+      </div>
     </div>
   );
 }
