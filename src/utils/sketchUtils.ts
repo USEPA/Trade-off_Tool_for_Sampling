@@ -94,8 +94,8 @@ export function updateLayerEdits({
 }: {
   edits: EditsType;
   layer: LayerType;
-  type: 'add' | 'update' | 'delete' | 'split';
-  changes: __esri.Collection<__esri.Graphic>;
+  type: 'add' | 'update' | 'delete' | 'split' | 'properties';
+  changes?: __esri.Collection<__esri.Graphic>;
 }) {
   // make a copy of the edits context variable
   const editsCopy = deepCopyObject(edits) as EditsType;
@@ -108,81 +108,91 @@ export function updateLayerEdits({
   if (!layerToEdit) {
     layerToEdit = createLayerEditTemplate(layer);
     editsCopy.edits.push(layerToEdit);
+  } else {
+    // handle property changes
+    layerToEdit.scenarioName = layer.scenarioName;
+    layerToEdit.scenarioDescription = layer.scenarioDescription;
   }
 
-  // Add new graphics
-  if (type === 'add') {
-    changes.forEach((change) => {
-      const formattedChange = convertToSimpleGraphic(change);
-      layerToEdit.adds.push(formattedChange);
-    });
-  }
-
-  // Apply the updates
-  if (type === 'update') {
-    changes.forEach((change) => {
-      // all updates should have a graphicid
-      if (!change?.attributes?.OBJECTID) return;
-
-      // attempt to find the graphic in edits.adds
-      const addChangeIndex = layerToEdit.adds.findIndex(
-        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
-      );
-      if (addChangeIndex > -1) {
-        // Update the added item  and exit
+  if (changes) {
+    // Add new graphics
+    if (type === 'add') {
+      changes.forEach((change) => {
         const formattedChange = convertToSimpleGraphic(change);
-        layerToEdit.adds[addChangeIndex] = formattedChange;
+        layerToEdit.adds.push(formattedChange);
+      });
+    }
 
-        return; // essentially a break on the forEach loop
-      }
+    // Apply the updates
+    if (type === 'update') {
+      changes.forEach((change) => {
+        // all updates should have a graphicid
+        if (!change?.attributes?.OBJECTID) return;
 
-      // attempt to find the graphic in edits
-      const existingChangeIndex = layerToEdit.updates.findIndex(
-        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
-      );
+        // attempt to find the graphic in edits.adds
+        const addChangeIndex = layerToEdit.adds.findIndex(
+          (graphic) =>
+            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        );
+        if (addChangeIndex > -1) {
+          // Update the added item  and exit
+          const formattedChange = convertToSimpleGraphic(change);
+          layerToEdit.adds[addChangeIndex] = formattedChange;
 
-      // update the existing change, otherwise add the change to the updates
-      const formattedChange = convertToSimpleGraphic(change);
-      if (existingChangeIndex > -1) {
-        layerToEdit.updates[existingChangeIndex] = formattedChange;
-      } else {
-        layerToEdit.updates.push(formattedChange);
-      }
-    });
-  }
+          return; // essentially a break on the forEach loop
+        }
 
-  // Append any deletes of items that have already been published
-  if (type === 'delete') {
-    // TODO: Fix issue of deleting new graphics, showing up in both
-    //  deletes and adds or updates.
-    changes.forEach((change) => {
-      // attempt to find this id in adds
-      const addChangeIndex = layerToEdit.adds.findIndex(
-        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
-      );
-      if (addChangeIndex > -1) {
-        // remove from adds and don't add to deletes
-        layerToEdit.adds = layerToEdit.adds.filter(
+        // attempt to find the graphic in edits
+        const existingChangeIndex = layerToEdit.updates.findIndex(
+          (graphic) =>
+            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        );
+
+        // update the existing change, otherwise add the change to the updates
+        const formattedChange = convertToSimpleGraphic(change);
+        if (existingChangeIndex > -1) {
+          layerToEdit.updates[existingChangeIndex] = formattedChange;
+        } else {
+          layerToEdit.updates.push(formattedChange);
+        }
+      });
+    }
+
+    // Append any deletes of items that have already been published
+    if (type === 'delete') {
+      // TODO: Fix issue of deleting new graphics, showing up in both
+      //  deletes and adds or updates.
+      changes.forEach((change) => {
+        // attempt to find this id in adds
+        const addChangeIndex = layerToEdit.adds.findIndex(
+          (graphic) =>
+            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        );
+        if (addChangeIndex > -1) {
+          // remove from adds and don't add to deletes
+          layerToEdit.adds = layerToEdit.adds.filter(
+            (graphic) =>
+              graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
+          );
+
+          return; // essentially a break on the forEach loop
+        }
+
+        // if the objectid is in the update list, remove it
+        // attempt to find the graphic in edits
+        layerToEdit.updates = layerToEdit.updates.filter(
           (graphic) =>
             graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
         );
 
-        return; // essentially a break on the forEach loop
-      }
+        // add the objectids to delete to the deletes array
+        layerToEdit.deletes.push(change.attributes.OBJECTID);
+      });
+    }
 
-      // if the objectid is in the update list, remove it
-      // attempt to find the graphic in edits
-      layerToEdit.updates = layerToEdit.updates.filter(
-        (graphic) => graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
-      );
-
-      // add the objectids to delete to the deletes array
-      layerToEdit.deletes.push(change.attributes.OBJECTID);
-    });
+    // TODO: determine if we need splits and implement if necessary
+    // if (type === 'splits') { }
   }
-
-  // TODO: determine if we need splits and implement if necessary
-  // if (type === 'splits') { }
 
   editsCopy.count = editsCopy.count + 1;
 
