@@ -47,7 +47,7 @@ const layerInfo = css`
 // --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet } = useEsriModulesContext();
-  const { layers, sketchLayer } = React.useContext(SketchContext);
+  const { sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
     setCalculateResults, //
@@ -63,10 +63,7 @@ function Calculate() {
   const [numLabHours, setNumLabHours] = React.useState('24');
 
   function runCalculation() {
-    const sampleLayers = layers.filter(
-      (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
-    );
-    if (sampleLayers.length === 0) return;
+    if (!sketchLayer) return;
 
     setCalculateResults({
       status: 'fetching',
@@ -100,11 +97,9 @@ function Calculate() {
     }
 
     const sketchedGraphics: __esri.Graphic[] = [];
-    sampleLayers.forEach((layer) => {
-      if (layer?.sketchLayer?.type === 'graphics') {
-        sketchedGraphics.push(...layer.sketchLayer.graphics.toArray());
-      }
-    });
+    if (sketchLayer?.sketchLayer?.type === 'graphics') {
+      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
+    }
 
     if (sketchedGraphics.length === 0) {
       setCalculateResults({ status: 'no-graphics', data: null });
