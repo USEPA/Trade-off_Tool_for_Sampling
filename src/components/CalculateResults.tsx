@@ -2,6 +2,8 @@
 
 import React, { ReactNode } from 'react';
 import { jsx, css } from '@emotion/core';
+// components
+import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
@@ -34,7 +36,9 @@ function LabelValue({ label, value }: LabelValueProps) {
   return (
     <div css={labelValueStyles}>
       <label>{label}: </label>
-      <span css={valueStyles}>{formattedValue}</span>
+      <span css={valueStyles}>
+        <ShowLessMore text={formattedValue} charLimit={20} />
+      </span>
     </div>
   );
 }

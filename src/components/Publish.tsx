@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
+// components
+import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { SketchContext } from 'contexts/Sketch';
@@ -72,7 +74,10 @@ function Publish() {
         </p>
         <p css={layerInfo}>
           <strong>Scenario Description: </strong>
-          {sketchLayer?.scenarioDescription}
+          <ShowLessMore
+            text={sketchLayer?.scenarioDescription}
+            charLimit={20}
+          />
         </p>
       </div>
 

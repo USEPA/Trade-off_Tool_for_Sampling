@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
+// components
+import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -314,7 +316,10 @@ function Calculate() {
         </p>
         <p css={layerInfo}>
           <strong>Scenario Description: </strong>
-          {sketchLayer?.scenarioDescription}
+          <ShowLessMore
+            text={sketchLayer?.scenarioDescription}
+            charLimit={20}
+          />
         </p>
       </div>
 
