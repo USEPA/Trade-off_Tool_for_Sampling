@@ -4,6 +4,7 @@ import React, { ReactNode } from 'react';
 import { jsx, css } from '@emotion/core';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
+import { SketchContext } from 'contexts/Sketch';
 // utils
 import LoadingSpinner from './LoadingSpinner';
 
@@ -21,7 +22,7 @@ const valueStyles = css`
 // --- components (LabelValue) ---
 type LabelValueProps = {
   label: ReactNode | string;
-  value: string;
+  value: string | undefined | null;
 };
 
 function LabelValue({ label, value }: LabelValueProps) {
@@ -52,6 +53,7 @@ const downloadButtonContainerStyles = css`
 // --- components (CalculateResults) ---
 function CalculateResults() {
   const { calculateResults } = React.useContext(CalculateContext);
+  const { sketchLayer } = React.useContext(SketchContext);
 
   return (
     <div css={panelContainer}>
@@ -69,10 +71,13 @@ function CalculateResults() {
         <React.Fragment>
           <div>
             <h3>Summary</h3>
-            <LabelValue label="Scenario Name" value="Name Placeholder..." />
+            <LabelValue
+              label="Scenario Name"
+              value={sketchLayer?.scenarioName}
+            />
             <LabelValue
               label="Scenario Description"
-              value="Description Placeholder..."
+              value={sketchLayer?.scenarioDescription}
             />
             <br />
 
