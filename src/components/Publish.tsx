@@ -17,10 +17,23 @@ const submitButtonStyles = css`
   margin-top: 10px;
 `;
 
+const sectionContainer = css`
+  margin-bottom: 10px;
+`;
+
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
 // --- components (Publish) ---
 function Publish() {
   const { portal } = React.useContext(AuthenticationContext);
-  const { edits, setEdits, layers } = React.useContext(SketchContext);
+  const {
+    edits,
+    setEdits,
+    layers,
+    sketchLayer, //
+  } = React.useContext(SketchContext);
 
   function runPublish() {
     if (!portal) return;
@@ -47,6 +60,22 @@ function Publish() {
   return (
     <div css={panelContainer}>
       <h2>Publish</h2>
+
+      <div css={sectionContainer}>
+        <p css={layerInfo}>
+          <strong>Layer Name: </strong>
+          {sketchLayer?.name}
+        </p>
+        <p css={layerInfo}>
+          <strong>Scenario Name: </strong>
+          {sketchLayer?.scenarioName}
+        </p>
+        <p css={layerInfo}>
+          <strong>Scenario Description: </strong>
+          {sketchLayer?.scenarioDescription}
+        </p>
+      </div>
+
       <div>
         <button css={submitButtonStyles} onClick={runPublish}>
           Publish

@@ -34,10 +34,18 @@ const panelContainer = css`
   padding: 20px;
 `;
 
+const sectionContainer = css`
+  margin-bottom: 10px;
+`;
+
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
 // --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet } = useEsriModulesContext();
-  const { layers } = React.useContext(SketchContext);
+  const { layers, sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
     setCalculateResults, //
@@ -295,7 +303,22 @@ function Calculate() {
     <div css={panelContainer}>
       <h2>Calculate</h2>
 
-      <div>
+      <div css={sectionContainer}>
+        <p css={layerInfo}>
+          <strong>Layer Name: </strong>
+          {sketchLayer?.name}
+        </p>
+        <p css={layerInfo}>
+          <strong>Scenario Name: </strong>
+          {sketchLayer?.scenarioName}
+        </p>
+        <p css={layerInfo}>
+          <strong>Scenario Description: </strong>
+          {sketchLayer?.scenarioDescription}
+        </p>
+      </div>
+
+      <div css={sectionContainer}>
         <label htmlFor="number-teams-input">
           Number of Available Teams for Sampling
         </label>
