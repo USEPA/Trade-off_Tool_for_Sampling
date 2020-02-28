@@ -7,7 +7,7 @@ import { defaultLayerProps } from 'config/layerProps';
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { convertToSimpleGraphic } from 'utils/sketchUtils';
 
-const featureServiceName = 'EPA_TOTS_FS_jklj_test';
+const featureServiceName = 'EPA_TOTS_FS';
 
 /**
  * Attempts to get the hosted feature service and creates it if
