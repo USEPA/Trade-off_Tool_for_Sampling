@@ -212,6 +212,8 @@ function LocateSamples() {
       name: 'Default Sample Layer',
       label: 'Default Sample Layer',
       layerType: 'Samples',
+      scenarioName: '',
+      scenarioDescription: '',
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',

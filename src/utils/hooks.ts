@@ -111,6 +111,8 @@ export function useSessionStorage() {
         name: editsLayer.name,
         label: editsLayer.name,
         layerType: editsLayer.layerType,
+        scenarioName: editsLayer.scenarioName,
+        scenarioDescription: editsLayer.scenarioDescription,
         addedFrom: editsLayer.addedFrom,
         defaultVisibility: true,
         geometryType: 'esriGeometryPolygon',

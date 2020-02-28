@@ -47,6 +47,8 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     layerId: layerToEdit.sketchLayer.id,
     name: layerToEdit.name,
     layerType: layerToEdit.layerType,
+    scenarioName: layerToEdit.scenarioName,
+    scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
     adds: [],
     updates: [],

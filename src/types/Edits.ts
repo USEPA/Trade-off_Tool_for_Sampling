@@ -8,6 +8,8 @@ export type LayerEditsType = {
   layerId: string; // id from esri layer
   name: string; // layer name
   layerType: string; // type of tots layer (sample, contamination, etc.)
+  scenarioName: string; // user defined scenario name
+  scenarioDescription: string; // user defined scenario description
   addedFrom: string; // how the layer was added (file, url, etc.)
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
