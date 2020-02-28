@@ -1,5 +1,5 @@
 // types
-import { EditsType, FeatureEditsType } from 'types/Edits';
+import { LayerEditsType, FeatureEditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
@@ -339,12 +339,12 @@ export function applyEdits({
   portal: __esri.Portal;
   serviceUrl: string;
   layers: LayerType[];
-  edits: EditsType;
+  edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
     const changes: any[] = [];
     // loop through the layers and build the payload
-    edits.edits.forEach((layerEdits) => {
+    edits.forEach((layerEdits) => {
       const adds: FeatureEditsType[] = [];
       if (layerEdits.adds.length > 0) {
         // get the graphics layer
@@ -410,14 +410,14 @@ export function publish({
 }: {
   portal: __esri.Portal;
   layers: LayerType[];
-  edits: EditsType;
+  edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
     getFeatureService(portal)
       .then((service: any) => {
         // build a list of layers that need to be created
         const layerNames: string[] = [];
-        edits.edits.forEach((layer) => {
+        edits.forEach((layer) => {
           if (layer.id < 0) layerNames.push(layer.name);
         });
 
@@ -427,7 +427,7 @@ export function publish({
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
-              const layerEdits = edits.edits.find(
+              const layerEdits = edits.find(
                 (layerEdit) =>
                   layerEdit.id === -1 && layerEdit.name === layer.name,
               );

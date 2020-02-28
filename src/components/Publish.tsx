@@ -32,28 +32,26 @@ function Publish() {
   const { portal } = React.useContext(AuthenticationContext);
   const {
     edits,
-    setEdits,
-    layers,
     sketchLayer, //
   } = React.useContext(SketchContext);
 
   function runPublish() {
     if (!portal) return;
 
-    const sampleLayers = layers.filter(
-      (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
+    if (!sketchLayer) return;
+
+    const layerEdits = edits.edits.filter(
+      (editLayer) =>
+        editLayer.id === sketchLayer.id && editLayer.name === sketchLayer.name,
     );
-    if (sampleLayers.length === 0) return;
 
     publish({
       portal,
-      layers: sampleLayers,
-      edits,
+      layers: [sketchLayer],
+      edits: layerEdits,
     })
       .then((res) => {
         console.log('publish res: ', res);
-        setEdits({ count: 0, edits: [] });
-
         alert('Publish complete.');
       })
       .catch((err) => console.error('publish error: ', err));
