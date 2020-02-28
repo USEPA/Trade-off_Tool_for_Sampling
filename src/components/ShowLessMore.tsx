@@ -34,7 +34,7 @@ function ShowLessMore({ text, charLimit }: Props) {
 
   if (typeof text === 'string') {
     if (!text) return <React.Fragment />;
-    if (text.length < charLimit) return <React.Fragment>text</React.Fragment>;
+    if (text.length < charLimit) return <React.Fragment>{text}</React.Fragment>;
 
     return (
       <React.Fragment>
