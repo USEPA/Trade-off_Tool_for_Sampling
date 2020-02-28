@@ -1,6 +1,6 @@
 import arcpy
 import sys,os
-import csv,uuid
+import uuid
 
 ###############################################################################
 class Toolbox(object):
@@ -15,6 +15,7 @@ class Toolbox(object):
       self.tools.append(GenerateRandom);
       self.tools.append(VSPImport);
       self.tools.append(Main);
+      self.tools.append(ContaminationResults);
 
 ###############################################################################
 class AddNotes(object):
@@ -34,7 +35,7 @@ class AddNotes(object):
       param0 = arcpy.Parameter(
           displayName   = "Input Sampling Layer"
          ,name          = "Input_Sampling_Layer"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -178,7 +179,7 @@ class GenerateRandom(object):
       param2 = arcpy.Parameter(
           displayName   = "Area of Interest Mask"
          ,name          = "Area_of_Interest_Mask"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -469,7 +470,7 @@ class VSPImport(object):
       param0 = arcpy.Parameter(
           displayName   = "Input VSP"
          ,name          = "Input_VSP"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -535,27 +536,16 @@ class VSPImport(object):
       );
       scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
       
-      scratch_full_v = arcpy.CreateScratchName(
-          prefix    = "VSPTemp"
-         ,suffix    = ""
-         ,data_type = "FeatureClass"
-         ,workspace = arcpy.env.scratchGDB
-      );
-      scratch_path_v,scratch_name_v = os.path.split(scratch_full_v);
-      
-      arcpy.FeatureClassToFeatureClass_conversion(
-          in_features = fc_vsp
-         ,out_path    = scratch_path_v
-         ,out_name    = scratch_name_v
-      );
-      
       #########################################################################
       # Use the FeatureToPolygon function to form new areas
       arcpy.FeatureToPolygon_management(
-          in_features       = scratch_full_v
+          in_features       = fc_vsp
          ,out_feature_class = scratch_full_o
          ,attributes        = "NO_ATTRIBUTES"
       );
+      
+      cnt = arcpy.GetCount_management(scratch_full_o).getOutput(0);
+      arcpy.AddMessage("Created " + str(cnt) + " records from VSP input");
       
       #########################################################################
       flds = arcpy.ListFields(scratch_full_o);
@@ -565,7 +555,8 @@ class VSPImport(object):
          if not field.required:
             fldnms.append(field.name);
       
-      arcpy.DeleteField_management(scratch_full_o,fldnms);
+      if len(fldnms) > 0:
+         arcpy.DeleteField_management(scratch_full_o,fldnms);
 
       #########################################################################
       dz_addfields(
@@ -693,7 +684,7 @@ class VSPImport(object):
             cursor.updateRow(row);
 
       #########################################################################
-      arcpy.SetParameterAsText(2,scratch_full_o); 
+      arcpy.SetParameterAsText(2,scratch_full_o);
 
       arcpy.AddMessage("Conversion Complete!");
 
@@ -724,7 +715,7 @@ class Main(object):
       param1 = arcpy.Parameter(
           displayName   = "Input Sampling Unit"
          ,name          = "Input_Sampling_Unit"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -734,7 +725,7 @@ class Main(object):
       param2 = arcpy.Parameter(
           displayName   = "Contamination Map"
          ,name          = "Contamination_Map"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Optional"
          ,direction     = "Input"
          ,enabled       = True
@@ -824,8 +815,8 @@ class Main(object):
       param11 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
+         ,datatype      = "GPTableView"
          ,parameterType = "Derived"
-         ,datatype      = "DEFile"
          ,direction     = "Output"
       );
 
@@ -888,11 +879,28 @@ class Main(object):
       
       scratch_full_o = arcpy.CreateScratchName(
           prefix    = "TOTSResults"
-         ,suffix    = ".csv"
+         ,suffix    = ""
          ,data_type = "Dataset"
-         ,workspace = arcpy.env.scratchFolder
+         ,workspace = arcpy.env.scratchGDB
       );
       scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+      
+      arcpy.CreateTable_management(
+          out_path          = scratch_path_o
+         ,out_name          = scratch_name_o
+         ,config_keyword    = None
+      );
+      
+      dz_addfields(
+          scratch_full_o
+         ,[
+             ['key'                       ,'TEXT'  ,'Key'                     ,255 ,None,'']
+            ,['value_str'                 ,'TEXT'  ,'Value_Str'               ,2000,None,'']
+            ,['value_long'                ,'LONG'  ,'Value_Long'              ,None,None,'']
+            ,['value_double'              ,'DOUBLE','Value_Double'            ,None,None,'']
+            ,['unit'                      ,'TEXT'  ,'Unit'                    ,255 ,None,'']
+          ]
+      );
 
       #########################################################################
       # Contaminaton results join
@@ -929,7 +937,7 @@ class Main(object):
             cursor.updateRow(row);
 
       #########################################################################
-      fields = ["TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS", "ALC", "AMC", "AC","ITER"];
+      fields = ["TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","ALC","AMC","AC","ITER"];
 
       with arcpy.da.UpdateCursor(fc_samples_in,fields) as cursor:
 
@@ -1080,16 +1088,16 @@ class Main(object):
       arcpy.AddMessage(" ");
       arcpy.AddMessage("-- Sampling --");
       arcpy.AddMessage("User Specified Number of Available Teams for Sampling: "        + str(int_available_teams));
-      arcpy.AddMessage("User Specified int_personnel per Sampling Team: "               + str(int_personnel));
+      arcpy.AddMessage("User Specified Personnel per Sampling Team: "               + str(int_personnel));
       arcpy.AddMessage("User Specified Sampling Team Hours per Shift: "                 + str(num_hours_per_shift));
       arcpy.AddMessage("User Specified Sampling Team Shifts per Day: "                  + str(num_shifts_per_day));
       arcpy.AddMessage("Sampling Hours per Day: "                                       + str(int_sampling_hours));
-      arcpy.AddMessage("Sampling int_personnel hours per Day: "                         + str(int_sampling_personnel_day));
+      arcpy.AddMessage("Sampling Personnel hours per Day: "                         + str(int_sampling_personnel_day));
       arcpy.AddMessage("User Specified Sampling Team Labor Cost ($): "                  + str(num_labor_cost));
       arcpy.AddMessage("Time to Prepare Kits (person hours): "                          + str(num_ttpk_total));
       arcpy.AddMessage("Time to Collect (person hours): "                               + str(num_ttc_total));
       arcpy.AddMessage("Material Cost: "                                                + str(num_mcps_total));
-      arcpy.AddMessage("Sampling int_personnel Labor Cost ($): "                        + str(num_sampling_personnel_labor_cost));
+      arcpy.AddMessage("Sampling Personnel Labor Cost ($): "                        + str(num_sampling_personnel_labor_cost));
       arcpy.AddMessage("Time to Complete Sampling (days): "                             + str(num_time_complete_sampling));
       arcpy.AddMessage("Total Sampling Labor Cost ($): "                                + str(num_total_sampling_num_labor_cost));
       arcpy.AddMessage(" ");
@@ -1105,100 +1113,396 @@ class Main(object):
       arcpy.AddMessage(" ");
 
       #########################################################################
-      # Write to spreadsheet
-      with open(scratch_full_o,'w+') as csvfile:
+      # Write to key/value table
+      fields = ["key","value_str","value_long","value_double","unit"];
 
-         csvwriter = csv.writer(
-             csvfile
-            ,delimiter      = ","
-            ,lineterminator = "\n"
-         );
-         csvwriter.writerow(["Summary"]);
-         csvwriter.writerow([""]);
-         csvwriter.writerow(['Total Number of User-Defined Samples: ']                  + [arcpy.GetCount_management(fc_samples_in).getOutput(0)]);
-         csvwriter.writerow(['Total Number of Samples: ']                               + [str(num_ac_total)]);
-         csvwriter.writerow(["Total Cost ($): "]                                        + [str(num_total_cost)]);
-         csvwriter.writerow(["Total Time (days): "]                                     + [str(num_total_time)]);
-
+      with arcpy.da.InsertCursor(scratch_full_o,fields) as cursor:
+      
+         cursor.insertRow((
+             'Total Number of User-Defined Samples'
+            ,None
+            ,None
+            ,arcpy.GetCount_management(fc_samples_in).getOutput(0)
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'Total Number of Samples'
+            ,None
+            ,None
+            ,num_ac_total
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'Total Cost'
+            ,None
+            ,None
+            ,num_total_cost
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Total Time'
+            ,None
+            ,None
+            ,num_total_time
+            ,'Day'
+         ));
+         
          if num_time_complete_sampling > num_throughput_time:
-            csvwriter.writerow(["Limiting Time Factor: "]                               + ["Sampling"]);
+            ltf = "Sampling";
 
          elif num_time_complete_sampling < num_throughput_time:
-            csvwriter.writerow(["Limiting Time Factor: "]                               + ["Analysis"]);
-
-         csvwriter.writerow([""])
-         csvwriter.writerow(["Spatial Information"])
-         csvwriter.writerow(["Total Sampled Area (feet): "]                             + [str(num_aa_total)]);
+            ltf = "Analysis";
+         
+         cursor.insertRow((
+             'Limiting Time Factor'
+            ,ltf
+            ,None
+            ,None
+            ,None
+         ));
+         
+         # Spatial Information
+         cursor.insertRow((
+             'Total Sampled Area'
+            ,None
+            ,None
+            ,num_aa_total
+            ,'sq ft'
+         ));
 
          if num_aoi_area > 0:
-            csvwriter.writerow(["User Specified Total AOI (feet): "]                    + [str(num_aoi_area)]);
-            csvwriter.writerow(["Percent of Area Sampled: "]                            + [str("{0:.0f}%".format(num_prob))]);
+         
+            cursor.insertRow((
+                'User Specified Total AOI'
+               ,None
+               ,None
+               ,num_aoi_area
+               ,'sq ft'
+            ));
+            
+            cursor.insertRow((
+                'Percent of Area Sampled'
+               ,None
+               ,None
+               ,num_prob
+               ,'%'
+            ));
 
-         csvwriter.writerow([""]);
-         csvwriter.writerow(["Sampling"]);
-         csvwriter.writerow(["User Specified Number of Available Teams for Sampling: "] + [str(int_available_teams)]);
-         csvwriter.writerow(["User Specified int_personnel per Sampling Team: "]        + [str(int_personnel)]);
-         csvwriter.writerow(["User Specified Sampling Team Hours per Shift: "]          + [str(num_hours_per_shift)]);
-         csvwriter.writerow(["User Specified Sampling Team Shifts per Day: "]           + [str(num_shifts_per_day)]);
-         csvwriter.writerow(["Sampling Hours per Day: "]                                + [str(int_sampling_hours)]);
-         csvwriter.writerow(["Sampling int_personnel hours per Day: "]                  + [str(int_sampling_personnel_day)]);
-         csvwriter.writerow(["User Specified Sampling Team Labor Cost ($): "]           + [str(num_labor_cost)]);
-         csvwriter.writerow(['Time to Prepare Kits (person hours): ']                   + [str(num_ttpk_total)]);
-         csvwriter.writerow(["Time to Collect (person hours): "]                        + [str(num_ttc_total)]);
-         csvwriter.writerow(["Material Cost: "]                                         + [str(num_mcps_total)]);
-         csvwriter.writerow(["Sampling int_personnel Labor Cost ($): "]                 + [str(num_sampling_personnel_labor_cost)]);
-         csvwriter.writerow(["Time to Complete Sampling (days): "]                      + [str(num_time_complete_sampling)]);
-         csvwriter.writerow(["Total Sampling Labor Cost ($): "]                         + [str(num_total_sampling_num_labor_cost)]);
-         csvwriter.writerow([""]);
-         csvwriter.writerow(["Analysis"]);
-         csvwriter.writerow(["User Specified Number of Available Labs for Analysis: "]  + [str(int_sampling_labs)]);
-         csvwriter.writerow(["User Specified Analysis Lab Hours per Day: "]             + [str(num_analysis_hours)]);
-         csvwriter.writerow(["Time to Complete Analyses (days)"]                        + [str(num_throughput_time)]);
-         csvwriter.writerow(["Time to Analyze (person hours): "]                        + [str(num_tta_total)]);
-         csvwriter.writerow(["Analysis Labor Cost ($): "]                               + [str(num_alc_total)]);
-         csvwriter.writerow(["Analysis Material Cost ($): "]                            + [str(num_amc_total)]);
-         csvwriter.writerow(["Waste volume (L): "]                                      + [str(num_wvps_total)]);
-         csvwriter.writerow(["Waste Weight (lbs): "]                                    + [str(num_wwps_total)]);
-         csvwriter.writerow([""]);
+         # Sampling
+         cursor.insertRow((
+             'User Specified Number of Available Teams for Sampling'
+            ,None
+            ,int_available_teams
+            ,None
+            ,None
+         ));
 
-         ######################################################################
-         # Contamination results join
-         # Write data depending on availability of contamination map
-         if fc_contamination_map:
-            fields = ['OID@','GLOBALID','TYPE','CFU','NOTES'];
-
-            arcpy.AddMessage("-- Sampling Results --");
-            with arcpy.da.SearchCursor(scratch_full_c,fields) as q:
-
-               for row in q:
-
-                  if row[3] > 0:
-                     num_cfu_count += 1;
-                     arcpy.AddMessage("Sample ID: " + str(row[0]) + ", Sample Type: " + str(row[2]) + ", CFU: " + str(row[3]));
-
-            arcpy.AddMessage(" ");
-            arcpy.AddMessage(str(num_cfu_count) + " of " + str(arcpy.GetCount_management(fc_samples_in).getOutput(0)) + " Samples Were Positive Detects");
-
-            fields_com = ['Sample ID','GlobalID','Sample Type','CFU','Notes']
-            csvwriter.writerow(fields_com)
-
-            with arcpy.da.SearchCursor(scratch_full_c,fields) as s_cursor:
-
-               for row in s_cursor:
-                  csvwriter.writerow(row)
-
-         else:
-            fields     = ['OID@','GLOBALID','NOTES'];
-            fields_com = ['Sample ID','GlobalID','Notes'];
-            csvwriter.writerow(fields_com);
-
-            with arcpy.da.SearchCursor(fc_samples_in,fields) as cursor:
-
-               for row in cursor:
-                  csvwriter.writerow(row);
+         cursor.insertRow((
+             'User Specified Personnel per Sampling Team'
+            ,None
+            ,int_personnel
+            ,None
+            ,None
+         ));
+        
+         cursor.insertRow((
+             'User Specified Sampling Team Hours per Shift'
+            ,None
+            ,None
+            ,num_hours_per_shift
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'User Specified Sampling Team Shifts per Day'
+            ,None
+            ,None
+            ,num_shifts_per_day
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'Sampling Hours per Day'
+            ,None
+            ,int_sampling_hours
+            ,None
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'Sampling Personnel hours per Day'
+            ,None
+            ,int_sampling_personnel_day
+            ,None
+            ,None
+         ));
+        
+         cursor.insertRow((
+             'User Specified Sampling Team Labor Cost'
+            ,None
+            ,None
+            ,num_labor_cost
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Time to Prepare Kits'
+            ,None
+            ,None
+            ,num_ttpk_total
+            ,'Person Hours'
+         ));
+         
+         cursor.insertRow((
+             'Time to Collect'
+            ,None
+            ,None
+            ,num_ttc_total
+            ,'Person Hours'
+         ));
+         
+         # Material Cost
+         cursor.insertRow((
+             'Material Cost'
+            ,None
+            ,None
+            ,num_mcps_total
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Sampling Personnel Labor Cost'
+            ,None
+            ,None
+            ,num_sampling_personnel_labor_cost
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Time to Complete Sampling'
+            ,None
+            ,None
+            ,num_time_complete_sampling
+            ,'Day'
+         ));
+         
+         cursor.insertRow((
+             'Total Sampling Labor Cost'
+            ,None
+            ,None
+            ,num_total_sampling_num_labor_cost
+            ,'USD'
+         ));
+      
+         # Analysis
+         cursor.insertRow((
+             'User Specified Number of Available Labs for Analysis'
+            ,None
+            ,int_sampling_labs
+            ,None
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'User Specified Analysis Lab Hours per Day'
+            ,None
+            ,None
+            ,num_analysis_hours
+            ,None
+         ));
+         
+         cursor.insertRow((
+             'Time to Complete Analyses'
+            ,None
+            ,None
+            ,num_throughput_time
+            ,'Day'
+         ));
+         
+         cursor.insertRow((
+             'Time to Analyze'
+            ,None
+            ,None
+            ,num_tta_total
+            ,'Person Hours'
+         ));
+         
+         cursor.insertRow((
+             'Analysis Labor Cost'
+            ,None
+            ,None
+            ,num_alc_total
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Analysis Material Cost'
+            ,None
+            ,None
+            ,num_amc_total
+            ,'USD'
+         ));
+         
+         cursor.insertRow((
+             'Waste Volume'
+            ,None
+            ,None
+            ,num_wvps_total
+            ,'L'
+         ));
+         
+         cursor.insertRow((
+             'Waste Weight'
+            ,None
+            ,None
+            ,num_wwps_total
+            ,'lbs'
+         ));
                   
       #########################################################################
       arcpy.SetParameterAsText(11,scratch_full_o);
+      
+###############################################################################
+class ContaminationResults(object):
+
+   #...........................................................................
+   def __init__(self):
+
+      self.label = "Contamination Results"
+      self.name  = "ContaminationResults"
+      self.canRunInBackground = False;
+
+   #...........................................................................
+   def getParameterInfo(self):
+
+      #########################################################################
+      param0 = arcpy.Parameter(
+          displayName   = "Input Sampling Unit"
+         ,name          = "Input_Sampling_Unit"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Required"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+
+      #########################################################################
+      param1 = arcpy.Parameter(
+          displayName   = "Contamination Map"
+         ,name          = "Contamination_Map"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Required"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+
+      #########################################################################
+      param2 = arcpy.Parameter(
+          displayName   = "Output TOTS Results"
+         ,name          = "Output_TOTS_Results"
+         ,datatype      = "GPTableView"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+
+      params = [
+          param0
+         ,param1
+         ,param2
+      ];
+
+      return params;
+
+   #...........................................................................
+   def isLicensed(self):
+
+      return True;
+
+   #...........................................................................
+   def updateParameters(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def updateMessages(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def execute(self,parameters,messages):
+
+      #########################################################################
+      fc_samples_in        = parameters[0].value;
+      fc_contamination_map = parameters[1].value;
+      
+      #########################################################################
+      scratch_full_c = arcpy.CreateScratchName(
+          prefix    = "Contamination"
+         ,suffix    = ""
+         ,data_type = "FeatureClass"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
+      
+      scratch_full_o = arcpy.CreateScratchName(
+          prefix    = "TOTSResults"
+         ,suffix    = ""
+         ,data_type = "Dataset"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+      
+      arcpy.CreateTable_management(
+          out_path       = scratch_path_o
+         ,out_name       = scratch_name_o
+         ,config_keyword = None
+      );
+      
+      dz_addfields(
+          in_table = scratch_full_o
+         ,field_description = [
+             ['GLOBALID'           ,'TEXT'  ,'GlobalID'         ,40  ,None,'']
+            ,['TYPE'               ,'TEXT'  ,'Type'             ,255 ,None,'']
+            ,['CFU'                ,'LONG'  ,'CFU'              ,None,None,'']
+            ,['Notes'              ,'TEXT'  ,'Notes'            ,255 ,None,'']
+          ]
+      );
+
+      #########################################################################
+      # Contamination results join
+      arcpy.SpatialJoin_analysis(
+          target_features   = fc_samples_in
+         ,join_features     = fc_contamination_map
+         ,out_feature_class = scratch_full_c
+      );
+
+      #########################################################################
+      # Sampling Results
+      flds = ['GLOBALID','TYPE','CFU','Notes'];
+      
+      with arcpy.da.InsertCursor(
+          in_table    = scratch_full_o
+         ,field_names = flds
+      ) as insert_curs:
+      
+         with arcpy.da.SearchCursor(
+             in_table    = scratch_full_c
+            ,field_names = flds
+         ) as search_curs:
+         
+            for row in search_curs:
+            
+               insert_curs.insertRow((
+                   row[0]
+                  ,row[1]
+                  ,row[2]
+                  ,row[3]
+               ));
+                  
+      #########################################################################
+      arcpy.SetParameterAsText(2,scratch_full_o);
 
 ###############################################################################
 def dz_addfields(in_table,field_description):
