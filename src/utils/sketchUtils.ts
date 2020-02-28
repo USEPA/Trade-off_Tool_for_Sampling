@@ -1,3 +1,7 @@
+// types
+import { EditsType, LayerEditsType } from 'types/Edits';
+import { LayerType } from 'types/Layer';
+
 /**
  * This function performs a deep copy, exluding functions,
  * of an object. This is mainly used for setting the edits
@@ -16,7 +20,10 @@ export function deepCopyObject(obj: any) {
  * @param layerToFind The layer to find within the edits object
  * @returns the layer that was found in the edits object
  */
-export function findLayerInEdits(edits: any[], layerToFind: any) {
+export function findLayerInEdits(
+  edits: LayerEditsType[],
+  layerToFind: LayerType,
+) {
   const nameToFind = layerToFind.name ? layerToFind.name : layerToFind.id;
 
   // find the layer in the edits using it's id and name
@@ -34,7 +41,7 @@ export function findLayerInEdits(edits: any[], layerToFind: any) {
  * @param layerToEdit The layer object
  * @returns object representing the layer edit template
  */
-export function createLayerEditTemplate(layerToEdit: any) {
+export function createLayerEditTemplate(layerToEdit: LayerType) {
   return {
     id: layerToEdit.id,
     layerId: layerToEdit.sketchLayer.id,
@@ -55,17 +62,17 @@ export function createLayerEditTemplate(layerToEdit: any) {
  * @param graphic The esri graphic to be stored
  * @returns simple graphic object with just attributes and geometry
  */
-export function convertToSimpleGraphic(graphic: any) {
+export function convertToSimpleGraphic(graphic: __esri.Graphic) {
+  let geometry: __esri.Polygon | object = {};
+  if (graphic?.geometry?.type === 'polygon') {
+    geometry = graphic.geometry as __esri.Polygon;
+  }
+
+  // currently we only have polygons
+  // in the future we may need to add code to handle different geometry types
   return {
     attributes: graphic.attributes ? graphic.attributes : {},
-    geometry:
-      graphic.geometry && graphic.geometry.rings
-        ? {
-            // currently we only have polygons
-            // in the future we may need to add code to handle different geometry types
-            rings: graphic.geometry.rings,
-          }
-        : {},
+    geometry: geometry,
   };
 }
 
@@ -83,13 +90,13 @@ export function updateLayerEdits({
   type,
   changes,
 }: {
-  edits: any;
-  layer: any;
+  edits: EditsType;
+  layer: LayerType;
   type: 'add' | 'update' | 'delete' | 'split';
   changes: __esri.Collection<__esri.Graphic>;
 }) {
   // make a copy of the edits context variable
-  const editsCopy = deepCopyObject(edits);
+  const editsCopy = deepCopyObject(edits) as EditsType;
 
   // find the layer's edit structure
   let layerToEdit = findLayerInEdits(editsCopy.edits, layer);
@@ -117,8 +124,7 @@ export function updateLayerEdits({
 
       // attempt to find the graphic in edits.adds
       const addChangeIndex = layerToEdit.adds.findIndex(
-        (graphic: any) =>
-          graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
       );
       if (addChangeIndex > -1) {
         // Update the added item  and exit
@@ -130,8 +136,7 @@ export function updateLayerEdits({
 
       // attempt to find the graphic in edits
       const existingChangeIndex = layerToEdit.updates.findIndex(
-        (graphic: any) =>
-          graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
       );
 
       // update the existing change, otherwise add the change to the updates
@@ -151,13 +156,12 @@ export function updateLayerEdits({
     changes.forEach((change) => {
       // attempt to find this id in adds
       const addChangeIndex = layerToEdit.adds.findIndex(
-        (graphic: any) =>
-          graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+        (graphic) => graphic.attributes.OBJECTID === change.attributes.OBJECTID,
       );
       if (addChangeIndex > -1) {
         // remove from adds and don't add to deletes
         layerToEdit.adds = layerToEdit.adds.filter(
-          (graphic: any) =>
+          (graphic) =>
             graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
         );
 
@@ -167,8 +171,7 @@ export function updateLayerEdits({
       // if the objectid is in the update list, remove it
       // attempt to find the graphic in edits
       layerToEdit.updates = layerToEdit.updates.filter(
-        (graphic: any) =>
-          graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
+        (graphic) => graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
       );
 
       // add the objectids to delete to the deletes array

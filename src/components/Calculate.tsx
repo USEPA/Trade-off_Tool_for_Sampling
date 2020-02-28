@@ -54,8 +54,7 @@ function Calculate() {
 
   function runCalculation() {
     const sampleLayers = layers.filter(
-      (layer: any) =>
-        layer.layerType === 'Samples' || layer.layerType === 'VSP',
+      (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
     );
     if (sampleLayers.length === 0) return;
 
@@ -69,6 +68,10 @@ function Calculate() {
     // create a feature set for communicating with the GPServer
     let contamMapSet: __esri.FeatureSet | null = null;
     if (contaminationMap) {
+      let graphics: __esri.GraphicProperties[] = [];
+      if (contaminationMap?.sketchLayer?.type === 'graphics') {
+        graphics = contaminationMap.sketchLayer.graphics.toArray();
+      }
       contamMapSet = new FeatureSet({
         displayFieldName: '',
         geometryType: 'polygon',
@@ -82,13 +85,15 @@ function Calculate() {
             alias: 'OBJECTID',
           },
         ],
-        features: contaminationMap.sketchLayer.graphics.items,
+        features: graphics,
       });
     }
 
     const sketchedGraphics: __esri.Graphic[] = [];
-    sampleLayers.forEach((layer: any) => {
-      sketchedGraphics.push(...layer.sketchLayer.graphics.toArray());
+    sampleLayers.forEach((layer) => {
+      if (layer?.sketchLayer?.type === 'graphics') {
+        sketchedGraphics.push(...layer.sketchLayer.graphics.toArray());
+      }
     });
 
     if (sketchedGraphics.length === 0) {

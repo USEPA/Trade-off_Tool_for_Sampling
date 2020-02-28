@@ -2,6 +2,8 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
+// types
+import { LayerType } from 'types/Layer';
 
 type ResultsDataType = {
   'Total Number of User-Defined Samples': string;
@@ -43,7 +45,7 @@ type ResultsType = {
 type CalculateType = {
   calculateResults: ResultsType;
   setCalculateResults: Function;
-  contaminationMap: any; // TODO - Need to update this tab when other PR is merged
+  contaminationMap: LayerType | null;
   setContaminationMap: Function;
 };
 
@@ -64,7 +66,7 @@ export function CalculateProvider({ children }: Props) {
   const [
     contaminationMap,
     setContaminationMap, //
-  ] = React.useState<any>(null); // TODO - Need to update this tab when other PR is merged
+  ] = React.useState<LayerType | null>(null);
 
   return (
     <CalculateContext.Provider
