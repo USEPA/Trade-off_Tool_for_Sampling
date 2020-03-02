@@ -50,17 +50,24 @@ function Calculate() {
   const { sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
-    setCalculateResults, //
+    setCalculateResults,
+    numLabs,
+    setNumLabs,
+    numLabHours,
+    setNumLabHours,
+    numSamplingHours,
+    setNumSamplingHours,
+    numSamplingPersonnel,
+    setNumSamplingPersonnel,
+    numSamplingShifts,
+    setNumSamplingShifts,
+    numSamplingTeams,
+    setNumSamplingTeams,
+    samplingLaborCost,
+    setSamplingLaborCost,
+    surfaceArea,
+    setSurfaceArea,
   } = React.useContext(CalculateContext);
-
-  const [surfaceArea, setSurfaceArea] = React.useState('7400');
-  const [numSamplingTeams, setNumSamplingTeams] = React.useState('1');
-  const [numSamplingPersonnel, setNumSamplingPersonnel] = React.useState('3');
-  const [numSamplingHours, setNumSamplingHours] = React.useState('5');
-  const [numSamplingShifts, setNumSamplingShifts] = React.useState('1');
-  const [samplingLaborCost, setSamplingLaborCost] = React.useState('420');
-  const [numLabs, setNumLabs] = React.useState('1');
-  const [numLabHours, setNumLabHours] = React.useState('24');
 
   function runCalculation() {
     if (!sketchLayer) return;
