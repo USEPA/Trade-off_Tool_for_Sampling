@@ -296,6 +296,184 @@ function Calculate() {
       });
   }
 
+  function runContaminationCalculation() {
+    const url = `${totsGPServer}/Contamination Results/execute`;
+
+    // create a feature set for communicating with the GPServer
+    let contamMapSet: __esri.FeatureSet | null = null;
+    if (contaminationMap) {
+      let graphics: __esri.GraphicProperties[] = [];
+      if (contaminationMap?.sketchLayer?.type === 'graphics') {
+        graphics = contaminationMap.sketchLayer.graphics.toArray();
+      }
+      contamMapSet = new FeatureSet({
+        displayFieldName: '',
+        geometryType: 'polygon',
+        spatialReference: {
+          wkid: 102100,
+        },
+        fields: [
+          {
+            name: 'OBJECTID',
+            type: 'oid',
+            alias: 'OBJECTID',
+          },
+        ],
+        features: graphics,
+      });
+    }
+
+    const sketchedGraphics: __esri.Graphic[] = [];
+    if (sketchLayer?.sketchLayer?.type === 'graphics') {
+      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
+    }
+
+    if (sketchedGraphics.length === 0) {
+      setCalculateResults({ status: 'no-graphics', data: null });
+      return;
+    }
+
+    const featureSet = new FeatureSet({
+      displayFieldName: '',
+      geometryType: 'polygon',
+      spatialReference: {
+        wkid: 102100,
+      },
+      fields: [
+        {
+          name: 'OBJECTID',
+          type: 'oid',
+          alias: 'OBJECTID',
+        },
+        {
+          name: 'GLOBALID',
+          type: 'guid',
+          alias: 'GlobalID',
+          length: 38,
+        },
+        {
+          name: 'TYPE',
+          type: 'string',
+          alias: 'Type',
+          length: 255,
+        },
+        {
+          name: 'TTPK',
+          type: 'double',
+          alias: 'TTPK',
+        },
+        {
+          name: 'TTC',
+          type: 'double',
+          alias: 'TTC',
+        },
+        {
+          name: 'TTA',
+          type: 'double',
+          alias: 'TTA',
+        },
+        {
+          name: 'TTPS',
+          type: 'double',
+          alias: 'TTPS',
+        },
+        {
+          name: 'LOD_P',
+          type: 'double',
+          alias: 'LOD_P',
+        },
+        {
+          name: 'LOD_NON',
+          type: 'double',
+          alias: 'LOD_NON',
+        },
+        {
+          name: 'MCPS',
+          type: 'double',
+          alias: 'MCPS',
+        },
+        {
+          name: 'TCPS',
+          type: 'double',
+          alias: 'TCPS',
+        },
+        {
+          name: 'WVPS',
+          type: 'double',
+          alias: 'WVPS',
+        },
+        {
+          name: 'WWPS',
+          type: 'double',
+          alias: 'WWPS',
+        },
+        {
+          name: 'SA',
+          type: 'double',
+          alias: 'SA',
+        },
+        {
+          name: 'AA',
+          type: 'double',
+          alias: 'AA',
+        },
+        {
+          name: 'AC',
+          type: 'integer',
+          alias: 'AC',
+        },
+        {
+          name: 'ITER',
+          type: 'integer',
+          alias: 'ITER',
+        },
+        {
+          name: 'NOTES',
+          type: 'string',
+          alias: 'Notes',
+          length: 2000,
+        },
+        {
+          name: 'ALC',
+          type: 'double',
+          alias: 'ALC',
+        },
+        {
+          name: 'AMC',
+          type: 'double',
+          alias: 'AMC',
+        },
+        {
+          name: 'Shape_Length',
+          type: 'double',
+          alias: 'Shape_Length',
+        },
+        {
+          name: 'Shape_Area',
+          type: 'double',
+          alias: 'Shape_Area',
+        },
+      ],
+      features: sketchedGraphics,
+    });
+
+    const params = {
+      f: 'json',
+      Input_Sampling_Unit: featureSet,
+      Contamination_Map: contamMapSet,
+    };
+
+    fetchPost(url, params)
+      .then((res: any) => {
+        console.log('GPServer contamination res: ', res);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+
+    runCalculation();
+  }
+
   return (
     <div css={panelContainer}>
       <h2>Calculate</h2>
@@ -398,7 +576,7 @@ function Calculate() {
         <button css={submitButtonStyles} onClick={runCalculation}>
           View Detailed Results
         </button>
-        <button css={submitButtonStyles} onClick={runCalculation}>
+        <button css={submitButtonStyles} onClick={runContaminationCalculation}>
           View Contamination Hits
         </button>
       </div>
