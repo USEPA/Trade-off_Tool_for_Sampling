@@ -114,7 +114,7 @@ function CalculateResults() {
             <h4>Analysis Operation</h4>
             <LabelValue
               label="Total Required Analysis Time (lab hrs)"
-              value="Placeholder..."
+              value={calculateResults.data['Time to Analyze']}
             />
             <LabelValue
               label="Time to Complete Analyses (days)"
