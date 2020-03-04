@@ -386,6 +386,22 @@ export function useCalculatePlan() {
   ]);
 
   const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
+  const [totals, setTotals] = React.useState({
+    ttpk: 0,
+    ttc: 0,
+    tta: 0,
+    ttps: 0,
+    lod_p: 0,
+    lod_non: 0,
+    mcps: 0,
+    tcps: 0,
+    wvps: 0,
+    wwps: 0,
+    sa: 0,
+    alc: 0,
+    amc: 0,
+    ac: 0,
+  });
   const [totalArea, setTotalArea] = React.useState(0);
 
   // perform geospatial calculatations
@@ -395,8 +411,22 @@ export function useCalculatePlan() {
     if (!sketchLayer?.sketchLayer || edits.count === 0) return;
     if (sketchLayer.sketchLayer.type !== 'graphics') return;
 
+    let ttpk = 0;
+    let ttc = 0;
+    let tta = 0;
+    let ttps = 0;
+    let lod_p = 0;
+    let lod_non = 0;
+    let mcps = 0;
+    let tcps = 0;
+    let wvps = 0;
+    let wwps = 0;
+    let sa = 0;
+    let alc = 0;
+    let amc = 0;
+    let ac = 0;
+
     // caluclate the area for graphics
-    let totalAreaSquareInches = 0;
     let totalAreaSquereFeet = 0;
     const calcGraphics: __esri.Graphic[] = [];
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
@@ -415,7 +445,6 @@ export function useCalculatePlan() {
 
       // calulate the area
       const areaSI = geometryEngine.geodesicArea(polygon, 109454);
-      totalAreaSquareInches = totalAreaSquareInches + areaSI;
       calcGraphic.attributes.AA = areaSI;
 
       // convert area to square inches
@@ -436,6 +465,8 @@ export function useCalculatePlan() {
         TTC,
         TTA,
         TTPS,
+        LOD_P,
+        LOD_NON,
         MCPS,
         TCPS,
         WVPS,
@@ -455,9 +486,68 @@ export function useCalculatePlan() {
       calcGraphic.attributes.ALC = ALC * AC;
       calcGraphic.attributes.AMC = AMC * AC;
 
+      if (TTPK) {
+        ttpk = ttpk + Number(TTPK * AC);
+      }
+      if (TTC) {
+        ttc = ttc + Number(TTC * AC);
+      }
+      if (TTA) {
+        tta = tta + Number(TTA * AC);
+      }
+      if (TTPS) {
+        ttps = ttps + Number(TTPS * AC);
+      }
+      if (LOD_P) {
+        lod_p = lod_p + Number(LOD_P);
+      }
+      if (LOD_NON) {
+        lod_non = lod_non + Number(LOD_NON);
+      }
+      if (MCPS) {
+        mcps = mcps + Number(MCPS * AC);
+      }
+      if (TCPS) {
+        tcps = tcps + Number(TCPS * AC);
+      }
+      if (WVPS) {
+        wvps = wvps + Number(WVPS * AC);
+      }
+      if (WWPS) {
+        wwps = wwps + Number(WWPS * AC);
+      }
+      if (SA) {
+        sa = sa + Number(SA);
+      }
+      if (ALC) {
+        alc = alc + Number(ALC * AC);
+      }
+      if (AMC) {
+        amc = amc + Number(AMC * AC);
+      }
+      if (AC) {
+        ac = ac + Number(AC);
+      }
+
       calcGraphics.push(calcGraphic);
     });
 
+    setTotals({
+      ttpk,
+      ttc,
+      tta,
+      ttps,
+      lod_p,
+      lod_non,
+      mcps,
+      tcps,
+      wvps,
+      wwps,
+      sa,
+      alc,
+      amc,
+      ac,
+    });
     setCalcGraphics(calcGraphics);
     setTotalArea(totalAreaSquereFeet);
   }, [
@@ -477,68 +567,6 @@ export function useCalculatePlan() {
     // exit early checks
     if (calcGraphics.length === 0 || totalArea === 0) return;
 
-    let ttpk_total = 0;
-    let ttc_total = 0;
-    let tta_total = 0;
-    let ttps_total = 0;
-    let lod_p_total = 0;
-    let lod_non_total = 0;
-    let mcps_total = 0;
-    let tcps_total = 0;
-    let wvps_total = 0;
-    let wwps_total = 0;
-    let sa_total = 0;
-    let alc_total = 0;
-    let amc_total = 0;
-    let ac_total = 0;
-
-    // get the totals for each attribute
-    calcGraphics.forEach((graphic) => {
-      const attributes = graphic.attributes;
-      if (attributes.TTPK) {
-        ttpk_total = ttpk_total + Number(attributes.TTPK);
-      }
-      if (attributes.TTC) {
-        ttc_total = ttc_total + Number(attributes.TTC);
-      }
-      if (attributes.TTA) {
-        tta_total = tta_total + Number(attributes.TTA);
-      }
-      if (attributes.TTPS) {
-        ttps_total = ttps_total + Number(attributes.TTPS);
-      }
-      if (attributes.LOD_P) {
-        lod_p_total = lod_p_total + Number(attributes.LOD_P);
-      }
-      if (attributes.LOD_NON) {
-        lod_non_total = lod_non_total + Number(attributes.LOD_NON);
-      }
-      if (attributes.MCPS) {
-        mcps_total = mcps_total + Number(attributes.MCPS);
-      }
-      if (attributes.TCPS) {
-        tcps_total = tcps_total + Number(attributes.TCPS);
-      }
-      if (attributes.WVPS) {
-        wvps_total = wvps_total + Number(attributes.WVPS);
-      }
-      if (attributes.WWPS) {
-        wwps_total = wwps_total + Number(attributes.WWPS);
-      }
-      if (attributes.SA) {
-        sa_total = sa_total + Number(attributes.SA);
-      }
-      if (attributes.ALC) {
-        alc_total = alc_total + Number(attributes.ALC);
-      }
-      if (attributes.AMC) {
-        amc_total = amc_total + Number(attributes.AMC);
-      }
-      if (attributes.AC) {
-        ac_total = ac_total + Number(attributes.AC);
-      }
-    });
-
     // calculate spatial items
     let userSpecifiedAOI = null;
     let percentAreaSampled = null;
@@ -552,7 +580,7 @@ export function useCalculatePlan() {
       numSamplingTeams * numSamplingHours * numSamplingShifts;
     const samplingPersonnelHoursPerDay = samplingHours * numSamplingPersonnel;
     const samplingPersonnelLaborCost = samplingLaborCost / numSamplingPersonnel;
-    const timeCompleteSampling = (ttc_total + ttpk_total) / samplingHours;
+    const timeCompleteSampling = (totals.ttc + totals.ttpk) / samplingHours;
     const totalSamplingLaborCost =
       numSamplingTeams *
       numSamplingPersonnel *
@@ -563,11 +591,11 @@ export function useCalculatePlan() {
 
     // calculate lab throughput
     const totalLabHours = numLabs * numLabHours;
-    const labThroughput = tta_total / totalLabHours;
+    const labThroughput = totals.tta / totalLabHours;
 
     // calculate total cost and time
     const totalCost =
-      totalSamplingLaborCost + mcps_total + alc_total + amc_total;
+      totalSamplingLaborCost + totals.mcps + totals.alc + totals.amc;
 
     // Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
@@ -600,16 +628,16 @@ export function useCalculatePlan() {
       'Total Number of User-Defined Samples': calcGraphics.length,
 
       // assign counts
-      'Total Number of Samples': ac_total,
+      'Total Number of Samples': totals.ac,
       'Total Sampled Area': totalArea,
-      'Time to Prepare Kits': ttpk_total,
-      'Time to Collect': ttc_total,
-      'Material Cost': mcps_total,
-      'Time to Analyze': tta_total,
-      'Analysis Labor Cost': alc_total,
-      'Analysis Material Cost': amc_total,
-      'Waste Volume': wvps_total,
-      'Waste Weight': wwps_total,
+      'Time to Prepare Kits': totals.ttpk,
+      'Time to Collect': totals.ttc,
+      'Material Cost': totals.mcps,
+      'Time to Analyze': totals.tta,
+      'Analysis Labor Cost': totals.alc,
+      'Analysis Material Cost': totals.amc,
+      'Waste Volume': totals.wvps,
+      'Waste Weight': totals.wwps,
 
       // spatial items
       'User Specified Total AOI': userSpecifiedAOI,
@@ -645,6 +673,7 @@ export function useCalculatePlan() {
     }, 1000);
   }, [
     calcGraphics,
+    totals,
     totalArea,
     numLabs,
     numLabHours,
