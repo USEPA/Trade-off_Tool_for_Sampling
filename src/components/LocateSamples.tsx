@@ -23,7 +23,9 @@ import { colors } from 'styles';
 
 // gets an array of layers that can be used with the sketch widget.
 function getSketchableLayers(layers: LayerType[]) {
-  return layers.filter((layer) => layer.layerType === 'Samples');
+  return layers.filter(
+    (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
+  );
 }
 
 // --- styles (SketchButton) ---
