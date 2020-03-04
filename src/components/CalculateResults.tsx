@@ -99,7 +99,7 @@ function CalculateResults() {
             <h4>Sampling Operation</h4>
             <LabelValue
               label="Total Required Sampling Time (team hrs)"
-              value="Placeholder..."
+              value={calculateResults.data['Total Required Sampling Time']}
             />
             <LabelValue
               label="Time to Complete Sampling (days)"

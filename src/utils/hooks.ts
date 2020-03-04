@@ -576,6 +576,7 @@ export function useCalculatePlan() {
     }
 
     // calculate the sampling items
+    const samplingTimeHours = totals.ttpk + totals.ttc;
     const samplingHours =
       numSamplingTeams * numSamplingHours * numSamplingShifts;
     const samplingPersonnelHoursPerDay = samplingHours * numSamplingPersonnel;
@@ -644,6 +645,7 @@ export function useCalculatePlan() {
       'Percent of Area Sampled': percentAreaSampled,
 
       // sampling
+      'Total Required Sampling Time': samplingTimeHours,
       'Sampling Hours per Day': samplingHours,
       'Sampling Personnel hours per Day': samplingPersonnelHoursPerDay,
       'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
