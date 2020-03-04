@@ -94,7 +94,7 @@ export function useSessionStorage() {
             symbol: polygonSymbol,
             geometry: new Polygon({
               spatialReference: {
-                wkid: 102100,
+                wkid: 3857,
               },
               rings: graphic.geometry.rings,
             }),

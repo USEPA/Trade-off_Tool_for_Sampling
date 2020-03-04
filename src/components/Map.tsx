@@ -54,6 +54,9 @@ function Map({ height }: Props) {
       popup: {
         defaultPopupTemplateEnabled: true,
       },
+      spatialReference: {
+        wkid: 3857,
+      },
     });
 
     setMapView(view);

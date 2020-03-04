@@ -303,7 +303,7 @@ function LocateSamples() {
       displayFieldName: '',
       geometryType: 'polygon',
       spatialReference: {
-        wkid: 102100,
+        wkid: 3857,
       },
       fields: [
         {

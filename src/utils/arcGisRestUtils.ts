@@ -105,7 +105,7 @@ export function createFeatureService(portal: __esri.Portal) {
         supportedQueryFormats: 'JSON',
         capabilities: 'Create,Delete,Query,Update,Editing',
         spatialReference: {
-          wkid: 102100,
+          wkid: 3857,
         },
         initialExtent: {
           xmin: -20037507.0671618,
@@ -113,8 +113,7 @@ export function createFeatureService(portal: __esri.Portal) {
           xmax: 20037507.0671618,
           ymax: 18398924.324645,
           spatialReference: {
-            wkid: 102100,
-            latestWkid: 3857,
+            wkid: 3857,
           },
         },
         allowGeometryUpdates: true,
