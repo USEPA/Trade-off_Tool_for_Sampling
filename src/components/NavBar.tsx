@@ -224,8 +224,14 @@ const helpIconStyles = css`
   text-align: center;
 `;
 
-const floatPanelStyles = (width: string, height: number, left: string) => {
+const floatPanelStyles = (
+  width: string,
+  height: number,
+  left: string,
+  expanded: boolean,
+) => {
   return css`
+    display: ${expanded ? 'block' : 'none'};
     z-index: 99;
     position: absolute;
     height: ${height}px;
@@ -235,8 +241,7 @@ const floatPanelStyles = (width: string, height: number, left: string) => {
   `;
 };
 
-const floatPanelContentStyles = (expanded: boolean) => css`
-  display: ${expanded ? 'inline' : 'none'};
+const floatPanelContentStyles = css`
   float: left;
   position: relative;
   height: 100%;
@@ -249,8 +254,8 @@ const floatPanelContentStyles = (expanded: boolean) => css`
   background-color: white;
 `;
 
-const resultsFloatPanelContentStyles = (expanded: boolean) => css`
-  ${floatPanelContentStyles(expanded)}
+const resultsFloatPanelContentStyles = css`
+  ${floatPanelContentStyles}
 
   width: ${resultsPanelWidth};
   color: white;
@@ -425,9 +430,11 @@ function NavBar({ height }: Props) {
           </button>
         </div>
       </div>
-      {currentPanel && expanded && (
-        <div css={floatPanelStyles(panelWidth, height, navPanelWidth)}>
-          <div css={floatPanelContentStyles(expanded)}>
+      {currentPanel && (
+        <div
+          css={floatPanelStyles(panelWidth, height, navPanelWidth, expanded)}
+        >
+          <div css={floatPanelContentStyles}>
             {currentPanel.value === 'search' && <Search />}
             {currentPanel.value === 'addData' && <AddData />}
             {currentPanel.value === 'locateSamples' && <LocateSamples />}
@@ -437,23 +444,28 @@ function NavBar({ height }: Props) {
         </div>
       )}
       {currentPanel?.value === 'calculate' &&
-        calculateResults.panelOpen === true &&
-        resultsExpanded && (
+        calculateResults.panelOpen === true && (
           <div
             css={floatPanelStyles(
               resultsPanelWidth,
               height,
               `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
+              resultsExpanded,
             )}
           >
-            <div css={resultsFloatPanelContentStyles(resultsExpanded)}>
+            <div css={resultsFloatPanelContentStyles}>
               <CalculateResults />
             </div>
           </div>
         )}
       {(currentPanel || calculateResults.panelOpen === true) && (
         <div
-          css={floatPanelStyles(panelCollapseButtonWidth, height, expandLeft)}
+          css={floatPanelStyles(
+            panelCollapseButtonWidth,
+            height,
+            expandLeft,
+            true,
+          )}
         >
           <div css={floatPanelButtonContainer(expanded)}>
             <div css={floatPanelTableContainer}>
