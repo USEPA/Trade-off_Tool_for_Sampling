@@ -24,6 +24,8 @@ import { useCalculatePlan } from 'utils/hooks';
 const panelWidth = '325px';
 const resultsPanelWidth = '500px';
 const panelCollapseButtonWidth = '32px';
+const buttonColor = colors.darkblue2();
+const buttonVisitedColor = colors.darkaqua();
 
 type PanelType = {
   value: string;
@@ -66,7 +68,7 @@ const navButtonStyles = (selected: boolean) => {
     align-items: center;
     text-align: justify;
     color: ${selected ? 'black' : 'white'};
-    background-color: ${selected ? '#FFFFFF' : 'transparent'};
+    background-color: ${selected ? colors.white() : 'transparent'};
     margin: 0;
     padding: 0;
     font-size: 14px;
@@ -127,8 +129,8 @@ function NavButton({
   const panelIndex = panels.findIndex((item) => item.value === panel.value);
 
   // get the color of the button
-  let color = '#01213B';
-  if (panelIndex <= visitedStepIndex) color = '#00bde3';
+  let color = buttonColor;
+  if (panelIndex <= visitedStepIndex) color = buttonVisitedColor;
 
   return (
     <React.Fragment>
@@ -171,7 +173,7 @@ const navPanelStyles = (height: number) => {
     position: relative;
     height: ${height}px;
     width: ${navPanelWidth};
-    background-color: #012e51;
+    background-color: ${colors.darkblue()};
   `;
 };
 
@@ -186,12 +188,12 @@ const navPanelContainerStyles = css`
 const resourceTallyStyles = css`
   color: white;
   text-align: center;
-  border-top: 5px solid #00bde3;
-  border-bottom: 5px solid #00bde3;
+  border-top: 5px solid ${buttonVisitedColor};
+  border-bottom: 5px solid ${buttonVisitedColor};
   padding: 5px;
 
   i {
-    color: #00bde3;
+    color: ${buttonVisitedColor};
   }
 `;
 
@@ -202,11 +204,11 @@ const resourceTallyContainerStyles = css`
 
 const resourceTallySeparator = css`
   border-top: none;
-  border-bottom: 1px solid #00bde3;
+  border-bottom: 1px solid ${buttonVisitedColor};
 `;
 
 const limitingFactorStyles = css`
-  color: #00bde3;
+  color: ${buttonVisitedColor};
 `;
 
 const helpIconStyles = css`
@@ -215,7 +217,7 @@ const helpIconStyles = css`
   margin-left: 8px;
   margin-right: 10px;
   border-radius: 50%;
-  color: #01213b;
+  color: ${buttonColor};
   background-color: white;
   width: 30px;
   height: 30px;
@@ -252,7 +254,7 @@ const resultsFloatPanelContentStyles = (expanded: boolean) => css`
 
   width: ${resultsPanelWidth};
   color: white;
-  background-color: #162E51;
+  background-color: ${colors.darkblue()};
 `;
 
 const floatPanelButtonContainer = (expanded: boolean) => {
@@ -296,7 +298,7 @@ const resultsCollapsePanelButton = css`
   padding: 1.5em 1em;
   margin: 0;
   border-radius: 0;
-  background-color: #162e51;
+  background-color: ${colors.darkblue()};
   color: white;
   pointer-events: all;
 `;
