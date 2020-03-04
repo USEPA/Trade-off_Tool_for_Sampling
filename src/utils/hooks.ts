@@ -359,7 +359,11 @@ export function useCalculatePlan() {
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
   React.useEffect(() => {
-    if (!sketchLayer?.sketchLayer) {
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics' ||
+      sketchLayer.sketchLayer.graphics.length === 0
+    ) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       return;
     }
