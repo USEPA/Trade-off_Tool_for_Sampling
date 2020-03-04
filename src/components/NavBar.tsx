@@ -7,6 +7,7 @@ import { jsx, css } from '@emotion/core';
 import AddData from 'components/AddData';
 import Calculate from 'components/Calculate';
 import CalculateResults from 'components/CalculateResults';
+import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
 import Search from 'components/Search';
@@ -171,15 +172,41 @@ const navPanelStyles = (height: number) => {
     height: ${height}px;
     width: ${navPanelWidth};
     background-color: #012e51;
-    padding-top: 15px;
   `;
 };
 
-const lastNavButtonStyles = css`
-  ${navButtonStyles(false)}
+const navPanelContainerStyles = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 15px 0;
+`;
 
-  position: absolute;
-  bottom: 15px;
+const resourceTallyStyles = css`
+  color: white;
+  text-align: center;
+  border-top: 5px solid #00bde3;
+  border-bottom: 5px solid #00bde3;
+  padding: 5px;
+
+  i {
+    color: #00bde3;
+  }
+`;
+
+const resourceTallyContainerStyles = css`
+  display: inline-block;
+  text-align: left;
+`;
+
+const resourceTallySeparator = css`
+  border-top: none;
+  border-bottom: 1px solid #00bde3;
+`;
+
+const limitingFactorStyles = css`
+  color: #00bde3;
 `;
 
 const helpIconStyles = css`
@@ -344,24 +371,57 @@ function NavBar({ height }: Props) {
         </div>
       </SplashScreenContent>
       <div css={navPanelStyles(height)}>
-        {panels.map((panel, index) => {
-          return (
-            <NavButton
-              key={index}
-              panel={panel}
-              selectedPanel={currentPanel}
-              visitedStepIndex={latestStepIndex}
-              onClick={toggleExpand}
-            />
-          );
-        })}
-        <button
-          onClick={(ev) => setHelpOpen(!helpOpen)}
-          css={lastNavButtonStyles}
-        >
-          <i className="fas fa-question" css={helpIconStyles} />
-          Help
-        </button>
+        <div css={navPanelContainerStyles}>
+          <div>
+            {panels.map((panel, index) => {
+              return (
+                <NavButton
+                  key={index}
+                  panel={panel}
+                  selectedPanel={currentPanel}
+                  visitedStepIndex={latestStepIndex}
+                  onClick={toggleExpand}
+                />
+              );
+            })}
+          </div>
+
+          {calculateResults.status === 'fetching' && <LoadingSpinner />}
+          {calculateResults.status === 'success' && calculateResults.data && (
+            <div css={resourceTallyStyles}>
+              <h4>Resource Tally</h4>
+              <div css={resourceTallyContainerStyles}>
+                <i className="fas fa-dollar-sign fa-fw" />{' '}
+                {calculateResults.data['Total Cost'].toLocaleString()}
+                <br />
+                <i className="far fa-clock fa-fw" />{' '}
+                {calculateResults.data['Total Time'].toLocaleString()} day(s)
+                <hr css={resourceTallySeparator} />
+              </div>
+              {calculateResults.data['Limiting Time Factor'] && (
+                <React.Fragment>
+                  Limiting Factor
+                  <br />
+                  {calculateResults.data['Limiting Time Factor'] ===
+                    'Sampling' && <i className="fas fa-users fa-fw" />}
+                  {calculateResults.data['Limiting Time Factor'] ===
+                    'Analysis' && <i className="fas fa-flask fa-fw" />}{' '}
+                  <span css={limitingFactorStyles}>
+                    {calculateResults.data['Limiting Time Factor']}
+                  </span>
+                </React.Fragment>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={(ev) => setHelpOpen(!helpOpen)}
+            css={navButtonStyles(false)}
+          >
+            <i className="fas fa-question" css={helpIconStyles} />
+            Help
+          </button>
+        </div>
       </div>
       {currentPanel && expanded && (
         <div css={floatPanelStyles(panelWidth, height, navPanelWidth)}>
