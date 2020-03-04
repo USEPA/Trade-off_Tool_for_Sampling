@@ -18,6 +18,7 @@ import { navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
 import { colors } from 'styles';
+import { useCalculatePlan } from 'utils/hooks';
 
 const panelWidth = '325px';
 const resultsPanelWidth = '500px';
@@ -312,7 +313,7 @@ function NavBar({ height }: Props) {
   if (expanded) {
     if (
       currentPanel?.value !== 'calculate' ||
-      calculateResults.status === 'none' ||
+      calculateResults.panelOpen === false ||
       !resultsExpanded
     ) {
       expandLeft = `calc(${navPanelWidth} + ${panelWidth})`;
@@ -321,11 +322,13 @@ function NavBar({ height }: Props) {
     }
   } else if (
     currentPanel?.value === 'calculate' &&
-    calculateResults.status !== 'none' &&
+    calculateResults.panelOpen === true &&
     resultsExpanded
   ) {
     expandLeft = `calc(${navPanelWidth} + ${resultsPanelWidth})`;
   }
+
+  useCalculatePlan();
 
   return (
     <React.Fragment>
@@ -372,7 +375,7 @@ function NavBar({ height }: Props) {
         </div>
       )}
       {currentPanel?.value === 'calculate' &&
-        calculateResults.status !== 'none' &&
+        calculateResults.panelOpen === true &&
         resultsExpanded && (
           <div
             css={floatPanelStyles(
@@ -386,7 +389,7 @@ function NavBar({ height }: Props) {
             </div>
           </div>
         )}
-      {(currentPanel || calculateResults.status !== 'none') && (
+      {(currentPanel || calculateResults.panelOpen === true) && (
         <div
           css={floatPanelStyles(panelCollapseButtonWidth, height, expandLeft)}
         >
@@ -406,7 +409,7 @@ function NavBar({ height }: Props) {
                   </button>
                 )}
                 {currentPanel?.value === 'calculate' &&
-                  calculateResults.status !== 'none' && (
+                  calculateResults.panelOpen === true && (
                     <button
                       css={resultsCollapsePanelButton}
                       onClick={() => setResultsExpanded(!resultsExpanded)}

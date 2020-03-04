@@ -38,7 +38,12 @@ type SampleProperties =
   | 'TCPS'
   | 'WVPS'
   | 'WWPS'
-  | 'NOTES';
+  | 'ALC'
+  | 'AMC'
+  | 'NOTES'
+  | 'AA'
+  | 'AC'
+  | 'ITER';
 
 type Attributes = {
   [key in SampleType]: {
@@ -61,7 +66,12 @@ const sampleAttributes: Attributes = {
     TCPS: '343.03',
     WVPS: '0',
     WWPS: '4.3',
-    NOTES: '',
+    ALC: '118',
+    AMC: '239',
+    NOTES: '239',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
   'Micro Vac': {
     OBJECTID: '-1',
@@ -77,7 +87,12 @@ const sampleAttributes: Attributes = {
     TCPS: '395.84',
     WVPS: '0',
     WWPS: '4.3',
+    ALC: '151',
+    AMC: '288',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
   'Wet Vac': {
     OBJECTID: '-1',
@@ -93,7 +108,12 @@ const sampleAttributes: Attributes = {
     TCPS: '220',
     WVPS: '5',
     WWPS: '28.5',
+    ALC: '151',
+    AMC: '200',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
   Robot: {
     OBJECTID: '-1',
@@ -109,7 +129,12 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    ALC: '200',
+    AMC: '288',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
   'Aggressive Air': {
     OBJECTID: '-1',
@@ -125,7 +150,12 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    ALC: '118',
+    AMC: '239',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
   Swab: {
     OBJECTID: '-1',
@@ -141,7 +171,12 @@ const sampleAttributes: Attributes = {
     TCPS: '219',
     WVPS: '0',
     WWPS: '0',
+    ALC: '118',
+    AMC: '239',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
   },
 };
 

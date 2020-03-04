@@ -9,9 +9,12 @@ type EsriConstructors = [
   typeof import('esri/Map'),
   typeof import('esri/Viewpoint'),
   typeof import('esri/core/watchUtils'),
+  typeof import('esri/geometry/geometryEngine'),
   typeof import('esri/geometry/Polygon'),
+  typeof import('esri/geometry/projection'),
   typeof import('esri/geometry/SpatialReference'),
   typeof import('esri/geometry/support/jsonUtils'),
+  typeof import('esri/geometry/support/webMercatorUtils'),
   typeof import('esri/identity/IdentityManager'),
   typeof import('esri/identity/OAuthInfo'),
   typeof import('esri/layers/CSVLayer'),
@@ -47,34 +50,37 @@ type State = {
   EsriMap: EsriConstructors[1];
   Viewpoint: EsriConstructors[2];
   watchUtils: EsriConstructors[3];
-  Polygon: EsriConstructors[4];
-  SpatialReference: EsriConstructors[5];
-  geometryJsonUtils: EsriConstructors[6];
-  IdentityManager: EsriConstructors[7];
-  OAuthInfo: EsriConstructors[8];
-  CSVLayer: EsriConstructors[9];
-  FeatureLayer: EsriConstructors[10];
-  GeoRSSLayer: EsriConstructors[11];
-  GraphicsLayer: EsriConstructors[12];
-  KMLLayer: EsriConstructors[13];
-  Layer: EsriConstructors[14];
-  WMSLayer: EsriConstructors[15];
-  WMTSLayer: EsriConstructors[16];
-  Field: EsriConstructors[17];
-  Portal: EsriConstructors[18];
-  PortalItem: EsriConstructors[19];
-  rendererJsonUtils: EsriConstructors[20];
-  Geoprocessor: EsriConstructors[21];
-  FeatureSet: EsriConstructors[22];
-  MapView: EsriConstructors[23];
-  BasemapGallery: EsriConstructors[24];
-  PortalBasemapsSource: EsriConstructors[25];
-  Home: EsriConstructors[26];
-  LayerList: EsriConstructors[27];
-  Legend: EsriConstructors[28];
-  Locate: EsriConstructors[29];
-  Search: EsriConstructors[30];
-  SketchViewModel: EsriConstructors[31];
+  geometryEngine: EsriConstructors[4];
+  Polygon: EsriConstructors[5];
+  projection: EsriConstructors[6];
+  SpatialReference: EsriConstructors[7];
+  geometryJsonUtils: EsriConstructors[8];
+  webMercatorUtils: EsriConstructors[9];
+  IdentityManager: EsriConstructors[10];
+  OAuthInfo: EsriConstructors[11];
+  CSVLayer: EsriConstructors[12];
+  FeatureLayer: EsriConstructors[13];
+  GeoRSSLayer: EsriConstructors[14];
+  GraphicsLayer: EsriConstructors[15];
+  KMLLayer: EsriConstructors[16];
+  Layer: EsriConstructors[17];
+  WMSLayer: EsriConstructors[18];
+  WMTSLayer: EsriConstructors[19];
+  Field: EsriConstructors[20];
+  Portal: EsriConstructors[21];
+  PortalItem: EsriConstructors[22];
+  rendererJsonUtils: EsriConstructors[23];
+  Geoprocessor: EsriConstructors[24];
+  FeatureSet: EsriConstructors[25];
+  MapView: EsriConstructors[26];
+  BasemapGallery: EsriConstructors[27];
+  PortalBasemapsSource: EsriConstructors[28];
+  Home: EsriConstructors[29];
+  LayerList: EsriConstructors[30];
+  Legend: EsriConstructors[31];
+  Locate: EsriConstructors[32];
+  Search: EsriConstructors[33];
+  SketchViewModel: EsriConstructors[34];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -87,9 +93,12 @@ function EsriModulesProvider({ children }: Props) {
         'esri/Map',
         'esri/Viewpoint',
         'esri/core/watchUtils',
+        'esri/geometry/geometryEngine',
         'esri/geometry/Polygon',
+        'esri/geometry/projection',
         'esri/geometry/SpatialReference',
         'esri/geometry/support/jsonUtils',
+        'esri/geometry/support/webMercatorUtils',
         'esri/identity/IdentityManager',
         'esri/identity/OAuthInfo',
         'esri/layers/CSVLayer',
@@ -126,9 +135,12 @@ function EsriModulesProvider({ children }: Props) {
         EsriMap,
         Viewpoint,
         watchUtils,
+        geometryEngine,
         Polygon,
+        projection,
         SpatialReference,
         geometryJsonUtils,
+        webMercatorUtils,
         IdentityManager,
         OAuthInfo,
         CSVLayer,
@@ -161,9 +173,12 @@ function EsriModulesProvider({ children }: Props) {
           EsriMap,
           Viewpoint,
           watchUtils,
+          geometryEngine,
           Polygon,
+          projection,
           SpatialReference,
           geometryJsonUtils,
+          webMercatorUtils,
           IdentityManager,
           OAuthInfo,
           CSVLayer,

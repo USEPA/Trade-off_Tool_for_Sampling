@@ -24,14 +24,12 @@ const valueStyles = css`
 // --- components (LabelValue) ---
 type LabelValueProps = {
   label: ReactNode | string;
-  value: string | undefined | null;
+  value: string | number | undefined | null;
 };
 
 function LabelValue({ label, value }: LabelValueProps) {
   let formattedValue = value;
-  if (Number(value) || Number(value) === 0) {
-    formattedValue = Number(value).toLocaleString();
-  }
+  if (typeof value === 'number') formattedValue = value.toLocaleString();
 
   return (
     <div css={labelValueStyles}>
@@ -64,6 +62,12 @@ function CalculateResults() {
       {calculateResults.status === 'fetching' && <LoadingSpinner />}
       {calculateResults.status === 'failure' && (
         <p>An error occurred while calculating. Please try again.</p>
+      )}
+      {calculateResults.status === 'no-layer' && (
+        <p>
+          No layer has been selected. Please go to the Create Plan tab, select a
+          layer and try again.
+        </p>
       )}
       {calculateResults.status === 'no-graphics' && (
         <p>

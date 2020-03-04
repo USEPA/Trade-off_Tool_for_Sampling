@@ -12,6 +12,7 @@ import { SketchContext } from 'contexts/Sketch';
 import { totsGPServer } from 'config/webService';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
+import { CalculateResultsType } from 'types/CalculateResults';
 
 // --- styles (Calculate) ---
 const inputStyles = css`
@@ -50,6 +51,7 @@ function Calculate() {
   const { sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
+    calculateResults,
     setCalculateResults,
     numLabs,
     setNumLabs,
@@ -69,238 +71,108 @@ function Calculate() {
     setSurfaceArea,
   } = React.useContext(CalculateContext);
 
-  function runCalculation() {
-    if (!sketchLayer) return;
-
-    setCalculateResults({
-      status: 'fetching',
-      data: null,
+  // callback for closing the results panel when leaving this tab
+  const closePanel = React.useCallback(() => {
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        ...calculateResults,
+        panelOpen: false,
+      };
     });
+  }, [setCalculateResults]);
 
-    const url = `${totsGPServer}/Main/execute`;
+  // Cleanup useEffect for closing the results panel when leaving
+  // this tab
+  React.useEffect(() => {
+    return function cleanup() {
+      closePanel();
+    };
+  }, [closePanel]);
 
-    // create a feature set for communicating with the GPServer
-    let contamMapSet: __esri.FeatureSet | null = null;
-    if (contaminationMap) {
-      let graphics: __esri.GraphicProperties[] = [];
-      if (contaminationMap?.sketchLayer?.type === 'graphics') {
-        graphics = contaminationMap.sketchLayer.graphics.toArray();
-      }
-      contamMapSet = new FeatureSet({
-        displayFieldName: '',
-        geometryType: 'polygon',
-        spatialReference: {
-          wkid: 3857,
-        },
-        fields: [
-          {
-            name: 'OBJECTID',
-            type: 'oid',
-            alias: 'OBJECTID',
-          },
-        ],
-        features: graphics,
-      });
-    }
+  // input states
+  const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
+  const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
+  const [inputSurfaceArea, setInputSurfaceArea] = React.useState(surfaceArea);
+  const [
+    inputNumSamplingHours,
+    setInputNumSamplingHours, //
+  ] = React.useState(numSamplingHours);
+  const [
+    inputNumSamplingPersonnel,
+    setInputNumSamplingPersonnel,
+  ] = React.useState(numSamplingPersonnel);
+  const [
+    inputNumSamplingShifts,
+    setInputNumSamplingShifts, //
+  ] = React.useState(numSamplingShifts);
+  const [
+    inputNumSamplingTeams,
+    setInputNumSamplingTeams, //
+  ] = React.useState(numSamplingTeams);
+  const [
+    inputSamplingLaborCost,
+    setInputSamplingLaborCost, //
+  ] = React.useState(samplingLaborCost);
 
-    const sketchedGraphics: __esri.Graphic[] = [];
-    if (sketchLayer?.sketchLayer?.type === 'graphics') {
-      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
-    }
-
-    if (sketchedGraphics.length === 0) {
-      setCalculateResults({ status: 'no-graphics', data: null });
+  // updates context to run the calculations
+  function runCalculation() {
+    // set the no layer status
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics'
+    ) {
+      setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
-    const featureSet = new FeatureSet({
-      displayFieldName: '',
-      geometryType: 'polygon',
-      spatialReference: {
-        wkid: 3857,
-      },
-      fields: [
-        {
-          name: 'OBJECTID',
-          type: 'oid',
-          alias: 'OBJECTID',
-        },
-        {
-          name: 'GLOBALID',
-          type: 'guid',
-          alias: 'GlobalID',
-          length: 38,
-        },
-        {
-          name: 'TYPE',
-          type: 'string',
-          alias: 'Type',
-          length: 255,
-        },
-        {
-          name: 'TTPK',
-          type: 'double',
-          alias: 'TTPK',
-        },
-        {
-          name: 'TTC',
-          type: 'double',
-          alias: 'TTC',
-        },
-        {
-          name: 'TTA',
-          type: 'double',
-          alias: 'TTA',
-        },
-        {
-          name: 'TTPS',
-          type: 'double',
-          alias: 'TTPS',
-        },
-        {
-          name: 'LOD_P',
-          type: 'double',
-          alias: 'LOD_P',
-        },
-        {
-          name: 'LOD_NON',
-          type: 'double',
-          alias: 'LOD_NON',
-        },
-        {
-          name: 'MCPS',
-          type: 'double',
-          alias: 'MCPS',
-        },
-        {
-          name: 'TCPS',
-          type: 'double',
-          alias: 'TCPS',
-        },
-        {
-          name: 'WVPS',
-          type: 'double',
-          alias: 'WVPS',
-        },
-        {
-          name: 'WWPS',
-          type: 'double',
-          alias: 'WWPS',
-        },
-        {
-          name: 'SA',
-          type: 'double',
-          alias: 'SA',
-        },
-        {
-          name: 'AA',
-          type: 'double',
-          alias: 'AA',
-        },
-        {
-          name: 'AC',
-          type: 'integer',
-          alias: 'AC',
-        },
-        {
-          name: 'ITER',
-          type: 'integer',
-          alias: 'ITER',
-        },
-        {
-          name: 'NOTES',
-          type: 'string',
-          alias: 'Notes',
-          length: 2000,
-        },
-        {
-          name: 'ALC',
-          type: 'double',
-          alias: 'ALC',
-        },
-        {
-          name: 'AMC',
-          type: 'double',
-          alias: 'AMC',
-        },
-        {
-          name: 'Shape_Length',
-          type: 'double',
-          alias: 'Shape_Length',
-        },
-        {
-          name: 'Shape_Area',
-          type: 'double',
-          alias: 'Shape_Area',
-        },
-      ],
-      features: sketchedGraphics,
-    });
+    // set the no graphics status
+    if (sketchLayer.sketchLayer.graphics.length === 0) {
+      setCalculateResults({
+        status: 'no-graphics',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
 
-    const params = {
-      f: 'json',
-      Scenario_Name: 'Test Scenario',
-      Input_Sampling_Unit: featureSet,
-      Contamination_Map: contamMapSet,
-      Surface_Area__ft2_: surfaceArea,
-      Number_of_Available_Teams_for_Sampling: numSamplingTeams,
-      Personnel_per_Sampling_Team: numSamplingPersonnel,
-      Sampling_Team_Hours_per_Shift: numSamplingHours,
-      Sampling_Team_Shifts_per_Day: numSamplingShifts,
-      Sampling_Team_Labor_Cost: samplingLaborCost,
-      Number_of_Available_Labs_for_Analysis: numLabs,
-      Analysis_Lab_Hours_per_Day: numLabHours,
-    };
-
-    fetchPost(url, params)
-      .then((res: any) => {
-        console.log('GPServer calculate res: ', res);
-        if (
-          !res.results ||
-          res.results.length === 0 ||
-          !res.results[0].value ||
-          !res.results[0].value.features
-        ) {
-          setCalculateResults({
-            status: 'failure',
-            data: null,
-          });
-          return;
-        }
-
-        const resultObject: any = {};
-        res.results[0].value.features.forEach((item: any) => {
-          const attributes = item.attributes;
-
-          // Get the value for this item. The value
-          // could be a string, long or doule.
-          let value = null;
-          if (attributes.value_str) {
-            value = attributes.value_str;
-          } else if (attributes.value_long) {
-            value = attributes.value_long;
-          } else if (attributes.value_double) {
-            value = attributes.value_double;
-          }
-
-          // insert this key value pair into the result object
-          resultObject[attributes.key] = value;
-        });
-
-        console.log('resultObject: ', resultObject);
-
+    // if the inputs are the same as context
+    // fake a loading spinner and open the panel
+    if (
+      calculateResults.status === 'success' &&
+      numLabs === inputNumLabs &&
+      numLabHours === inputNumLabHours &&
+      numSamplingHours === inputNumSamplingHours &&
+      numSamplingPersonnel === inputNumSamplingPersonnel &&
+      numSamplingTeams === inputNumSamplingTeams &&
+      samplingLaborCost === inputSamplingLaborCost &&
+      surfaceArea === inputSurfaceArea
+    ) {
+      // display the loading spinner for 1 second
+      setCalculateResults({
+        status: 'fetching',
+        panelOpen: true,
+        data: calculateResults.data,
+      });
+      setTimeout(() => {
         setCalculateResults({
           status: 'success',
-          data: resultObject,
+          panelOpen: true,
+          data: calculateResults.data,
         });
-      })
-      .catch((err) => {
-        console.error(err);
-        setCalculateResults({
-          status: 'failure',
-          data: null,
-        });
-      });
+      }, 1000);
+      return;
+    }
+
+    // open the panel and update context to run calculations
+    setCalculateResults({ status: 'fetching', panelOpen: true, data: null });
+    setNumLabs(inputNumLabs);
+    setNumLabHours(inputNumLabHours);
+    setNumSamplingHours(inputNumSamplingHours);
+    setNumSamplingPersonnel(inputNumSamplingPersonnel);
+    setNumSamplingShifts(inputNumSamplingShifts);
+    setNumSamplingTeams(inputNumSamplingTeams);
+    setSamplingLaborCost(inputSamplingLaborCost);
+    setSurfaceArea(inputSurfaceArea);
   }
 
   function runContaminationCalculation() {
@@ -336,7 +208,11 @@ function Calculate() {
     }
 
     if (sketchedGraphics.length === 0) {
-      setCalculateResults({ status: 'no-graphics', data: null });
+      setCalculateResults({
+        status: 'no-graphics',
+        panelOpen: true,
+        data: null,
+      });
       return;
     }
 
@@ -509,9 +385,15 @@ function Calculate() {
         </label>
         <input
           id="number-teams-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numSamplingTeams}
-          onChange={(ev) => setNumSamplingTeams(ev.target.value)}
+          value={inputNumSamplingTeams}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumSamplingTeams(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="personnel-per-team-input">
@@ -519,9 +401,15 @@ function Calculate() {
         </label>
         <input
           id="personnel-per-team-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numSamplingPersonnel}
-          onChange={(ev) => setNumSamplingPersonnel(ev.target.value)}
+          value={inputNumSamplingPersonnel}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumSamplingPersonnel(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="sampling-hours-input">
@@ -529,25 +417,43 @@ function Calculate() {
         </label>
         <input
           id="sampling-hours-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numSamplingHours}
-          onChange={(ev) => setNumSamplingHours(ev.target.value)}
+          value={inputNumSamplingHours}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumSamplingHours(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
         <input
           id="shifts-per-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numSamplingShifts}
-          onChange={(ev) => setNumSamplingShifts(ev.target.value)}
+          value={inputNumSamplingShifts}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumSamplingShifts(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
         <input
           id="labor-cost-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={samplingLaborCost}
-          onChange={(ev) => setSamplingLaborCost(ev.target.value)}
+          value={inputSamplingLaborCost}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputSamplingLaborCost(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="number-of-labs-input">
@@ -555,17 +461,29 @@ function Calculate() {
         </label>
         <input
           id="number-of-labs-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numLabs}
-          onChange={(ev) => setNumLabs(ev.target.value)}
+          value={inputNumLabs}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumLabs(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
         <input
           id="lab-hours-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={numLabHours}
-          onChange={(ev) => setNumLabHours(ev.target.value)}
+          value={inputNumLabHours}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputNumLabHours(Number(ev.target.value));
+            }
+          }}
         />
 
         <label htmlFor="surface-area-input">
@@ -573,9 +491,15 @@ function Calculate() {
         </label>
         <input
           id="surface-area-input"
+          type="text"
+          pattern="[0-9]*"
           css={inputStyles}
-          value={surfaceArea}
-          onChange={(ev) => setSurfaceArea(ev.target.value)}
+          value={inputSurfaceArea}
+          onChange={(ev) => {
+            if (ev.target.validity.valid) {
+              setInputSurfaceArea(Number(ev.target.value));
+            }
+          }}
         />
       </div>
 
