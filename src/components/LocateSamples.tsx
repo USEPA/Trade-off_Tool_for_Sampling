@@ -423,61 +423,67 @@ function LocateSamples() {
           options={getSketchableLayers(layers)}
         />
 
-        <label htmlFor="scenario-name-input">Scenario Name</label>
-        <input
-          id="scenario-name-input"
-          disabled={!sketchLayer}
-          css={inputStyles}
-          value={sketchLayer?.scenarioName}
-          onChange={(ev) => {
-            const newValue = ev.target.value;
-            setSaveStatus('changes');
-            if (sketchLayer) {
-              setSketchLayer((sketchLayer: LayerType) => {
-                return { ...sketchLayer, scenarioName: newValue };
-              });
-            }
-          }}
-        />
+        {sketchLayer && (
+          <React.Fragment>
+            <label htmlFor="scenario-name-input">Scenario Name</label>
+            <input
+              id="scenario-name-input"
+              disabled={!sketchLayer}
+              css={inputStyles}
+              value={sketchLayer.scenarioName}
+              onChange={(ev) => {
+                const newValue = ev.target.value;
+                setSaveStatus('changes');
+                if (sketchLayer) {
+                  setSketchLayer((sketchLayer: LayerType) => {
+                    return { ...sketchLayer, scenarioName: newValue };
+                  });
+                }
+              }}
+            />
 
-        <label htmlFor="scenario-description-input">Scenario Description</label>
-        <input
-          id="scenario-description-input"
-          disabled={!sketchLayer}
-          css={inputStyles}
-          value={sketchLayer?.scenarioDescription}
-          onChange={(ev) => {
-            const newValue = ev.target.value;
-            setSaveStatus('changes');
-            if (sketchLayer) {
-              setSketchLayer((sketchLayer: LayerType) => {
-                return { ...sketchLayer, scenarioDescription: newValue };
-              });
-            }
-          }}
-        />
+            <label htmlFor="scenario-description-input">
+              Scenario Description
+            </label>
+            <input
+              id="scenario-description-input"
+              disabled={!sketchLayer}
+              css={inputStyles}
+              value={sketchLayer.scenarioDescription}
+              onChange={(ev) => {
+                const newValue = ev.target.value;
+                setSaveStatus('changes');
+                if (sketchLayer) {
+                  setSketchLayer((sketchLayer: LayerType) => {
+                    return { ...sketchLayer, scenarioDescription: newValue };
+                  });
+                }
+              }}
+            />
 
-        <div css={saveButtonContainerStyles}>
-          <button
-            css={saveButtonStyles(saveStatus)}
-            disabled={saveStatus !== 'changes'}
-            onClick={(ev) => {
-              if (sketchLayer) updateLayersState(sketchLayer);
-            }}
-          >
-            {(!saveStatus || saveStatus === 'changes') && 'Save'}
-            {saveStatus === 'success' && (
-              <React.Fragment>
-                <i className="fas fa-check" /> Saved
-              </React.Fragment>
-            )}
-            {saveStatus === 'failure' && (
-              <React.Fragment>
-                <i className="fas fa-exclamation-triangle" /> Error
-              </React.Fragment>
-            )}
-          </button>
-        </div>
+            <div css={saveButtonContainerStyles}>
+              <button
+                css={saveButtonStyles(saveStatus)}
+                disabled={saveStatus !== 'changes'}
+                onClick={(ev) => {
+                  if (sketchLayer) updateLayersState(sketchLayer);
+                }}
+              >
+                {(!saveStatus || saveStatus === 'changes') && 'Save'}
+                {saveStatus === 'success' && (
+                  <React.Fragment>
+                    <i className="fas fa-check" /> Saved
+                  </React.Fragment>
+                )}
+                {saveStatus === 'failure' && (
+                  <React.Fragment>
+                    <i className="fas fa-exclamation-triangle" /> Error
+                  </React.Fragment>
+                )}
+              </button>
+            </div>
+          </React.Fragment>
+        )}
       </div>
       <AccordionList>
         <AccordionItem title={'Draw Sampling Layer'} initiallyExpanded={true}>
