@@ -3,6 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -13,6 +14,19 @@ import { totsGPServer } from 'config/webService';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
+import LoadingSpinner from './LoadingSpinner';
+
+type ContaminationResultsType = {
+  status:
+    | 'none'
+    | 'no-map'
+    | 'no-contamination-graphics'
+    | 'no-graphics'
+    | 'fetching'
+    | 'success'
+    | 'failure';
+  data: any[] | null;
+};
 
 // --- styles (Calculate) ---
 const inputStyles = css`
@@ -175,50 +189,98 @@ function Calculate() {
     setSurfaceArea(inputSurfaceArea);
   }
 
+  const [
+    contaminationResults,
+    setContaminationResults, //
+  ] = React.useState<ContaminationResultsType>({ status: 'none', data: null });
+
+  // Call the GP Server to run calculations against the contamination
+  // map.
   function runContaminationCalculation() {
+    if (!contaminationMap) {
+      setContaminationResults({ status: 'no-map', data: null });
+      return;
+    }
+
     const url = `${totsGPServer}/Contamination Results/execute`;
 
-    // create a feature set for communicating with the GPServer
     let contamMapSet: __esri.FeatureSet | null = null;
-    if (contaminationMap) {
-      let graphics: __esri.GraphicProperties[] = [];
-      if (contaminationMap?.sketchLayer?.type === 'graphics') {
-        graphics = contaminationMap.sketchLayer.graphics.toArray();
-      }
-      contamMapSet = new FeatureSet({
-        displayFieldName: '',
-        geometryType: 'polygon',
-        spatialReference: {
-          wkid: 3857,
-        },
-        fields: [
-          {
-            name: 'OBJECTID',
-            type: 'oid',
-            alias: 'OBJECTID',
-          },
-        ],
-        features: graphics,
-      });
+    let graphics: __esri.GraphicProperties[] = [];
+    if (contaminationMap?.sketchLayer?.type === 'graphics') {
+      graphics = contaminationMap.sketchLayer.graphics.toArray();
     }
-
-    const sketchedGraphics: __esri.Graphic[] = [];
-    if (sketchLayer?.sketchLayer?.type === 'graphics') {
-      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
-    }
-
-    if (sketchedGraphics.length === 0) {
-      setCalculateResults({
-        status: 'no-graphics',
-        panelOpen: true,
+    if (graphics.length === 0) {
+      // display the no graphics on contamination map warning
+      setContaminationResults({
+        status: 'no-contamination-graphics',
         data: null,
       });
       return;
     }
 
+    // create a feature set for communicating with the GPServer
+    // this one is for the contamination map input
+    contamMapSet = new FeatureSet({
+      displayFieldName: '',
+      geometryType: 'polygon',
+      features: graphics,
+      spatialReference: {
+        wkid: 3857,
+      },
+      fields: [
+        {
+          name: 'FID',
+          type: 'oid',
+          alias: 'FID',
+        },
+        {
+          name: 'Id',
+          type: 'integer',
+          alias: 'Id',
+        },
+        {
+          name: 'CFU',
+          type: 'double',
+          alias: 'CFU',
+        },
+        {
+          name: 'Shape_Length',
+          type: 'double',
+          alias: 'Shape_Length',
+        },
+        {
+          name: 'Shape_Area',
+          type: 'double',
+          alias: 'Shape_Area',
+        },
+      ],
+    });
+
+    const sketchedGraphics: __esri.Graphic[] = [];
+    if (sketchLayer?.sketchLayer?.type === 'graphics') {
+      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
+    }
+    if (sketchedGraphics.length === 0) {
+      // display the no-graphics warning
+      setContaminationResults({
+        status: 'no-graphics',
+        data: null,
+      });
+      return;
+    }
+
+    // display the loading spinner
+    setContaminationResults({
+      status: 'fetching',
+      data: null,
+    });
+
+    // create a feature set for communicating with the GPServer
+    // this one is for the samples input
     const featureSet = new FeatureSet({
       displayFieldName: '',
       geometryType: 'polygon',
+      features: sketchedGraphics,
       spatialReference: {
         wkid: 3857,
       },
@@ -337,24 +399,48 @@ function Calculate() {
           alias: 'Shape_Area',
         },
       ],
-      features: sketchedGraphics,
     });
 
+    // call the GP Server
     const params = {
       f: 'json',
       Input_Sampling_Unit: featureSet,
       Contamination_Map: contamMapSet,
     };
-
     fetchPost(url, params)
       .then((res: any) => {
         console.log('GPServer contamination res: ', res);
+
+        // catch an error in the response of the successful fetch
+        if (res.error) {
+          console.error(res.error);
+          setContaminationResults({
+            status: 'failure',
+            data: null,
+          });
+          return;
+        }
+
+        // save the data to state, use an empty array if there is no data
+        if (res?.results?.[0]?.value?.features) {
+          setContaminationResults({
+            status: 'success',
+            data: res.results[0].value.features,
+          });
+        } else {
+          setContaminationResults({
+            status: 'success',
+            data: [],
+          });
+        }
       })
       .catch((err) => {
         console.error(err);
+        setContaminationResults({
+          status: 'failure',
+          data: null,
+        });
       });
-
-    runCalculation();
   }
 
   return (
@@ -502,6 +588,43 @@ function Calculate() {
           }}
         />
       </div>
+
+      {contaminationResults.status === 'fetching' && <LoadingSpinner />}
+      {contaminationResults.status === 'failure' && (
+        <MessageBox
+          severity="error"
+          title="Web Service Error"
+          message="An error occurred in the web service"
+        />
+      )}
+      {contaminationResults.status === 'no-map' && (
+        <MessageBox
+          severity="error"
+          title="No Contamination Map Found"
+          message="Return to Create Plan and add and/or select a contamination map"
+        />
+      )}
+      {contaminationResults.status === 'no-graphics' && (
+        <MessageBox
+          severity="error"
+          title="No Samples"
+          message="There are no samples to run calculations on"
+        />
+      )}
+      {contaminationResults.status === 'no-contamination-graphics' && (
+        <MessageBox
+          severity="error"
+          title="No Features In Contamination Map"
+          message="There are no features in the contamination map to run calculations on"
+        />
+      )}
+      {contaminationResults.status === 'success' && (
+        <MessageBox
+          severity="info"
+          title="Contamination Hits"
+          message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
+        />
+      )}
 
       <div css={submitButtonContainerStyles}>
         <button css={submitButtonStyles} onClick={runCalculation}>
