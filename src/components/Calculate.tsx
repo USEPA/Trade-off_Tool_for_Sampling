@@ -445,10 +445,7 @@ function Calculate() {
             );
 
             if (feature) {
-              const cfu =
-                resFeature.attributes.OBJECTID === 1
-                  ? 1
-                  : resFeature.attributes.CFU;
+              const cfu = resFeature.attributes.CFU;
               feature.attributes.CFU = cfu;
             }
           });
