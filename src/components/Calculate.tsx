@@ -130,6 +130,18 @@ function Calculate() {
     setInputSamplingLaborCost, //
   ] = React.useState(samplingLaborCost);
 
+  // updates the calculate context with the user input values
+  function updateContextValues() {
+    setNumLabs(inputNumLabs);
+    setNumLabHours(inputNumLabHours);
+    setNumSamplingHours(inputNumSamplingHours);
+    setNumSamplingPersonnel(inputNumSamplingPersonnel);
+    setNumSamplingShifts(inputNumSamplingShifts);
+    setNumSamplingTeams(inputNumSamplingTeams);
+    setSamplingLaborCost(inputSamplingLaborCost);
+    setSurfaceArea(inputSurfaceArea);
+  }
+
   // updates context to run the calculations
   function runCalculation() {
     // set the no layer status
@@ -181,14 +193,7 @@ function Calculate() {
 
     // open the panel and update context to run calculations
     setCalculateResults({ status: 'fetching', panelOpen: true, data: null });
-    setNumLabs(inputNumLabs);
-    setNumLabHours(inputNumLabHours);
-    setNumSamplingHours(inputNumSamplingHours);
-    setNumSamplingPersonnel(inputNumSamplingPersonnel);
-    setNumSamplingShifts(inputNumSamplingShifts);
-    setNumSamplingTeams(inputNumSamplingTeams);
-    setSamplingLaborCost(inputSamplingLaborCost);
-    setSurfaceArea(inputSurfaceArea);
+    updateContextValues();
   }
 
   const [
@@ -421,6 +426,9 @@ function Calculate() {
       .then((res: any) => {
         console.log('GPServer contamination res: ', res);
 
+        // perform calculations to update talley in nav bar
+        updateContextValues();
+
         // catch an error in the response of the successful fetch
         if (res.error) {
           console.error(res.error);
@@ -445,8 +453,7 @@ function Calculate() {
             );
 
             if (feature) {
-              const cfu = resFeature.attributes.CFU;
-              feature.attributes.CFU = cfu;
+              feature.attributes.CFU = resFeature.attributes.CFU;
             }
           });
 
@@ -473,6 +480,10 @@ function Calculate() {
       })
       .catch((err) => {
         console.error(err);
+
+        // perform calculations to update talley in nav bar
+        updateContextValues();
+
         setContaminationResults({
           status: 'failure',
           data: null,

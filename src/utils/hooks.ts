@@ -665,8 +665,6 @@ export function useCalculatePlan() {
       'Limiting Time Factor': limitingFactor,
     };
 
-    console.log('resultObject: ', resultObject);
-
     // display loading spinner for 1 second
     setTimeout(() => {
       setCalculateResults((calculateResults: CalculateResultsType) => {
