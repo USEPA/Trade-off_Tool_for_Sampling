@@ -57,6 +57,10 @@ function Map({ height }: Props) {
       spatialReference: {
         wkid: 3857,
       },
+      highlightOptions: {
+        color: '#32C5FD',
+        fillOpacity: 1,
+      },
     });
 
     setMapView(view);
