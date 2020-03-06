@@ -26,6 +26,7 @@ type EsriConstructors = [
   typeof import('esri/layers/WMSLayer'),
   typeof import('esri/layers/WMTSLayer'),
   typeof import('esri/layers/support/Field'),
+  typeof import('esri/PopupTemplate'),
   typeof import('esri/portal/Portal'),
   typeof import('esri/portal/PortalItem'),
   typeof import('esri/renderers/support/jsonUtils'),
@@ -67,20 +68,21 @@ type State = {
   WMSLayer: EsriConstructors[18];
   WMTSLayer: EsriConstructors[19];
   Field: EsriConstructors[20];
-  Portal: EsriConstructors[21];
-  PortalItem: EsriConstructors[22];
-  rendererJsonUtils: EsriConstructors[23];
-  Geoprocessor: EsriConstructors[24];
-  FeatureSet: EsriConstructors[25];
-  MapView: EsriConstructors[26];
-  BasemapGallery: EsriConstructors[27];
-  PortalBasemapsSource: EsriConstructors[28];
-  Home: EsriConstructors[29];
-  LayerList: EsriConstructors[30];
-  Legend: EsriConstructors[31];
-  Locate: EsriConstructors[32];
-  Search: EsriConstructors[33];
-  SketchViewModel: EsriConstructors[34];
+  PopupTemplate: EsriConstructors[21];
+  Portal: EsriConstructors[22];
+  PortalItem: EsriConstructors[23];
+  rendererJsonUtils: EsriConstructors[24];
+  Geoprocessor: EsriConstructors[25];
+  FeatureSet: EsriConstructors[26];
+  MapView: EsriConstructors[27];
+  BasemapGallery: EsriConstructors[28];
+  PortalBasemapsSource: EsriConstructors[29];
+  Home: EsriConstructors[30];
+  LayerList: EsriConstructors[31];
+  Legend: EsriConstructors[32];
+  Locate: EsriConstructors[33];
+  Search: EsriConstructors[34];
+  SketchViewModel: EsriConstructors[35];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -110,6 +112,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/layers/WMSLayer',
         'esri/layers/WMTSLayer',
         'esri/layers/support/Field',
+        'esri/PopupTemplate',
         'esri/portal/Portal',
         'esri/portal/PortalItem',
         'esri/renderers/support/jsonUtils',
@@ -152,6 +155,7 @@ function EsriModulesProvider({ children }: Props) {
         WMSLayer,
         WMTSLayer,
         Field,
+        PopupTemplate,
         Portal,
         PortalItem,
         rendererJsonUtils,
@@ -190,6 +194,7 @@ function EsriModulesProvider({ children }: Props) {
           WMSLayer,
           WMTSLayer,
           Field,
+          PopupTemplate,
           Portal,
           PortalItem,
           rendererJsonUtils,

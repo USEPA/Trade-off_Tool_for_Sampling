@@ -14,6 +14,7 @@ import Search from 'components/Search';
 import SplashScreenContent from 'components/SplashScreenContent';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
+import { SketchContext } from 'contexts/Sketch';
 // config
 import { navPanelWidth } from 'config/appConfig';
 // styles
@@ -315,6 +316,7 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
+  const { sketchLayer, sketchVM } = React.useContext(SketchContext);
   const [
     currentPanel,
     setCurrentPanel, //
@@ -340,6 +342,17 @@ function NavBar({ height }: Props) {
     }
   }, [calculateResults]);
 
+  // Enable the sketchVM for the Create Plan tab and disable for all others.
+  React.useEffect(() => {
+    if (!sketchVM || !currentPanel) return;
+
+    if (currentPanel.value === 'locateSamples' && sketchLayer?.sketchLayer) {
+      sketchVM.layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
+    } else {
+      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
+  }, [currentPanel, sketchLayer, sketchVM]);
+
   const [helpOpen, setHelpOpen] = React.useState(false);
 
   // determine how far to the right the expand/collapse buttons should be
@@ -362,6 +375,7 @@ function NavBar({ height }: Props) {
     expandLeft = `calc(${navPanelWidth} + ${resultsPanelWidth})`;
   }
 
+  // run calculations to update the running tally
   useCalculatePlan();
 
   return (

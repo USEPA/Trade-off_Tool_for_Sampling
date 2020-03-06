@@ -240,6 +240,7 @@ function MapWidgets({ mapView }: Props) {
     Home,
     Locate,
     Polygon,
+    PopupTemplate,
     SketchViewModel,
   } = useEsriModulesContext();
 
@@ -342,6 +343,17 @@ function MapWidgets({ mapView }: Props) {
           ...sampleAttributes[id],
           OBJECTID: nextId.toString(),
         };
+        graphic.popupTemplate = new PopupTemplate({
+          title: '',
+          content: [
+            {
+              type: 'fields',
+              fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                return { fieldName: key, label: key };
+              }),
+            },
+          ],
+        });
         nextId = nextId + 1;
 
         // predefined boxes (sponge, micro vac and swab) need to be
@@ -377,7 +389,7 @@ function MapWidgets({ mapView }: Props) {
         if (map) {
           map.layers.forEach((layer: any) => {
             // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = false;
+            if (layer.popupEnabled) layer.popupEnabled = true;
           });
         }
       }
@@ -393,7 +405,7 @@ function MapWidgets({ mapView }: Props) {
         if (map) {
           map.layers.forEach((layer: any) => {
             // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = false;
+            if (layer.popupEnabled) layer.popupEnabled = true;
           });
         }
       }
@@ -444,6 +456,7 @@ function MapWidgets({ mapView }: Props) {
     setSketchEventsInitialized,
     Graphic,
     Polygon,
+    PopupTemplate,
     setEdits,
     sketchEventsInitialized,
   ]);

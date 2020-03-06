@@ -104,6 +104,17 @@ export function useSessionStorage() {
               },
               rings: graphic.geometry.rings,
             }),
+            popupTemplate: {
+              title: '',
+              content: [
+                {
+                  type: 'fields',
+                  fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                    return { fieldName: key, label: key };
+                  }),
+                },
+              ],
+            },
           }),
         );
       });
