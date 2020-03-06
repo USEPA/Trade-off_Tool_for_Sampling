@@ -126,7 +126,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/Sketch/SketchViewModel',
       ],
       {
-        version: '4.13',
+        version: '4.14',
         css: true,
       },
     ) as Promise<EsriConstructors>).then(
