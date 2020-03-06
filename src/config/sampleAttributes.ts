@@ -26,6 +26,7 @@ export const SampleSelectOptions: SimpleSelectType[] = [
 
 type SampleProperties =
   | 'OBJECTID'
+  | 'GLOBALID'
   | 'TYPE'
   | 'SA'
   | 'TTPK'
@@ -43,17 +44,19 @@ type SampleProperties =
   | 'NOTES'
   | 'AA'
   | 'AC'
-  | 'ITER';
+  | 'ITER'
+  | 'CFU';
 
 type Attributes = {
   [key in SampleType]: {
-    [key in SampleProperties]: string;
+    [key in SampleProperties]: string | null;
   };
 };
 
 const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Sponge',
     SA: '100',
     TTPK: '0.12',
@@ -72,9 +75,11 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
   'Micro Vac': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Micro Vac',
     SA: '144',
     TTPK: '0.18',
@@ -93,9 +98,11 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
   'Wet Vac': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Wet Vac',
     SA: '28800',
     TTPK: '0.33',
@@ -114,9 +121,11 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
   Robot: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Robot',
     SA: '144000',
     TTPK: '0.17',
@@ -135,9 +144,11 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
   'Aggressive Air': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Aggressive Air',
     SA: '12000',
     TTPK: '0.17',
@@ -156,9 +167,11 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
   Swab: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Swab',
     SA: '4',
     TTPK: '0.12',
@@ -177,6 +190,7 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
+    CFU: null,
   },
 };
 

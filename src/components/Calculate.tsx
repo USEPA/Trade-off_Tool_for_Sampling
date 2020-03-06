@@ -3,6 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
@@ -14,11 +15,12 @@ import { totsGPServer } from 'config/webService';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
-import LoadingSpinner from './LoadingSpinner';
+import { updateLayerEdits } from 'utils/sketchUtils';
 
 type ContaminationResultsType = {
   status:
     | 'none'
+    | 'no-layer'
     | 'no-map'
     | 'no-contamination-graphics'
     | 'no-graphics'
@@ -62,7 +64,7 @@ const layerInfo = css`
 // --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet } = useEsriModulesContext();
-  const { sketchLayer } = React.useContext(SketchContext);
+  const { edits, setEdits, sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
     calculateResults,
@@ -197,6 +199,16 @@ function Calculate() {
   // Call the GP Server to run calculations against the contamination
   // map.
   function runContaminationCalculation() {
+    // set the no layer status
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics'
+    ) {
+      setContaminationResults({ status: 'no-layer', data: null });
+      return;
+    }
+
+    // set the no contamination map status
     if (!contaminationMap) {
       setContaminationResults({ status: 'no-map', data: null });
       return;
@@ -257,9 +269,7 @@ function Calculate() {
     });
 
     const sketchedGraphics: __esri.Graphic[] = [];
-    if (sketchLayer?.sketchLayer?.type === 'graphics') {
-      sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
-    }
+    sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
     if (sketchedGraphics.length === 0) {
       // display the no-graphics warning
       setContaminationResults({
@@ -423,6 +433,36 @@ function Calculate() {
 
         // save the data to state, use an empty array if there is no data
         if (res?.results?.[0]?.value?.features) {
+          const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
+          // update the cfu attribute of the graphics
+          res.results[0].value.features.forEach((resFeature: any) => {
+            const feature = layer.graphics.find(
+              (graphic) =>
+                String(graphic.attributes.OBJECTID) ===
+                  String(resFeature.attributes.OBJECTID) &&
+                String(graphic.attributes.GLOBALID) ===
+                  String(resFeature.attributes.GLOBALID),
+            );
+
+            if (feature) {
+              const cfu =
+                resFeature.attributes.OBJECTID === 1
+                  ? 1
+                  : resFeature.attributes.CFU;
+              feature.attributes.CFU = cfu;
+            }
+          });
+
+          // make a copy of the edits context variable
+          const editsCopy = updateLayerEdits({
+            edits,
+            layer: sketchLayer,
+            type: 'update',
+            changes: layer.graphics,
+          });
+
+          setEdits(editsCopy);
+
           setContaminationResults({
             status: 'success',
             data: res.results[0].value.features,
@@ -602,6 +642,13 @@ function Calculate() {
           severity="error"
           title="No Contamination Map Found"
           message="Return to Create Plan and add and/or select a contamination map"
+        />
+      )}
+      {contaminationResults.status === 'no-layer' && (
+        <MessageBox
+          severity="error"
+          title="No Samples"
+          message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
         />
       )}
       {contaminationResults.status === 'no-graphics' && (

@@ -65,8 +65,8 @@ function CalculateResults() {
       )}
       {calculateResults.status === 'no-layer' && (
         <p>
-          No layer has been selected. Please go to the Create Plan tab, select a
-          layer and try again.
+          No sample layer has been selected. Please go to the Create Plan tab,
+          select a layer and try again.
         </p>
       )}
       {calculateResults.status === 'no-graphics' && (
