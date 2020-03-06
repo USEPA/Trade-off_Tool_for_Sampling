@@ -674,7 +674,7 @@ export function useCalculatePlan() {
           data: resultObject,
         };
       });
-    }, 1000);
+    }, 500);
   }, [
     calcGraphics,
     totals,
