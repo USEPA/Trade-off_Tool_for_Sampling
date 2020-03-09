@@ -240,6 +240,7 @@ function MapWidgets({ mapView }: Props) {
     Home,
     Locate,
     Polygon,
+    PopupTemplate,
     SketchViewModel,
   } = useEsriModulesContext();
 
@@ -296,9 +297,11 @@ function MapWidgets({ mapView }: Props) {
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
-    if (!sketchVM || !sketchLayer) return;
+    if (!sketchVM || !sketchLayer?.sketchLayer) return;
 
-    sketchVM.layer = sketchLayer.sketchLayer;
+    if (sketchLayer.sketchLayer.type === 'graphics') {
+      sketchVM.layer = sketchLayer.sketchLayer;
+    }
   }, [sketchVM, sketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
@@ -340,6 +343,17 @@ function MapWidgets({ mapView }: Props) {
           ...sampleAttributes[id],
           OBJECTID: nextId.toString(),
         };
+        graphic.popupTemplate = new PopupTemplate({
+          title: '',
+          content: [
+            {
+              type: 'fields',
+              fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                return { fieldName: key, label: key };
+              }),
+            },
+          ],
+        });
         nextId = nextId + 1;
 
         // predefined boxes (sponge, micro vac and swab) need to be
@@ -375,13 +389,13 @@ function MapWidgets({ mapView }: Props) {
         if (map) {
           map.layers.forEach((layer: any) => {
             // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = false;
+            if (layer.popupEnabled) layer.popupEnabled = true;
           });
         }
       }
     });
 
-    sketchVM.on('update', (event: __esri.SketchViewModelUpdateEvent) => {
+    sketchVM.on('update', (event) => {
       // the updates have completed add them to the edits variable
       if (event.state === 'complete' || event.state === 'cancel') {
         // fire the update event if event.state is complete.
@@ -391,7 +405,7 @@ function MapWidgets({ mapView }: Props) {
         if (map) {
           map.layers.forEach((layer: any) => {
             // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = false;
+            if (layer.popupEnabled) layer.popupEnabled = true;
           });
         }
       }
@@ -442,6 +456,7 @@ function MapWidgets({ mapView }: Props) {
     setSketchEventsInitialized,
     Graphic,
     Polygon,
+    PopupTemplate,
     setEdits,
     sketchEventsInitialized,
   ]);
@@ -546,6 +561,67 @@ function MapWidgets({ mapView }: Props) {
     edits,
     setEdits,
   ]);
+
+  // Gets the graphics to be highlighted and highlights them
+  const [
+    nextHighlight,
+    setNextHighlight,
+  ] = React.useState<__esri.Handle | null>(null);
+  const [
+    highlightGraphics,
+    setHighlightGraphics, //
+  ] = React.useState<__esri.Graphic[]>([]);
+  React.useEffect(() => {
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics'
+    ) {
+      return;
+    }
+
+    // Get any graphics that have a CFU value
+    const highlightGraphics: __esri.Graphic[] = [];
+    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.attributes.CFU) {
+        highlightGraphics.push(graphic);
+      }
+    });
+    setHighlightGraphics(highlightGraphics);
+
+    // Highlight the graphics with a CFU
+    if (highlightGraphics.length > 0) {
+      mapView.whenLayerView(sketchLayer.sketchLayer).then((layerView) => {
+        setNextHighlight(layerView.highlight(highlightGraphics));
+      });
+    } else {
+      setNextHighlight(null);
+    }
+  }, [edits, sketchLayer, mapView]);
+
+  // Remove any old highlights if the highlighted graphics list changed
+  const [highlight, setHighlight] = React.useState<__esri.Handle | null>(null);
+  const [
+    lastHighlightGraphics,
+    setLastHighlightGraphics, //
+  ] = React.useState<__esri.Graphic[]>([]);
+  React.useEffect(() => {
+    // exit if the highlightGraphics list is the same
+    if (
+      JSON.stringify(highlightGraphics) ===
+      JSON.stringify(lastHighlightGraphics)
+    ) {
+      return;
+    }
+
+    // remove old highlights
+    if (highlight) {
+      highlight.remove();
+    }
+
+    setLastHighlightGraphics(highlightGraphics);
+    setHighlight(nextHighlight);
+  }, [highlightGraphics, lastHighlightGraphics, highlight, nextHighlight]);
+
   return null;
 }
 

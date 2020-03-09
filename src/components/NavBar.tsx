@@ -7,21 +7,26 @@ import { jsx, css } from '@emotion/core';
 import AddData from 'components/AddData';
 import Calculate from 'components/Calculate';
 import CalculateResults from 'components/CalculateResults';
+import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
 import Search from 'components/Search';
 import SplashScreenContent from 'components/SplashScreenContent';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
+import { SketchContext } from 'contexts/Sketch';
 // config
 import { navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
 import { colors } from 'styles';
+import { useCalculatePlan } from 'utils/hooks';
 
 const panelWidth = '325px';
 const resultsPanelWidth = '500px';
 const panelCollapseButtonWidth = '32px';
+const buttonColor = colors.darkblue2();
+const buttonVisitedColor = colors.darkaqua();
 
 type PanelType = {
   value: string;
@@ -64,7 +69,7 @@ const navButtonStyles = (selected: boolean) => {
     align-items: center;
     text-align: justify;
     color: ${selected ? 'black' : 'white'};
-    background-color: ${selected ? '#FFFFFF' : 'transparent'};
+    background-color: ${selected ? colors.white() : 'transparent'};
     margin: 0;
     padding: 0;
     font-size: 14px;
@@ -125,8 +130,8 @@ function NavButton({
   const panelIndex = panels.findIndex((item) => item.value === panel.value);
 
   // get the color of the button
-  let color = '#01213B';
-  if (panelIndex <= visitedStepIndex) color = '#00bde3';
+  let color = buttonColor;
+  if (panelIndex <= visitedStepIndex) color = buttonVisitedColor;
 
   return (
     <React.Fragment>
@@ -169,16 +174,42 @@ const navPanelStyles = (height: number) => {
     position: relative;
     height: ${height}px;
     width: ${navPanelWidth};
-    background-color: #012e51;
-    padding-top: 15px;
+    background-color: ${colors.darkblue()};
   `;
 };
 
-const lastNavButtonStyles = css`
-  ${navButtonStyles(false)}
+const navPanelContainerStyles = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 15px 0;
+`;
 
-  position: absolute;
-  bottom: 15px;
+const resourceTallyStyles = css`
+  color: white;
+  text-align: center;
+  border-top: 5px solid ${buttonVisitedColor};
+  border-bottom: 5px solid ${buttonVisitedColor};
+  padding: 5px;
+
+  i {
+    color: ${buttonVisitedColor};
+  }
+`;
+
+const resourceTallyContainerStyles = css`
+  display: inline-block;
+  text-align: left;
+`;
+
+const resourceTallySeparator = css`
+  border-top: none;
+  border-bottom: 1px solid ${buttonVisitedColor};
+`;
+
+const limitingFactorStyles = css`
+  color: ${buttonVisitedColor};
 `;
 
 const helpIconStyles = css`
@@ -187,15 +218,21 @@ const helpIconStyles = css`
   margin-left: 8px;
   margin-right: 10px;
   border-radius: 50%;
-  color: #01213b;
+  color: ${buttonColor};
   background-color: white;
   width: 30px;
   height: 30px;
   text-align: center;
 `;
 
-const floatPanelStyles = (width: string, height: number, left: string) => {
+const floatPanelStyles = (
+  width: string,
+  height: number,
+  left: string,
+  expanded: boolean,
+) => {
   return css`
+    display: ${expanded ? 'block' : 'none'};
     z-index: 99;
     position: absolute;
     height: ${height}px;
@@ -205,8 +242,7 @@ const floatPanelStyles = (width: string, height: number, left: string) => {
   `;
 };
 
-const floatPanelContentStyles = (expanded: boolean) => css`
-  display: ${expanded ? 'inline' : 'none'};
+const floatPanelContentStyles = css`
   float: left;
   position: relative;
   height: 100%;
@@ -219,12 +255,12 @@ const floatPanelContentStyles = (expanded: boolean) => css`
   background-color: white;
 `;
 
-const resultsFloatPanelContentStyles = (expanded: boolean) => css`
-  ${floatPanelContentStyles(expanded)}
+const resultsFloatPanelContentStyles = css`
+  ${floatPanelContentStyles}
 
   width: ${resultsPanelWidth};
   color: white;
-  background-color: black;
+  background-color: ${colors.darkblue()};
 `;
 
 const floatPanelButtonContainer = (expanded: boolean) => {
@@ -268,7 +304,7 @@ const resultsCollapsePanelButton = css`
   padding: 1.5em 1em;
   margin: 0;
   border-radius: 0;
-  background-color: black;
+  background-color: ${colors.darkblue()};
   color: white;
   pointer-events: all;
 `;
@@ -280,6 +316,7 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
+  const { sketchLayer, sketchVM } = React.useContext(SketchContext);
   const [
     currentPanel,
     setCurrentPanel, //
@@ -305,6 +342,17 @@ function NavBar({ height }: Props) {
     }
   }, [calculateResults]);
 
+  // Enable the sketchVM for the Create Plan tab and disable for all others.
+  React.useEffect(() => {
+    if (!sketchVM || !currentPanel) return;
+
+    if (currentPanel.value === 'locateSamples' && sketchLayer?.sketchLayer) {
+      sketchVM.layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
+    } else {
+      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
+  }, [currentPanel, sketchLayer, sketchVM]);
+
   const [helpOpen, setHelpOpen] = React.useState(false);
 
   // determine how far to the right the expand/collapse buttons should be
@@ -312,7 +360,7 @@ function NavBar({ height }: Props) {
   if (expanded) {
     if (
       currentPanel?.value !== 'calculate' ||
-      calculateResults.status === 'none' ||
+      calculateResults.panelOpen === false ||
       !resultsExpanded
     ) {
       expandLeft = `calc(${navPanelWidth} + ${panelWidth})`;
@@ -321,11 +369,14 @@ function NavBar({ height }: Props) {
     }
   } else if (
     currentPanel?.value === 'calculate' &&
-    calculateResults.status !== 'none' &&
+    calculateResults.panelOpen === true &&
     resultsExpanded
   ) {
     expandLeft = `calc(${navPanelWidth} + ${resultsPanelWidth})`;
   }
+
+  // run calculations to update the running tally
+  useCalculatePlan();
 
   return (
     <React.Fragment>
@@ -341,28 +392,63 @@ function NavBar({ height }: Props) {
         </div>
       </SplashScreenContent>
       <div css={navPanelStyles(height)}>
-        {panels.map((panel, index) => {
-          return (
-            <NavButton
-              key={index}
-              panel={panel}
-              selectedPanel={currentPanel}
-              visitedStepIndex={latestStepIndex}
-              onClick={toggleExpand}
-            />
-          );
-        })}
-        <button
-          onClick={(ev) => setHelpOpen(!helpOpen)}
-          css={lastNavButtonStyles}
-        >
-          <i className="fas fa-question" css={helpIconStyles} />
-          Help
-        </button>
+        <div css={navPanelContainerStyles}>
+          <div>
+            {panels.map((panel, index) => {
+              return (
+                <NavButton
+                  key={index}
+                  panel={panel}
+                  selectedPanel={currentPanel}
+                  visitedStepIndex={latestStepIndex}
+                  onClick={toggleExpand}
+                />
+              );
+            })}
+          </div>
+
+          {calculateResults.status === 'fetching' && <LoadingSpinner />}
+          {calculateResults.status === 'success' && calculateResults.data && (
+            <div css={resourceTallyStyles}>
+              <h4>Resource Tally</h4>
+              <div css={resourceTallyContainerStyles}>
+                <i className="fas fa-dollar-sign fa-fw" />{' '}
+                {calculateResults.data['Total Cost'].toLocaleString()}
+                <br />
+                <i className="far fa-clock fa-fw" />{' '}
+                {calculateResults.data['Total Time'].toLocaleString()} day(s)
+                <hr css={resourceTallySeparator} />
+              </div>
+              {calculateResults.data['Limiting Time Factor'] && (
+                <React.Fragment>
+                  Limiting Factor
+                  <br />
+                  {calculateResults.data['Limiting Time Factor'] ===
+                    'Sampling' && <i className="fas fa-users fa-fw" />}
+                  {calculateResults.data['Limiting Time Factor'] ===
+                    'Analysis' && <i className="fas fa-flask fa-fw" />}{' '}
+                  <span css={limitingFactorStyles}>
+                    {calculateResults.data['Limiting Time Factor']}
+                  </span>
+                </React.Fragment>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={(ev) => setHelpOpen(!helpOpen)}
+            css={navButtonStyles(false)}
+          >
+            <i className="fas fa-question" css={helpIconStyles} />
+            Help
+          </button>
+        </div>
       </div>
-      {currentPanel && expanded && (
-        <div css={floatPanelStyles(panelWidth, height, navPanelWidth)}>
-          <div css={floatPanelContentStyles(expanded)}>
+      {currentPanel && (
+        <div
+          css={floatPanelStyles(panelWidth, height, navPanelWidth, expanded)}
+        >
+          <div css={floatPanelContentStyles}>
             {currentPanel.value === 'search' && <Search />}
             {currentPanel.value === 'addData' && <AddData />}
             {currentPanel.value === 'locateSamples' && <LocateSamples />}
@@ -372,23 +458,28 @@ function NavBar({ height }: Props) {
         </div>
       )}
       {currentPanel?.value === 'calculate' &&
-        calculateResults.status !== 'none' &&
-        resultsExpanded && (
+        calculateResults.panelOpen === true && (
           <div
             css={floatPanelStyles(
               resultsPanelWidth,
               height,
               `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
+              resultsExpanded,
             )}
           >
-            <div css={resultsFloatPanelContentStyles(resultsExpanded)}>
+            <div css={resultsFloatPanelContentStyles}>
               <CalculateResults />
             </div>
           </div>
         )}
-      {(currentPanel || calculateResults.status !== 'none') && (
+      {(currentPanel || calculateResults.panelOpen === true) && (
         <div
-          css={floatPanelStyles(panelCollapseButtonWidth, height, expandLeft)}
+          css={floatPanelStyles(
+            panelCollapseButtonWidth,
+            height,
+            expandLeft,
+            true,
+          )}
         >
           <div css={floatPanelButtonContainer(expanded)}>
             <div css={floatPanelTableContainer}>
@@ -406,7 +497,7 @@ function NavBar({ height }: Props) {
                   </button>
                 )}
                 {currentPanel?.value === 'calculate' &&
-                  calculateResults.status !== 'none' && (
+                  calculateResults.panelOpen === true && (
                     <button
                       css={resultsCollapsePanelButton}
                       onClick={() => setResultsExpanded(!resultsExpanded)}

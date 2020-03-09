@@ -26,6 +26,7 @@ export const SampleSelectOptions: SimpleSelectType[] = [
 
 type SampleProperties =
   | 'OBJECTID'
+  | 'GLOBALID'
   | 'TYPE'
   | 'SA'
   | 'TTPK'
@@ -38,17 +39,24 @@ type SampleProperties =
   | 'TCPS'
   | 'WVPS'
   | 'WWPS'
-  | 'NOTES';
+  | 'ALC'
+  | 'AMC'
+  | 'NOTES'
+  | 'AA'
+  | 'AC'
+  | 'ITER'
+  | 'CFU';
 
 type Attributes = {
   [key in SampleType]: {
-    [key in SampleProperties]: string;
+    [key in SampleProperties]: string | null;
   };
 };
 
 const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Sponge',
     SA: '100',
     TTPK: '0.12',
@@ -61,10 +69,17 @@ const sampleAttributes: Attributes = {
     TCPS: '343.03',
     WVPS: '0',
     WWPS: '4.3',
-    NOTES: '',
+    ALC: '118',
+    AMC: '239',
+    NOTES: '239',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
   'Micro Vac': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Micro Vac',
     SA: '144',
     TTPK: '0.18',
@@ -77,10 +92,17 @@ const sampleAttributes: Attributes = {
     TCPS: '395.84',
     WVPS: '0',
     WWPS: '4.3',
+    ALC: '151',
+    AMC: '288',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
   'Wet Vac': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Wet Vac',
     SA: '28800',
     TTPK: '0.33',
@@ -93,10 +115,17 @@ const sampleAttributes: Attributes = {
     TCPS: '220',
     WVPS: '5',
     WWPS: '28.5',
+    ALC: '151',
+    AMC: '200',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
   Robot: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Robot',
     SA: '144000',
     TTPK: '0.17',
@@ -109,10 +138,17 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    ALC: '200',
+    AMC: '288',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
   'Aggressive Air': {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Aggressive Air',
     SA: '12000',
     TTPK: '0.17',
@@ -125,10 +161,17 @@ const sampleAttributes: Attributes = {
     TCPS: '267',
     WVPS: '0.5',
     WWPS: '10.5',
+    ALC: '118',
+    AMC: '239',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
   Swab: {
     OBJECTID: '-1',
+    GLOBALID: null,
     TYPE: 'Swab',
     SA: '4',
     TTPK: '0.12',
@@ -141,7 +184,13 @@ const sampleAttributes: Attributes = {
     TCPS: '219',
     WVPS: '0',
     WWPS: '0',
+    ALC: '118',
+    AMC: '239',
     NOTES: '',
+    AA: '0',
+    AC: '0',
+    ITER: '0',
+    CFU: null,
   },
 };
 

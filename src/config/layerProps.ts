@@ -16,8 +16,7 @@ export const defaultLayerProps = {
     xmax: -12922032.654624918,
     ymax: 3962581.2727843975,
     spatialReference: {
-      wkid: 102100,
-      latestWkid: 3857,
+      wkid: 3857,
     },
   },
   allowGeometryUpdates: true,

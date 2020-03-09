@@ -3,7 +3,15 @@
 import React from 'react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
+// types
+import {
+  CalculateResultsType,
+  CalculateResultsDataType,
+} from 'types/CalculateResults';
+import { EditsType } from 'types/Edits';
+import { LayerType, UrlLayerType } from 'types/Layer';
 // config
 import { polygonSymbol } from 'config/symbols';
 
@@ -29,6 +37,7 @@ function readFromStorage(key: string) {
   return sessionStorage.getItem(key);
 }
 
+// Saves/Retrieves data to session storage
 export function useSessionStorage() {
   const {
     CSVLayer,
@@ -36,6 +45,7 @@ export function useSessionStorage() {
     Field,
     geometryJsonUtils,
     GeoRSSLayer,
+    Graphic,
     GraphicsLayer,
     KMLLayer,
     Layer,
@@ -69,31 +79,44 @@ export function useSessionStorage() {
     const editsStr = readFromStorage('tots_edits');
     if (!editsStr) return;
 
-    const edits = JSON.parse(editsStr);
+    const edits: EditsType = JSON.parse(editsStr);
     setEdits(edits);
 
-    const newLayers: any[] = [];
+    const newLayers: LayerType[] = [];
     const graphicsLayers: __esri.GraphicsLayer[] = [];
-    edits.edits.forEach((editsLayer: any) => {
+    edits.edits.forEach((editsLayer) => {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.name,
         id: editsLayer.layerId,
       });
 
-      const features: any[] = [];
+      const features: __esri.Graphic[] = [];
       const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
       // add graphics to the map
-      displayedFeatures.forEach((graphic: any) => {
-        features.push({
-          attributes: graphic.attributes,
-          geometry: new Polygon({
-            spatialReference: {
-              wkid: 102100,
+      displayedFeatures.forEach((graphic) => {
+        features.push(
+          new Graphic({
+            attributes: graphic.attributes,
+            symbol: polygonSymbol,
+            geometry: new Polygon({
+              spatialReference: {
+                wkid: 3857,
+              },
+              rings: graphic.geometry.rings,
+            }),
+            popupTemplate: {
+              title: '',
+              content: [
+                {
+                  type: 'fields',
+                  fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                    return { fieldName: key, label: key };
+                  }),
+                },
+              ],
             },
-            rings: graphic.geometry.rings,
           }),
-          symbol: polygonSymbol,
-        });
+        );
       });
       sketchLayer.addMany(features);
       graphicsLayers.push(sketchLayer);
@@ -105,12 +128,10 @@ export function useSessionStorage() {
         name: editsLayer.name,
         label: editsLayer.name,
         layerType: editsLayer.layerType,
+        scenarioName: editsLayer.scenarioName,
+        scenarioDescription: editsLayer.scenarioDescription,
         addedFrom: editsLayer.addedFrom,
-        parentLayerId: -1,
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
       });
@@ -121,6 +142,7 @@ export function useSessionStorage() {
       map.addMany(graphicsLayers);
     }
   }, [
+    Graphic,
     GraphicsLayer,
     Polygon,
     setEdits,
@@ -188,10 +210,10 @@ export function useSessionStorage() {
     const urlLayersStr = readFromStorage('tots_url_layers');
     if (!urlLayersStr) return;
 
-    const urlLayers = JSON.parse(urlLayersStr);
+    const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
 
     // add the portal layers to the map
-    urlLayers.forEach((urlLayer: any) => {
+    urlLayers.forEach((urlLayer) => {
       const type = urlLayer.type;
       const url = urlLayer.url;
 
@@ -263,7 +285,7 @@ export function useSessionStorage() {
     const layersToAdd: __esri.FeatureLayer[] = [];
     referenceLayers.forEach((layer: any) => {
       const fields: __esri.Field[] = [];
-      layer.fields.forEach((field: any) => {
+      layer.fields.forEach((field: __esri.Field) => {
         fields.push(Field.fromJSON(field));
       });
 
@@ -308,4 +330,374 @@ export function useSessionStorage() {
     if (!localReferenceLayerInitialized) return;
     writeToStorage('tots_reference_layers', referenceLayers);
   }, [referenceLayers, localReferenceLayerInitialized]);
+}
+
+// Runs sampling plan calculations whenever the
+// samples change or the variables on the calculate tab
+// change.
+export function useCalculatePlan() {
+  const {
+    geometryEngine,
+    Polygon,
+    projection,
+    webMercatorUtils,
+  } = useEsriModulesContext();
+  const { edits, sketchLayer } = React.useContext(SketchContext);
+  const {
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  } = React.useContext(CalculateContext);
+
+  // Load the esri projection module. This needs
+  // to happen before the projection module will work.
+  const [
+    loadedProjection,
+    setLoadedProjection, //
+  ] = React.useState<__esri.projection | null>(null);
+  React.useEffect(() => {
+    projection.load().then(() => {
+      setLoadedProjection(projection);
+    });
+  });
+
+  // Reset the calculateResults context variable, whenever anything
+  // changes that will cause a re-calculation.
+  React.useEffect(() => {
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics' ||
+      sketchLayer.sketchLayer.graphics.length === 0
+    ) {
+      setCalculateResults({ status: 'none', panelOpen: false, data: null });
+      return;
+    }
+
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        status: 'fetching',
+        panelOpen: calculateResults.panelOpen,
+        data: null,
+      };
+    });
+  }, [
+    edits,
+    sketchLayer,
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  ]);
+
+  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
+  const [totals, setTotals] = React.useState({
+    ttpk: 0,
+    ttc: 0,
+    tta: 0,
+    ttps: 0,
+    lod_p: 0,
+    lod_non: 0,
+    mcps: 0,
+    tcps: 0,
+    wvps: 0,
+    wwps: 0,
+    sa: 0,
+    alc: 0,
+    amc: 0,
+    ac: 0,
+  });
+  const [totalArea, setTotalArea] = React.useState(0);
+
+  // perform geospatial calculatations
+  React.useEffect(() => {
+    // exit early checks
+    if (!loadedProjection) return;
+    if (!sketchLayer?.sketchLayer || edits.count === 0) return;
+    if (sketchLayer.sketchLayer.type !== 'graphics') return;
+
+    let ttpk = 0;
+    let ttc = 0;
+    let tta = 0;
+    let ttps = 0;
+    let lod_p = 0;
+    let lod_non = 0;
+    let mcps = 0;
+    let tcps = 0;
+    let wvps = 0;
+    let wwps = 0;
+    let sa = 0;
+    let alc = 0;
+    let amc = 0;
+    let ac = 0;
+
+    // caluclate the area for graphics
+    let totalAreaSquereFeet = 0;
+    const calcGraphics: __esri.Graphic[] = [];
+    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
+      const calcGraphic = graphic;
+
+      // convert the geometry to WGS84 for geometryEngine
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      );
+
+      // get the polygon object
+      const geometry = geometryEngine.simplify(wgsGeometry) as __esri.Polygon;
+      if (!geometry) return;
+
+      const polygon = new Polygon({ rings: geometry.rings });
+
+      // calulate the area
+      const areaSI = geometryEngine.geodesicArea(polygon, 109454);
+      calcGraphic.attributes.AA = areaSI;
+
+      // convert area to square inches
+      const areaSF = areaSI * 0.00694444;
+      totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
+
+      // calculate AC
+      const { SA, AA } = calcGraphic.attributes;
+      if (AA < SA) {
+        calcGraphic.attributes.AC = 1;
+      } else {
+        calcGraphic.attributes.AC = Math.round(AA / SA);
+      }
+
+      // multiply all of the attributes by the area
+      const {
+        TTPK,
+        TTC,
+        TTA,
+        TTPS,
+        LOD_P,
+        LOD_NON,
+        MCPS,
+        TCPS,
+        WVPS,
+        WWPS,
+        ALC,
+        AMC,
+        AC,
+      } = calcGraphic.attributes;
+      calcGraphic.attributes.TTPK = TTPK * AC;
+      calcGraphic.attributes.TTC = TTC * AC;
+      calcGraphic.attributes.TTA = TTA * AC;
+      calcGraphic.attributes.TTPS = TTPS * AC;
+      calcGraphic.attributes.MCPS = MCPS * AC;
+      calcGraphic.attributes.TCPS = TCPS * AC;
+      calcGraphic.attributes.WVPS = WVPS * AC;
+      calcGraphic.attributes.WWPS = WWPS * AC;
+      calcGraphic.attributes.ALC = ALC * AC;
+      calcGraphic.attributes.AMC = AMC * AC;
+
+      if (TTPK) {
+        ttpk = ttpk + Number(TTPK * AC);
+      }
+      if (TTC) {
+        ttc = ttc + Number(TTC * AC);
+      }
+      if (TTA) {
+        tta = tta + Number(TTA * AC);
+      }
+      if (TTPS) {
+        ttps = ttps + Number(TTPS * AC);
+      }
+      if (LOD_P) {
+        lod_p = lod_p + Number(LOD_P);
+      }
+      if (LOD_NON) {
+        lod_non = lod_non + Number(LOD_NON);
+      }
+      if (MCPS) {
+        mcps = mcps + Number(MCPS * AC);
+      }
+      if (TCPS) {
+        tcps = tcps + Number(TCPS * AC);
+      }
+      if (WVPS) {
+        wvps = wvps + Number(WVPS * AC);
+      }
+      if (WWPS) {
+        wwps = wwps + Number(WWPS * AC);
+      }
+      if (SA) {
+        sa = sa + Number(SA);
+      }
+      if (ALC) {
+        alc = alc + Number(ALC * AC);
+      }
+      if (AMC) {
+        amc = amc + Number(AMC * AC);
+      }
+      if (AC) {
+        ac = ac + Number(AC);
+      }
+
+      calcGraphics.push(calcGraphic);
+    });
+
+    setTotals({
+      ttpk,
+      ttc,
+      tta,
+      ttps,
+      lod_p,
+      lod_non,
+      mcps,
+      tcps,
+      wvps,
+      wwps,
+      sa,
+      alc,
+      amc,
+      ac,
+    });
+    setCalcGraphics(calcGraphics);
+    setTotalArea(totalAreaSquereFeet);
+  }, [
+    // esri modules
+    geometryEngine,
+    loadedProjection,
+    Polygon,
+    webMercatorUtils,
+
+    // TOTS items
+    edits,
+    sketchLayer,
+  ]);
+
+  // perform non-geospatial calculations
+  React.useEffect(() => {
+    // exit early checks
+    if (calcGraphics.length === 0 || totalArea === 0) return;
+
+    // calculate spatial items
+    let userSpecifiedAOI = null;
+    let percentAreaSampled = null;
+    if (surfaceArea > 0) {
+      userSpecifiedAOI = surfaceArea;
+      percentAreaSampled = (totalArea / surfaceArea) * 100;
+    }
+
+    // calculate the sampling items
+    const samplingTimeHours = totals.ttpk + totals.ttc;
+    const samplingHours =
+      numSamplingTeams * numSamplingHours * numSamplingShifts;
+    const samplingPersonnelHoursPerDay = samplingHours * numSamplingPersonnel;
+    const samplingPersonnelLaborCost = samplingLaborCost / numSamplingPersonnel;
+    const timeCompleteSampling = (totals.ttc + totals.ttpk) / samplingHours;
+    const totalSamplingLaborCost =
+      numSamplingTeams *
+      numSamplingPersonnel *
+      numSamplingHours *
+      numSamplingShifts *
+      samplingPersonnelLaborCost *
+      timeCompleteSampling;
+
+    // calculate lab throughput
+    const totalLabHours = numLabs * numLabHours;
+    const labThroughput = totals.tta / totalLabHours;
+
+    // calculate total cost and time
+    const totalCost =
+      totalSamplingLaborCost + totals.mcps + totals.alc + totals.amc;
+
+    // Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
+    // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
+    // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
+    let totalTime = 0;
+    if (labThroughput < timeCompleteSampling) {
+      totalTime = timeCompleteSampling;
+    } else {
+      totalTime = labThroughput + 1;
+    }
+
+    // Get limiting time factor (will be undefined if they are equal)
+    let limitingFactor: CalculateResultsDataType['Limiting Time Factor'] = '';
+    if (timeCompleteSampling > labThroughput) {
+      limitingFactor = 'Sampling';
+    }
+    if (timeCompleteSampling < labThroughput) {
+      limitingFactor = 'Analysis';
+    }
+
+    const resultObject: CalculateResultsDataType = {
+      // assign input parameters
+      'User Specified Number of Available Teams for Sampling': numSamplingTeams,
+      'User Specified Personnel per Sampling Team': numSamplingPersonnel,
+      'User Specified Sampling Team Hours per Shift': numSamplingHours,
+      'User Specified Sampling Team Shifts per Day': numSamplingShifts,
+      'User Specified Sampling Team Labor Cost': samplingLaborCost,
+      'User Specified Number of Available Labs for Analysis': numLabs,
+      'User Specified Analysis Lab Hours per Day': numLabHours,
+      'Total Number of User-Defined Samples': calcGraphics.length,
+
+      // assign counts
+      'Total Number of Samples': totals.ac,
+      'Total Sampled Area': totalArea,
+      'Time to Prepare Kits': totals.ttpk,
+      'Time to Collect': totals.ttc,
+      'Material Cost': totals.mcps,
+      'Time to Analyze': totals.tta,
+      'Analysis Labor Cost': totals.alc,
+      'Analysis Material Cost': totals.amc,
+      'Waste Volume': totals.wvps,
+      'Waste Weight': totals.wwps,
+
+      // spatial items
+      'User Specified Total AOI': userSpecifiedAOI,
+      'Percent of Area Sampled': percentAreaSampled,
+
+      // sampling
+      'Total Required Sampling Time': samplingTimeHours,
+      'Sampling Hours per Day': samplingHours,
+      'Sampling Personnel hours per Day': samplingPersonnelHoursPerDay,
+      'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
+      'Time to Complete Sampling': timeCompleteSampling,
+      'Total Sampling Labor Cost': totalSamplingLaborCost,
+
+      // analysis
+      'Time to Complete Analyses': labThroughput,
+
+      //totals
+      'Total Cost': totalCost,
+      'Total Time': totalTime,
+      'Limiting Time Factor': limitingFactor,
+    };
+
+    // display loading spinner for 1 second
+    setTimeout(() => {
+      setCalculateResults((calculateResults: CalculateResultsType) => {
+        return {
+          status: 'success',
+          panelOpen: calculateResults.panelOpen,
+          data: resultObject,
+        };
+      });
+    }, 500);
+  }, [
+    calcGraphics,
+    totals,
+    totalArea,
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  ]);
 }

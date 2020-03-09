@@ -2,31 +2,9 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
-
-type FeatureEditsType = {
-  attributes: any;
-  geometry: any;
-};
-
-type LayerEditsType = {
-  id: number; // layer id
-  layerId: string; // id from esri layer
-  name: string; // layer name
-  adds: FeatureEditsType[]; // features to add
-  updates: FeatureEditsType[]; // features to update
-  deletes: FeatureEditsType[]; // features to delete
-  splits: FeatureEditsType[]; // features to split
-};
-
-type EditsType = {
-  count: number;
-  edits: LayerEditsType[];
-};
-
-type UrlLayerType = {
-  url: string;
-  type: string;
-};
+// types
+import { EditsType } from 'types/Edits';
+import { LayerType, UrlLayerType } from 'types/Layer';
 
 type SketchType = {
   edits: EditsType;
@@ -37,7 +15,7 @@ type SketchType = {
   setFeatureServiceUrl: Function;
   homeWidget: __esri.Home | null;
   setHomeWidget: Function;
-  layers: any[];
+  layers: LayerType[];
   setLayers: Function;
   portalLayers: string[];
   setPortalLayers: Function;
@@ -45,13 +23,13 @@ type SketchType = {
   setReferenceLayers: Function;
   urlLayers: UrlLayerType[];
   setUrlLayers: Function;
-  sketchLayer: any | null;
+  sketchLayer: LayerType | null;
   setSketchLayer: Function;
   map: __esri.Map | null;
   setMap: Function;
-  selectedLayer: any;
+  selectedLayer: LayerType | null;
   setSelectedLayer: Function;
-  mapView: any;
+  mapView: __esri.MapView | null;
   setMapView: Function;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: Function;
@@ -92,15 +70,18 @@ export function SketchProvider({ children }: Props) {
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [featureService, setFeatureService] = React.useState<any>(null);
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
-  const [layers, setLayers] = React.useState([]);
+  const [layers, setLayers] = React.useState<LayerType[]>([]);
   const [portalLayers, setPortalLayers] = React.useState([]);
   const [referenceLayers, setReferenceLayers] = React.useState([]);
   const [urlLayers, setUrlLayers] = React.useState([]);
   const [sketchLayer, setSketchLayer] = React.useState(null);
   const [homeWidget, setHomeWidget] = React.useState(null);
   const [map, setMap] = React.useState(null);
-  const [selectedLayer, setSelectedLayer] = React.useState<any>(null);
   const [mapView, setMapView] = React.useState(null);
+  const [
+    selectedLayer,
+    setSelectedLayer, //
+  ] = React.useState<LayerType | null>(null);
   const [
     sketchVM,
     setSketchVM, //

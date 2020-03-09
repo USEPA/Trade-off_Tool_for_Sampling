@@ -54,6 +54,13 @@ function Map({ height }: Props) {
       popup: {
         defaultPopupTemplateEnabled: true,
       },
+      spatialReference: {
+        wkid: 3857,
+      },
+      highlightOptions: {
+        color: '#32C5FD',
+        fillOpacity: 1,
+      },
     });
 
     setMapView(view);
@@ -105,7 +112,10 @@ function Map({ height }: Props) {
     if (!map || !mapView || !homeWidget) return;
     if (!sketchLayer?.sketchLayer) return;
 
-    const zoomGraphics = sketchLayer.sketchLayer.graphics.items;
+    let zoomGraphics: __esri.Graphic[] = [];
+    if (sketchLayer?.sketchLayer?.type === 'graphics') {
+      zoomGraphics = sketchLayer.sketchLayer.graphics.toArray();
+    }
 
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics).then(() => {

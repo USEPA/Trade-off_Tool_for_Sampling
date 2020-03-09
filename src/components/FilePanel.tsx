@@ -11,6 +11,8 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
+// types
+import { LayerType } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
 import { SimpleSelectType, SampleSelectOptions } from 'config/sampleAttributes';
@@ -379,7 +381,7 @@ function FilePanel() {
             .toLowerCase()
             .replace('esrigeometry', ''),
           spatialReference: {
-            wkid: 4326,
+            wkid: 3857,
           },
           fields,
           features,
@@ -394,7 +396,7 @@ function FilePanel() {
 
         const goeprocessor = new Geoprocessor({
           url: `${totsGPServer}/VSP%20Import/execute`,
-          outSpatialReference: { wkid: 102100 },
+          outSpatialReference: { wkid: 3857 },
         });
 
         goeprocessor
@@ -503,11 +505,9 @@ function FilePanel() {
       name: file.name,
       label: file.name,
       layerType: layerType.value,
-      parentLayerId: -1,
+      scenarioName: '',
+      scenarioDescription: '',
       defaultVisibility: true,
-      subLayerIds: null,
-      minScale: 0,
-      maxScale: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       sketchLayer: graphicsLayer,
@@ -562,7 +562,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
-    const layersAdded: any[] = [];
+    const layersAdded: LayerType[] = [];
     const featureLayers: __esri.FeatureLayer[] = [];
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -649,11 +649,9 @@ function FilePanel() {
         name: file.name,
         label: file.name,
         layerType: layerType.value,
-        parentLayerId: -1,
+        scenarioName: '',
+        scenarioDescription: '',
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: layer.layerDefinition.geometryType,
         addedFrom: 'file',
         sketchLayer: layerToAdd,
