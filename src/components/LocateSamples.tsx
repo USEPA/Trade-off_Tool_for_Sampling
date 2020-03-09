@@ -94,23 +94,15 @@ const submitButtonStyles = css`
 type SketchButtonProps = {
   label: string;
   iconClass: string;
-  activeButton: string;
   onClick: Function;
 };
 
-function SketchButton({
-  label,
-  iconClass,
-  activeButton,
-  onClick,
-}: SketchButtonProps) {
+function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
   return (
     <button
       id={label}
       title={label}
-      className={
-        activeButton === label ? 'sketch-button-selected' : 'sketch-button'
-      }
+      className={'sketch-button'}
       onClick={() => onClick()}
       css={sketchButtonStyles}
     >
@@ -221,7 +213,6 @@ function LocateSamples() {
     sampleType,
     setSampleType, //
   ] = React.useState<SampleSelectionType>({ value: 'Sponge', label: 'Sponge' });
-  const activeButton = '';
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
@@ -364,37 +355,31 @@ function LocateSamples() {
             <SketchButton
               label="Sponge"
               iconClass="fas fa-pen-fancy"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Sponge')}
             />
             <SketchButton
               label="Micro Vac"
               iconClass="fas fa-pen-fancy"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Micro Vac')}
             />
             <SketchButton
               label="Wet Vac"
               iconClass="fas fa-draw-polygon"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Wet Vac')}
             />
             <SketchButton
               label="Robot"
               iconClass="fas fa-draw-polygon"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Robot')}
             />
             <SketchButton
               label="Aggressive Air"
               iconClass="fas fa-draw-polygon"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Aggressive Air')}
             />
             <SketchButton
               label="Swab"
               iconClass="fas fa-pen-fancy"
-              activeButton={activeButton}
               onClick={() => sketchButtonClick('Swab')}
             />
           </div>
