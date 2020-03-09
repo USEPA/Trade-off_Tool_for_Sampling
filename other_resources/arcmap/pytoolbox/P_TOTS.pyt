@@ -1,6 +1,6 @@
 import arcpy
 import sys,os
-import csv,uuid
+import uuid
 
 ###############################################################################
 class Toolbox(object):
@@ -11,132 +11,11 @@ class Toolbox(object):
       self.alias = "TOTS_Toolbox";
 
       self.tools = [];
-      self.tools.append(AddNotes);
       self.tools.append(GenerateRandom);
       self.tools.append(VSPImport);
-      self.tools.append(Main);
-
-###############################################################################
-class AddNotes(object):
-
-   #...........................................................................
-   def __init__(self):
-
-      self.label = "Add Notes"
-      self.name  = "AddNotes"
-      self.description = "Add notes to sample locations"
-      self.canRunInBackground = False;
-
-   #...........................................................................
-   def getParameterInfo(self):
-
-      #########################################################################
-      param0 = arcpy.Parameter(
-          displayName   = "Input Sampling Layer"
-         ,name          = "Input_Sampling_Layer"
-         ,datatype      = "GPFeatureLayer"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-      
-      #########################################################################
-      param1 = arcpy.Parameter(
-          displayName   = "Target ObjectID"
-         ,name          = "Target_ObjectID"
-         ,datatype      = "GPString"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param2 = arcpy.Parameter(
-          displayName   = "Notes"
-         ,name          = "Notes"
-         ,datatype      = "GPString"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-      
-      #########################################################################
-      param3 = arcpy.Parameter(
-          displayName   = "Output Sampling Unit"
-         ,name          = "Output_Sampling_Unit"
-         ,datatype      = "DEFeatureClass"
-         ,parameterType = "Derived"
-         ,direction     = "Output"
-      );
-
-      params = [
-          param0
-         ,param1
-         ,param2
-         ,param3
-      ];
-
-      return params;
-
-   #...........................................................................
-   def isLicensed(self):
-
-      return True;
-
-   #...........................................................................
-   def updateParameters(self,parameters):
-
-      return;
-
-   #...........................................................................
-   def updateMessages(self,parameters):
-
-      return;
-
-   #...........................................................................
-   def execute(self,parameters,messages):
-
-      #########################################################################
-      fc_sampling = parameters[0].value;
-      str_oid     = parameters[1].valueAsText;
-      str_notes   = parameters[2].valueAsText;
-      
-      ary_oid = [int(n) for n in str_oid.split(',')];
-      
-      #########################################################################
-      scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "AddNotes"
-         ,suffix    = ""
-         ,data_type = "FeatureClass"
-         ,workspace = arcpy.env.scratchGDB
-      );
-      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
-      
-      arcpy.FeatureClassToFeatureClass_conversion(
-          in_features = fc_sampling
-         ,out_path    = scratch_path_o
-         ,out_name    = scratch_name_o
-      );
-      
-      #########################################################################
-      int_cnt = 0;
-      with arcpy.da.UpdateCursor(
-          in_table    = scratch_full_o
-         ,field_names = ["OID@","NOTES"]
-      ) as cursor:
-      
-         for row in cursor:
-         
-            if row[0] in ary_oid:
-               row[1] = str_notes;
-               int_cnt += 1;
-               
-               cursor.updateRow(row);
-      
-      arcpy.AddMessage("Note recorded on " + str(int_cnt) + " record(s).");
-
-      #########################################################################
-      arcpy.SetParameterAsText(3,scratch_full_o);         
+      self.tools.append(ContaminationResults);
+      self.tools.append(SampleData);
+      self.tools.append(Debug);
 
 ###############################################################################
 class GenerateRandom(object):
@@ -178,7 +57,7 @@ class GenerateRandom(object):
       param2 = arcpy.Parameter(
           displayName   = "Area of Interest Mask"
          ,name          = "Area_of_Interest_Mask"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -242,16 +121,33 @@ class GenerateRandom(object):
       );
       scratch_path_b,scratch_name_b = os.path.split(scratch_full_b);
       
-      scratch_full_o = arcpy.CreateScratchName(
+      scratch_full_r = arcpy.CreateScratchName(
           prefix    = "GenerateRandom"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
-      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+      scratch_path_r,scratch_name_r = os.path.split(scratch_full_r);
       
       #########################################################################
-      sr = arcpy.Describe(fc_aoi_mask).spatialReference;
+      sr = arcpy.Describe(fc_aoi_mask).spatialReference.factoryCode;
+      
+      if sr != 3857:
+      
+         scratch_full_mask = arcpy.CreateScratchName(
+             prefix    = "TOTS_MASK"
+            ,suffix    = ""
+            ,data_type = "FeatureClass"
+            ,workspace = arcpy.env.scratchGDB
+         );
+         
+         arcpy.Project_management(
+             in_dataset      = fc_aoi_mask
+            ,out_dataset     = scratch_full_mask
+            ,out_coor_system = arcpy.SpatialReference(3857)
+         )
+            
+         fc_aoi_mask = scratch_full_mask;
       
       #########################################################################
       # Licensing information
@@ -304,7 +200,7 @@ class GenerateRandom(object):
       #########################################################################
       arcpy.MinimumBoundingGeometry_management(
           in_features       = scratch_full_b
-         ,out_feature_class = scratch_full_o
+         ,out_feature_class = scratch_full_r
          ,geometry_type     = "ENVELOPE"
          ,group_option      = "NONE"
          ,group_field       = ""
@@ -312,44 +208,31 @@ class GenerateRandom(object):
       );
       
       #########################################################################
-      flds = arcpy.ListFields(scratch_full_o);
-      fldnms = [];
+      (a,b,scratch_full_o) = sampling_scratch_fc(None);
       
-      for field in flds:
-         if not field.required:
-            fldnms.append(field.name);
-      
-      arcpy.DeleteField_management(scratch_full_o,fldnms);
-
-      #########################################################################
-      arcpy.AddMessage("Populating Sampling Metrics...");
-      dz_addfields(
-          in_table = scratch_full_o
-         ,field_description = [
-             ["GLOBALID","GUID"    ,"GlobalID",None,None,'']
-            ,["TYPE"    ,"TEXT"    ,"Type"    ,255 ,None,'']
-            ,["TTPK"    ,"DOUBLE"  ,"TTPK"    ,None,None,'']
-            ,["TTC"     ,"DOUBLE"  ,"TTC"     ,None,None,'']
-            ,["TTA"     ,"DOUBLE"  ,"TTA"     ,None,None,'']
-            ,["TTPS"    ,"DOUBLE"  ,"TTPS"    ,None,None,'']
-            ,["LOD_P"   ,"DOUBLE"  ,"LOD_P"   ,None,None,'']
-            ,["LOD_NON" ,"DOUBLE"  ,"LOD_NON" ,None,None,'']
-            ,["MCPS"    ,"DOUBLE"  ,"MCPS"    ,None,None,'']
-            ,["TCPS"    ,"DOUBLE"  ,"TCPS"    ,None,None,'']
-            ,["WVPS"    ,"DOUBLE"  ,"WVPS"    ,None,None,'']
-            ,["WWPS"    ,"DOUBLE"  ,"WWPS"    ,None,None,'']
-            ,["SA"      ,"DOUBLE"  ,"SA"      ,None,None,'']
-            ,["AA"      ,"DOUBLE"  ,"AA"      ,None,None,'']
-            ,["AC"      ,"LONG"    ,"AC"      ,None,None,'']
-            ,["ITER"    ,"LONG"    ,"ITER"    ,None,None,'']
-            ,["NOTES"   ,"TEXT"    ,"Notes"   ,2000,None,'']
-            ,["ALC"     ,"DOUBLE"  ,"ALC"     ,None,None,'']
-            ,["AMC"     ,"DOUBLE"  ,"AMC"     ,None,None,'']
-         ]
+      arcpy.Append_management(
+          inputs      = scratch_full_r
+         ,target      = scratch_full_o
+         ,schema_type = "NO_TEST"
       );
 
       #########################################################################
-      fields = ["GLOBALID","TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
+      arcpy.AddMessage("Populating Sampling Metrics...");
+      fields = [
+          "GLOBALID"
+         ,"TYPE"
+         ,"TTPK"
+         ,"TTC"
+         ,"TTA"
+         ,"TTPS"
+         ,"MCPS"
+         ,"TCPS"
+         ,"WVPS"
+         ,"WWPS"
+         ,"SA"
+         ,"ALC"
+         ,"AMC"
+      ];
 
       with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
 
@@ -469,7 +352,7 @@ class VSPImport(object):
       param0 = arcpy.Parameter(
           displayName   = "Input VSP"
          ,name          = "Input_VSP"
-         ,datatype      = "GPFeatureLayer"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -526,71 +409,40 @@ class VSPImport(object):
       fc_vsp            = parameters[0].value;
       str_sample_type   = parameters[1].valueAsText;
       
+      cnt = int(arcpy.GetCount_management(fc_vsp).getOutput(0));
+      
+      if cnt == 0:
+         arcpy.AddError("No input VSP records found.");
+      else:
+         arcpy.AddMessage("Processing " + str(cnt) + " incoming records.");       
+         
       #########################################################################
-      scratch_full_o = arcpy.CreateScratchName(
+      scratch_full_fp = arcpy.CreateScratchName(
           prefix    = "VSPImport"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
-      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
-      
-      scratch_full_v = arcpy.CreateScratchName(
-          prefix    = "VSPTemp"
-         ,suffix    = ""
-         ,data_type = "FeatureClass"
-         ,workspace = arcpy.env.scratchGDB
-      );
-      scratch_path_v,scratch_name_v = os.path.split(scratch_full_v);
-      
-      arcpy.FeatureClassToFeatureClass_conversion(
-          in_features = fc_vsp
-         ,out_path    = scratch_path_v
-         ,out_name    = scratch_name_v
-      );
+      scratch_path_fp,scratch_name_fp = os.path.split(scratch_full_fp);
       
       #########################################################################
       # Use the FeatureToPolygon function to form new areas
       arcpy.FeatureToPolygon_management(
-          in_features       = scratch_full_v
-         ,out_feature_class = scratch_full_o
+          in_features       = fc_vsp
+         ,out_feature_class = scratch_full_fp
          ,attributes        = "NO_ATTRIBUTES"
       );
       
-      #########################################################################
-      flds = arcpy.ListFields(scratch_full_o);
-      fldnms = [];
+      cnt = int(arcpy.GetCount_management(scratch_full_fp).getOutput(0));
+      arcpy.AddMessage("Built " + str(cnt) + " polygons from VSP input");
       
-      for field in flds:
-         if not field.required:
-            fldnms.append(field.name);
-      
-      arcpy.DeleteField_management(scratch_full_o,fldnms);
-
       #########################################################################
-      dz_addfields(
-          in_table = scratch_full_o
-         ,field_description = [
-             ["GLOBALID","GUID"    ,"GlobalID",None,None,'']
-            ,["TYPE"    ,"TEXT"    ,"Type"    ,255 ,None,'']
-            ,["TTPK"    ,"DOUBLE"  ,"TTPK"    ,None,None,'']
-            ,["TTC"     ,"DOUBLE"  ,"TTC"     ,None,None,'']
-            ,["TTA"     ,"DOUBLE"  ,"TTA"     ,None,None,'']
-            ,["TTPS"    ,"DOUBLE"  ,"TTPS"    ,None,None,'']
-            ,["LOD_P"   ,"DOUBLE"  ,"LOD_P"   ,None,None,'']
-            ,["LOD_NON" ,"DOUBLE"  ,"LOD_NON" ,None,None,'']
-            ,["MCPS"    ,"DOUBLE"  ,"MCPS"    ,None,None,'']
-            ,["TCPS"    ,"DOUBLE"  ,"TCPS"    ,None,None,'']
-            ,["WVPS"    ,"DOUBLE"  ,"WVPS"    ,None,None,'']
-            ,["WWPS"    ,"DOUBLE"  ,"WWPS"    ,None,None,'']
-            ,["SA"      ,"DOUBLE"  ,"SA"      ,None,None,'']
-            ,["AA"      ,"DOUBLE"  ,"AA"      ,None,None,'']
-            ,["AC"      ,"LONG"    ,"AC"      ,None,None,'']
-            ,["ITER"    ,"LONG"    ,"ITER"    ,None,None,'']
-            ,["NOTES"   ,"TEXT"    ,"Notes"   ,2000,None,'']
-            ,["ALC"     ,"DOUBLE"  ,"ALC"     ,None,None,'']
-            ,["AMC"     ,"DOUBLE"  ,"AMC"     ,None,None,'']
-         ]
+      (a,b,scratch_full_o) = sampling_scratch_fc(None);
+      
+      arcpy.Append_management(
+          inputs      = scratch_full_fp
+         ,target      = scratch_full_o
+         ,schema_type = "NO_TEST"
       );
 
       #########################################################################
@@ -693,18 +545,18 @@ class VSPImport(object):
             cursor.updateRow(row);
 
       #########################################################################
-      arcpy.SetParameterAsText(2,scratch_full_o); 
+      arcpy.SetParameterAsText(2,scratch_full_o);
 
       arcpy.AddMessage("Conversion Complete!");
 
 ###############################################################################
-class Main(object):
+class ContaminationResults(object):
 
    #...........................................................................
    def __init__(self):
 
-      self.label = "Main"
-      self.name  = "Main"
+      self.label = "Contamination Results"
+      self.name  = "ContaminationResults"
       self.canRunInBackground = False;
 
    #...........................................................................
@@ -712,9 +564,9 @@ class Main(object):
 
       #########################################################################
       param0 = arcpy.Parameter(
-          displayName   = "Scenario Name"
-         ,name          = "Scenario_Name"
-         ,datatype      = "GPString"
+          displayName   = "Input Sampling Unit"
+         ,name          = "Input_Sampling_Unit"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -722,9 +574,9 @@ class Main(object):
 
       #########################################################################
       param1 = arcpy.Parameter(
-          displayName   = "Input Sampling Unit"
-         ,name          = "Input_Sampling_Unit"
-         ,datatype      = "GPFeatureLayer"
+          displayName   = "Contamination Map"
+         ,name          = "Contamination_Map"
+         ,datatype      = "DEFeatureClass"
          ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
@@ -732,100 +584,10 @@ class Main(object):
 
       #########################################################################
       param2 = arcpy.Parameter(
-          displayName   = "Contamination Map"
-         ,name          = "Contamination_Map"
-         ,datatype      = "GPFeatureLayer"
-         ,parameterType = "Optional"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param3 = arcpy.Parameter(
-          displayName   = "Surface Area (ft2)"
-         ,name          = "Surface_Area_ft2"
-         ,datatype      = "GPDouble"
-         ,parameterType = "Optional"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param4 = arcpy.Parameter(
-          displayName   = "Number of Available Teams for Sampling"
-         ,name          = "Number_of_Available_Teams_for_Sampling"
-         ,datatype      = "GPLong"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param5 = arcpy.Parameter(
-          displayName   = "Personnel per Sampling Team"
-         ,name          = "Personnel_per_Sampling_Team"
-         ,datatype      = "GPLong"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param6 = arcpy.Parameter(
-          displayName   = "Sampling Team Hours per Shift"
-         ,name          = "Sampling_Team_Hours_per_Shift"
-         ,datatype      = "GPDouble"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param7 = arcpy.Parameter(
-          displayName   = "Sampling Team Shifts per Day"
-         ,name          = "Sampling_Team_Shifts_per_Day"
-         ,datatype      = "GPDouble"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param8 = arcpy.Parameter(
-          displayName   = "Sampling Team Labor Cost"
-         ,name          = "Sampling_Team_Labor_Cost"
-         ,datatype      = "GPDouble"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param9 = arcpy.Parameter(
-          displayName   = "Number of Available Labs for Analysis"
-         ,name          = "Number_of_Available_Labs_for_Analysis"
-         ,datatype      = "GPLong"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-
-      #########################################################################
-      param10 = arcpy.Parameter(
-          displayName   = "Analysis Lab Hours per Day"
-         ,name          = "Analysis_Lab_Hours_per_Day"
-         ,datatype      = "GPDouble"
-         ,parameterType = "Required"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-      
-      #########################################################################
-      param11 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
+         ,datatype      = "GPTableView"
          ,parameterType = "Derived"
-         ,datatype      = "DEFile"
          ,direction     = "Output"
       );
 
@@ -833,15 +595,6 @@ class Main(object):
           param0
          ,param1
          ,param2
-         ,param3
-         ,param4
-         ,param5
-         ,param6
-         ,param7
-         ,param8
-         ,param9
-         ,param10
-         ,param11
       ];
 
       return params;
@@ -865,19 +618,76 @@ class Main(object):
    def execute(self,parameters,messages):
 
       #########################################################################
-      str_scenario_name    = parameters[0].valueAsText;
-      fc_samples_in        = parameters[1].value;
-      fc_contamination_map = parameters[2].value;
-      num_aoi_area         = parameters[3].value;
-      int_available_teams  = parameters[4].value;
-      int_personnel        = parameters[5].value;
-      num_hours_per_shift  = parameters[6].value;
-      num_shifts_per_day   = parameters[7].value;
-      num_labor_cost       = parameters[8].value;
-      int_sampling_labs    = parameters[9].value;
-      num_analysis_hours   = parameters[10].value;
+      fc_samples_in        = parameters[0].value;
+      fc_contamination_map = parameters[1].value;
       
       #########################################################################
+      sr = arcpy.Describe(fc_samples_in).spatialReference.factoryCode;
+      
+      if sr != 3857:
+      
+         scratch_full_samp = arcpy.CreateScratchName(
+             prefix    = "TOTS_SAMP"
+            ,suffix    = ""
+            ,data_type = "FeatureClass"
+            ,workspace = arcpy.env.scratchGDB
+         );
+         
+         arcpy.Project_management(
+             in_dataset      = fc_samples_in
+            ,out_dataset     = scratch_full_samp
+            ,out_coor_system = arcpy.SpatialReference(3857)
+         )
+            
+         fc_samples_in = scratch_full_samp;
+         
+      #########################################################################
+      sr = arcpy.Describe(fc_contamination_map).spatialReference.factoryCode;
+      
+      if sr != 3857:
+      
+         scratch_full_mask = arcpy.CreateScratchName(
+             prefix    = "TOTS_MASK"
+            ,suffix    = ""
+            ,data_type = "FeatureClass"
+            ,workspace = arcpy.env.scratchGDB
+         );
+         
+         arcpy.Project_management(
+             in_dataset      = fc_contamination_map
+            ,out_dataset     = scratch_full_mask
+            ,out_coor_system = arcpy.SpatialReference(3857)
+         )
+            
+         fc_contamination_map = scratch_full_mask;
+      
+      #########################################################################
+      scratch_full_o = arcpy.CreateScratchName(
+          prefix    = "TOTSResults"
+         ,suffix    = ""
+         ,data_type = "Dataset"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+      
+      arcpy.CreateTable_management(
+          out_path       = scratch_path_o
+         ,out_name       = scratch_name_o
+         ,config_keyword = None
+      );
+      
+      dz_addfields(
+          in_table = scratch_full_o
+         ,field_description = [
+             ['GLOBALID'           ,'TEXT'  ,'GlobalID'         ,40  ,None,'']
+            ,['TYPE'               ,'TEXT'  ,'Type'             ,255 ,None,'']
+            ,['CFU'                ,'LONG'  ,'CFU'              ,None,None,'']
+            ,['Notes'              ,'TEXT'  ,'Notes'            ,255 ,None,'']
+          ]
+      );
+
+      #########################################################################
+      # Contamination results join
       scratch_full_c = arcpy.CreateScratchName(
           prefix    = "Contamination"
          ,suffix    = ""
@@ -886,319 +696,450 @@ class Main(object):
       );
       scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
       
-      scratch_full_o = arcpy.CreateScratchName(
-          prefix    = "TOTSResults"
-         ,suffix    = ".csv"
-         ,data_type = "Dataset"
-         ,workspace = arcpy.env.scratchFolder
-      );
-      scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
-
-      #########################################################################
-      # Contaminaton results join
-      if fc_contamination_map:
-      
-         arcpy.SpatialJoin_analysis(
-             target_features   = fc_samples_in
-            ,join_features     = fc_contamination_map
-            ,out_feature_class = scratch_full_c
-         );
-
-      #########################################################################
-      # Define actual area
-      arcpy.CalculateField_management(
-          in_table        = fc_samples_in
-         ,field           = "AA"
-         ,expression      = "!SHAPE.AREA@SQUAREINCHES!"
-         ,expression_type = "PYTHON_9.3"
+      arcpy.SpatialJoin_analysis(
+          target_features   = fc_samples_in
+         ,join_features     = fc_contamination_map
+         ,out_feature_class = scratch_full_c
       );
 
       #########################################################################
-      # Count the number of iterations exist in user define samples areas
-      fields = ["SA","AA","AC"];
-
-      with arcpy.da.UpdateCursor(fc_samples_in,fields) as cursor:
-
-         for row in cursor:
-
-            row[2] = row[1] / row[0];
-
-            if row[1] < row[0]:
-               row[2] = 1;
-
-            cursor.updateRow(row);
-
-      #########################################################################
-      fields = ["TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS", "ALC", "AMC", "AC","ITER"];
-
-      with arcpy.da.UpdateCursor(fc_samples_in,fields) as cursor:
-
-         for row in cursor:
-
-            if row[11] == 0:
-               row[0]  = row[0] * row[10];
-               row[1]  = row[1] * row[10];
-               row[2]  = row[2] * row[10];
-               row[3]  = row[3] * row[10];
-               row[4]  = row[4] * row[10];
-               row[5]  = row[5] * row[10];
-               row[6]  = row[6] * row[10];
-               row[7]  = row[7] * row[10];
-               row[8]  = row[8] * row[10];
-               row[9]  = row[9] * row[10];
-               row[11] = row[11] + 1;
-
-               cursor.updateRow(row);
-
-      #########################################################################
-      # Calculate area total and probability if AOI is > 0
-      num_aa_total = 0.00;
-
-      with arcpy.da.SearchCursor(fc_samples_in,"AA") as p:
-         for row in p:
-            num_aa_total = num_aa_total + row[0];
-
-      #########################################################################
-      # Convert to square feet
-      num_aa_total = num_aa_total * 0.00694444;
-
-      if num_aoi_area > 0:
-         num_prob = float(num_aa_total) / float(num_aoi_area) * 100;
-
-      #########################################################################
-      num_ttpk_total    = 0;
-      num_ttc_total     = 0;
-      num_tta_total     = 0;
-      num_ttps_total    = 0;
-      num_lod_p_total   = 0;
-      num_lod_non_total = 0;
-      num_mcps_total    = 0;
-      num_tcps_total    = 0;
-      num_wvps_total    = 0;
-      num_wwps_total    = 0;
-      num_sa_total      = 0;
-      num_alc_total     = 0;
-      num_amc_total     = 0;
-      num_ac_total      = 0;
-      num_cfu_count     = 0;
+      # Sampling Results
+      flds = ['GLOBALID','TYPE','CFU','Notes'];
       
-      fields = ["TTPK","TTC","TTA","TTPS","LOD_P","LOD_NON","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC","AC"];
-
-      with arcpy.da.SearchCursor(fc_samples_in,fields) as cursor:
-
-         for row in cursor:
-            if row[0] is not None:
-               num_ttpk_total    += row[0];
+      with arcpy.da.InsertCursor(
+          in_table    = scratch_full_o
+         ,field_names = flds
+      ) as insert_curs:
+      
+         with arcpy.da.SearchCursor(
+             in_table    = scratch_full_c
+            ,field_names = flds
+         ) as search_curs:
+         
+            for row in search_curs:
             
-            if row[1] is not None:
-               num_ttc_total     += row[1];
-            
-            if row[2] is not None:
-               num_tta_total     += row[2];
-            
-            if row[3] is not None:
-               num_ttps_total    += row[3];
-            
-            if row[4] is not None:
-               num_lod_p_total   += row[4];
-            
-            if row[5] is not None:
-               num_lod_non_total += row[5];
-            
-            if row[6] is not None:
-               num_mcps_total    += row[6];
-            
-            if row[7] is not None:
-               num_tcps_total    += row[7];
-            
-            if row[8] is not None:
-               num_wvps_total    += row[8];
-            
-            if row[9] is not None:
-               num_wwps_total    += row[9];
-            
-            if row[10] is not None:
-               num_sa_total      += row[10];
-            
-            if row[11] is not None:
-               num_alc_total     += row[11];
-            
-            if row[12] is not None:
-               num_amc_total     += row[12];
-            
-            if row[13] is not None:
-               num_ac_total      += row[13];
-
-      #########################################################################
-      int_sampling_hours                = int(int_available_teams) * int(num_hours_per_shift) * int(num_shifts_per_day);
-      int_sampling_personnel_day        = int(int_sampling_hours) * int(int_personnel);
-      num_sampling_personnel_labor_cost = int(num_labor_cost) / int(int_personnel);
-
-      #new 10.31.19
-      num_time_complete_sampling        = (float(num_ttc_total) + float(num_ttpk_total)) / float(int_sampling_hours);
-      num_total_sampling_num_labor_cost = float(int_available_teams) * float(int_personnel) * float(num_hours_per_shift) * float(num_shifts_per_day) * float(num_sampling_personnel_labor_cost) * float(num_time_complete_sampling);
-
-      # Calculate Lab Throughput
-      num_total_hours                   = int(int_sampling_labs) * int(num_analysis_hours);
-      num_throughput_time               = num_tta_total / num_total_hours;
-
-      # Calculate Total Cost and Time
-      num_total_cost                    = float(num_total_sampling_num_labor_cost) + float(num_mcps_total) + float(num_alc_total) + float(num_amc_total);
-
-      # Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
-      # If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
-      # The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
-      if float(num_throughput_time) < float(num_time_complete_sampling):
-         num_total_time = float(num_time_complete_sampling);
-
-      else:
-         num_total_time = float(num_throughput_time) + 1.00;
-
-      arcpy.AddMessage(" ");
-      arcpy.AddMessage("TOTS Results:");
-      arcpy.AddMessage(" ");
-      arcpy.AddMessage("--Summary--");
-      arcpy.AddMessage("Total Number of User-Defined Samples: " + str(arcpy.GetCount_management(fc_samples_in).getOutput(0)));
-      arcpy.AddMessage("Total Number of Samples: " + str(num_ac_total));
-      arcpy.AddMessage("Total Cost ($): " + str(num_total_cost));
-      arcpy.AddMessage("Total Time (days): " + str(num_total_time));
-
-      if num_time_complete_sampling > num_throughput_time:
-         arcpy.AddMessage("Limiting Time Factor: Sampling");
-
-      elif num_time_complete_sampling < num_throughput_time:
-         arcpy.AddMessage("Limiting Time Factor: Analysis");
-
-      arcpy.AddMessage(" ");
-      arcpy.AddMessage("--Spatial Information--");
-      arcpy.AddMessage("Total Sampled Area (feet): "                                    + str(num_aa_total));
-
-      if num_aoi_area > 0:
-         arcpy.AddMessage("User Specified Total AOI (feet): "                           + str(num_aoi_area));
-         arcpy.AddMessage("Percent of Area Sampled: "                                   + str("{0:.0f}%".format(num_prob)));
-
-      arcpy.AddMessage(" ");
-      arcpy.AddMessage("-- Sampling --");
-      arcpy.AddMessage("User Specified Number of Available Teams for Sampling: "        + str(int_available_teams));
-      arcpy.AddMessage("User Specified int_personnel per Sampling Team: "               + str(int_personnel));
-      arcpy.AddMessage("User Specified Sampling Team Hours per Shift: "                 + str(num_hours_per_shift));
-      arcpy.AddMessage("User Specified Sampling Team Shifts per Day: "                  + str(num_shifts_per_day));
-      arcpy.AddMessage("Sampling Hours per Day: "                                       + str(int_sampling_hours));
-      arcpy.AddMessage("Sampling int_personnel hours per Day: "                         + str(int_sampling_personnel_day));
-      arcpy.AddMessage("User Specified Sampling Team Labor Cost ($): "                  + str(num_labor_cost));
-      arcpy.AddMessage("Time to Prepare Kits (person hours): "                          + str(num_ttpk_total));
-      arcpy.AddMessage("Time to Collect (person hours): "                               + str(num_ttc_total));
-      arcpy.AddMessage("Material Cost: "                                                + str(num_mcps_total));
-      arcpy.AddMessage("Sampling int_personnel Labor Cost ($): "                        + str(num_sampling_personnel_labor_cost));
-      arcpy.AddMessage("Time to Complete Sampling (days): "                             + str(num_time_complete_sampling));
-      arcpy.AddMessage("Total Sampling Labor Cost ($): "                                + str(num_total_sampling_num_labor_cost));
-      arcpy.AddMessage(" ");
-      arcpy.AddMessage("-- Analysis --");
-      arcpy.AddMessage("User Specified Number of Available Labs for Analysis: "         + str(int_sampling_labs));
-      arcpy.AddMessage("User Specified Analysis Lab Hours per Day: "                    + str(num_analysis_hours));
-      arcpy.AddMessage("Time to Complete Analyses (days): "                             + str(num_throughput_time));
-      arcpy.AddMessage("Time to Analyze (person hours): "                               + str(num_tta_total));
-      arcpy.AddMessage("Analysis Labor Cost ($): "                                      + str(num_alc_total));
-      arcpy.AddMessage("Analysis Material Cost ($): "                                   + str(num_amc_total));
-      arcpy.AddMessage("Waste volume (L): "                                             + str(num_wvps_total));
-      arcpy.AddMessage("Waste Weight (lbs): "                                           + str(num_wwps_total));
-      arcpy.AddMessage(" ");
-
-      #########################################################################
-      # Write to spreadsheet
-      with open(scratch_full_o,'w+') as csvfile:
-
-         csvwriter = csv.writer(
-             csvfile
-            ,delimiter      = ","
-            ,lineterminator = "\n"
-         );
-         csvwriter.writerow(["Summary"]);
-         csvwriter.writerow([""]);
-         csvwriter.writerow(['Total Number of User-Defined Samples: ']                  + [arcpy.GetCount_management(fc_samples_in).getOutput(0)]);
-         csvwriter.writerow(['Total Number of Samples: ']                               + [str(num_ac_total)]);
-         csvwriter.writerow(["Total Cost ($): "]                                        + [str(num_total_cost)]);
-         csvwriter.writerow(["Total Time (days): "]                                     + [str(num_total_time)]);
-
-         if num_time_complete_sampling > num_throughput_time:
-            csvwriter.writerow(["Limiting Time Factor: "]                               + ["Sampling"]);
-
-         elif num_time_complete_sampling < num_throughput_time:
-            csvwriter.writerow(["Limiting Time Factor: "]                               + ["Analysis"]);
-
-         csvwriter.writerow([""])
-         csvwriter.writerow(["Spatial Information"])
-         csvwriter.writerow(["Total Sampled Area (feet): "]                             + [str(num_aa_total)]);
-
-         if num_aoi_area > 0:
-            csvwriter.writerow(["User Specified Total AOI (feet): "]                    + [str(num_aoi_area)]);
-            csvwriter.writerow(["Percent of Area Sampled: "]                            + [str("{0:.0f}%".format(num_prob))]);
-
-         csvwriter.writerow([""]);
-         csvwriter.writerow(["Sampling"]);
-         csvwriter.writerow(["User Specified Number of Available Teams for Sampling: "] + [str(int_available_teams)]);
-         csvwriter.writerow(["User Specified int_personnel per Sampling Team: "]        + [str(int_personnel)]);
-         csvwriter.writerow(["User Specified Sampling Team Hours per Shift: "]          + [str(num_hours_per_shift)]);
-         csvwriter.writerow(["User Specified Sampling Team Shifts per Day: "]           + [str(num_shifts_per_day)]);
-         csvwriter.writerow(["Sampling Hours per Day: "]                                + [str(int_sampling_hours)]);
-         csvwriter.writerow(["Sampling int_personnel hours per Day: "]                  + [str(int_sampling_personnel_day)]);
-         csvwriter.writerow(["User Specified Sampling Team Labor Cost ($): "]           + [str(num_labor_cost)]);
-         csvwriter.writerow(['Time to Prepare Kits (person hours): ']                   + [str(num_ttpk_total)]);
-         csvwriter.writerow(["Time to Collect (person hours): "]                        + [str(num_ttc_total)]);
-         csvwriter.writerow(["Material Cost: "]                                         + [str(num_mcps_total)]);
-         csvwriter.writerow(["Sampling int_personnel Labor Cost ($): "]                 + [str(num_sampling_personnel_labor_cost)]);
-         csvwriter.writerow(["Time to Complete Sampling (days): "]                      + [str(num_time_complete_sampling)]);
-         csvwriter.writerow(["Total Sampling Labor Cost ($): "]                         + [str(num_total_sampling_num_labor_cost)]);
-         csvwriter.writerow([""]);
-         csvwriter.writerow(["Analysis"]);
-         csvwriter.writerow(["User Specified Number of Available Labs for Analysis: "]  + [str(int_sampling_labs)]);
-         csvwriter.writerow(["User Specified Analysis Lab Hours per Day: "]             + [str(num_analysis_hours)]);
-         csvwriter.writerow(["Time to Complete Analyses (days)"]                        + [str(num_throughput_time)]);
-         csvwriter.writerow(["Time to Analyze (person hours): "]                        + [str(num_tta_total)]);
-         csvwriter.writerow(["Analysis Labor Cost ($): "]                               + [str(num_alc_total)]);
-         csvwriter.writerow(["Analysis Material Cost ($): "]                            + [str(num_amc_total)]);
-         csvwriter.writerow(["Waste volume (L): "]                                      + [str(num_wvps_total)]);
-         csvwriter.writerow(["Waste Weight (lbs): "]                                    + [str(num_wwps_total)]);
-         csvwriter.writerow([""]);
-
-         ######################################################################
-         # Contamination results join
-         # Write data depending on availability of contamination map
-         if fc_contamination_map:
-            fields = ['OID@','GLOBALID','TYPE','CFU','NOTES'];
-
-            arcpy.AddMessage("-- Sampling Results --");
-            with arcpy.da.SearchCursor(scratch_full_c,fields) as q:
-
-               for row in q:
-
-                  if row[3] > 0:
-                     num_cfu_count += 1;
-                     arcpy.AddMessage("Sample ID: " + str(row[0]) + ", Sample Type: " + str(row[2]) + ", CFU: " + str(row[3]));
-
-            arcpy.AddMessage(" ");
-            arcpy.AddMessage(str(num_cfu_count) + " of " + str(arcpy.GetCount_management(fc_samples_in).getOutput(0)) + " Samples Were Positive Detects");
-
-            fields_com = ['Sample ID','GlobalID','Sample Type','CFU','Notes']
-            csvwriter.writerow(fields_com)
-
-            with arcpy.da.SearchCursor(scratch_full_c,fields) as s_cursor:
-
-               for row in s_cursor:
-                  csvwriter.writerow(row)
-
-         else:
-            fields     = ['OID@','GLOBALID','NOTES'];
-            fields_com = ['Sample ID','GlobalID','Notes'];
-            csvwriter.writerow(fields_com);
-
-            with arcpy.da.SearchCursor(fc_samples_in,fields) as cursor:
-
-               for row in cursor:
-                  csvwriter.writerow(row);
+               insert_curs.insertRow((
+                   row[0]
+                  ,row[1]
+                  ,row[2]
+                  ,row[3]
+               ));
                   
       #########################################################################
-      arcpy.SetParameterAsText(11,scratch_full_o);
+      arcpy.SetParameterAsText(2,scratch_full_o);
+      
+###############################################################################
+class SampleData(object):
+
+   #...........................................................................
+   def __init__(self):
+
+      self.label = "Sample Data"
+      self.name  = "SampleData"
+      self.canRunInBackground = False;
+
+   #...........................................................................
+   def getParameterInfo(self):
+
+      #########################################################################
+      param0 = arcpy.Parameter(
+          displayName   = "Preset"
+         ,name          = "Preset"
+         ,datatype      = "GPLong"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param1 = arcpy.Parameter(
+          displayName   = "Sampling"
+         ,name          = "Sampling"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param2 = arcpy.Parameter(
+          displayName   = "ContaminationMask"
+         ,name          = "ContaminationMask"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param3 = arcpy.Parameter(
+          displayName   = "AreaOfInterest"
+         ,name          = "AreaOfInterest"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param4 = arcpy.Parameter(
+          displayName   = "VSP"
+         ,name          = "VSP"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      params = [
+          param0
+         ,param1
+         ,param2
+         ,param3
+         ,param4
+      ];
+
+      return params;
+
+   #...........................................................................
+   def isLicensed(self):
+
+      return True;
+
+   #...........................................................................
+   def updateParameters(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def updateMessages(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def execute(self,parameters,messages):
+
+      #########################################################################
+      int_preset = parameters[0].value;
+      
+      #########################################################################
+      arcpy.AddMessage("  Building Sampling Feature Class");
+      (a,b,scratch_full_sam) = sampling_scratch_fc(int_preset);
+      arcpy.AddMessage("  Building Contamination Map Feature Class");
+      (a,b,scratch_full_con) = contamination_scratch_fc(int_preset);
+      arcpy.AddMessage("  Building Area of Interest Feature Class");
+      (a,b,scratch_full_aoi) = aoi_scratch_fc(int_preset);
+      arcpy.AddMessage("  Building VSP Feature Class");
+      (a,b,scratch_full_vsp) = vsp_scratch_fc(int_preset);
+
+      #########################################################################
+      arcpy.SetParameterAsText(1,scratch_full_sam);
+      arcpy.SetParameterAsText(2,scratch_full_con);
+      arcpy.SetParameterAsText(3,scratch_full_aoi);
+      arcpy.SetParameterAsText(4,scratch_full_vsp);
+      
+###############################################################################
+class Debug(object):
+
+   #...........................................................................
+   def __init__(self):
+
+      self.label = "Debug"
+      self.name  = "Debug"
+      self.canRunInBackground = False;
+
+   #...........................................................................
+   def getParameterInfo(self):
+
+      #########################################################################
+      param0 = arcpy.Parameter(
+          displayName   = "Preset"
+         ,name          = "Preset"
+         ,datatype      = "GPLong"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param1 = arcpy.Parameter(
+          displayName   = "Precluded"
+         ,name          = "Precluded"
+         ,datatype      = "GPString"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      params = [
+          param0
+         ,param1
+      ];
+
+      return params;
+
+   #...........................................................................
+   def isLicensed(self):
+
+      return True;
+
+   #...........................................................................
+   def updateParameters(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def updateMessages(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def execute(self,parameters,messages):
+
+      #########################################################################
+      int_preset = parameters[0].value;
+      
+      #########################################################################
+      environments = arcpy.ListEnvironments();
+      
+      str_dump = "";
+      for environment in environments:
+         str_dump = str_dump + environment + ": " + str(arcpy.env[environment]) + " | ";
+         arcpy.AddMessage(environment + ": " + str(arcpy.env[environment]));
+
+      #########################################################################
+      arcpy.SetParameter(1,str_dump);
+
+
+###############################################################################
+def sampling_scratch_fc(p_preset):
+
+   scratch_full_o = arcpy.CreateScratchName(
+       prefix    = "TOTS_Sampling"
+      ,suffix    = ""
+      ,data_type = "FeatureClass"
+      ,workspace = arcpy.env.scratchGDB
+   );
+   scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+   
+   arcpy.CreateFeatureclass_management(
+       out_path          = scratch_path_o
+      ,out_name          = scratch_name_o
+      ,geometry_type     = "POLYGON"
+      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,config_keyword    = None
+   );
+   
+   dz_addfields(
+       in_table = scratch_full_o
+      ,field_description = [
+          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
+         ,['TYPE'               ,'TEXT'  ,'Sampling Method Type'        ,255 ,None,'']
+         ,['TTPK'               ,'DOUBLE','Time to Prepare Kits'        ,None,None,'']
+         ,['TTC'                ,'DOUBLE','Time to Collect'             ,None,None,'']
+         ,['TTA'                ,'DOUBLE','Time to Analyze'             ,None,None,'']
+         ,['TTPS'               ,'DOUBLE','Total Time per Sample'       ,None,None,'']
+         ,['LOD_P'              ,'DOUBLE','Limit of Detection Porous'   ,None,None,'']
+         ,['LOD_NON'            ,'DOUBLE','Limit of Detection Nonporous',None,None,'']
+         ,['MCPS'               ,'DOUBLE','Material Cost per Sample'    ,None,None,'']
+         ,['TCPS'               ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
+         ,['WVPS'               ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
+         ,['WWPS'               ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
+         ,['SA'                 ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
+         ,['AA'                 ,'DOUBLE','AA'                          ,None,None,'']
+         ,['AC'                 ,'LONG'  ,'AC'                          ,None,None,'']
+         ,['ITER'               ,'LONG'  ,'ITER'                        ,None,None,'']
+         ,['Notes'              ,'TEXT'  ,'Notes'                       ,2000,None,'']
+         ,['ALC'                ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
+         ,['AMC'                ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
+         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CREATEDDATE'        ,'DATE'  ,'Created Date'                ,None,None,'']
+         ,['UPDATEDDATE'        ,'DATE'  ,'Updated Date'                ,None,None,'']
+         ,['USERNAME'           ,'TEXT'  ,'Username'                    ,255 ,None,'']
+         ,['ORGANIZATION'       ,'TEXT'  ,'Organization'                ,255 ,None,'']
+         ,['SURFACEAREAUNIT'    ,'TEXT'  ,'Surface Area Unit'           ,255 ,None,'']
+         ,['ELEVATIONSERIES'    ,'TEXT'  ,'Elevation Series'            ,255 ,None,'']
+       ]
+   );
+   
+   if p_preset is not None:
+      jfile = "SAMP" + str(p_preset) + ".json";
+      json_file = arcpy.env.packageWorkspace + os.sep + ".." + os.sep + "cd" + os.sep + "pytoolbox" + os.sep + jfile;
+      
+      if arcpy.Exists(json_file):
+         dz_appendjson(
+             in_json_file = json_file
+            ,out_features = scratch_full_o
+         );
+         
+      else:      
+         pathname = os.path.dirname(os.path.realpath(__file__));
+         json_file = pathname + os.sep + jfile;
+
+         if arcpy.Exists(json_file):
+            dz_appendjson(
+                in_json_file = json_file
+               ,out_features = scratch_full_o
+            );
+   
+   return (scratch_path_o,scratch_name_o,scratch_full_o);
+   
+###############################################################################
+def contamination_scratch_fc(p_preset):
+
+   scratch_full_o = arcpy.CreateScratchName(
+       prefix    = "TOTS_Contamination"
+      ,suffix    = ""
+      ,data_type = "FeatureClass"
+      ,workspace = arcpy.env.scratchGDB
+   );
+   scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+   
+   arcpy.CreateFeatureclass_management(
+       out_path          = scratch_path_o
+      ,out_name          = scratch_name_o
+      ,geometry_type     = "POLYGON"
+      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,config_keyword    = None
+   );
+   
+   dz_addfields(
+       in_table = scratch_full_o
+      ,field_description = [
+          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
+         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CFU'                ,'DOUBLE','CFU'                         ,255 ,None,'']
+         ,['NOTES'              ,'TEXT'  ,'Notes'                       ,255 ,None,'']
+       ]
+   );
+   
+   if p_preset is not None:
+      jfile = "CMAP" + str(p_preset) + ".json";
+      json_file = arcpy.env.packageWorkspace + os.sep + ".." + os.sep + "cd" + os.sep + "pytoolbox" + os.sep + jfile;
+      
+      if arcpy.Exists(json_file):
+         dz_appendjson(
+             in_json_file = json_file
+            ,out_features = scratch_full_o
+         );
+         
+      else:      
+         pathname = os.path.dirname(os.path.realpath(__file__));
+         json_file = pathname + os.sep + jfile;
+         
+         if arcpy.Exists(json_file):
+            dz_appendjson(
+                in_json_file = json_file
+               ,out_features = scratch_full_o
+            );
+   
+   return (scratch_path_o,scratch_name_o,scratch_full_o);
+   
+###############################################################################
+def aoi_scratch_fc(p_preset):
+
+   scratch_full_o = arcpy.CreateScratchName(
+       prefix    = "TOTS_AOI"
+      ,suffix    = ""
+      ,data_type = "FeatureClass"
+      ,workspace = arcpy.env.scratchGDB
+   );
+   scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+   
+   arcpy.CreateFeatureclass_management(
+       out_path          = scratch_path_o
+      ,out_name          = scratch_name_o
+      ,geometry_type     = "POLYGON"
+      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,config_keyword    = None
+   );
+   
+   dz_addfields(
+       in_table = scratch_full_o
+      ,field_description = [
+          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
+         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['NOTES'              ,'TEXT'  ,'Notes'                       ,255 ,None,'']
+       ]
+   );
+   
+   if p_preset is not None:
+      jfile = "AOI" + str(p_preset) + ".json";
+      json_file = arcpy.env.packageWorkspace + os.sep + ".." + os.sep + "cd" + os.sep + "pytoolbox" + os.sep + jfile;
+      
+      if arcpy.Exists(json_file):
+         dz_appendjson(
+             in_json_file = json_file
+            ,out_features = scratch_full_o
+         );
+         
+      else:      
+         pathname = os.path.dirname(os.path.realpath(__file__));
+         json_file = pathname + os.sep + jfile;
+         
+         if arcpy.Exists(json_file):
+            dz_appendjson(
+                in_json_file = json_file
+               ,out_features = scratch_full_o
+            );
+
+   return (scratch_path_o,scratch_name_o,scratch_full_o);
+   
+###############################################################################
+def vsp_scratch_fc(p_preset):
+
+   scratch_full_o = arcpy.CreateScratchName(
+       prefix    = "TOTS_VSP"
+      ,suffix    = ""
+      ,data_type = "FeatureClass"
+      ,workspace = arcpy.env.scratchGDB
+   );
+   scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+   
+   arcpy.CreateFeatureclass_management(
+       out_path          = scratch_path_o
+      ,out_name          = scratch_name_o
+      ,geometry_type     = "POLYLINE"
+      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,config_keyword    = None
+   );
+   
+   dz_addfields(
+       in_table = scratch_full_o
+      ,field_description = [
+          ['ID'                 ,'LONG'  ,'ID'                          ,None,None,'']
+         ,['AREA_ID'            ,'LONG'  ,'Area_ID'                     ,None,None,'']
+         ,['X'                  ,'DOUBLE','X'                           ,None,None,'']
+         ,['Y'                  ,'DOUBLE','Y'                           ,None,None,'']
+         ,['Z'                  ,'DOUBLE','Z'                           ,None,None,'']
+         ,['LX'                 ,'DOUBLE','LX'                          ,None,None,'']
+         ,['LY'                 ,'DOUBLE','LY'                          ,None,None,'']
+         ,['SURFACE'            ,'TEXT'  ,'Surface'                     ,32  ,None,'']
+         ,['ROW'                ,'SHORT' ,'Row'                         ,None,None,'']
+         ,['COLUMN'             ,'SHORT' ,'Column'                      ,None,None,'']
+         ,['NETWORK'            ,'SHORT' ,'Network'                     ,None,None,'']
+         ,['ITERATION'          ,'SHORT' ,'Iteration'                   ,None,None,'']
+         ,['LABEL'              ,'TEXT'  ,'Label'                       ,40  ,None,'']
+         ,['VALUE'              ,'TEXT'  ,'Value'                       ,14  ,None,'']
+       ]
+   );
+   
+   if p_preset is not None:
+      jfile = "VSP" + str(p_preset) + ".json";
+      json_file = arcpy.env.packageWorkspace + os.sep + ".." + os.sep + "cd" + os.sep + "pytoolbox" + os.sep + jfile;
+      
+      if arcpy.Exists(json_file):
+         dz_appendjson(
+             in_json_file = json_file
+            ,out_features = scratch_full_o
+         );
+         
+      else:      
+         pathname = os.path.dirname(os.path.realpath(__file__));
+         json_file = pathname + os.sep + jfile;
+         
+         if arcpy.Exists(json_file):
+            dz_appendjson(
+                in_json_file = json_file
+               ,out_features = scratch_full_o
+            );      
+
+   return (scratch_path_o,scratch_name_o,scratch_full_o);
 
 ###############################################################################
 def dz_addfields(in_table,field_description):
@@ -1219,4 +1160,34 @@ def dz_addfields(in_table,field_description):
             ,field_length = fld[3]
             ,field_domain = fld[5]
          );
+   
+###############################################################################
+def dz_appendjson(in_json_file,out_features):
+
+   scratch_full_o = arcpy.CreateScratchName(
+       prefix    = "TOTS_APPEND"
+      ,suffix    = ""
+      ,data_type = "FeatureClass"
+      ,workspace = arcpy.env.scratchGDB
+   );
+   scratch_path_o,scratch_name_o = os.path.split(scratch_full_o);
+
+   arcpy.JSONToFeatures_conversion(
+       in_json_file = in_json_file
+      ,out_features = scratch_full_o
+   );
+   
+   arcpy.Append_management(
+       inputs = scratch_full_o
+      ,target = out_features
+   );
+   
+   
+   
+   
+   
+   
+   
+   
+   
    
