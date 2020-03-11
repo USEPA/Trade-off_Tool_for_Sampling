@@ -22,6 +22,8 @@ const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
 
+type SaveStatusType = '' | 'success' | 'failure';
+
 // Makes all sketch buttons no longer active by removing
 // the sketch-button-selected class.
 function deactivateButtons() {
@@ -90,7 +92,7 @@ const saveButtonContainerStyles = css`
   justify-content: flex-end;
 `;
 
-const saveButtonStyles = (status: string) => {
+const saveButtonStyles = (status: SaveStatusType) => {
   let backgroundColor = '';
   if (status === 'success') {
     backgroundColor = `background-color: ${colors.green()};`;
@@ -120,7 +122,7 @@ function FeatureTool({
   // initializes the note and graphicNote whenever the graphic selection changes
   const [graphicNote, setGraphicNote] = React.useState('');
   const [note, setNote] = React.useState('');
-  const [saveStatus, setSaveStatus] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState<SaveStatusType>('');
   React.useEffect(() => {
     // Reset the note if either no graphics are selected or multiple graphics
     // are selected. The note field only works if one graphic is selected.

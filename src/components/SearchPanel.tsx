@@ -118,14 +118,15 @@ const totalStyles = css`
 `;
 
 // --- components (SearchPanel) ---
+type LocationNameType = 'ArcGIS Online' | 'My Content' | 'My Organization';
 type LocationType = {
-  value: string;
-  label: string;
+  value: LocationNameType;
+  label: LocationNameType;
 };
 
 type SortByType = {
-  value: string;
-  label: string;
+  value: '' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
+  label: 'Relevance' | 'Title' | 'Owner' | 'Rating' | 'Views' | 'Date';
   defaultSort: 'asc' | 'desc';
 };
 
