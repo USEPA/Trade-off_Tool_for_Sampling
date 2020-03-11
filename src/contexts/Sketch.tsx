@@ -26,7 +26,7 @@ type SketchType = {
   sketchLayer: LayerType | null;
   setSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   lastSketchLayer: any | null;
-  setLastSketchLayer: Function;
+  setLastSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   map: __esri.Map | null;
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   selectedLayer: LayerType | null;
