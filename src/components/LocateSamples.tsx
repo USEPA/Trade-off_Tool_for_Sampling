@@ -611,7 +611,7 @@ function LocateSamples() {
         )}
       </div>
       <AccordionList>
-        <AccordionItem title={'Draw Sampling Layer'} initiallyExpanded={true}>
+        <AccordionItem title={'Add Targeted Samples'} initiallyExpanded={true}>
           <div css={sketchButtonContainerStyles}>
             <SketchButton
               label="Sponge"
