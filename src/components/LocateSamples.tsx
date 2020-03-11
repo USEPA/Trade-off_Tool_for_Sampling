@@ -5,6 +5,7 @@ import { jsx, css } from '@emotion/core';
 import Select from 'react-select';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
+import MessageBox from 'components/MessageBox';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -646,59 +647,72 @@ function LocateSamples() {
         </AccordionItem>
         <AccordionItem title={'Add Multiple Random Samples'}>
           <div css={panelContainer}>
-            <label htmlFor="number-of-samples-input">Number of Samples</label>
-            <input
-              id="number-of-samples-input"
-              css={inputStyles}
-              value={numberRandomSamples}
-              onChange={(ev) => setNumberRandomSamples(ev.target.value)}
-            />
-            <label htmlFor="sample-type-select">Sample Type</label>
-            <Select
-              inputId="sample-type-select"
-              value={sampleType}
-              onChange={(ev) => setSampleType(ev as SampleSelectionType)}
-              options={[
-                { value: 'Sponge', label: 'Sponge' },
-                { value: 'Micro Vac', label: 'Micro Vac' },
-                { value: 'Wet Vac', label: 'Wet Vac' },
-                { value: 'Robot', label: 'Robot' },
-                { value: 'Aggressive Air', label: 'Aggressive Air' },
-                { value: 'Swab', label: 'Swab' },
-              ]}
-            />
-            <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
-            <Select
-              inputId="aoi-mask-select"
-              value={aoiMaskLayer}
-              onChange={(ev) => setAoiMaskLayer(ev as LayerType)}
-              options={layers.filter(
-                (layer) => layer.layerType === 'Area of Interest',
-              )}
-            />
-            <br />
-            <div css={centerTextStyles}>
-              <em>OR</em>
-            </div>
-            <div css={inlineMenuStyles}>
-              <button
-                id="aoi"
-                title="Draw Area of Interest Mask"
-                className="sketch-button"
-                onClick={sketchAoiButtonClick}
-                css={sketchAoiButtonStyles}
-              >
-                <div css={sketchAoiTextStyles}>
-                  <i className="fas fa-draw-polygon" />{' '}
-                  <span>Draw Area of Interest Mask</span>
+            {sketchLayer?.layerType === 'VSP' && (
+              <MessageBox
+                severity="warning"
+                title="Cannot Use With VSP"
+                message="Multiple Random Samples cannot be used in combination with VSP-Created Sampling Plans"
+              />
+            )}
+            {sketchLayer?.layerType !== 'VSP' && (
+              <React.Fragment>
+                <label htmlFor="number-of-samples-input">
+                  Number of Samples
+                </label>
+                <input
+                  id="number-of-samples-input"
+                  css={inputStyles}
+                  value={numberRandomSamples}
+                  onChange={(ev) => setNumberRandomSamples(ev.target.value)}
+                />
+                <label htmlFor="sample-type-select">Sample Type</label>
+                <Select
+                  inputId="sample-type-select"
+                  value={sampleType}
+                  onChange={(ev) => setSampleType(ev as SampleSelectionType)}
+                  options={[
+                    { value: 'Sponge', label: 'Sponge' },
+                    { value: 'Micro Vac', label: 'Micro Vac' },
+                    { value: 'Wet Vac', label: 'Wet Vac' },
+                    { value: 'Robot', label: 'Robot' },
+                    { value: 'Aggressive Air', label: 'Aggressive Air' },
+                    { value: 'Swab', label: 'Swab' },
+                  ]}
+                />
+                <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
+                <Select
+                  inputId="aoi-mask-select"
+                  value={aoiMaskLayer}
+                  onChange={(ev) => setAoiMaskLayer(ev as LayerType)}
+                  options={layers.filter(
+                    (layer) => layer.layerType === 'Area of Interest',
+                  )}
+                />
+                <br />
+                <div css={centerTextStyles}>
+                  <em>OR</em>
                 </div>
-              </button>
-              <button>Add</button>
-            </div>
-            {numberRandomSamples && aoiMaskLayer && (
-              <button css={submitButtonStyles} onClick={randomSamples}>
-                Submit
-              </button>
+                <div css={inlineMenuStyles}>
+                  <button
+                    id="aoi"
+                    title="Draw Area of Interest Mask"
+                    className="sketch-button"
+                    onClick={sketchAoiButtonClick}
+                    css={sketchAoiButtonStyles}
+                  >
+                    <div css={sketchAoiTextStyles}>
+                      <i className="fas fa-draw-polygon" />{' '}
+                      <span>Draw Area of Interest Mask</span>
+                    </div>
+                  </button>
+                  <button>Add</button>
+                </div>
+                {numberRandomSamples && aoiMaskLayer && (
+                  <button css={submitButtonStyles} onClick={randomSamples}>
+                    Submit
+                  </button>
+                )}
+              </React.Fragment>
             )}
           </div>
         </AccordionItem>
