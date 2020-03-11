@@ -232,7 +232,10 @@ function MapWidgets({ mapView }: Props) {
     selectedLayer,
     sketchVM,
     setSketchVM,
+    setSketchVMLayerId,
     sketchLayer,
+    setSketchLayer,
+    lastSketchLayer,
     map,
   } = React.useContext(SketchContext);
   const {
@@ -301,8 +304,9 @@ function MapWidgets({ mapView }: Props) {
 
     if (sketchLayer.sketchLayer.type === 'graphics') {
       sketchVM.layer = sketchLayer.sketchLayer;
+      setSketchVMLayerId(sketchLayer.sketchLayer.id);
     }
-  }, [sketchVM, sketchLayer]);
+  }, [sketchVM, setSketchVM, setSketchVMLayerId, sketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const [
@@ -481,7 +485,17 @@ function MapWidgets({ mapView }: Props) {
 
     // update the edits state
     setEdits(editsCopy);
-  }, [edits, setEdits, updateSketchEvent, sketchLayer]);
+    if (sketchLayer.layerType === 'Area of Interest') {
+      setSketchLayer(lastSketchLayer);
+    }
+  }, [
+    edits,
+    setEdits,
+    updateSketchEvent,
+    sketchLayer,
+    setSketchLayer,
+    lastSketchLayer,
+  ]);
 
   // Adds a container for the feature tool to the map
   const [

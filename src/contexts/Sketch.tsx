@@ -25,6 +25,8 @@ type SketchType = {
   setUrlLayers: Function;
   sketchLayer: LayerType | null;
   setSketchLayer: Function;
+  lastSketchLayer: any | null;
+  setLastSketchLayer: Function;
   map: __esri.Map | null;
   setMap: Function;
   selectedLayer: LayerType | null;
@@ -33,6 +35,8 @@ type SketchType = {
   setMapView: Function;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: Function;
+  sketchVMLayerId: string;
+  setSketchVMLayerId: Function;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -54,6 +58,8 @@ export const SketchContext = React.createContext<SketchType>({
   setUrlLayers: () => {},
   sketchLayer: null,
   setSketchLayer: () => {},
+  lastSketchLayer: null,
+  setLastSketchLayer: () => {},
   map: null,
   setMap: () => {},
   selectedLayer: null,
@@ -62,6 +68,8 @@ export const SketchContext = React.createContext<SketchType>({
   setMapView: () => {},
   sketchVM: null,
   setSketchVM: () => {},
+  sketchVMLayerId: '',
+  setSketchVMLayerId: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -75,9 +83,11 @@ export function SketchProvider({ children }: Props) {
   const [referenceLayers, setReferenceLayers] = React.useState([]);
   const [urlLayers, setUrlLayers] = React.useState([]);
   const [sketchLayer, setSketchLayer] = React.useState(null);
+  const [lastSketchLayer, setLastSketchLayer] = React.useState(null);
   const [homeWidget, setHomeWidget] = React.useState(null);
   const [map, setMap] = React.useState(null);
   const [mapView, setMapView] = React.useState(null);
+  const [sketchVMLayerId, setSketchVMLayerId] = React.useState('');
   const [
     selectedLayer,
     setSelectedLayer, //
@@ -108,6 +118,8 @@ export function SketchProvider({ children }: Props) {
         setUrlLayers,
         sketchLayer,
         setSketchLayer,
+        lastSketchLayer,
+        setLastSketchLayer,
         map,
         setMap,
         selectedLayer,
@@ -116,6 +128,8 @@ export function SketchProvider({ children }: Props) {
         setMapView,
         sketchVM,
         setSketchVM,
+        sketchVMLayerId,
+        setSketchVMLayerId,
       }}
     >
       {children}

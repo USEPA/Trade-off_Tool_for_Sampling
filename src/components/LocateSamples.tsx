@@ -84,6 +84,39 @@ const textStyles = css`
   justify-content: center;
 `;
 
+const centerTextStyles = css`
+  text-align: center;
+`;
+
+const sketchAoiButtonStyles = css`
+  background-color: white;
+  color: black;
+  margin-right: 5px;
+
+  &:hover,
+  &:focus {
+    background-color: #f0f0f0;
+    cursor: pointer;
+  }
+`;
+
+const sketchAoiTextStyles = css`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  i {
+    font-size: 20px;
+    margin-right: 5px;
+  }
+`;
+
+const inlineMenuStyles = css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
 const inputStyles = css`
   width: 100%;
   height: 36px;
@@ -109,7 +142,7 @@ function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
     <button
       id={label}
       title={label}
-      className={'sketch-button'}
+      className="sketch-button"
       onClick={() => onClick()}
       css={sketchButtonStyles}
     >
@@ -190,7 +223,9 @@ function LocateSamples() {
     map,
     sketchLayer,
     setSketchLayer,
+    setLastSketchLayer,
     sketchVM,
+    sketchVMLayerId,
   } = React.useContext(SketchContext);
   const {
     FeatureSet,
@@ -277,10 +312,108 @@ function LocateSamples() {
     if (elem) elem.classList.add('sketch-button-selected');
   }
 
+  // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
+  // dropdown this will create an AOI layer. This also sets the sketchVM to use the
+  // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
+  const [aoiMaskLayer, setAoiMaskLayer] = React.useState<any>(null);
+  const [aoiSketchInitialized, setAoiSketchInitialized] = React.useState(false);
+  function sketchAoiButtonClick() {
+    if (!map || !sketchVM) return;
+
+    setAoiSketchInitialized(false);
+
+    // look for an existing sketch aoi layer
+    let aoiSketchLayer = aoiMaskLayer;
+
+    // create the layer
+    if (!aoiSketchLayer) {
+      const graphicsLayer = new GraphicsLayer({
+        title: 'Sketched Area of Interest',
+      });
+      aoiSketchLayer = {
+        id: -1,
+        value: 'sketchAoi',
+        name: 'Sketched Area of Interest',
+        label: 'Sketched Area of Interest',
+        layerType: 'Area of Interest',
+        parentLayerId: -1,
+        defaultVisibility: true,
+        subLayerIds: null,
+        minScale: 0,
+        maxScale: 0,
+        geometryType: 'esriGeometryPolygon',
+        addedFrom: 'sketch',
+        sketchLayer: graphicsLayer,
+      };
+
+      // add the layer to the map
+      setLayers([...layers, aoiSketchLayer]);
+      setAoiMaskLayer(aoiSketchLayer);
+      map.add(graphicsLayer);
+    }
+
+    // set the sketch layer to the aoi sketch layer
+    setLastSketchLayer(sketchLayer);
+    setSketchLayer(aoiSketchLayer);
+
+    // disable popups for the active sketch layer, so the user doesn't
+    // get shape edit controls and a popup at the same time.
+    if (map) {
+      map.layers.forEach((layer: any) => {
+        // had to use any, since some layer types don't have popupEnabled
+        if (layer.popupEnabled) layer.popupEnabled = false;
+      });
+    }
+
+    // make the style of the button active
+    const elem = document.getElementById('aoi');
+    if (elem) elem.classList.add('sketch-button-selected');
+  }
+
+  // Triggers the ability to sketch an AOI graphic on the AOI layer.
+  // This is needed to give time for the sketchVM to get setup on the AOI layer.
+  React.useEffect(() => {
+    if (aoiSketchInitialized || !sketchVM) return;
+
+    // make sure the sketch layer is an AOI layer
+    if (sketchLayer?.layerType !== 'Area of Interest') return;
+    // make sure the sketchLayer and sketchVM are synced up
+    if (sketchLayer.sketchLayer.id !== sketchVMLayerId) return;
+
+    // The above check on the sketchVM layer id wasn't enough time, so this
+    // quarter second timeout is needed to give the sketchVM enough time to
+    // get setup on the aoi sketch layer.
+    setTimeout(() => {
+      sketchVM.create('polygon');
+    }, 250);
+
+    setAoiSketchInitialized(true);
+  }, [aoiSketchInitialized, sketchLayer, sketchVM, sketchVMLayerId]);
+
+  // Initializes the Area of Interest dropdown to the first aoi layer
+  const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (aoiMaskLayer || layers.length === 0 || aoiLayerInitialized) return;
+
+    // find the first aoi mask layer
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (layer.layerType === 'Area of Interest') {
+        setAoiMaskLayer(layer);
+        break;
+      }
+    }
+
+    setAoiLayerInitialized(true);
+  }, [
+    aoiLayerInitialized,
+    setAoiLayerInitialized,
+    layers,
+    aoiMaskLayer,
+    setAoiMaskLayer,
+  ]);
+
   // Handle a user generating random samples
-  const [aoiMaskLayer, setAoiMaskLayer] = React.useState<LayerType | null>(
-    null,
-  );
   function randomSamples() {
     if (!sketchLayer) return;
 
@@ -534,7 +667,7 @@ function LocateSamples() {
                 { value: 'Swab', label: 'Swab' },
               ]}
             />
-            <label htmlFor="aoi-mask-select">AOI Mask</label>
+            <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
             <Select
               inputId="aoi-mask-select"
               value={aoiMaskLayer}
@@ -543,6 +676,25 @@ function LocateSamples() {
                 (layer) => layer.layerType === 'Area of Interest',
               )}
             />
+            <br />
+            <div css={centerTextStyles}>
+              <em>OR</em>
+            </div>
+            <div css={inlineMenuStyles}>
+              <button
+                id="aoi"
+                title="Draw Area of Interest Mask"
+                className="sketch-button"
+                onClick={sketchAoiButtonClick}
+                css={sketchAoiButtonStyles}
+              >
+                <div css={sketchAoiTextStyles}>
+                  <i className="fas fa-draw-polygon" />{' '}
+                  <span>Draw Area of Interest Mask</span>
+                </div>
+              </button>
+              <button>Add</button>
+            </div>
             {numberRandomSamples && aoiMaskLayer && (
               <button css={submitButtonStyles} onClick={randomSamples}>
                 Submit
