@@ -501,6 +501,7 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      layerId: graphicsLayer.id,
       value: `-1 - ${file.name}`,
       name: file.name,
       label: file.name,
@@ -645,6 +646,7 @@ function FilePanel() {
       // add the layers, from the uploaded file, to the map
       layersAdded.push({
         id: -1,
+        layerId: layerToAdd.id,
         value: `-1 - ${file.name}`,
         name: file.name,
         label: file.name,
