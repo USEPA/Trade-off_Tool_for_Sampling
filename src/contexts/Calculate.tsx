@@ -8,25 +8,27 @@ import { LayerType } from 'types/Layer';
 
 type CalculateType = {
   calculateResults: CalculateResultsType;
-  setCalculateResults: Function;
+  setCalculateResults: React.Dispatch<
+    React.SetStateAction<CalculateResultsType>
+  >;
   contaminationMap: LayerType | null;
-  setContaminationMap: Function;
+  setContaminationMap: React.Dispatch<React.SetStateAction<LayerType | null>>;
   numLabs: number;
-  setNumLabs: Function;
+  setNumLabs: React.Dispatch<React.SetStateAction<number>>;
   numLabHours: number;
-  setNumLabHours: Function;
+  setNumLabHours: React.Dispatch<React.SetStateAction<number>>;
   numSamplingHours: number;
-  setNumSamplingHours: Function;
+  setNumSamplingHours: React.Dispatch<React.SetStateAction<number>>;
   numSamplingPersonnel: number;
-  setNumSamplingPersonnel: Function;
+  setNumSamplingPersonnel: React.Dispatch<React.SetStateAction<number>>;
   numSamplingShifts: number;
-  setNumSamplingShifts: Function;
+  setNumSamplingShifts: React.Dispatch<React.SetStateAction<number>>;
   numSamplingTeams: number;
-  setNumSamplingTeams: Function;
+  setNumSamplingTeams: React.Dispatch<React.SetStateAction<number>>;
   samplingLaborCost: number;
-  setSamplingLaborCost: Function;
+  setSamplingLaborCost: React.Dispatch<React.SetStateAction<number>>;
   surfaceArea: number;
-  setSurfaceArea: Function;
+  setSurfaceArea: React.Dispatch<React.SetStateAction<number>>;
 };
 
 export const CalculateContext = React.createContext<CalculateType>({

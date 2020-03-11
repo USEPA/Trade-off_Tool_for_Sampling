@@ -102,7 +102,7 @@ type SketchButtonProps = {
   label: string;
   iconClass: string;
   activeButton: string;
-  onClick: Function;
+  onClick: () => void;
 };
 
 function SketchButton({
@@ -355,7 +355,10 @@ function LocateSamples() {
       .catch((err) => console.error(err));
   }
 
-  const [saveStatus, setSaveStatus] = React.useState('');
+  const [
+    saveStatus,
+    setSaveStatus, //
+  ] = React.useState<'' | 'changes' | 'success' | 'failure'>('');
   function updateLayersState(sketchLayer: LayerType) {
     // find the layer being edited
     const index = layers.findIndex(
@@ -419,7 +422,7 @@ function LocateSamples() {
           inputId="sampling-layer-select"
           css={layerSelectStyles}
           value={sketchLayer}
-          onChange={(ev) => setSketchLayer(ev)}
+          onChange={(ev) => setSketchLayer(ev as LayerType)}
           options={getSketchableLayers(layers)}
         />
 
@@ -435,7 +438,8 @@ function LocateSamples() {
                 const newValue = ev.target.value;
                 setSaveStatus('changes');
                 if (sketchLayer) {
-                  setSketchLayer((sketchLayer: LayerType) => {
+                  setSketchLayer((sketchLayer: LayerType | null) => {
+                    if (!sketchLayer) return sketchLayer;
                     return { ...sketchLayer, scenarioName: newValue };
                   });
                 }
@@ -454,7 +458,8 @@ function LocateSamples() {
                 const newValue = ev.target.value;
                 setSaveStatus('changes');
                 if (sketchLayer) {
-                  setSketchLayer((sketchLayer: LayerType) => {
+                  setSketchLayer((sketchLayer: LayerType | null) => {
+                    if (!sketchLayer) return sketchLayer;
                     return { ...sketchLayer, scenarioDescription: newValue };
                   });
                 }
@@ -572,7 +577,7 @@ function LocateSamples() {
               <Select
                 inputId="contamination-map-select"
                 value={contaminationMap}
-                onChange={(ev) => setContaminationMap(ev)}
+                onChange={(ev) => setContaminationMap(ev as LayerType)}
                 options={layers.filter(
                   (layer: any) => layer.layerType === 'Contamination Map',
                 )}
