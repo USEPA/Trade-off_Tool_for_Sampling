@@ -337,7 +337,7 @@ export function applyEdits({
         // loop through and find any graphics without objectids
         if (layerToSearch && layerToSearch.sketchLayer) {
           layerToSearch.sketchLayer.graphics.items.forEach((graphic: any) => {
-            if (graphic?.attributes?.OBJECTID) {
+            if (!graphic?.attributes?.OBJECTID) {
               return;
             }
 
