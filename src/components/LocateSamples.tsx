@@ -234,6 +234,7 @@ function LocateSamples() {
     sketchVMLayerId,
   } = React.useContext(SketchContext);
   const {
+    Collection,
     FeatureSet,
     Graphic,
     GraphicsLayer,
@@ -491,7 +492,20 @@ function LocateSamples() {
 
         // put the graphics on the map
         if (sketchLayer?.sketchLayer?.type === 'graphics') {
-          sketchLayer.sketchLayer.graphics.addMany(graphicsToAdd);
+          // add the graphics to a collection so it can added to browser storage
+          const collection = new Collection<__esri.Graphic>();
+          collection.addMany(graphicsToAdd);
+          sketchLayer.sketchLayer.graphics.addMany(collection);
+
+          const editsCopy = updateLayerEdits({
+            edits,
+            layer: sketchLayer,
+            type: 'add',
+            changes: collection,
+          });
+
+          // update the edits state
+          setEdits(editsCopy);
         }
 
         setGenerateRandomResponse({ status: 'success', data: graphicsToAdd });
