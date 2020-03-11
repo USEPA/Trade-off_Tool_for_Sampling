@@ -19,8 +19,8 @@ const panelContainer = css`
 
 // --- components (AddData) ---
 type LocationType = {
-  value: string;
-  label: string;
+  value: 'search' | 'url' | 'file';
+  label: 'Search for Layers' | 'Add Layer from Web' | 'Add Layer from File';
 };
 
 function AddData() {

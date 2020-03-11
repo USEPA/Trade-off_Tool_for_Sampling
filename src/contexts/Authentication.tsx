@@ -5,11 +5,11 @@ import { jsx } from '@emotion/core';
 
 type AuthenticationType = {
   signedIn: boolean;
-  setSignedIn: Function;
+  setSignedIn: React.Dispatch<React.SetStateAction<boolean>>;
   oAuthInfo: __esri.OAuthInfo | null;
-  setOAuthInfo: Function;
+  setOAuthInfo: React.Dispatch<React.SetStateAction<__esri.OAuthInfo | null>>;
   portal: __esri.Portal | null;
-  setPortal: Function;
+  setPortal: React.Dispatch<React.SetStateAction<__esri.Portal | null>>;
 };
 
 export const AuthenticationContext = React.createContext<AuthenticationType>({

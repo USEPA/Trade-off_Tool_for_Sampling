@@ -10,12 +10,12 @@ export type SampleType =
   | 'Aggressive Air'
   | 'Swab';
 
-export type SimpleSelectType = {
-  value: string;
-  label: string;
+export type SampleSelectType = {
+  value: SampleType;
+  label: SampleType;
 };
 
-export const SampleSelectOptions: SimpleSelectType[] = [
+export const SampleSelectOptions: SampleSelectType[] = [
   { value: 'Sponge', label: 'Sponge' },
   { value: 'Micro Vac', label: 'Micro Vac' },
   { value: 'Wet Vac', label: 'Wet Vac' },
