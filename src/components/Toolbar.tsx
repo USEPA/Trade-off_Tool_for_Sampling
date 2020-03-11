@@ -9,6 +9,8 @@ import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { polygonSymbol } from 'config/symbols';
+// styles
+import { colors } from 'styles';
 
 const toolBarHeight = '40px';
 
@@ -51,7 +53,7 @@ const toolBarStyles = css`
   justify-content: space-between;
   padding: 0;
   padding-right: 0;
-  background-color: #012e51;
+  background-color: ${colors.darkblue()};
 
   div:last-child {
     margin-left: auto;
@@ -65,14 +67,14 @@ const toolBarButtonStyles = css`
   margin-bottom: 0;
   padding: 0.75em 1em;
   color: white;
-  background-color: #012e51;
+  background-color: ${colors.darkblue()};
   border-radius: 0;
   line-height: 16px;
   text-decoration-line: none;
   font-weight: bold;
 
   &:hover {
-    background-color: #012e51;
+    background-color: ${colors.darkblue()};
   }
 
   &:visited {

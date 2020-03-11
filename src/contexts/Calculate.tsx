@@ -2,44 +2,56 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
-
-type ResultsDataType = {
-  'Total Number of Samples': string;
-  'Time to Prepare Kits': string;
-  'Time to Collect': string;
-  'Time to Analyze': string;
-  'Total Time': string;
-  'Material Cost': string;
-  'Waste Volume': string;
-  'Waste Weight': string;
-  'User Specified Number of Available Teams for Sampling': string;
-  'User Specified Personnel per Sampling Team': string;
-  'User Specified Sampling Team Hours per Shift': string;
-  'User Specified Sampling Team Shifts per Day': string;
-  'Sampling Hours per Day': string;
-  'Sampling Personnel hours per Day': string;
-  'User Specified Sampling Team Labor Cost': string;
-  'Sampling Personnel Labor Cost': string;
-  'Time to Complete Sampling': string;
-  'Total Sampling Labor Cost': string;
-  'User Specified Number of Available Labs for Analysis': string;
-  'User Specified Analysis Lab Hours per Day': string;
-  'Time to Complete Analyses': string;
-};
-
-type ResultsType = {
-  status: string;
-  data: ResultsDataType | null;
-};
+// types
+import { CalculateResultsType } from 'types/CalculateResults';
+import { LayerType } from 'types/Layer';
 
 type CalculateType = {
-  calculateResults: ResultsType;
-  setCalculateResults: Function;
+  calculateResults: CalculateResultsType;
+  setCalculateResults: React.Dispatch<
+    React.SetStateAction<CalculateResultsType>
+  >;
+  contaminationMap: LayerType | null;
+  setContaminationMap: React.Dispatch<React.SetStateAction<LayerType | null>>;
+  numLabs: number;
+  setNumLabs: React.Dispatch<React.SetStateAction<number>>;
+  numLabHours: number;
+  setNumLabHours: React.Dispatch<React.SetStateAction<number>>;
+  numSamplingHours: number;
+  setNumSamplingHours: React.Dispatch<React.SetStateAction<number>>;
+  numSamplingPersonnel: number;
+  setNumSamplingPersonnel: React.Dispatch<React.SetStateAction<number>>;
+  numSamplingShifts: number;
+  setNumSamplingShifts: React.Dispatch<React.SetStateAction<number>>;
+  numSamplingTeams: number;
+  setNumSamplingTeams: React.Dispatch<React.SetStateAction<number>>;
+  samplingLaborCost: number;
+  setSamplingLaborCost: React.Dispatch<React.SetStateAction<number>>;
+  surfaceArea: number;
+  setSurfaceArea: React.Dispatch<React.SetStateAction<number>>;
 };
 
 export const CalculateContext = React.createContext<CalculateType>({
-  calculateResults: { status: 'none', data: null },
+  calculateResults: { status: 'none', panelOpen: false, data: null },
   setCalculateResults: () => {},
+  contaminationMap: null,
+  setContaminationMap: () => {},
+  numLabs: 1,
+  setNumLabs: () => {},
+  numLabHours: 24,
+  setNumLabHours: () => {},
+  numSamplingHours: 5,
+  setNumSamplingHours: () => {},
+  numSamplingPersonnel: 3,
+  setNumSamplingPersonnel: () => {},
+  numSamplingShifts: 1,
+  setNumSamplingShifts: () => {},
+  numSamplingTeams: 1,
+  setNumSamplingTeams: () => {},
+  samplingLaborCost: 420,
+  setSamplingLaborCost: () => {},
+  surfaceArea: 7400,
+  setSurfaceArea: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -48,13 +60,47 @@ export function CalculateProvider({ children }: Props) {
   const [
     calculateResults,
     setCalculateResults, //
-  ] = React.useState<ResultsType>({ status: 'none', data: null });
+  ] = React.useState<CalculateResultsType>({
+    status: 'none',
+    panelOpen: false,
+    data: null,
+  });
+  const [
+    contaminationMap,
+    setContaminationMap, //
+  ] = React.useState<LayerType | null>(null);
+  const [numLabs, setNumLabs] = React.useState(1);
+  const [numLabHours, setNumLabHours] = React.useState(24);
+  const [numSamplingHours, setNumSamplingHours] = React.useState(5);
+  const [numSamplingPersonnel, setNumSamplingPersonnel] = React.useState(3);
+  const [numSamplingShifts, setNumSamplingShifts] = React.useState(1);
+  const [numSamplingTeams, setNumSamplingTeams] = React.useState(1);
+  const [samplingLaborCost, setSamplingLaborCost] = React.useState(420);
+  const [surfaceArea, setSurfaceArea] = React.useState(7400);
 
   return (
     <CalculateContext.Provider
       value={{
         calculateResults,
         setCalculateResults,
+        contaminationMap,
+        setContaminationMap,
+        numLabs,
+        setNumLabs,
+        numLabHours,
+        setNumLabHours,
+        numSamplingHours,
+        setNumSamplingHours,
+        numSamplingPersonnel,
+        setNumSamplingPersonnel,
+        numSamplingShifts,
+        setNumSamplingShifts,
+        numSamplingTeams,
+        setNumSamplingTeams,
+        samplingLaborCost,
+        setSamplingLaborCost,
+        surfaceArea,
+        setSurfaceArea,
       }}
     >
       {children}

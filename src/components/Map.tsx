@@ -54,6 +54,13 @@ function Map({ height }: Props) {
       popup: {
         defaultPopupTemplateEnabled: true,
       },
+      spatialReference: {
+        wkid: 3857,
+      },
+      highlightOptions: {
+        color: '#32C5FD',
+        fillOpacity: 1,
+      },
     });
 
     setMapView(view);

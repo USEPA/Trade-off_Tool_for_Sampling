@@ -19,6 +19,8 @@ export type LayerType = {
   name: string;
   label: string;
   layerType: LayerTypeName;
+  scenarioName: string;
+  scenarioDescription: string;
   defaultVisibility: boolean;
   geometryType: string;
   addedFrom: AddedFrom;

@@ -381,7 +381,7 @@ function FilePanel() {
             .toLowerCase()
             .replace('esrigeometry', ''),
           spatialReference: {
-            wkid: 4326,
+            wkid: 3857,
           },
           fields,
           features,
@@ -396,7 +396,7 @@ function FilePanel() {
 
         const goeprocessor = new Geoprocessor({
           url: `${totsGPServer}/VSP%20Import/execute`,
-          outSpatialReference: { wkid: 102100 },
+          outSpatialReference: { wkid: 3857 },
         });
 
         goeprocessor
@@ -505,6 +505,8 @@ function FilePanel() {
       name: file.name,
       label: file.name,
       layerType: layerType.value,
+      scenarioName: '',
+      scenarioDescription: '',
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
@@ -647,6 +649,8 @@ function FilePanel() {
         name: file.name,
         label: file.name,
         layerType: layerType.value,
+        scenarioName: '',
+        scenarioDescription: '',
         defaultVisibility: true,
         geometryType: layer.layerDefinition.geometryType,
         addedFrom: 'file',

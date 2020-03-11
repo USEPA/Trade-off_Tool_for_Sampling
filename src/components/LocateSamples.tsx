@@ -7,6 +7,7 @@ import Select from 'react-select';
 import { AccordionList, AccordionItem } from 'components/Accordion';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
@@ -17,10 +18,14 @@ import { totsGPServer } from 'config/webService';
 // utils
 import { updateLayerEdits } from 'utils/sketchUtils';
 import { fetchPost } from 'utils/fetchUtils';
+// styles
+import { colors } from 'styles';
 
 // gets an array of layers that can be used with the sketch widget.
 function getSketchableLayers(layers: LayerType[]) {
-  return layers.filter((layer) => layer.layerType === 'Samples');
+  return layers.filter(
+    (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
+  );
 }
 
 // --- styles (SketchButton) ---
@@ -97,7 +102,7 @@ type SketchButtonProps = {
   label: string;
   iconClass: string;
   activeButton: string;
-  onClick: Function;
+  onClick: () => void;
 };
 
 function SketchButton({
@@ -154,6 +159,26 @@ const lineSeparatorStyles = css`
   border-bottom: 1px solid #d8dfe2;
 `;
 
+const saveButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const saveButtonStyles = (status: string) => {
+  let backgroundColor = '';
+  if (status === 'success') {
+    backgroundColor = `background-color: ${colors.green()};`;
+  }
+  if (status === 'failure') {
+    backgroundColor = `background-color: ${colors.red()};`;
+  }
+
+  return css`
+    margin: 5px 0;
+    ${backgroundColor}
+  `;
+};
+
 // --- components (LocateSamples) ---
 type SampleSelectionType = {
   value: string;
@@ -161,6 +186,10 @@ type SampleSelectionType = {
 };
 
 function LocateSamples() {
+  const {
+    contaminationMap,
+    setContaminationMap, //
+  } = React.useContext(CalculateContext);
   const {
     edits,
     setEdits,
@@ -177,13 +206,6 @@ function LocateSamples() {
     GraphicsLayer,
     Polygon,
   } = useEsriModulesContext();
-
-  // resets the sketchLayer back to null when this panel is no longer active
-  React.useEffect(() => {
-    return function cleanup() {
-      setSketchLayer(null);
-    };
-  }, [setSketchLayer]);
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
@@ -207,6 +229,8 @@ function LocateSamples() {
       name: 'Default Sample Layer',
       label: 'Default Sample Layer',
       layerType: 'Samples',
+      scenarioName: '',
+      scenarioDescription: '',
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
@@ -281,7 +305,7 @@ function LocateSamples() {
       displayFieldName: '',
       geometryType: 'polygon',
       spatialReference: {
-        wkid: 102100,
+        wkid: 3857,
       },
       fields: [
         {
@@ -331,6 +355,37 @@ function LocateSamples() {
       .catch((err) => console.error(err));
   }
 
+  const [
+    saveStatus,
+    setSaveStatus, //
+  ] = React.useState<'' | 'changes' | 'success' | 'failure'>('');
+  function updateLayersState(sketchLayer: LayerType) {
+    // find the layer being edited
+    const index = layers.findIndex(
+      (layer) => layer.id === sketchLayer.id && layer.name === sketchLayer.name,
+    );
+
+    if (index === -1) {
+      setSaveStatus('failure');
+    } else {
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: sketchLayer,
+        type: 'properties',
+      });
+      setEdits(editsCopy);
+
+      // updated the edited layer
+      setLayers([
+        ...layers.slice(0, index),
+        sketchLayer,
+        ...layers.slice(index + 1),
+      ]);
+      setSaveStatus('success');
+    }
+  }
+
   return (
     <React.Fragment>
       <div css={panelContainer}>
@@ -367,9 +422,73 @@ function LocateSamples() {
           inputId="sampling-layer-select"
           css={layerSelectStyles}
           value={sketchLayer}
-          onChange={(ev) => setSketchLayer(ev)}
+          onChange={(ev) => setSketchLayer(ev as LayerType)}
           options={getSketchableLayers(layers)}
         />
+
+        {sketchLayer && (
+          <React.Fragment>
+            <label htmlFor="scenario-name-input">Scenario Name</label>
+            <input
+              id="scenario-name-input"
+              disabled={!sketchLayer}
+              css={inputStyles}
+              value={sketchLayer.scenarioName}
+              onChange={(ev) => {
+                const newValue = ev.target.value;
+                setSaveStatus('changes');
+                if (sketchLayer) {
+                  setSketchLayer((sketchLayer: LayerType | null) => {
+                    if (!sketchLayer) return sketchLayer;
+                    return { ...sketchLayer, scenarioName: newValue };
+                  });
+                }
+              }}
+            />
+
+            <label htmlFor="scenario-description-input">
+              Scenario Description
+            </label>
+            <input
+              id="scenario-description-input"
+              disabled={!sketchLayer}
+              css={inputStyles}
+              value={sketchLayer.scenarioDescription}
+              onChange={(ev) => {
+                const newValue = ev.target.value;
+                setSaveStatus('changes');
+                if (sketchLayer) {
+                  setSketchLayer((sketchLayer: LayerType | null) => {
+                    if (!sketchLayer) return sketchLayer;
+                    return { ...sketchLayer, scenarioDescription: newValue };
+                  });
+                }
+              }}
+            />
+
+            <div css={saveButtonContainerStyles}>
+              <button
+                css={saveButtonStyles(saveStatus)}
+                disabled={saveStatus !== 'changes'}
+                onClick={(ev) => {
+                  if (sketchLayer) updateLayersState(sketchLayer);
+                }}
+              >
+                {(!saveStatus || saveStatus === 'changes') && 'Save'}
+                {saveStatus === 'success' && (
+                  <React.Fragment>
+                    <i className="fas fa-check" /> Saved
+                  </React.Fragment>
+                )}
+                {saveStatus === 'failure' && (
+                  <React.Fragment>
+                    <i className="fas fa-exclamation-triangle" /> Error
+                  </React.Fragment>
+                )}
+              </button>
+            </div>
+          </React.Fragment>
+        )}
       </div>
       <AccordionList>
         <AccordionItem title={'Draw Sampling Layer'} initiallyExpanded={true}>
@@ -449,6 +568,21 @@ function LocateSamples() {
                 Submit
               </button>
             )}
+          </div>
+        </AccordionItem>
+        <AccordionItem title={'Include Contamination Map (Optional)'}>
+          <div css={panelContainer}>
+            <label htmlFor="contamination-map-select">Contamination map</label>
+            <div>
+              <Select
+                inputId="contamination-map-select"
+                value={contaminationMap}
+                onChange={(ev) => setContaminationMap(ev as LayerType)}
+                options={layers.filter(
+                  (layer: any) => layer.layerType === 'Contamination Map',
+                )}
+              />
+            </div>
           </div>
         </AccordionItem>
       </AccordionList>

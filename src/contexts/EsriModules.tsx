@@ -9,9 +9,12 @@ type EsriConstructors = [
   typeof import('esri/Map'),
   typeof import('esri/Viewpoint'),
   typeof import('esri/core/watchUtils'),
+  typeof import('esri/geometry/geometryEngine'),
   typeof import('esri/geometry/Polygon'),
+  typeof import('esri/geometry/projection'),
   typeof import('esri/geometry/SpatialReference'),
   typeof import('esri/geometry/support/jsonUtils'),
+  typeof import('esri/geometry/support/webMercatorUtils'),
   typeof import('esri/identity/IdentityManager'),
   typeof import('esri/identity/OAuthInfo'),
   typeof import('esri/layers/CSVLayer'),
@@ -23,6 +26,7 @@ type EsriConstructors = [
   typeof import('esri/layers/WMSLayer'),
   typeof import('esri/layers/WMTSLayer'),
   typeof import('esri/layers/support/Field'),
+  typeof import('esri/PopupTemplate'),
   typeof import('esri/portal/Portal'),
   typeof import('esri/portal/PortalItem'),
   typeof import('esri/renderers/support/jsonUtils'),
@@ -47,34 +51,38 @@ type State = {
   EsriMap: EsriConstructors[1];
   Viewpoint: EsriConstructors[2];
   watchUtils: EsriConstructors[3];
-  Polygon: EsriConstructors[4];
-  SpatialReference: EsriConstructors[5];
-  geometryJsonUtils: EsriConstructors[6];
-  IdentityManager: EsriConstructors[7];
-  OAuthInfo: EsriConstructors[8];
-  CSVLayer: EsriConstructors[9];
-  FeatureLayer: EsriConstructors[10];
-  GeoRSSLayer: EsriConstructors[11];
-  GraphicsLayer: EsriConstructors[12];
-  KMLLayer: EsriConstructors[13];
-  Layer: EsriConstructors[14];
-  WMSLayer: EsriConstructors[15];
-  WMTSLayer: EsriConstructors[16];
-  Field: EsriConstructors[17];
-  Portal: EsriConstructors[18];
-  PortalItem: EsriConstructors[19];
-  rendererJsonUtils: EsriConstructors[20];
-  Geoprocessor: EsriConstructors[21];
-  FeatureSet: EsriConstructors[22];
-  MapView: EsriConstructors[23];
-  BasemapGallery: EsriConstructors[24];
-  PortalBasemapsSource: EsriConstructors[25];
-  Home: EsriConstructors[26];
-  LayerList: EsriConstructors[27];
-  Legend: EsriConstructors[28];
-  Locate: EsriConstructors[29];
-  Search: EsriConstructors[30];
-  SketchViewModel: EsriConstructors[31];
+  geometryEngine: EsriConstructors[4];
+  Polygon: EsriConstructors[5];
+  projection: EsriConstructors[6];
+  SpatialReference: EsriConstructors[7];
+  geometryJsonUtils: EsriConstructors[8];
+  webMercatorUtils: EsriConstructors[9];
+  IdentityManager: EsriConstructors[10];
+  OAuthInfo: EsriConstructors[11];
+  CSVLayer: EsriConstructors[12];
+  FeatureLayer: EsriConstructors[13];
+  GeoRSSLayer: EsriConstructors[14];
+  GraphicsLayer: EsriConstructors[15];
+  KMLLayer: EsriConstructors[16];
+  Layer: EsriConstructors[17];
+  WMSLayer: EsriConstructors[18];
+  WMTSLayer: EsriConstructors[19];
+  Field: EsriConstructors[20];
+  PopupTemplate: EsriConstructors[21];
+  Portal: EsriConstructors[22];
+  PortalItem: EsriConstructors[23];
+  rendererJsonUtils: EsriConstructors[24];
+  Geoprocessor: EsriConstructors[25];
+  FeatureSet: EsriConstructors[26];
+  MapView: EsriConstructors[27];
+  BasemapGallery: EsriConstructors[28];
+  PortalBasemapsSource: EsriConstructors[29];
+  Home: EsriConstructors[30];
+  LayerList: EsriConstructors[31];
+  Legend: EsriConstructors[32];
+  Locate: EsriConstructors[33];
+  Search: EsriConstructors[34];
+  SketchViewModel: EsriConstructors[35];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -87,9 +95,12 @@ function EsriModulesProvider({ children }: Props) {
         'esri/Map',
         'esri/Viewpoint',
         'esri/core/watchUtils',
+        'esri/geometry/geometryEngine',
         'esri/geometry/Polygon',
+        'esri/geometry/projection',
         'esri/geometry/SpatialReference',
         'esri/geometry/support/jsonUtils',
+        'esri/geometry/support/webMercatorUtils',
         'esri/identity/IdentityManager',
         'esri/identity/OAuthInfo',
         'esri/layers/CSVLayer',
@@ -101,6 +112,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/layers/WMSLayer',
         'esri/layers/WMTSLayer',
         'esri/layers/support/Field',
+        'esri/PopupTemplate',
         'esri/portal/Portal',
         'esri/portal/PortalItem',
         'esri/renderers/support/jsonUtils',
@@ -117,7 +129,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/Sketch/SketchViewModel',
       ],
       {
-        version: '4.13',
+        version: '4.14',
         css: true,
       },
     ) as Promise<EsriConstructors>).then(
@@ -126,9 +138,12 @@ function EsriModulesProvider({ children }: Props) {
         EsriMap,
         Viewpoint,
         watchUtils,
+        geometryEngine,
         Polygon,
+        projection,
         SpatialReference,
         geometryJsonUtils,
+        webMercatorUtils,
         IdentityManager,
         OAuthInfo,
         CSVLayer,
@@ -140,6 +155,7 @@ function EsriModulesProvider({ children }: Props) {
         WMSLayer,
         WMTSLayer,
         Field,
+        PopupTemplate,
         Portal,
         PortalItem,
         rendererJsonUtils,
@@ -161,9 +177,12 @@ function EsriModulesProvider({ children }: Props) {
           EsriMap,
           Viewpoint,
           watchUtils,
+          geometryEngine,
           Polygon,
+          projection,
           SpatialReference,
           geometryJsonUtils,
+          webMercatorUtils,
           IdentityManager,
           OAuthInfo,
           CSVLayer,
@@ -175,6 +194,7 @@ function EsriModulesProvider({ children }: Props) {
           WMSLayer,
           WMTSLayer,
           Field,
+          PopupTemplate,
           Portal,
           PortalItem,
           rendererJsonUtils,

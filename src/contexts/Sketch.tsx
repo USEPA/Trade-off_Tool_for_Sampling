@@ -8,31 +8,33 @@ import { LayerType, UrlLayerType } from 'types/Layer';
 
 type SketchType = {
   edits: EditsType;
-  setEdits: Function;
+  setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   featureService: any;
-  setFeatureService: Function;
+  setFeatureService: React.Dispatch<React.SetStateAction<any>>;
   featureServiceUrl: string;
-  setFeatureServiceUrl: Function;
+  setFeatureServiceUrl: React.Dispatch<React.SetStateAction<string>>;
   homeWidget: __esri.Home | null;
-  setHomeWidget: Function;
+  setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
   layers: LayerType[];
-  setLayers: Function;
+  setLayers: React.Dispatch<React.SetStateAction<LayerType[]>>;
   portalLayers: string[];
-  setPortalLayers: Function;
+  setPortalLayers: React.Dispatch<React.SetStateAction<string[]>>;
   referenceLayers: any[];
-  setReferenceLayers: Function;
+  setReferenceLayers: React.Dispatch<React.SetStateAction<any[]>>;
   urlLayers: UrlLayerType[];
-  setUrlLayers: Function;
+  setUrlLayers: React.Dispatch<React.SetStateAction<UrlLayerType[]>>;
   sketchLayer: LayerType | null;
-  setSketchLayer: Function;
+  setSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   map: __esri.Map | null;
-  setMap: Function;
+  setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   selectedLayer: LayerType | null;
-  setSelectedLayer: Function;
+  setSelectedLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   mapView: __esri.MapView | null;
-  setMapView: Function;
+  setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
   sketchVM: __esri.SketchViewModel | null;
-  setSketchVM: Function;
+  setSketchVM: React.Dispatch<
+    React.SetStateAction<__esri.SketchViewModel | null>
+  >;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -71,13 +73,13 @@ export function SketchProvider({ children }: Props) {
   const [featureService, setFeatureService] = React.useState<any>(null);
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
   const [layers, setLayers] = React.useState<LayerType[]>([]);
-  const [portalLayers, setPortalLayers] = React.useState([]);
-  const [referenceLayers, setReferenceLayers] = React.useState([]);
-  const [urlLayers, setUrlLayers] = React.useState([]);
-  const [sketchLayer, setSketchLayer] = React.useState(null);
-  const [homeWidget, setHomeWidget] = React.useState(null);
-  const [map, setMap] = React.useState(null);
-  const [mapView, setMapView] = React.useState(null);
+  const [portalLayers, setPortalLayers] = React.useState<string[]>([]);
+  const [referenceLayers, setReferenceLayers] = React.useState<any[]>([]);
+  const [urlLayers, setUrlLayers] = React.useState<UrlLayerType[]>([]);
+  const [sketchLayer, setSketchLayer] = React.useState<LayerType | null>(null);
+  const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
+  const [map, setMap] = React.useState<__esri.Map | null>(null);
+  const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
   const [
     selectedLayer,
     setSelectedLayer, //
