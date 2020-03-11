@@ -206,6 +206,11 @@ const saveButtonStyles = (status: string) => {
 };
 
 // --- components (LocateSamples) ---
+type GenerateRandomType = {
+  status: '' | 'fetching' | 'success' | 'failure';
+  data: __esri.Graphic[];
+};
+
 type SampleSelectionType = {
   value: string;
   label: string;
@@ -316,7 +321,10 @@ function LocateSamples() {
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
   // dropdown this will create an AOI layer. This also sets the sketchVM to use the
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
-  const [aoiMaskLayer, setAoiMaskLayer] = React.useState<any>(null);
+  const [
+    aoiMaskLayer,
+    setAoiMaskLayer, //
+  ] = React.useState<LayerType | null>(null);
   const [aoiSketchInitialized, setAoiSketchInitialized] = React.useState(false);
   function sketchAoiButtonClick() {
     if (!map || !sketchVM) return;
@@ -337,11 +345,9 @@ function LocateSamples() {
         name: 'Sketched Area of Interest',
         label: 'Sketched Area of Interest',
         layerType: 'Area of Interest',
-        parentLayerId: -1,
+        scenarioName: '',
+        scenarioDescription: '',
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: 'esriGeometryPolygon',
         addedFrom: 'sketch',
         sketchLayer: graphicsLayer,
@@ -415,9 +421,17 @@ function LocateSamples() {
   ]);
 
   // Handle a user generating random samples
+  const [
+    generateRandomResponse,
+    setGenerateRandomResponse, //
+  ] = React.useState<GenerateRandomType>({
+    status: '',
+    data: [],
+  });
   function randomSamples() {
     if (!sketchLayer) return;
 
+    setGenerateRandomResponse({ status: 'fetching', data: [] });
     const url = `${totsGPServer}/Generate%20Random/execute`;
 
     let graphics: __esri.GraphicProperties[] = [];
@@ -452,7 +466,10 @@ function LocateSamples() {
 
     fetchPost(url, props)
       .then((res: any) => {
-        if (!res || res.results.length === 0 || !res.results[0].value) return;
+        if (!res || res.results.length === 0 || !res.results[0].value) {
+          setGenerateRandomResponse({ status: 'failure', data: [] });
+          return;
+        }
 
         // get the results from the response
         const results = res.results[0].value;
@@ -476,8 +493,13 @@ function LocateSamples() {
         if (sketchLayer?.sketchLayer?.type === 'graphics') {
           sketchLayer.sketchLayer.graphics.addMany(graphicsToAdd);
         }
+
+        setGenerateRandomResponse({ status: 'success', data: graphicsToAdd });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setGenerateRandomResponse({ status: 'failure', data: [] });
+      });
   }
 
   const [saveStatus, setSaveStatus] = React.useState('');
@@ -707,11 +729,33 @@ function LocateSamples() {
                   </button>
                   <button>Add</button>
                 </div>
-                {numberRandomSamples && aoiMaskLayer && (
-                  <button css={submitButtonStyles} onClick={randomSamples}>
-                    Submit
-                  </button>
+                {generateRandomResponse.status === 'success' && (
+                  <MessageBox
+                    severity="info"
+                    title="Samples Added"
+                    message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.name}" layer`}
+                  />
                 )}
+                {generateRandomResponse.status === 'failure' && (
+                  <MessageBox
+                    severity="error"
+                    title="Web Service Error"
+                    message="An error occurred in the web service"
+                  />
+                )}
+                {numberRandomSamples &&
+                  aoiMaskLayer?.sketchLayer.type === 'graphics' &&
+                  aoiMaskLayer.sketchLayer.graphics.length > 0 && (
+                    <button css={submitButtonStyles} onClick={randomSamples}>
+                      {generateRandomResponse.status !== 'fetching' && 'Submit'}
+                      {generateRandomResponse.status === 'fetching' && (
+                        <React.Fragment>
+                          <i className="fas fa-spinner fa-pulse" />
+                          &nbsp;&nbsp;Loading...
+                        </React.Fragment>
+                      )}
+                    </button>
+                  )}
               </React.Fragment>
             )}
           </div>
