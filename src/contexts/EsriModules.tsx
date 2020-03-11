@@ -8,6 +8,7 @@ type EsriConstructors = [
   typeof import('esri/Graphic'),
   typeof import('esri/Map'),
   typeof import('esri/Viewpoint'),
+  typeof import('esri/core/Collection'),
   typeof import('esri/core/watchUtils'),
   typeof import('esri/geometry/geometryEngine'),
   typeof import('esri/geometry/Polygon'),
@@ -50,39 +51,40 @@ type State = {
   Graphic: EsriConstructors[0];
   EsriMap: EsriConstructors[1];
   Viewpoint: EsriConstructors[2];
-  watchUtils: EsriConstructors[3];
-  geometryEngine: EsriConstructors[4];
-  Polygon: EsriConstructors[5];
-  projection: EsriConstructors[6];
-  SpatialReference: EsriConstructors[7];
-  geometryJsonUtils: EsriConstructors[8];
-  webMercatorUtils: EsriConstructors[9];
-  IdentityManager: EsriConstructors[10];
-  OAuthInfo: EsriConstructors[11];
-  CSVLayer: EsriConstructors[12];
-  FeatureLayer: EsriConstructors[13];
-  GeoRSSLayer: EsriConstructors[14];
-  GraphicsLayer: EsriConstructors[15];
-  KMLLayer: EsriConstructors[16];
-  Layer: EsriConstructors[17];
-  WMSLayer: EsriConstructors[18];
-  WMTSLayer: EsriConstructors[19];
-  Field: EsriConstructors[20];
-  PopupTemplate: EsriConstructors[21];
-  Portal: EsriConstructors[22];
-  PortalItem: EsriConstructors[23];
-  rendererJsonUtils: EsriConstructors[24];
-  Geoprocessor: EsriConstructors[25];
-  FeatureSet: EsriConstructors[26];
-  MapView: EsriConstructors[27];
-  BasemapGallery: EsriConstructors[28];
-  PortalBasemapsSource: EsriConstructors[29];
-  Home: EsriConstructors[30];
-  LayerList: EsriConstructors[31];
-  Legend: EsriConstructors[32];
-  Locate: EsriConstructors[33];
-  Search: EsriConstructors[34];
-  SketchViewModel: EsriConstructors[35];
+  Collection: EsriConstructors[3];
+  watchUtils: EsriConstructors[4];
+  geometryEngine: EsriConstructors[5];
+  Polygon: EsriConstructors[6];
+  projection: EsriConstructors[7];
+  SpatialReference: EsriConstructors[8];
+  geometryJsonUtils: EsriConstructors[9];
+  webMercatorUtils: EsriConstructors[10];
+  IdentityManager: EsriConstructors[11];
+  OAuthInfo: EsriConstructors[12];
+  CSVLayer: EsriConstructors[13];
+  FeatureLayer: EsriConstructors[14];
+  GeoRSSLayer: EsriConstructors[15];
+  GraphicsLayer: EsriConstructors[16];
+  KMLLayer: EsriConstructors[17];
+  Layer: EsriConstructors[18];
+  WMSLayer: EsriConstructors[19];
+  WMTSLayer: EsriConstructors[20];
+  Field: EsriConstructors[21];
+  PopupTemplate: EsriConstructors[22];
+  Portal: EsriConstructors[23];
+  PortalItem: EsriConstructors[24];
+  rendererJsonUtils: EsriConstructors[25];
+  Geoprocessor: EsriConstructors[26];
+  FeatureSet: EsriConstructors[27];
+  MapView: EsriConstructors[28];
+  BasemapGallery: EsriConstructors[29];
+  PortalBasemapsSource: EsriConstructors[30];
+  Home: EsriConstructors[31];
+  LayerList: EsriConstructors[32];
+  Legend: EsriConstructors[33];
+  Locate: EsriConstructors[34];
+  Search: EsriConstructors[35];
+  SketchViewModel: EsriConstructors[36];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -94,6 +96,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/Graphic',
         'esri/Map',
         'esri/Viewpoint',
+        'esri/core/Collection',
         'esri/core/watchUtils',
         'esri/geometry/geometryEngine',
         'esri/geometry/Polygon',
@@ -137,6 +140,7 @@ function EsriModulesProvider({ children }: Props) {
         Graphic,
         EsriMap,
         Viewpoint,
+        Collection,
         watchUtils,
         geometryEngine,
         Polygon,
@@ -176,6 +180,7 @@ function EsriModulesProvider({ children }: Props) {
           Graphic,
           EsriMap,
           Viewpoint,
+          Collection,
           watchUtils,
           geometryEngine,
           Polygon,
