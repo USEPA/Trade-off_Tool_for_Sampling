@@ -18,8 +18,14 @@ const urlInputStyles = css`
 
 // --- components (URLPanel) ---
 type UrlType = {
-  value: string;
-  label: string;
+  value: 'ArcGIS' | 'WMS' | 'WFS' | 'KML' | 'GeoRSS' | 'CSV';
+  label:
+    | 'An ArcGIS Server Web Service'
+    | 'A WMS OGC Web Service'
+    | 'A WFS OGC Web Service'
+    | 'A KML File'
+    | 'A GeoRSS File'
+    | 'A CSV File';
 };
 
 function URLPanel() {

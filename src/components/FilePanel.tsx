@@ -12,10 +12,10 @@ import { SketchContext } from 'contexts/Sketch';
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
 // types
-import { LayerType } from 'types/Layer';
+import { LayerType, LayerSelectType } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
-import { SimpleSelectType, SampleSelectOptions } from 'config/sampleAttributes';
+import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 
 // --- styles (FileIcon) ---
@@ -121,7 +121,7 @@ function FilePanel() {
   const [
     layerType,
     setLayerType, //
-  ] = React.useState<SimpleSelectType | null>(null);
+  ] = React.useState<LayerSelectType | null>(null);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -270,7 +270,7 @@ function FilePanel() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SimpleSelectType | null>(null);
+  ] = React.useState<SampleSelectType | null>(null);
   React.useEffect(() => {
     if (
       !mapView ||
@@ -499,7 +499,7 @@ function FilePanel() {
     });
 
     // create the graphics layer
-    const layerToAdd = {
+    const layerToAdd: LayerType = {
       id: -1,
       value: `-1 - ${file.name}`,
       name: file.name,
@@ -729,7 +729,7 @@ function FilePanel() {
         inputId="layer-type-select"
         css={selectStyles}
         value={layerType}
-        onChange={(ev) => setLayerType(ev as SimpleSelectType)}
+        onChange={(ev) => setLayerType(ev as LayerSelectType)}
         options={[
           { value: 'Contamination Map', label: 'Contamination Map' },
           { value: 'Samples', label: 'Samples' },
@@ -747,7 +747,7 @@ function FilePanel() {
                 inputId="sample-type-select"
                 css={selectStyles}
                 value={sampleType}
-                onChange={(ev) => setSampleType(ev as SimpleSelectType)}
+                onChange={(ev) => setSampleType(ev as SampleSelectType)}
                 options={SampleSelectOptions}
               />
             </React.Fragment>
