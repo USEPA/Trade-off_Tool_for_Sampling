@@ -445,7 +445,7 @@ export function useCalculatePlan() {
     let totalAreaSquereFeet = 0;
     const calcGraphics: __esri.Graphic[] = [];
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      const calcGraphic = graphic.clone();
+      const calcGraphic = graphic;
 
       // convert the geometry to WGS84 for geometryEngine
       const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
