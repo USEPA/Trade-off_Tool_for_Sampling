@@ -22,6 +22,8 @@ const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
 
+type SaveStatusType = '' | 'success' | 'failure';
+
 // Makes all sketch buttons no longer active by removing
 // the sketch-button-selected class.
 function deactivateButtons() {
@@ -90,7 +92,7 @@ const saveButtonContainerStyles = css`
   justify-content: flex-end;
 `;
 
-const saveButtonStyles = (status: string) => {
+const saveButtonStyles = (status: SaveStatusType) => {
   let backgroundColor = '';
   if (status === 'success') {
     backgroundColor = `background-color: ${colors.green()};`;
@@ -120,7 +122,7 @@ function FeatureTool({
   // initializes the note and graphicNote whenever the graphic selection changes
   const [graphicNote, setGraphicNote] = React.useState('');
   const [note, setNote] = React.useState('');
-  const [saveStatus, setSaveStatus] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState<SaveStatusType>('');
   React.useEffect(() => {
     // Reset the note if either no graphics are selected or multiple graphics
     // are selected. The note field only works if one graphic is selected.
@@ -296,9 +298,11 @@ function MapWidgets({ mapView }: Props) {
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
-    if (!sketchVM || !sketchLayer) return;
+    if (!sketchVM || !sketchLayer?.sketchLayer) return;
 
-    sketchVM.layer = sketchLayer.sketchLayer;
+    if (sketchLayer.sketchLayer.type === 'graphics') {
+      sketchVM.layer = sketchLayer.sketchLayer;
+    }
   }, [sketchVM, sketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
@@ -381,7 +385,7 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
-    sketchVM.on('update', (event: __esri.SketchViewModelUpdateEvent) => {
+    sketchVM.on('update', (event) => {
       // the updates have completed add them to the edits variable
       if (event.state === 'complete' || event.state === 'cancel') {
         // fire the update event if event.state is complete.

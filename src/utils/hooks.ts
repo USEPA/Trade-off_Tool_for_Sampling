@@ -4,6 +4,9 @@ import React from 'react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// types
+import { EditsType } from 'types/Edits';
+import { LayerType, UrlLayerType } from 'types/Layer';
 // config
 import { polygonSymbol } from 'config/symbols';
 
@@ -36,6 +39,7 @@ export function useSessionStorage() {
     Field,
     geometryJsonUtils,
     GeoRSSLayer,
+    Graphic,
     GraphicsLayer,
     KMLLayer,
     Layer,
@@ -69,31 +73,33 @@ export function useSessionStorage() {
     const editsStr = readFromStorage('tots_edits');
     if (!editsStr) return;
 
-    const edits = JSON.parse(editsStr);
+    const edits: EditsType = JSON.parse(editsStr);
     setEdits(edits);
 
-    const newLayers: any[] = [];
+    const newLayers: LayerType[] = [];
     const graphicsLayers: __esri.GraphicsLayer[] = [];
-    edits.edits.forEach((editsLayer: any) => {
+    edits.edits.forEach((editsLayer) => {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.name,
         id: editsLayer.layerId,
       });
 
-      const features: any[] = [];
+      const features: __esri.Graphic[] = [];
       const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
       // add graphics to the map
-      displayedFeatures.forEach((graphic: any) => {
-        features.push({
-          attributes: graphic.attributes,
-          geometry: new Polygon({
-            spatialReference: {
-              wkid: 102100,
-            },
-            rings: graphic.geometry.rings,
+      displayedFeatures.forEach((graphic) => {
+        features.push(
+          new Graphic({
+            attributes: graphic.attributes,
+            symbol: polygonSymbol,
+            geometry: new Polygon({
+              spatialReference: {
+                wkid: 102100,
+              },
+              rings: graphic.geometry.rings,
+            }),
           }),
-          symbol: polygonSymbol,
-        });
+        );
       });
       sketchLayer.addMany(features);
       graphicsLayers.push(sketchLayer);
@@ -106,11 +112,7 @@ export function useSessionStorage() {
         label: editsLayer.name,
         layerType: editsLayer.layerType,
         addedFrom: editsLayer.addedFrom,
-        parentLayerId: -1,
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
       });
@@ -121,6 +123,7 @@ export function useSessionStorage() {
       map.addMany(graphicsLayers);
     }
   }, [
+    Graphic,
     GraphicsLayer,
     Polygon,
     setEdits,
@@ -188,10 +191,10 @@ export function useSessionStorage() {
     const urlLayersStr = readFromStorage('tots_url_layers');
     if (!urlLayersStr) return;
 
-    const urlLayers = JSON.parse(urlLayersStr);
+    const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
 
     // add the portal layers to the map
-    urlLayers.forEach((urlLayer: any) => {
+    urlLayers.forEach((urlLayer) => {
       const type = urlLayer.type;
       const url = urlLayer.url;
 
@@ -263,7 +266,7 @@ export function useSessionStorage() {
     const layersToAdd: __esri.FeatureLayer[] = [];
     referenceLayers.forEach((layer: any) => {
       const fields: __esri.Field[] = [];
-      layer.fields.forEach((field: any) => {
+      layer.fields.forEach((field: __esri.Field) => {
         fields.push(Field.fromJSON(field));
       });
 

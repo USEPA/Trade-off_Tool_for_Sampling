@@ -11,9 +11,11 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
+// types
+import { LayerType, LayerSelectType } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
-import { SimpleSelectType, SampleSelectOptions } from 'config/sampleAttributes';
+import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 
 // --- styles (FileIcon) ---
@@ -119,7 +121,7 @@ function FilePanel() {
   const [
     layerType,
     setLayerType, //
-  ] = React.useState<SimpleSelectType | null>(null);
+  ] = React.useState<LayerSelectType | null>(null);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -268,7 +270,7 @@ function FilePanel() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SimpleSelectType | null>(null);
+  ] = React.useState<SampleSelectType | null>(null);
   React.useEffect(() => {
     if (
       !mapView ||
@@ -497,17 +499,13 @@ function FilePanel() {
     });
 
     // create the graphics layer
-    const layerToAdd = {
+    const layerToAdd: LayerType = {
       id: -1,
       value: `-1 - ${file.name}`,
       name: file.name,
       label: file.name,
       layerType: layerType.value,
-      parentLayerId: -1,
       defaultVisibility: true,
-      subLayerIds: null,
-      minScale: 0,
-      maxScale: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       sketchLayer: graphicsLayer,
@@ -562,7 +560,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
-    const layersAdded: any[] = [];
+    const layersAdded: LayerType[] = [];
     const featureLayers: __esri.FeatureLayer[] = [];
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -649,11 +647,7 @@ function FilePanel() {
         name: file.name,
         label: file.name,
         layerType: layerType.value,
-        parentLayerId: -1,
         defaultVisibility: true,
-        subLayerIds: null,
-        minScale: 0,
-        maxScale: 0,
         geometryType: layer.layerDefinition.geometryType,
         addedFrom: 'file',
         sketchLayer: layerToAdd,
@@ -731,7 +725,7 @@ function FilePanel() {
         inputId="layer-type-select"
         css={selectStyles}
         value={layerType}
-        onChange={(ev) => setLayerType(ev as SimpleSelectType)}
+        onChange={(ev) => setLayerType(ev as LayerSelectType)}
         options={[
           { value: 'Contamination Map', label: 'Contamination Map' },
           { value: 'Samples', label: 'Samples' },
@@ -749,7 +743,7 @@ function FilePanel() {
                 inputId="sample-type-select"
                 css={selectStyles}
                 value={sampleType}
-                onChange={(ev) => setSampleType(ev as SimpleSelectType)}
+                onChange={(ev) => setSampleType(ev as SampleSelectType)}
                 options={SampleSelectOptions}
               />
             </React.Fragment>

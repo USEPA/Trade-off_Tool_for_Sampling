@@ -9,6 +9,8 @@ import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { totsGPServer } from 'config/webService';
+// types
+import { LayerType } from 'types/Layer';
 // utils
 import { fetchPost } from 'utils/fetchUtils';
 
@@ -48,11 +50,13 @@ function Calculate() {
   const [numLabs, setNumLabs] = React.useState('1');
   const [numLabHours, setNumLabHours] = React.useState('24');
 
-  const [contaminationMap, setContaminationMap] = React.useState<any>(null);
+  const [
+    contaminationMap,
+    setContaminationMap,
+  ] = React.useState<LayerType | null>(null);
   function runCalculation() {
     const sampleLayers = layers.filter(
-      (layer: any) =>
-        layer.layerType === 'Samples' || layer.layerType === 'VSP',
+      (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
     );
     if (sampleLayers.length === 0) return;
 
@@ -66,6 +70,10 @@ function Calculate() {
     // create a feature set for communicating with the GPServer
     let contamMapSet: __esri.FeatureSet | null = null;
     if (contaminationMap) {
+      let graphics: __esri.GraphicProperties[] = [];
+      if (contaminationMap?.sketchLayer?.type === 'graphics') {
+        graphics = contaminationMap.sketchLayer.graphics.toArray();
+      }
       contamMapSet = new FeatureSet({
         displayFieldName: '',
         geometryType: 'polygon',
@@ -79,13 +87,15 @@ function Calculate() {
             alias: 'OBJECTID',
           },
         ],
-        features: contaminationMap.sketchLayer.graphics.items,
+        features: graphics,
       });
     }
 
     const sketchedGraphics: __esri.Graphic[] = [];
-    sampleLayers.forEach((layer: any) => {
-      sketchedGraphics.push(...layer.sketchLayer.graphics.toArray());
+    sampleLayers.forEach((layer) => {
+      if (layer?.sketchLayer?.type === 'graphics') {
+        sketchedGraphics.push(...layer.sketchLayer.graphics.toArray());
+      }
     });
 
     if (sketchedGraphics.length === 0) {
@@ -291,9 +301,9 @@ function Calculate() {
         <Select
           inputId="contamination-map-select"
           value={contaminationMap}
-          onChange={(ev) => setContaminationMap(ev)}
+          onChange={(ev) => setContaminationMap(ev as LayerType)}
           options={layers.filter(
-            (layer: any) => layer.layerType === 'Contamination Map',
+            (layer) => layer.layerType === 'Contamination Map',
           )}
         />
       </div>
