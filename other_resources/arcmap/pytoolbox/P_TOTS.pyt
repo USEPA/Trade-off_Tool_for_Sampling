@@ -689,17 +689,39 @@ class ContaminationResults(object):
       #########################################################################
       # Contamination results join
       scratch_full_c = arcpy.CreateScratchName(
-          prefix    = "Contamination"
+          prefix    = "SpatialJoin"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
       scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
       
+      fldmaps_in = arcpy.FieldMappings();
+      fldmaps_in.addTable(fc_samples_in);
+      fldmaps_in.addTable(fc_contamination_map);
+
+      fldmaps_out = arcpy.FieldMappings();
+      
+      for i in range(fldmaps_in.fieldCount):
+         map  = fldmaps_in.getFieldMap(i);
+         name = map.getInputFieldName(0);
+         if name == "CFU":
+            map.mergeRule = "Max";
+         if name == "GLOBALID":
+            map.mergeRule = "First";
+         if name == "SCENARIOID":
+            map.mergeRule = "First";
+         if name == "NOTES":
+            map.mergeRule = "First";
+         fldmaps_out.addFieldMap(map)
+
       arcpy.SpatialJoin_analysis(
           target_features   = fc_samples_in
          ,join_features     = fc_contamination_map
          ,out_feature_class = scratch_full_c
+         ,join_operation    = 'JOIN_ONE_TO_ONE'
+         ,join_type         = 'KEEP_COMMON'
+         ,field_mapping     = fldmaps_out
       );
 
       #########################################################################
@@ -718,12 +740,14 @@ class ContaminationResults(object):
          
             for row in search_curs:
             
-               insert_curs.insertRow((
-                   row[0]
-                  ,row[1]
-                  ,row[2]
-                  ,row[3]
-               ));
+               if row[2] is not None:
+               
+                  insert_curs.insertRow((
+                      row[0]
+                     ,row[1]
+                     ,row[2]
+                     ,row[3]
+                  ));
                   
       #########################################################################
       arcpy.SetParameterAsText(2,scratch_full_o);
@@ -940,6 +964,7 @@ def sampling_scratch_fc(p_preset):
          ,['TCPS'               ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
          ,['WVPS'               ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
          ,['WWPS'               ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
+         ,['CFU'                ,'DOUBLE','CFU'                         ,None,None,'']
          ,['SA'                 ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
          ,['AA'                 ,'DOUBLE','AA'                          ,None,None,'']
          ,['AC'                 ,'LONG'  ,'AC'                          ,None,None,'']
