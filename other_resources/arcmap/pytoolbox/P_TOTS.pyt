@@ -707,8 +707,6 @@ class ContaminationResults(object):
          name = map.getInputFieldName(0);
          if name == "CFU":
             map.mergeRule = "Max";
-         if name == "GLOBALID":
-            map.mergeRule = "First";
          if name == "SCENARIOID":
             map.mergeRule = "First";
          if name == "NOTES":
@@ -726,7 +724,7 @@ class ContaminationResults(object):
 
       #########################################################################
       # Sampling Results
-      flds = ['GLOBALID','TYPE','CFU','Notes'];
+      flds = ['GLOBALID','TYPE','CFU','NOTES'];
       
       with arcpy.da.InsertCursor(
           in_table    = scratch_full_o
@@ -743,7 +741,7 @@ class ContaminationResults(object):
                if row[2] is not None:
                
                   insert_curs.insertRow((
-                      row[0]
+                      '{' + str(uuid.uuid4()) + '}'
                      ,row[1]
                      ,row[2]
                      ,row[3]
