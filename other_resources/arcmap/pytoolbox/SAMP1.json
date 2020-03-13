@@ -5,6 +5,7 @@
     "Shape_Length" : "Shape_Length",
     "Shape_Area" : "Shape_Area",
     "GLOBALID" : "GlobalID",
+    "PERMANENT_IDENTIFIER": "Permanent_Identifier",
     "TYPE" : "Sampling Method Type",
     "TTPK" : "Time to Prepare Kits",
     "TTC" : "Time to Collect",
@@ -16,6 +17,7 @@
     "TCPS" : "Total Cost Per Sample",
     "WVPS" : "Waste Volume per Sample",
     "WWPS" : "Waste Weight per Sample",
+    "CFU": "CFU",
     "SA" : "Sampling Surface Area",
     "AA" : "AA",
     "AC" : "AC",
@@ -54,9 +56,13 @@
     },
     {
       "name" : "GLOBALID",
-      "type" : "esriFieldTypeString",
-      "alias" : "GlobalID",
-      "length" : 40
+      "type" : "esriFieldTypeGUID",
+      "alias" : "GlobalID"
+    },
+    {
+      "name" : "PERMANENT_IDENTIFIER",
+      "type" : "esriFieldTypeGUID",
+      "alias" : "Permanent_Identifier"
     },
     {
       "name" : "TYPE",
@@ -113,6 +119,11 @@
       "name" : "WWPS",
       "type" : "esriFieldTypeDouble",
       "alias" : "Waste Weight per Sample"
+    },
+    {
+      "name" : "CFU",
+      "type" : "esriFieldTypeDouble",
+      "alias" : "CFU"
     },
     {
       "name" : "SA",
@@ -201,6 +212,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{5babd7d1-54aa-421e-9620-00a266843881}",
+        "PERMANENT_IDENTIFIER" : "{21f041ef-dfbf-40e4-b5a0-319674168822}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -212,6 +224,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -260,6 +273,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{2a9ad2ab-ac7f-4044-a39d-7cec9a58037b}",
+        "PERMANENT_IDENTIFIER" : "{93201fb8-f915-4592-9c9a-2d89e3cba939}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -271,6 +285,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -319,6 +334,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{d27d7a7a-0e82-44e8-834a-a5be1e97e6fa}",
+        "PERMANENT_IDENTIFIER" : "{36222c5d-d011-4501-a051-f3997c585beb}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -330,6 +346,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -378,6 +395,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{0e4b623c-be97-4ebb-8894-f649388cd3fc}",
+        "PERMANENT_IDENTIFIER" : "{77bc62ec-6bf6-41d8-8766-f08c6ce86602}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -389,6 +407,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -437,6 +456,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{18f9ad3e-07ae-4201-ac6e-260e17e3ab17}",
+        "PERMANENT_IDENTIFIER" : "{9e86acf3-fe63-4c7d-bf60-f31dcd0c287e}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -448,6 +468,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -496,6 +517,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{c6276feb-afd5-4358-8b37-23dbcb52a6ee}",
+        "PERMANENT_IDENTIFIER" : "{eddfa550-b7ef-4a1c-a9c2-8cda7a49a823}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -507,6 +529,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -555,6 +578,7 @@
         "Shape_Length" : 17.24159998819232,
         "Shape_Area" : 18.579548134552088,
         "GLOBALID" : "{232a63e8-cfaf-47ec-864a-5a72f64f64c4}",
+        "PERMANENT_IDENTIFIER" : "{793d68fe-3816-40dd-951d-95ad5e0d2245}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -566,6 +590,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -614,6 +639,7 @@
         "Shape_Length" : 17.24159998819232,
         "Shape_Area" : 18.579548134552088,
         "GLOBALID" : "{40731d3a-e853-40e7-b055-1cecf8831eec}",
+        "PERMANENT_IDENTIFIER" : "{bd176410-e7fe-4491-8316-9f21ba410cbb}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -625,6 +651,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -673,6 +700,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{1ee8fdbc-9fa9-46ce-9a43-b9d438fd5903}",
+        "PERMANENT_IDENTIFIER" : "{76140c30-cda0-4e62-8233-3ba3dd22af48}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -684,6 +712,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -732,6 +761,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{2083b1da-c5f8-4a1e-9432-fd956cb2894f}",
+        "PERMANENT_IDENTIFIER" : "{5f48827f-018d-40c5-a172-5013bce2e56e}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -743,6 +773,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -791,6 +822,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{e9c7ce25-ed84-4d27-9723-b1009c9da483}",
+        "PERMANENT_IDENTIFIER" : "{5119ef7d-c753-4ebc-9713-b7ecfa6b0d3e}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -802,6 +834,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -850,6 +883,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{de9246f4-88d8-4e5e-b7d5-ff81062e3143}",
+        "PERMANENT_IDENTIFIER" : "{b89e980e-4cd7-446f-a47c-421cd28c7341}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -861,6 +895,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -909,6 +944,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{1ff02dc6-a1af-45aa-93ee-8831865cabbf}",
+        "PERMANENT_IDENTIFIER" : "{779ac4db-42f1-4d87-ac63-3df6de8f9ec6}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -920,6 +956,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -968,6 +1005,7 @@
         "Shape_Length" : 17.24159998819232,
         "Shape_Area" : 18.579548134552088,
         "GLOBALID" : "{46fce7fb-6c97-442e-b40a-e19f5eead5dd}",
+        "PERMANENT_IDENTIFIER" : "{5eaa369e-b9ef-4aa0-b586-845b2c879713}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -979,6 +1017,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1027,6 +1066,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{bd48756a-e5d6-4b8b-9770-80a85569f296}",
+        "PERMANENT_IDENTIFIER" : "{613d36e6-ac0c-4938-8aff-db17b38c36a1}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1038,6 +1078,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1086,6 +1127,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{670bf4f0-6257-4b20-a16c-fc48cc4b4894}",
+        "PERMANENT_IDENTIFIER" : "{0f6506c8-7ee8-4b32-872c-129c957b4996}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1097,6 +1139,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1145,6 +1188,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{30095e14-0925-4c4f-8044-f2e2bbd37bd3}",
+        "PERMANENT_IDENTIFIER" : "{8ead2b44-b57c-4157-8eef-79b226432e13}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1156,6 +1200,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1204,6 +1249,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{4c465b95-b8ec-4288-9b67-8414207c1429}",
+        "PERMANENT_IDENTIFIER" : "{61b42239-862d-4363-8851-91adeadb1cd4}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1215,6 +1261,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1263,6 +1310,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{53b834a7-95f4-47ea-bd8a-a829f51ecfb5}",
+        "PERMANENT_IDENTIFIER" : "{2f5cc5fa-1814-4812-8801-586f0b55a3ee}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1274,6 +1322,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1322,6 +1371,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{dbedd08e-ddd1-465e-80f0-63b2057b477f}",
+        "PERMANENT_IDENTIFIER" : "{02c6d1b4-dc5b-45be-9cc7-5bf71484e582}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1333,6 +1383,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1381,6 +1432,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{53c3dd73-daf3-4202-9d71-be0256078084}",
+        "PERMANENT_IDENTIFIER" : "{3cf27fb5-fd0d-45f5-94a0-5c82e891a147}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1392,6 +1444,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1440,6 +1493,7 @@
         "Shape_Length" : 17.241600006818771,
         "Shape_Area" : 18.579548174695816,
         "GLOBALID" : "{474e9409-deb0-42f5-82d8-1441124d6fea}",
+        "PERMANENT_IDENTIFIER" : "{7eaef85d-c6ba-4002-9492-e93e37c894ab}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1451,6 +1505,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1499,6 +1554,7 @@
         "Shape_Length" : 17.24159999191761,
         "Shape_Area" : 18.579548142580833,
         "GLOBALID" : "{9f3c6080-debb-4f6a-b833-cfb09ac06cdc}",
+        "PERMANENT_IDENTIFIER" : "{b43e6f7d-af90-4054-8604-ab3025beb41f}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1510,6 +1566,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1558,6 +1615,7 @@
         "Shape_Length" : 17.241600006818771,
         "Shape_Area" : 18.579548174695816,
         "GLOBALID" : "{7a3a9633-e84d-4610-86bb-844abaa44a1b}",
+        "PERMANENT_IDENTIFIER" : "{a8a63d0b-2628-479a-abde-9cd935b4ca9e}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1569,6 +1627,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1617,6 +1676,7 @@
         "Shape_Length" : 17.241600003093481,
         "Shape_Area" : 18.57954816666707,
         "GLOBALID" : "{0793bcbd-9f94-4271-aea9-697a0219b4b6}",
+        "PERMANENT_IDENTIFIER" : "{530a4921-4ae5-4193-924b-4882fd042fa3}",
         "TYPE" : "Wet Vac",
         "TTPK" : 0.33000000000000002,
         "TTC" : 0.13,
@@ -1628,6 +1688,7 @@
         "TCPS" : 220,
         "WVPS" : 5,
         "WWPS" : 28.5,
+        "CFU" : null,
         "SA" : 28800,
         "AA" : null,
         "AC" : null,
@@ -1665,596 +1726,6 @@
             [
               -9779925.8586999997,
               5251921.7770999968
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 26,
-        "Shape_Length" : 17.241600006818771,
-        "Shape_Area" : 18.579548174695816,
-        "GLOBALID" : "{f6946242-cac9-4c12-9228-a63baecf52d1}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779940.9074000008,
-              5251870.2133999988
-            ],
-            [
-              -9779940.9074000008,
-              5251874.5238000005
-            ],
-            [
-              -9779936.5969999991,
-              5251874.5238000005
-            ],
-            [
-              -9779936.5969999991,
-              5251870.2133999988
-            ],
-            [
-              -9779940.9074000008,
-              5251870.2133999988
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 27,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{f2344498-09d2-4111-bded-c4eaed91f9ac}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779963.5878999997,
-              5251938.6988999993
-            ],
-            [
-              -9779963.5878999997,
-              5251943.009300001
-            ],
-            [
-              -9779959.2774999999,
-              5251943.009300001
-            ],
-            [
-              -9779959.2774999999,
-              5251938.6988999993
-            ],
-            [
-              -9779963.5878999997,
-              5251938.6988999993
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 28,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{5f8b20f1-fb3d-420f-8a9d-8362ab83a3a7}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779952.9328000005,
-              5251861.2577999979
-            ],
-            [
-              -9779952.9328000005,
-              5251865.5681999996
-            ],
-            [
-              -9779948.6224000007,
-              5251865.5681999996
-            ],
-            [
-              -9779948.6224000007,
-              5251861.2577999979
-            ],
-            [
-              -9779952.9328000005,
-              5251861.2577999979
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 29,
-        "Shape_Length" : 17.24159998819232,
-        "Shape_Area" : 18.579548134552088,
-        "GLOBALID" : "{091c7928-acb2-4f21-8b0d-8474eb4ce548}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779936.5979999993,
-              5252033.1736000031
-            ],
-            [
-              -9779936.5979999993,
-              5252037.4839999974
-            ],
-            [
-              -9779932.2875999995,
-              5252037.4839999974
-            ],
-            [
-              -9779932.2875999995,
-              5252033.1736000031
-            ],
-            [
-              -9779936.5979999993,
-              5252033.1736000031
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 30,
-        "Shape_Length" : 17.24159998819232,
-        "Shape_Area" : 18.579548134552088,
-        "GLOBALID" : "{e7f174d8-30ab-4a79-aa68-2e44f826b1ac}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9780037.9745000005,
-              5251982.7990000024
-            ],
-            [
-              -9780037.9745000005,
-              5251987.1093999967
-            ],
-            [
-              -9780033.6641000006,
-              5251987.1093999967
-            ],
-            [
-              -9780033.6641000006,
-              5251982.7990000024
-            ],
-            [
-              -9780037.9745000005,
-              5251982.7990000024
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 31,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{cc351fca-b6c8-48cd-a21d-29f54775a850}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779957.1553000007,
-              5251943.8150999993
-            ],
-            [
-              -9779957.1553000007,
-              5251948.125500001
-            ],
-            [
-              -9779952.8449000008,
-              5251948.125500001
-            ],
-            [
-              -9779952.8449000008,
-              5251943.8150999993
-            ],
-            [
-              -9779957.1553000007,
-              5251943.8150999993
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 32,
-        "Shape_Length" : 17.24159998819232,
-        "Shape_Area" : 18.579548134552088,
-        "GLOBALID" : "{740c12f8-11eb-4367-9393-229bdb333eb8}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9780018.9444999993,
-              5252060.0869000033
-            ],
-            [
-              -9780018.9444999993,
-              5252064.3972999975
-            ],
-            [
-              -9780014.6340999994,
-              5252064.3972999975
-            ],
-            [
-              -9780014.6340999994,
-              5252060.0869000033
-            ],
-            [
-              -9780018.9444999993,
-              5252060.0869000033
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 33,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{86f3bea4-2bd1-4e65-b350-507919082932}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779969.0343999993,
-              5251888.6787
-            ],
-            [
-              -9779969.0343999993,
-              5251892.9891000018
-            ],
-            [
-              -9779964.7239999995,
-              5251892.9891000018
-            ],
-            [
-              -9779964.7239999995,
-              5251888.6787
-            ],
-            [
-              -9779969.0343999993,
-              5251888.6787
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 34,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{72c66533-660a-447c-8bb0-2cec3f13228a}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779873.4763999991,
-              5252167.7987999991
-            ],
-            [
-              -9779873.4763999991,
-              5252172.1092000008
-            ],
-            [
-              -9779869.1659999993,
-              5252172.1092000008
-            ],
-            [
-              -9779869.1659999993,
-              5252167.7987999991
-            ],
-            [
-              -9779873.4763999991,
-              5252167.7987999991
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "attributes" : {
-        "OBJECTID" : 35,
-        "Shape_Length" : 17.241600003093481,
-        "Shape_Area" : 18.57954816666707,
-        "GLOBALID" : "{40faf9e0-9746-4ace-9aa0-ec9b29f5d35f}",
-        "TYPE" : "Wet Vac",
-        "TTPK" : 0.33000000000000002,
-        "TTC" : 0.13,
-        "TTA" : 0.80000000000000004,
-        "TTPS" : 1.0700000000000001,
-        "LOD_P" : null,
-        "LOD_NON" : null,
-        "MCPS" : 167,
-        "TCPS" : 220,
-        "WVPS" : 5,
-        "WWPS" : 28.5,
-        "SA" : 28800,
-        "AA" : null,
-        "AC" : null,
-        "ITER" : null,
-        "Notes" : null,
-        "ALC" : 151,
-        "AMC" : 200,
-        "SCENARIONAME" : null,
-        "CREATEDDATE" : null,
-        "UPDATEDDATE" : null,
-        "USERNAME" : null,
-        "ORGANIZATION" : null,
-        "SURFACEAREAUNIT" : null,
-        "ELEVATIONSERIES" : null
-      },
-      "geometry" : {
-        "rings" : [
-          [
-            [
-              -9779963.6066999994,
-              5252168.800499998
-            ],
-            [
-              -9779963.6066999994,
-              5252173.1108999997
-            ],
-            [
-              -9779959.2962999996,
-              5252173.1108999997
-            ],
-            [
-              -9779959.2962999996,
-              5252168.800499998
-            ],
-            [
-              -9779963.6066999994,
-              5252168.800499998
             ]
           ]
         ]
