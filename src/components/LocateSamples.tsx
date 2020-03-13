@@ -234,6 +234,7 @@ function LocateSamples() {
     map,
     sketchLayer,
     setSketchLayer,
+    aoiSketchLayer,
     setAoiSketchLayer,
     sketchVM,
     aoiSketchVM,
@@ -285,10 +286,6 @@ function LocateSamples() {
 
   // Initializes the aoi layer for performance reasons
   const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
-  const [
-    aoiMaskLayer,
-    setAoiMaskLayer, //
-  ] = React.useState<LayerType | null>(null);
   React.useEffect(() => {
     if (!map || aoiLayerInitialized) return;
 
@@ -296,7 +293,6 @@ function LocateSamples() {
     const sketchableLayers = getSketchableAoiLayers(layers);
     if (sketchableLayers.length > 0) {
       setAoiSketchLayer(sketchableLayers[0]);
-      setAoiMaskLayer(sketchableLayers[0]);
       setAoiLayerInitialized(true);
       return;
     }
@@ -322,7 +318,6 @@ function LocateSamples() {
     // add the layer to the map
     setLayers([...layers, aoiSketchLayer]);
     setAoiSketchLayer(aoiSketchLayer);
-    setAoiMaskLayer(aoiSketchLayer);
     map.add(graphicsLayer);
 
     setAoiLayerInitialized(true);
@@ -415,8 +410,8 @@ function LocateSamples() {
     const url = `${totsGPServer}/Generate%20Random/execute`;
 
     let graphics: __esri.GraphicProperties[] = [];
-    if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
-      graphics = aoiMaskLayer.sketchLayer.graphics.toArray();
+    if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
+      graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
     }
 
     // create a feature set for communicating with the GPServer
@@ -702,8 +697,8 @@ function LocateSamples() {
                 <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
                 <Select
                   inputId="aoi-mask-select"
-                  value={aoiMaskLayer}
-                  onChange={(ev) => setAoiMaskLayer(ev as LayerType)}
+                  value={aoiSketchLayer}
+                  onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
                   options={layers.filter(
                     (layer) => layer.layerType === 'Area of Interest',
                   )}
@@ -742,8 +737,8 @@ function LocateSamples() {
                   />
                 )}
                 {numberRandomSamples &&
-                  aoiMaskLayer?.sketchLayer.type === 'graphics' &&
-                  aoiMaskLayer.sketchLayer.graphics.length > 0 && (
+                  aoiSketchLayer?.sketchLayer.type === 'graphics' &&
+                  aoiSketchLayer.sketchLayer.graphics.length > 0 && (
                     <button css={submitButtonStyles} onClick={randomSamples}>
                       {generateRandomResponse.status !== 'fetching' && 'Submit'}
                       {generateRandomResponse.status === 'fetching' && (
