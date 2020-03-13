@@ -346,84 +346,81 @@ function MapWidgets({ mapView }: Props) {
     (sketchViewModel: __esri.SketchViewModel) => {
       let nextId = 1;
 
-      sketchViewModel.on(
-        'create',
-        (event: __esri.SketchViewModelCreateEvent) => {
-          const { graphic } = event;
+      sketchViewModel.on('create', (event) => {
+        const { graphic } = event;
 
-          // place the graphic on the map when the drawing is complete
-          if (event.state === 'complete') {
-            // get the button and it's id
-            const button = document.querySelector('.sketch-button-selected');
-            const id = button && (button.id as SampleType);
-            deactivateButtons();
+        // place the graphic on the map when the drawing is complete
+        if (event.state === 'complete') {
+          // get the button and it's id
+          const button = document.querySelector('.sketch-button-selected');
+          const id = button && (button.id as SampleType);
+          deactivateButtons();
 
-            if (!id) {
-              // workaround for an error that said "target" does not exist on
-              // type 'SketchViewModelUpdateEvent'.
-              const tempEvent = event as any;
-              tempEvent.target.cancel();
-              return;
-            }
+          if (!id) {
+            // workaround for an error that said "target" does not exist on
+            // type 'SketchViewModelUpdateEvent'.
+            const tempEvent = event as any;
+            tempEvent.target.cancel();
+            return;
+          }
 
-            // get the predefined attributes using the id of the clicked button
-            graphic.attributes = {
-              ...sampleAttributes[id],
-              OBJECTID: nextId.toString(),
-              NOTES: '',
-            };
-            graphic.popupTemplate = new PopupTemplate({
-              title: '',
-              content: [
-                {
-                  type: 'fields',
-                  fieldInfos: Object.keys(graphic.attributes).map((key) => {
-                    return { fieldName: key, label: key };
-                  }),
-                },
+          // get the predefined attributes using the id of the clicked button
+          graphic.attributes = {
+            ...sampleAttributes[id],
+            OBJECTID: nextId.toString(),
+            NOTES: '',
+          };
+          graphic.popupTemplate = new PopupTemplate({
+            title: '',
+            content: [
+              {
+                type: 'fields',
+                fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                  return { fieldName: key, label: key };
+                }),
+              },
+            ],
+          });
+          nextId = nextId + 1;
+
+          // predefined boxes (sponge, micro vac and swab) need to be
+          // converted to a box of a specific size.
+          if (predefinedBoxTypes.includes(id)) {
+            let halfWidth = 0;
+            if (id === 'Sponge') halfWidth = sponge_SA;
+            if (id === 'Micro Vac') halfWidth = vac_SA;
+            if (id === 'Swab') halfWidth = swab_SA;
+
+            // create the graphic
+            const prevGeo = graphic.geometry as __esri.Point;
+
+            graphic.geometry = new Polygon({
+              spatialReference: prevGeo.spatialReference,
+              centroid: prevGeo,
+              rings: [
+                [
+                  [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
+                  [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
+                  [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
+                  [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
+                ],
               ],
             });
-            nextId = nextId + 1;
-
-            // predefined boxes (sponge, micro vac and swab) need to be
-            // converted to a box of a specific size.
-            if (predefinedBoxTypes.includes(id)) {
-              let halfWidth = 0;
-              if (id === 'Sponge') halfWidth = sponge_SA;
-              if (id === 'Micro Vac') halfWidth = vac_SA;
-              if (id === 'Swab') halfWidth = swab_SA;
-
-              // create the graphic
-              const prevGeo = graphic.geometry as __esri.Point;
-
-              graphic.geometry = new Polygon({
-                spatialReference: prevGeo.spatialReference,
-                centroid: prevGeo,
-                rings: [
-                  [
-                    [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
-                    [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
-                    [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
-                    [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
-                  ],
-                ],
-              });
-            }
-
-            // save the graphic
-            sketchViewModel.update(graphic);
-            setUpdateSketchEvent(event);
-
-            // re-enable layer popups
-            if (map) {
-              map.layers.forEach((layer: any) => {
-                // had to use any, since some layer types don't have popupEnabled
-                if (layer.popupEnabled) layer.popupEnabled = true;
-              });
-            }
           }
-        },
-      );
+
+          // save the graphic
+          sketchViewModel.update(graphic);
+          setUpdateSketchEvent(event);
+
+          // re-enable layer popups
+          if (map) {
+            map.layers.forEach((layer: any) => {
+              // had to use any, since some layer types don't have popupEnabled
+              if (layer.popupEnabled) layer.popupEnabled = true;
+            });
+          }
+        }
+      });
 
       sketchViewModel.on('update', (event) => {
         // the updates have completed add them to the edits variable
