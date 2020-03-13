@@ -6,6 +6,8 @@ import { jsx, css } from '@emotion/core';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// types
+import { LayerType } from 'types/Layer';
 // config
 import {
   predefinedBoxTypes,
@@ -231,13 +233,14 @@ function MapWidgets({ mapView }: Props) {
     setEdits,
     homeWidget,
     setHomeWidget,
-    selectedLayer,
     sketchVM,
     setSketchVM,
+    aoiSketchVM,
+    setAoiSketchVM,
     setSketchVMLayerId,
     sketchLayer,
-    setSketchLayer,
-    lastSketchLayer,
+    aoiSketchLayer,
+    layers,
     map,
   } = React.useContext(SketchContext);
   const {
@@ -300,6 +303,21 @@ function MapWidgets({ mapView }: Props) {
     setSketchVM(svm);
   }, [SketchViewModel, mapView, sketchVM, setSketchVM, sketchLayer]);
 
+  // Creates the SketchViewModel
+  React.useEffect(() => {
+    console.log('aoiSketchLayer: ', aoiSketchLayer);
+    if (!aoiSketchLayer) return;
+    if (aoiSketchVM) return;
+    const svm = new SketchViewModel({
+      layer: aoiSketchLayer.sketchLayer,
+      view: mapView,
+      polygonSymbol,
+      pointSymbol: polygonSymbol,
+    });
+
+    setAoiSketchVM(svm);
+  }, [SketchViewModel, mapView, aoiSketchVM, setAoiSketchVM, aoiSketchLayer]);
+
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
     if (!sketchVM || !sketchLayer?.sketchLayer) return;
@@ -308,168 +326,202 @@ function MapWidgets({ mapView }: Props) {
       sketchVM.layer = sketchLayer.sketchLayer;
       setSketchVMLayerId(sketchLayer.sketchLayer.id);
     }
-  }, [sketchVM, setSketchVM, setSketchVMLayerId, sketchLayer]);
+  }, [sketchVM, setSketchVMLayerId, sketchLayer]);
+
+  // Updates the selected layer of the aoiSketchViewModel
+  React.useEffect(() => {
+    if (!aoiSketchVM || !aoiSketchLayer?.sketchLayer) return;
+
+    if (aoiSketchLayer.sketchLayer.type === 'graphics') {
+      aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+    }
+  }, [aoiSketchVM, aoiSketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
-  const [
-    sketchEventsInitialized,
-    setSketchEventsInitialized, //
-  ] = React.useState(false);
   const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   const [
     selectedGraphicsIds,
     setSelectedGraphicsIds, //
   ] = React.useState<Array<string>>([]);
-  React.useEffect(() => {
-    if (!sketchVM) return;
-    if (sketchEventsInitialized) return;
+  const setupEvents = React.useCallback(
+    (sketchViewModel: __esri.SketchViewModel) => {
+      let nextId = 1;
 
-    let nextId = 1;
+      sketchViewModel.on(
+        'create',
+        (event: __esri.SketchViewModelCreateEvent) => {
+          const { graphic } = event;
 
-    sketchVM.on('create', (event: __esri.SketchViewModelCreateEvent) => {
-      const { graphic } = event;
+          // place the graphic on the map when the drawing is complete
+          if (event.state === 'complete') {
+            console.log('create event: ', event);
+            // get the button and it's id
+            const button = document.querySelector('.sketch-button-selected');
+            const id = button && (button.id as SampleType);
+            deactivateButtons();
 
-      // place the graphic on the map when the drawing is complete
-      if (event.state === 'complete') {
-        // get the button and it's id
-        const button = document.querySelector('.sketch-button-selected');
-        const id = button && (button.id as SampleType);
-        deactivateButtons();
+            if (!id) {
+              // workaround for an error that said "target" does not exist on
+              // type 'SketchViewModelUpdateEvent'.
+              const tempEvent = event as any;
+              tempEvent.target.cancel();
+              return;
+            }
 
-        if (!id) {
+            // get the predefined attributes using the id of the clicked button
+            graphic.attributes = {
+              ...sampleAttributes[id],
+              OBJECTID: nextId.toString(),
+              NOTES: '',
+            };
+            graphic.popupTemplate = new PopupTemplate({
+              title: '',
+              content: [
+                {
+                  type: 'fields',
+                  fieldInfos: Object.keys(graphic.attributes).map((key) => {
+                    return { fieldName: key, label: key };
+                  }),
+                },
+              ],
+            });
+            nextId = nextId + 1;
+
+            // predefined boxes (sponge, micro vac and swab) need to be
+            // converted to a box of a specific size.
+            if (predefinedBoxTypes.includes(id)) {
+              let halfWidth = 0;
+              if (id === 'Sponge') halfWidth = sponge_SA;
+              if (id === 'Micro Vac') halfWidth = vac_SA;
+              if (id === 'Swab') halfWidth = swab_SA;
+
+              // create the graphic
+              const prevGeo = graphic.geometry as __esri.Point;
+
+              graphic.geometry = new Polygon({
+                spatialReference: prevGeo.spatialReference,
+                centroid: prevGeo,
+                rings: [
+                  [
+                    [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
+                    [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
+                    [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
+                    [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
+                  ],
+                ],
+              });
+            }
+
+            // save the graphic
+            sketchViewModel.update(graphic);
+            setUpdateSketchEvent(event);
+
+            // re-enable layer popups
+            if (map) {
+              map.layers.forEach((layer: any) => {
+                // had to use any, since some layer types don't have popupEnabled
+                if (layer.popupEnabled) layer.popupEnabled = true;
+              });
+            }
+          }
+        },
+      );
+
+      sketchViewModel.on('update', (event) => {
+        // the updates have completed add them to the edits variable
+        if (event.state === 'complete' || event.state === 'cancel') {
+          console.log('update event: ', event);
+          // fire the update event if event.state is complete.
+          if (event.state === 'complete') setUpdateSketchEvent(event);
+
+          // re-enable layer popups
+          if (map) {
+            map.layers.forEach((layer: any) => {
+              // had to use any, since some layer types don't have popupEnabled
+              if (layer.popupEnabled) layer.popupEnabled = true;
+            });
+          }
+        }
+
+        // Swab, Micro Vac, Wet Vac, etc.
+        const firstGraphicType =
+          event.graphics[0].attributes && event.graphics[0].attributes.TYPE;
+
+        const isShapeChange =
+          event.toolEventInfo &&
+          (event.toolEventInfo.type.includes('reshape') ||
+            event.toolEventInfo.type.includes('scale'));
+
+        // prevent scale and reshape changes on the predefined graphics
+        // allow moves and rotates
+        if (isShapeChange && predefinedBoxTypes.includes(firstGraphicType)) {
           // workaround for an error that said "target" does not exist on
           // type 'SketchViewModelUpdateEvent'.
           const tempEvent = event as any;
           tempEvent.target.cancel();
-          return;
         }
 
-        // get the predefined attributes using the id of the clicked button
-        graphic.attributes = {
-          ...sampleAttributes[id],
-          OBJECTID: nextId.toString(),
-        };
-        graphic.popupTemplate = new PopupTemplate({
-          title: '',
-          content: [
-            {
-              type: 'fields',
-              fieldInfos: Object.keys(graphic.attributes).map((key) => {
-                return { fieldName: key, label: key };
-              }),
-            },
-          ],
-        });
-        nextId = nextId + 1;
-
-        // predefined boxes (sponge, micro vac and swab) need to be
-        // converted to a box of a specific size.
-        if (predefinedBoxTypes.includes(id)) {
-          let halfWidth = 0;
-          if (id === 'Sponge') halfWidth = sponge_SA;
-          if (id === 'Micro Vac') halfWidth = vac_SA;
-          if (id === 'Swab') halfWidth = swab_SA;
-
-          // create the graphic
-          const prevGeo = graphic.geometry as __esri.Point;
-
-          graphic.geometry = new Polygon({
-            spatialReference: prevGeo.spatialReference,
-            centroid: prevGeo,
-            rings: [
-              [
-                [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
-                [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
-                [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
-                [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
-              ],
-            ],
+        // get the number of selected graphics
+        let selectedGraphicsIds: Array<string> = [];
+        if (event.state !== 'cancel' && event.graphics) {
+          event.graphics.forEach((graphic) => {
+            selectedGraphicsIds.push(graphic.attributes.OBJECTID);
           });
         }
+        setSelectedGraphicsIds(selectedGraphicsIds);
+      });
 
-        // save the graphic
-        sketchVM.update(graphic);
+      // handles deleting when the delete key is pressed
+      // Workaround for an error that said Argument of type '"delete"' is
+      // not assignable to parameter of type '"undo"'.
+      // This issue looks like the types haven't been updated, because delete
+      // is now an option.
+      const tempSketchVM = sketchViewModel as any;
+      tempSketchVM.on('delete', (event: any) => {
+        console.log('delete event: ', event);
         setUpdateSketchEvent(event);
+      });
+    },
+    [Polygon, PopupTemplate, map],
+  );
 
-        // re-enable layer popups
-        if (map) {
-          map.layers.forEach((layer: any) => {
-            // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = true;
-          });
-        }
-      }
-    });
-
-    sketchVM.on('update', (event) => {
-      // the updates have completed add them to the edits variable
-      if (event.state === 'complete' || event.state === 'cancel') {
-        // fire the update event if event.state is complete.
-        if (event.state === 'complete') setUpdateSketchEvent(event);
-
-        // re-enable layer popups
-        if (map) {
-          map.layers.forEach((layer: any) => {
-            // had to use any, since some layer types don't have popupEnabled
-            if (layer.popupEnabled) layer.popupEnabled = true;
-          });
-        }
-      }
-
-      // Swab, Micro Vac, Wet Vac, etc.
-      const firstGraphicType =
-        event.graphics[0].attributes && event.graphics[0].attributes.TYPE;
-
-      const isShapeChange =
-        event.toolEventInfo &&
-        (event.toolEventInfo.type.includes('reshape') ||
-          event.toolEventInfo.type.includes('scale'));
-
-      // prevent scale and reshape changes on the predefined graphics
-      // allow moves and rotates
-      if (isShapeChange && predefinedBoxTypes.includes(firstGraphicType)) {
-        // workaround for an error that said "target" does not exist on
-        // type 'SketchViewModelUpdateEvent'.
-        const tempEvent = event as any;
-        tempEvent.target.cancel();
-      }
-
-      // get the number of selected graphics
-      let selectedGraphicsIds: Array<string> = [];
-      if (event.state !== 'cancel' && event.graphics) {
-        event.graphics.forEach((graphic) => {
-          selectedGraphicsIds.push(graphic.attributes.OBJECTID);
-        });
-      }
-      setSelectedGraphicsIds(selectedGraphicsIds);
-    });
-
-    // handles deleting when the delete key is pressed
-    // Workaround for an error that said Argument of type '"delete"' is
-    // not assignable to parameter of type '"undo"'.
-    // This issue looks like the types haven't been updated, because delete
-    // is now an option.
-    const tempSketchVM = sketchVM as any;
-    tempSketchVM.on('delete', (event: any) => {
-      setUpdateSketchEvent(event);
-    });
+  // Setup the sketch view model events for the base sketchVM
+  const [
+    sketchEventsInitialized,
+    setSketchEventsInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!sketchVM || sketchEventsInitialized) return;
+    setupEvents(sketchVM);
 
     setSketchEventsInitialized(true);
   }, [
     sketchVM,
-    map,
-    mapView,
-    setSketchEventsInitialized,
-    Graphic,
-    Polygon,
-    PopupTemplate,
-    setEdits,
+    setupEvents,
     sketchEventsInitialized,
+    setSketchEventsInitialized,
+  ]);
+
+  // Setup the sketch view model events for the Area of Interest (AOI) sketchVM
+  const [
+    aoiSketchEventsInitialized,
+    setAoiSketchEventsInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!aoiSketchVM || aoiSketchEventsInitialized) return;
+    setupEvents(aoiSketchVM);
+
+    setAoiSketchEventsInitialized(true);
+  }, [
+    aoiSketchVM,
+    setupEvents,
+    aoiSketchEventsInitialized,
+    setAoiSketchEventsInitialized,
   ]);
 
   // save the updated graphic to the edits data structure for later publishing
   React.useEffect(() => {
-    if (!sketchLayer || !updateSketchEvent) return;
+    if (layers.length === 0 || !updateSketchEvent) return;
     setUpdateSketchEvent(null);
 
     const type =
@@ -477,27 +529,37 @@ function MapWidgets({ mapView }: Props) {
     const changes =
       type === 'add' ? [updateSketchEvent.graphic] : updateSketchEvent.graphics;
 
-    // make a copy of the edits context variable
-    const editsCopy = updateLayerEdits({
-      edits,
-      layer: sketchLayer,
-      type,
-      changes,
-    });
+    console.log(
+      'updateSketchEvent.graphic.layer.id: ',
+      updateSketchEvent.graphic.layer.id,
+    );
 
-    // update the edits state
-    setEdits(editsCopy);
-    if (sketchLayer.layerType === 'Area of Interest') {
-      setSketchLayer(lastSketchLayer);
+    // look up the layer for this event
+    let updateLayer: LayerType | null = null;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      console.log(`${layer.layerId} - ${updateSketchEvent.graphic.layer.id}`);
+      if (layer.layerId === updateSketchEvent.graphic.layer.id) {
+        updateLayer = layer;
+        break;
+      }
     }
-  }, [
-    edits,
-    setEdits,
-    updateSketchEvent,
-    sketchLayer,
-    setSketchLayer,
-    lastSketchLayer,
-  ]);
+
+    console.log('updateLayer: ', updateLayer);
+
+    if (updateLayer) {
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: updateLayer,
+        type,
+        changes,
+      });
+
+      // update the edits state
+      setEdits(editsCopy);
+    }
+  }, [edits, setEdits, updateSketchEvent, layers]);
 
   // Adds a container for the feature tool to the map
   const [
@@ -514,11 +576,19 @@ function MapWidgets({ mapView }: Props) {
 
   // Creates and adds the custom edit feature tool to the map.
   React.useEffect(() => {
-    if (!featureTool || !sketchVM) return;
+    if (!featureTool) return;
+
+    let localSketchVM: __esri.SketchViewModel | null = sketchVM;
+    let tempAoiSketchVM = aoiSketchVM as any;
+    if (tempAoiSketchVM?.activeComponent?.graphics?.length > 0) {
+      localSketchVM = aoiSketchVM;
+    }
+
+    if (!localSketchVM) return;
 
     // handles the sketch button clicks
     const handleClick = (ev: React.MouseEvent<HTMLElement>, type: string) => {
-      if (!sketchVM || !sketchLayer) return;
+      if (!localSketchVM || !sketchLayer) return;
 
       // set the clicked button as active until the drawing is complete
       deactivateButtons();
@@ -528,7 +598,7 @@ function MapWidgets({ mapView }: Props) {
 
       if (type === 'Delete') {
         // Workaround for activeComponent not existing on the SketchViewModel type.
-        const tempSketchVM = sketchVM as any;
+        const tempSketchVM = localSketchVM as any;
         if (tempSketchVM.activeComponent?.graphics) {
           // make a copy of the edits context variable
           const editsCopy = updateLayerEdits({
@@ -540,12 +610,12 @@ function MapWidgets({ mapView }: Props) {
 
           setEdits(editsCopy);
 
-          sketchVM.layer.removeMany(tempSketchVM.activeComponent.graphics);
+          localSketchVM.layer.removeMany(tempSketchVM.activeComponent.graphics);
         }
       }
       if (type === 'Save') {
         // Workaround for activeComponent not existing on the SketchViewModel type.
-        const tempSketchVM = sketchVM as any;
+        const tempSketchVM = localSketchVM as any;
         if (tempSketchVM.activeComponent?.graphics) {
           // make a copy of the edits context variable
           const editsCopy = updateLayerEdits({
@@ -562,7 +632,7 @@ function MapWidgets({ mapView }: Props) {
 
     let featureToolContent = (
       <FeatureTool
-        sketchVM={sketchVM}
+        sketchVM={localSketchVM}
         selectedGraphicsIds={selectedGraphicsIds}
         onClick={handleClick}
       />
@@ -571,9 +641,9 @@ function MapWidgets({ mapView }: Props) {
   }, [
     featureTool,
     sketchVM,
+    aoiSketchVM,
     sketchLayer,
     selectedGraphicsIds,
-    selectedLayer,
     edits,
     setEdits,
   ]);

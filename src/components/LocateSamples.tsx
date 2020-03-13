@@ -29,6 +29,11 @@ function getSketchableLayers(layers: LayerType[]) {
   );
 }
 
+// gets an array of layers that can be used with the aoi sketch widget.
+function getSketchableAoiLayers(layers: LayerType[]) {
+  return layers.filter((layer) => layer.layerType === 'Area of Interest');
+}
+
 // --- styles (SketchButton) ---
 const panelContainer = css`
   padding: 20px;
@@ -229,9 +234,9 @@ function LocateSamples() {
     map,
     sketchLayer,
     setSketchLayer,
-    setLastSketchLayer,
+    setAoiSketchLayer,
     sketchVM,
-    sketchVMLayerId,
+    aoiSketchVM,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -278,6 +283,58 @@ function LocateSamples() {
     setSketchLayer(tempSketchLayer);
   }, [GraphicsLayer, map, layers, setLayers, sketchLayer, setSketchLayer]);
 
+  // Initializes the aoi layer for performance reasons
+  const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
+  const [
+    aoiMaskLayer,
+    setAoiMaskLayer, //
+  ] = React.useState<LayerType | null>(null);
+  React.useEffect(() => {
+    if (!map || aoiLayerInitialized) return;
+
+    // get the first layer that can be used for aoi sketching and return
+    const sketchableLayers = getSketchableAoiLayers(layers);
+    if (sketchableLayers.length > 0) {
+      setAoiSketchLayer(sketchableLayers[0]);
+      setAoiMaskLayer(sketchableLayers[0]);
+      setAoiLayerInitialized(true);
+      return;
+    }
+
+    const graphicsLayer = new GraphicsLayer({
+      title: 'Sketched Area of Interest',
+    });
+    const aoiSketchLayer: LayerType = {
+      id: -1,
+      layerId: graphicsLayer.id,
+      value: 'sketchAoi',
+      name: 'Sketched Area of Interest',
+      label: 'Sketched Area of Interest',
+      layerType: 'Area of Interest',
+      scenarioName: '',
+      scenarioDescription: '',
+      defaultVisibility: true,
+      geometryType: 'esriGeometryPolygon',
+      addedFrom: 'sketch',
+      sketchLayer: graphicsLayer,
+    };
+
+    // add the layer to the map
+    setLayers([...layers, aoiSketchLayer]);
+    setAoiSketchLayer(aoiSketchLayer);
+    setAoiMaskLayer(aoiSketchLayer);
+    map.add(graphicsLayer);
+
+    setAoiLayerInitialized(true);
+  }, [
+    GraphicsLayer,
+    map,
+    layers,
+    setLayers,
+    aoiLayerInitialized,
+    setAoiSketchLayer,
+  ]);
+
   const [numberRandomSamples, setNumberRandomSamples] = React.useState('33');
   const [
     sampleType,
@@ -323,48 +380,11 @@ function LocateSamples() {
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
   // dropdown this will create an AOI layer. This also sets the sketchVM to use the
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
-  const [
-    aoiMaskLayer,
-    setAoiMaskLayer, //
-  ] = React.useState<LayerType | null>(null);
-  const [aoiSketchInitialized, setAoiSketchInitialized] = React.useState(false);
   function sketchAoiButtonClick() {
-    if (!map || !sketchVM) return;
+    if (!map || !aoiSketchVM) return;
 
-    setAoiSketchInitialized(false);
-
-    // look for an existing sketch aoi layer
-    let aoiSketchLayer = aoiMaskLayer;
-
-    // create the layer
-    if (!aoiSketchLayer) {
-      const graphicsLayer = new GraphicsLayer({
-        title: 'Sketched Area of Interest',
-      });
-      aoiSketchLayer = {
-        id: -1,
-        layerId: graphicsLayer.id,
-        value: 'sketchAoi',
-        name: 'Sketched Area of Interest',
-        label: 'Sketched Area of Interest',
-        layerType: 'Area of Interest',
-        scenarioName: '',
-        scenarioDescription: '',
-        defaultVisibility: true,
-        geometryType: 'esriGeometryPolygon',
-        addedFrom: 'sketch',
-        sketchLayer: graphicsLayer,
-      };
-
-      // add the layer to the map
-      setLayers([...layers, aoiSketchLayer]);
-      setAoiMaskLayer(aoiSketchLayer);
-      map.add(graphicsLayer);
-    }
-
-    // set the sketch layer to the aoi sketch layer
-    setLastSketchLayer(sketchLayer);
-    setSketchLayer(aoiSketchLayer);
+    // activate the sketch tool
+    aoiSketchVM.create('polygon');
 
     // disable popups for the active sketch layer, so the user doesn't
     // get shape edit controls and a popup at the same time.
@@ -379,49 +399,6 @@ function LocateSamples() {
     const elem = document.getElementById('aoi');
     if (elem) elem.classList.add('sketch-button-selected');
   }
-
-  // Triggers the ability to sketch an AOI graphic on the AOI layer.
-  // This is needed to give time for the sketchVM to get setup on the AOI layer.
-  React.useEffect(() => {
-    if (aoiSketchInitialized || !sketchVM) return;
-
-    // make sure the sketch layer is an AOI layer
-    if (sketchLayer?.layerType !== 'Area of Interest') return;
-    // make sure the sketchLayer and sketchVM are synced up
-    if (sketchLayer.sketchLayer.id !== sketchVMLayerId) return;
-
-    // The above check on the sketchVM layer id wasn't enough time, so this
-    // quarter second timeout is needed to give the sketchVM enough time to
-    // get setup on the aoi sketch layer.
-    setTimeout(() => {
-      sketchVM.create('polygon');
-    }, 250);
-
-    setAoiSketchInitialized(true);
-  }, [aoiSketchInitialized, sketchLayer, sketchVM, sketchVMLayerId]);
-
-  // Initializes the Area of Interest dropdown to the first aoi layer
-  const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
-  React.useEffect(() => {
-    if (aoiMaskLayer || layers.length === 0 || aoiLayerInitialized) return;
-
-    // find the first aoi mask layer
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
-      if (layer.layerType === 'Area of Interest') {
-        setAoiMaskLayer(layer);
-        break;
-      }
-    }
-
-    setAoiLayerInitialized(true);
-  }, [
-    aoiLayerInitialized,
-    setAoiLayerInitialized,
-    layers,
-    aoiMaskLayer,
-    setAoiMaskLayer,
-  ]);
 
   // Handle a user generating random samples
   const [

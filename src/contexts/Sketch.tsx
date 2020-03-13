@@ -25,16 +25,20 @@ type SketchType = {
   setUrlLayers: React.Dispatch<React.SetStateAction<UrlLayerType[]>>;
   sketchLayer: LayerType | null;
   setSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
+  aoiSketchLayer: LayerType | null;
+  setAoiSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   lastSketchLayer: any | null;
   setLastSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   map: __esri.Map | null;
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
-  selectedLayer: LayerType | null;
-  setSelectedLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   mapView: __esri.MapView | null;
   setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: React.Dispatch<
+    React.SetStateAction<__esri.SketchViewModel | null>
+  >;
+  aoiSketchVM: __esri.SketchViewModel | null;
+  setAoiSketchVM: React.Dispatch<
     React.SetStateAction<__esri.SketchViewModel | null>
   >;
   sketchVMLayerId: string;
@@ -60,16 +64,18 @@ export const SketchContext = React.createContext<SketchType>({
   setUrlLayers: () => {},
   sketchLayer: null,
   setSketchLayer: () => {},
+  aoiSketchLayer: null,
+  setAoiSketchLayer: () => {},
   lastSketchLayer: null,
   setLastSketchLayer: () => {},
   map: null,
   setMap: () => {},
-  selectedLayer: null,
-  setSelectedLayer: () => {},
   mapView: null,
   setMapView: () => {},
   sketchVM: null,
   setSketchVM: () => {},
+  aoiSketchVM: null,
+  setAoiSketchVM: () => {},
   sketchVMLayerId: '',
   setSketchVMLayerId: () => {},
 });
@@ -85,6 +91,9 @@ export function SketchProvider({ children }: Props) {
   const [referenceLayers, setReferenceLayers] = React.useState<any[]>([]);
   const [urlLayers, setUrlLayers] = React.useState<UrlLayerType[]>([]);
   const [sketchLayer, setSketchLayer] = React.useState<LayerType | null>(null);
+  const [aoiSketchLayer, setAoiSketchLayer] = React.useState<LayerType | null>(
+    null,
+  );
   const [
     lastSketchLayer,
     setLastSketchLayer,
@@ -94,12 +103,12 @@ export function SketchProvider({ children }: Props) {
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
   const [sketchVMLayerId, setSketchVMLayerId] = React.useState<string>('');
   const [
-    selectedLayer,
-    setSelectedLayer, //
-  ] = React.useState<LayerType | null>(null);
-  const [
     sketchVM,
     setSketchVM, //
+  ] = React.useState<__esri.SketchViewModel | null>(null);
+  const [
+    aoiSketchVM,
+    setAoiSketchVM, //
   ] = React.useState<__esri.SketchViewModel | null>(null);
 
   return (
@@ -123,16 +132,18 @@ export function SketchProvider({ children }: Props) {
         setUrlLayers,
         sketchLayer,
         setSketchLayer,
+        aoiSketchLayer,
+        setAoiSketchLayer,
         lastSketchLayer,
         setLastSketchLayer,
         map,
         setMap,
-        selectedLayer,
-        setSelectedLayer,
         mapView,
         setMapView,
         sketchVM,
         setSketchVM,
+        aoiSketchVM,
+        setAoiSketchVM,
         sketchVMLayerId,
         setSketchVMLayerId,
       }}
