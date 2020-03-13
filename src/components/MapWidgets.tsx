@@ -526,7 +526,7 @@ function MapWidgets({ mapView }: Props) {
     let updateLayer: LayerType | null = null;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
-      if (layer.layerId === updateSketchEvent.graphic.layer.id) {
+      if (layer.layerId === changes[0].layer.id) {
         updateLayer = layer;
         break;
       }
