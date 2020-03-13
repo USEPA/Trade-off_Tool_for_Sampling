@@ -220,6 +220,7 @@ class GenerateRandom(object):
       arcpy.AddMessage("Populating Sampling Metrics...");
       fields = [
           "GLOBALID"
+         ,"PERMANENT_IDENTIFIER"
          ,"TYPE"
          ,"TTPK"
          ,"TTC"
@@ -240,81 +241,87 @@ class GenerateRandom(object):
 
             if str_sample_type == 'Micro Vac':
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Micro Vac";
-               row[2]  = 0.18;
-               row[3]  = 0.15;
-               row[4]  = 0.8;
-               row[5]  = 1.21;
-               row[6]  = 34.28;
-               row[7]  = 395.84;
-               row[8]  = 0.02;
-               row[9]  = 4.3;
-               row[10] = 144;
-               row[11] = 151;
-               row[12] = 288;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Micro Vac";
+               row[3]  = 0.18;
+               row[4]  = 0.15;
+               row[5]  = 0.8;
+               row[6]  = 1.21;
+               row[7]  = 34.28;
+               row[8]  = 395.84;
+               row[9]  = 0.02;
+               row[10] = 4.3;
+               row[11] = 144;
+               row[12] = 151;
+               row[13] = 288;
                
             elif str_sample_type == "Wet Vac":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Wet Vac";
-               row[2]  = 0.33;
-               row[3]  = 0.13;
-               row[4]  = 0.8;
-               row[5]  = 1.07;
-               row[6]  = 167;
-               row[7]  = 220;
-               row[8]  = 5;
-               row[9]  = 28.5;
-               row[10] = 28800;
-               row[11] = 151;
-               row[12] = 200;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Wet Vac";
+               row[3]  = 0.33;
+               row[4]  = 0.13;
+               row[5]  = 0.8;
+               row[6]  = 1.07;
+               row[7]  = 167;
+               row[8]  = 220;
+               row[9]  = 5;
+               row[10] = 28.5;
+               row[11] = 28800;
+               row[12] = 151;
+               row[13] = 200;
                
             elif str_sample_type == "Sponge":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Sponge";
-               row[2]  = 0.12;
-               row[3]  = 0.09;
-               row[4]  = 0.7;
-               row[5]  = 0.99;
-               row[6]  = 46.87;
-               row[7]  = 343.03;
-               row[8]  = 0.1;
-               row[9]  = 4.3;
-               row[10] = 100;
-               row[11] = 118;
-               row[12] = 239;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Sponge";
+               row[3]  = 0.12;
+               row[4]  = 0.09;
+               row[5]  = 0.7;
+               row[6]  = 0.99;
+               row[7]  = 46.87;
+               row[8]  = 343.03;
+               row[9]  = 0.1;
+               row[10] = 4.3;
+               row[11] = 100;
+               row[12] = 118;
+               row[13] = 239;
                
             elif str_sample_type == "Robot":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Robot";
-               row[2]  = 0.33;
-               row[3]  = 0.3;
-               row[4]  = 0.7;
-               row[5]  = 1.12;
-               row[6]  = 400;
-               row[7]  = 267;
-               row[8]  = 0.5;
-               row[9]  = 10.5;
-               row[10] = 144000;
-               row[11] = 200;
-               row[12] = 288;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Robot";
+               row[3]  = 0.33;
+               row[4]  = 0.3;
+               row[5]  = 0.7;
+               row[6]  = 1.12;
+               row[7]  = 400;
+               row[8]  = 267;
+               row[9]  = 0.5;
+               row[10] = 10.5;
+               row[11] = 144000;
+               row[12] = 200;
+               row[13] = 288;
                
             elif str_sample_type == "Aggressive Air":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Aggressive Air";
-               row[2]  = 0.33;
-               row[3]  = 0.6;
-               row[4]  = 0.5;
-               row[5]  = 1.12;
-               row[6]  = 207;
-               row[7]  = 267;
-               row[8]  = 0.1;
-               row[9]  = 5;
-               row[10] = 12000;
-               row[11] = 118;
-               row[12] = 239;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Aggressive Air";
+               row[3]  = 0.33;
+               row[4]  = 0.6;
+               row[5]  = 0.5;
+               row[6]  = 1.12;
+               row[7]  = 207;
+               row[8]  = 267;
+               row[9]  = 0.1;
+               row[10] = 5;
+               row[11] = 12000;
+               row[12] = 118;
+               row[13] = 239;
                
             elif str_sample_type == "Swab":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
                row[1]  = "Swab";
                row[2]  = 0.12;
                row[3]  = 0.07;
@@ -446,7 +453,22 @@ class VSPImport(object):
       );
 
       #########################################################################
-      fields = ["GLOBALID","TYPE","TTPK","TTC","TTA","TTPS","MCPS","TCPS","WVPS","WWPS","SA","ALC","AMC"];
+      fields = [
+          "GLOBALID"
+         ,"PERMANENT_IDENTIFIER"
+         ,"TYPE"
+         ,"TTPK"
+         ,"TTC"
+         ,"TTA"
+         ,"TTPS"
+         ,"MCPS"
+         ,"TCPS"
+         ,"WVPS"
+         ,"WWPS"
+         ,"SA"
+         ,"ALC"
+         ,"AMC"
+      ];
 
       with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
 
@@ -454,93 +476,99 @@ class VSPImport(object):
 
             if str_sample_type == 'Micro Vac':
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Micro Vac";
-               row[2]  = 0.18;
-               row[3]  = 0.15;
-               row[4]  = 0.8;
-               row[5]  = 1.21;
-               row[6]  = 34.28;
-               row[7]  = 395.84;
-               row[8]  = 0.02;
-               row[9]  = 4.3;
-               row[10] = 144;
-               row[11] = 151;
-               row[12] = 288;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Micro Vac";
+               row[3]  = 0.18;
+               row[4]  = 0.15;
+               row[5]  = 0.8;
+               row[6]  = 1.21;
+               row[7]  = 34.28;
+               row[8]  = 395.84;
+               row[9]  = 0.02;
+               row[10] = 4.3;
+               row[11] = 144;
+               row[12] = 151;
+               row[13] = 288;
 
             elif str_sample_type == "Wet Vac":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Wet Vac";
-               row[2]  = 0.33;
-               row[3]  = 0.13;
-               row[4]  = 0.8;
-               row[5]  = 1.07;
-               row[6]  = 167;
-               row[7]  = 220;
-               row[8]  = 5;
-               row[9]  = 28.5;
-               row[10] = 28800;
-               row[11] = 151;
-               row[12] = 200;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Wet Vac";
+               row[3]  = 0.33;
+               row[4]  = 0.13;
+               row[5]  = 0.8;
+               row[6]  = 1.07;
+               row[7]  = 167;
+               row[8]  = 220;
+               row[9]  = 5;
+               row[10] = 28.5;
+               row[11] = 28800;
+               row[12] = 151;
+               row[13] = 200;
                
             elif str_sample_type == "Sponge":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Sponge";
-               row[2]  = 0.12;
-               row[3]  = 0.09;
-               row[4]  = 0.7;
-               row[5]  = 0.99;
-               row[6]  = 46.87;
-               row[7]  = 343.03;
-               row[8]  = 0.1;
-               row[9]  = 4.3;
-               row[10] = 100;
-               row[11] = 118;
-               row[12] = 239;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Sponge";
+               row[3]  = 0.12;
+               row[4]  = 0.09;
+               row[5]  = 0.7;
+               row[6]  = 0.99;
+               row[7]  = 46.87;
+               row[8]  = 343.03;
+               row[9]  = 0.1;
+               row[10] = 4.3;
+               row[11] = 100;
+               row[12] = 118;
+               row[13] = 239;
                
             elif str_sample_type == "Robot":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Robot";
-               row[2]  = 0.33;
-               row[3]  = 0.3;
-               row[4]  = 0.7;
-               row[5]  = 1.12;
-               row[6]  = 400;
-               row[7]  = 267;
-               row[8]  = 0.5;
-               row[9]  = 10.5;
-               row[10] = 144000;
-               row[11] = 200;
-               row[12] = 288;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Robot";
+               row[3]  = 0.33;
+               row[4]  = 0.3;
+               row[5]  = 0.7;
+               row[6]  = 1.12;
+               row[7]  = 400;
+               row[8]  = 267;
+               row[9]  = 0.5;
+               row[10] = 10.5;
+               row[11] = 144000;
+               row[12] = 200;
+               row[13] = 288;
                
             elif str_sample_type == "Aggressive Air":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Aggressive Air";
-               row[2]  = 0.33;
-               row[3]  = 0.6;
-               row[4]  = 0.5;
-               row[5]  = 1.12;
-               row[6]  = 207;
-               row[7]  = 267;
-               row[8]  = 0.1;
-               row[9]  = 5;
-               row[10] = 12000;
-               row[11] = 118;
-               row[12] = 239;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Aggressive Air";
+               row[3]  = 0.33;
+               row[4]  = 0.6;
+               row[5]  = 0.5;
+               row[6]  = 1.12;
+               row[7]  = 207;
+               row[8]  = 267;
+               row[9]  = 0.1;
+               row[10]  = 5;
+               row[11] = 12000;
+               row[12] = 118;
+               row[13] = 239;
                
             elif str_sample_type == "Swab":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Swab";
-               row[2]  = 0.12;
-               row[3]  = 0.07;
-               row[4]  = 0.7;
-               row[5]  = 0.89;
-               row[6]  = 21;
-               row[7]  = 219;
-               row[8]  = 0.01;
-               row[9]  = 2;
-               row[10] = 4;
-               row[11] = 118;
-               row[12] = 239;
+               row[1]  = '{' + str(uuid.uuid4()) + '}';
+               row[2]  = "Swab";
+               row[3]  = 0.12;
+               row[4]  = 0.07;
+               row[5]  = 0.7;
+               row[6]  = 0.89;
+               row[7]  = 21;
+               row[8]  = 219;
+               row[9]  = 0.01;
+               row[10] = 2;
+               row[11] = 4;
+               row[12] = 118;
+               row[13] = 239;
             
             cursor.updateRow(row);
 
@@ -679,10 +707,11 @@ class ContaminationResults(object):
       dz_addfields(
           in_table = scratch_full_o
          ,field_description = [
-             ['GLOBALID'           ,'TEXT'  ,'GlobalID'         ,40  ,None,'']
-            ,['TYPE'               ,'TEXT'  ,'Type'             ,255 ,None,'']
-            ,['CFU'                ,'LONG'  ,'CFU'              ,None,None,'']
-            ,['Notes'              ,'TEXT'  ,'Notes'            ,255 ,None,'']
+             ['GLOBALID'            ,'GUID'  ,'GlobalID'            ,None,None,'']
+            ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent_Identifier',None,None,'']
+            ,['TYPE'                ,'TEXT'  ,'Type'                ,255 ,None,'']
+            ,['CFU'                 ,'LONG'  ,'CFU'                 ,None,None,'']
+            ,['Notes'               ,'TEXT'  ,'Notes'               ,255 ,None,'']
           ]
       );
 
@@ -707,6 +736,8 @@ class ContaminationResults(object):
          name = map.getInputFieldName(0);
          if name == "CFU":
             map.mergeRule = "Max";
+         if name == "PERMANENT_IDENTIFIER":
+            map.mergeRule = "First";
          if name == "SCENARIOID":
             map.mergeRule = "First";
          if name == "NOTES":
@@ -724,7 +755,13 @@ class ContaminationResults(object):
 
       #########################################################################
       # Sampling Results
-      flds = ['GLOBALID','TYPE','CFU','NOTES'];
+      flds = [
+          "GLOBALID"
+         ,"PERMANENT_IDENTIFIER"
+         ,"TYPE"
+         ,"CFU"
+         ,"NOTES"
+      ];
       
       with arcpy.da.InsertCursor(
           in_table    = scratch_full_o
@@ -738,13 +775,14 @@ class ContaminationResults(object):
          
             for row in search_curs:
             
-               if row[2] is not None:
+               if row[3] is not None:
                
                   insert_curs.insertRow((
                       '{' + str(uuid.uuid4()) + '}'
                      ,row[1]
                      ,row[2]
                      ,row[3]
+                     ,row[4]
                   ));
                   
       #########################################################################
@@ -950,33 +988,34 @@ def sampling_scratch_fc(p_preset):
    dz_addfields(
        in_table = scratch_full_o
       ,field_description = [
-          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
-         ,['TYPE'               ,'TEXT'  ,'Sampling Method Type'        ,255 ,None,'']
-         ,['TTPK'               ,'DOUBLE','Time to Prepare Kits'        ,None,None,'']
-         ,['TTC'                ,'DOUBLE','Time to Collect'             ,None,None,'']
-         ,['TTA'                ,'DOUBLE','Time to Analyze'             ,None,None,'']
-         ,['TTPS'               ,'DOUBLE','Total Time per Sample'       ,None,None,'']
-         ,['LOD_P'              ,'DOUBLE','Limit of Detection Porous'   ,None,None,'']
-         ,['LOD_NON'            ,'DOUBLE','Limit of Detection Nonporous',None,None,'']
-         ,['MCPS'               ,'DOUBLE','Material Cost per Sample'    ,None,None,'']
-         ,['TCPS'               ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
-         ,['WVPS'               ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
-         ,['WWPS'               ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
-         ,['CFU'                ,'DOUBLE','CFU'                         ,None,None,'']
-         ,['SA'                 ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
-         ,['AA'                 ,'DOUBLE','AA'                          ,None,None,'']
-         ,['AC'                 ,'LONG'  ,'AC'                          ,None,None,'']
-         ,['ITER'               ,'LONG'  ,'ITER'                        ,None,None,'']
-         ,['Notes'              ,'TEXT'  ,'Notes'                       ,2000,None,'']
-         ,['ALC'                ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
-         ,['AMC'                ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
-         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
-         ,['CREATEDDATE'        ,'DATE'  ,'Created Date'                ,None,None,'']
-         ,['UPDATEDDATE'        ,'DATE'  ,'Updated Date'                ,None,None,'']
-         ,['USERNAME'           ,'TEXT'  ,'Username'                    ,255 ,None,'']
-         ,['ORGANIZATION'       ,'TEXT'  ,'Organization'                ,255 ,None,'']
-         ,['SURFACEAREAUNIT'    ,'TEXT'  ,'Surface Area Unit'           ,255 ,None,'']
-         ,['ELEVATIONSERIES'    ,'TEXT'  ,'Elevation Series'            ,255 ,None,'']
+          ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,None,None,'']
+         ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
+         ,['TYPE'                ,'TEXT'  ,'Sampling Method Type'        ,255 ,None,'']
+         ,['TTPK'                ,'DOUBLE','Time to Prepare Kits'        ,None,None,'']
+         ,['TTC'                 ,'DOUBLE','Time to Collect'             ,None,None,'']
+         ,['TTA'                 ,'DOUBLE','Time to Analyze'             ,None,None,'']
+         ,['TTPS'                ,'DOUBLE','Total Time per Sample'       ,None,None,'']
+         ,['LOD_P'               ,'DOUBLE','Limit of Detection Porous'   ,None,None,'']
+         ,['LOD_NON'             ,'DOUBLE','Limit of Detection Nonporous',None,None,'']
+         ,['MCPS'                ,'DOUBLE','Material Cost per Sample'    ,None,None,'']
+         ,['TCPS'                ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
+         ,['WVPS'                ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
+         ,['WWPS'                ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
+         ,['CFU'                 ,'DOUBLE','CFU'                         ,None,None,'']
+         ,['SA'                  ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
+         ,['AA'                  ,'DOUBLE','AA'                          ,None,None,'']
+         ,['AC'                  ,'LONG'  ,'AC'                          ,None,None,'']
+         ,['ITER'                ,'LONG'  ,'ITER'                        ,None,None,'']
+         ,['Notes'               ,'TEXT'  ,'Notes'                       ,2000,None,'']
+         ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
+         ,['AMC'                 ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
+         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CREATEDDATE'         ,'DATE'  ,'Created Date'                ,None,None,'']
+         ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                ,None,None,'']
+         ,['USERNAME'            ,'TEXT'  ,'Username'                    ,255 ,None,'']
+         ,['ORGANIZATION'        ,'TEXT'  ,'Organization'                ,255 ,None,'']
+         ,['SURFACEAREAUNIT'     ,'TEXT'  ,'Surface Area Unit'           ,255 ,None,'']
+         ,['ELEVATIONSERIES'     ,'TEXT'  ,'Elevation Series'            ,255 ,None,'']
        ]
    );
    
@@ -1024,10 +1063,11 @@ def contamination_scratch_fc(p_preset):
    dz_addfields(
        in_table = scratch_full_o
       ,field_description = [
-          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
-         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
-         ,['CFU'                ,'DOUBLE','CFU'                         ,255 ,None,'']
-         ,['NOTES'              ,'TEXT'  ,'Notes'                       ,255 ,None,'']
+          ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
+         ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
+         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CFU'                 ,'DOUBLE','CFU'                         ,255 ,None,'']
+         ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
        ]
    );
    
@@ -1075,9 +1115,10 @@ def aoi_scratch_fc(p_preset):
    dz_addfields(
        in_table = scratch_full_o
       ,field_description = [
-          ['GLOBALID'           ,'TEXT'  ,'GlobalID'                    ,40  ,None,'']
-         ,['SCENARIONAME'       ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
-         ,['NOTES'              ,'TEXT'  ,'Notes'                       ,255 ,None,'']
+          ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
+         ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
+         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
        ]
    );
    
