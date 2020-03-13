@@ -677,15 +677,13 @@ export function useCalculatePlan() {
     };
 
     // display loading spinner for 1 second
-    setTimeout(() => {
-      setCalculateResults((calculateResults: CalculateResultsType) => {
-        return {
-          status: 'success',
-          panelOpen: calculateResults.panelOpen,
-          data: resultObject,
-        };
-      });
-    }, 500);
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        status: 'success',
+        panelOpen: calculateResults.panelOpen,
+        data: resultObject,
+      };
+    });
   }, [
     calcGraphics,
     totals,
