@@ -305,7 +305,6 @@ function MapWidgets({ mapView }: Props) {
 
   // Creates the SketchViewModel
   React.useEffect(() => {
-    console.log('aoiSketchLayer: ', aoiSketchLayer);
     if (!aoiSketchLayer) return;
     if (aoiSketchVM) return;
     const svm = new SketchViewModel({
@@ -354,7 +353,6 @@ function MapWidgets({ mapView }: Props) {
 
           // place the graphic on the map when the drawing is complete
           if (event.state === 'complete') {
-            console.log('create event: ', event);
             // get the button and it's id
             const button = document.querySelector('.sketch-button-selected');
             const id = button && (button.id as SampleType);
@@ -430,7 +428,6 @@ function MapWidgets({ mapView }: Props) {
       sketchViewModel.on('update', (event) => {
         // the updates have completed add them to the edits variable
         if (event.state === 'complete' || event.state === 'cancel') {
-          console.log('update event: ', event);
           // fire the update event if event.state is complete.
           if (event.state === 'complete') setUpdateSketchEvent(event);
 
@@ -478,7 +475,6 @@ function MapWidgets({ mapView }: Props) {
       // is now an option.
       const tempSketchVM = sketchViewModel as any;
       tempSketchVM.on('delete', (event: any) => {
-        console.log('delete event: ', event);
         setUpdateSketchEvent(event);
       });
     },
@@ -529,24 +525,17 @@ function MapWidgets({ mapView }: Props) {
     const changes =
       type === 'add' ? [updateSketchEvent.graphic] : updateSketchEvent.graphics;
 
-    console.log(
-      'updateSketchEvent.graphic.layer.id: ',
-      updateSketchEvent.graphic.layer.id,
-    );
-
     // look up the layer for this event
     let updateLayer: LayerType | null = null;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
-      console.log(`${layer.layerId} - ${updateSketchEvent.graphic.layer.id}`);
       if (layer.layerId === updateSketchEvent.graphic.layer.id) {
         updateLayer = layer;
         break;
       }
     }
 
-    console.log('updateLayer: ', updateLayer);
-
+    // save the layer changes
     if (updateLayer) {
       // make a copy of the edits context variable
       const editsCopy = updateLayerEdits({
