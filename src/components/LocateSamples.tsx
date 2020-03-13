@@ -697,6 +697,7 @@ function LocateSamples() {
                 <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
                 <Select
                   inputId="aoi-mask-select"
+                  isClearable={true}
                   value={aoiSketchLayer}
                   onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
                   options={layers.filter(
@@ -759,6 +760,7 @@ function LocateSamples() {
             <div>
               <Select
                 inputId="contamination-map-select"
+                isClearable={true}
                 value={contaminationMap}
                 onChange={(ev) => setContaminationMap(ev as LayerType)}
                 options={layers.filter(
