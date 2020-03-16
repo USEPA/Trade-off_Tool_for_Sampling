@@ -8,6 +8,8 @@ import Select from 'react-select';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
@@ -88,6 +90,7 @@ const selectStyles = css`
 // --- components (FilePanel) ---
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
+  const { goTo, goToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -119,10 +122,29 @@ function FilePanel() {
   const [generateCalled, setGenerateCalled] = React.useState(false);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
 
+  const layerOptions: LayerSelectType[] = [
+    { value: 'Contamination Map', label: 'Contamination Map' },
+    { value: 'Samples', label: 'Samples' },
+    { value: 'Reference Layer', label: 'Reference Layer' },
+    { value: 'Area of Interest', label: 'Area of Interest' },
+    { value: 'VSP', label: 'VSP' },
+  ];
+
   const [
     layerType,
     setLayerType, //
   ] = React.useState<LayerSelectType | null>(null);
+
+  // Handle navigation options
+  React.useEffect(() => {
+    if (goTo !== 'addData' || goToOptions?.from !== 'file') return;
+
+    let optionValue: LayerSelectType | null = null;
+    layerOptions.forEach((option) => {
+      if (option.value === goToOptions.layerType) optionValue = option;
+    });
+    if (optionValue) setLayerType(optionValue);
+  }, [goTo, goToOptions, layerOptions]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -744,13 +766,7 @@ function FilePanel() {
         css={selectStyles}
         value={layerType}
         onChange={(ev) => setLayerType(ev as LayerSelectType)}
-        options={[
-          { value: 'Contamination Map', label: 'Contamination Map' },
-          { value: 'Samples', label: 'Samples' },
-          { value: 'Reference Layer', label: 'Reference Layer' },
-          { value: 'Area of Interest', label: 'Area of Interest' },
-          { value: 'VSP', label: 'VSP' },
-        ]}
+        options={layerOptions}
       />
       {layerType && (
         <React.Fragment>

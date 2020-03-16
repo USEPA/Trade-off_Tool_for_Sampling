@@ -9,6 +9,7 @@ import MessageBox from 'components/MessageBox';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
@@ -222,6 +223,7 @@ type SampleSelectionType = {
 };
 
 function LocateSamples() {
+  const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
   const {
     contaminationMap,
     setContaminationMap, //
@@ -727,7 +729,17 @@ function LocateSamples() {
                       <span>Draw Area of Interest Mask</span>
                     </div>
                   </button>
-                  <button>Add</button>
+                  <button
+                    onClick={(ev) => {
+                      setGoTo('addData');
+                      setGoToOptions({
+                        from: 'file',
+                        layerType: 'Area of Interest',
+                      });
+                    }}
+                  >
+                    Add
+                  </button>
                 </div>
                 {generateRandomResponse.status === 'success' && (
                   <MessageBox

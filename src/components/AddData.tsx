@@ -7,6 +7,8 @@ import Select from 'react-select';
 import FilePanel from 'components/FilePanel';
 import SearchPanel from 'components/SearchPanel';
 import URLPanel from 'components/URLPanel';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 
 // --- styles (AddData) ---
 const panelSelectStyles = css`
@@ -24,14 +26,30 @@ type LocationType = {
 };
 
 function AddData() {
+  const { goTo, goToOptions } = React.useContext(NavigationContext);
+
+  const addFromOptions: LocationType[] = [
+    { value: 'search', label: 'Search for Layers' },
+    { value: 'url', label: 'Add Layer from Web' },
+    { value: 'file', label: 'Add Layer from File' },
+  ];
+
   // filters
   const [
     location,
     setLocation, //
-  ] = React.useState<LocationType>({
-    value: 'search',
-    label: 'Search for Layers',
-  });
+  ] = React.useState<LocationType>(addFromOptions[0]);
+
+  // Handle navigation options
+  React.useEffect(() => {
+    if (goTo !== 'addData' || !goToOptions?.from) return;
+
+    let optionValue: LocationType | null = null;
+    addFromOptions.forEach((option) => {
+      if (option.value === goToOptions.from) optionValue = option;
+    });
+    if (optionValue) setLocation(optionValue);
+  }, [goTo, goToOptions, addFromOptions]);
 
   return (
     <div css={panelContainer}>
@@ -41,11 +59,7 @@ function AddData() {
         data-testid="tots-add-data-select"
         value={location}
         onChange={(ev) => setLocation(ev as LocationType)}
-        options={[
-          { value: 'search', label: 'Search for Layers' },
-          { value: 'url', label: 'Add Layer from Web' },
-          { value: 'file', label: 'Add Layer from File' },
-        ]}
+        options={addFromOptions}
       />
       {location.value === 'search' && <SearchPanel />}
       {location.value === 'url' && <URLPanel />}
