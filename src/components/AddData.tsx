@@ -10,6 +10,17 @@ import URLPanel from 'components/URLPanel';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 
+type LocationType = {
+  value: 'search' | 'url' | 'file';
+  label: 'Search for Layers' | 'Add Layer from Web' | 'Add Layer from File';
+};
+
+const addFromOptions: LocationType[] = [
+  { value: 'search', label: 'Search for Layers' },
+  { value: 'url', label: 'Add Layer from Web' },
+  { value: 'file', label: 'Add Layer from File' },
+];
+
 // --- styles (AddData) ---
 const panelSelectStyles = css`
   margin-bottom: 10px;
@@ -20,19 +31,8 @@ const panelContainer = css`
 `;
 
 // --- components (AddData) ---
-type LocationType = {
-  value: 'search' | 'url' | 'file';
-  label: 'Search for Layers' | 'Add Layer from Web' | 'Add Layer from File';
-};
-
 function AddData() {
   const { goTo, goToOptions } = React.useContext(NavigationContext);
-
-  const addFromOptions: LocationType[] = [
-    { value: 'search', label: 'Search for Layers' },
-    { value: 'url', label: 'Add Layer from Web' },
-    { value: 'file', label: 'Add Layer from File' },
-  ];
 
   // filters
   const [
@@ -49,7 +49,7 @@ function AddData() {
       if (option.value === goToOptions.from) optionValue = option;
     });
     if (optionValue) setLocation(optionValue);
-  }, [goTo, goToOptions, addFromOptions]);
+  }, [goTo, goToOptions]);
 
   return (
     <div css={panelContainer}>

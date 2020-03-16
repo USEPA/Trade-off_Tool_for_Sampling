@@ -20,6 +20,14 @@ import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 
+const layerOptions: LayerSelectType[] = [
+  { value: 'Contamination Map', label: 'Contamination Map' },
+  { value: 'Samples', label: 'Samples' },
+  { value: 'Reference Layer', label: 'Reference Layer' },
+  { value: 'Area of Interest', label: 'Area of Interest' },
+  { value: 'VSP', label: 'VSP' },
+];
+
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
   width: 2em;
@@ -122,14 +130,6 @@ function FilePanel() {
   const [generateCalled, setGenerateCalled] = React.useState(false);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
 
-  const layerOptions: LayerSelectType[] = [
-    { value: 'Contamination Map', label: 'Contamination Map' },
-    { value: 'Samples', label: 'Samples' },
-    { value: 'Reference Layer', label: 'Reference Layer' },
-    { value: 'Area of Interest', label: 'Area of Interest' },
-    { value: 'VSP', label: 'VSP' },
-  ];
-
   const [
     layerType,
     setLayerType, //
@@ -144,7 +144,7 @@ function FilePanel() {
       if (option.value === goToOptions.layerType) optionValue = option;
     });
     if (optionValue) setLayerType(optionValue);
-  }, [goTo, goToOptions, layerOptions]);
+  }, [goTo, goToOptions]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
