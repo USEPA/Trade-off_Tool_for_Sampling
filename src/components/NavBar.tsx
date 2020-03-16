@@ -316,7 +316,12 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
-  const { sketchLayer, sketchVM } = React.useContext(SketchContext);
+  const {
+    sketchLayer,
+    sketchVM,
+    aoiSketchLayer,
+    aoiSketchVM,
+  } = React.useContext(SketchContext);
   const [
     currentPanel,
     setCurrentPanel, //
@@ -352,6 +357,17 @@ function NavBar({ height }: Props) {
       sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
   }, [currentPanel, sketchLayer, sketchVM]);
+
+  // Enable the aoi sketchVM for the Create Plan tab and disable for all others.
+  React.useEffect(() => {
+    if (!aoiSketchVM || !currentPanel) return;
+
+    if (currentPanel.value === 'locateSamples' && aoiSketchLayer?.sketchLayer) {
+      aoiSketchVM.layer = aoiSketchLayer.sketchLayer as __esri.GraphicsLayer;
+    } else {
+      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
+  }, [currentPanel, aoiSketchLayer, aoiSketchVM]);
 
   const [helpOpen, setHelpOpen] = React.useState(false);
 
