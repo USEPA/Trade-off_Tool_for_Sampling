@@ -10,7 +10,7 @@ import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 // types
 import { LayerType, LayerSelectType } from 'types/Layer';
 // config
@@ -107,6 +107,7 @@ function FilePanel() {
     Graphic,
     Geoprocessor,
     KMLLayer,
+    PopupTemplate,
     rendererJsonUtils,
     SpatialReference,
   } = useEsriModulesContext();
@@ -486,9 +487,19 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
+        // add a layer type to the graphic
+        if (!graphic?.attributes?.TYPE)
+          graphic.attributes['TYPE'] = layerType.value;
+
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;
         }
+
+        // generate a basic popup
+        graphic.popupTemplate = new PopupTemplate(
+          getSimplePopupTemplate(graphic.attributes),
+        );
+
         graphics.push(graphic);
       });
     });
@@ -533,6 +544,7 @@ function FilePanel() {
     Field,
     geometryJsonUtils,
     Graphic,
+    PopupTemplate,
     rendererJsonUtils,
 
     // app

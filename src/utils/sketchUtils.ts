@@ -198,3 +198,24 @@ export function updateLayerEdits({
 
   return editsCopy;
 }
+
+/**
+ * Creates a simple popup that contains all of the attributes on the
+ * graphic.
+ *
+ * @param attributes Attributes to be placed in the popup content
+ * @returns the json object to pass to the Esri PopupTemplate constructor.
+ */
+export function getSimplePopupTemplate(attributes: any) {
+  return {
+    title: '',
+    content: [
+      {
+        type: 'fields',
+        fieldInfos: Object.keys(attributes).map((key) => {
+          return { fieldName: key, label: key };
+        }),
+      },
+    ],
+  };
+}

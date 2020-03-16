@@ -16,7 +16,7 @@ import {
 } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
 
@@ -156,6 +156,10 @@ function FeatureTool({
 
   if (!sketchVM || selectedGraphicsIds.length === 0) return null;
 
+  // Workaround for activeComponent not existing on the SketchViewModel type.
+  const tempSketchVM = sketchVM as any;
+  const type = tempSketchVM?.activeComponent?.graphics?.[0]?.attributes?.TYPE;
+
   return (
     <div css={containerStyles}>
       <div css={headerStyles}>
@@ -172,6 +176,10 @@ function FeatureTool({
       </div>
       {selectedGraphicsIds.length === 1 && (
         <React.Fragment>
+          <div>
+            <label>Type: </label>
+            {type}
+          </div>
           <div>
             <label htmlFor="graphic-note">Note: </label>
             <br />
@@ -353,7 +361,8 @@ function MapWidgets({ mapView }: Props) {
         if (event.state === 'complete') {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
-          const id = button && (button.id as SampleType);
+          const id = button && button.id;
+          const key = id as SampleType;
           deactivateButtons();
 
           if (!id) {
@@ -365,22 +374,21 @@ function MapWidgets({ mapView }: Props) {
           }
 
           // get the predefined attributes using the id of the clicked button
+          if (id === 'aoi') {
+            graphic.attributes = {
+              OBJECTID: nextId.toString(),
+              NOTES: '',
+              TYPE: 'Area of Interest',
+            };
+          }
           graphic.attributes = {
-            ...sampleAttributes[id],
+            ...sampleAttributes[key],
             OBJECTID: nextId.toString(),
             NOTES: '',
           };
-          graphic.popupTemplate = new PopupTemplate({
-            title: '',
-            content: [
-              {
-                type: 'fields',
-                fieldInfos: Object.keys(graphic.attributes).map((key) => {
-                  return { fieldName: key, label: key };
-                }),
-              },
-            ],
-          });
+          graphic.popupTemplate = new PopupTemplate(
+            getSimplePopupTemplate(graphic.attributes),
+          );
           nextId = nextId + 1;
 
           // predefined boxes (sponge, micro vac and swab) need to be
