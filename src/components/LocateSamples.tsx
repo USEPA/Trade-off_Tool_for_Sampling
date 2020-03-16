@@ -340,6 +340,9 @@ function LocateSamples() {
   function sketchButtonClick(label: string) {
     if (!sketchVM) return;
 
+    // save changes from other sketchVM
+    if (aoiSketchVM) aoiSketchVM.complete();
+
     // determine whether the sketch button draws points or polygons
     let shapeType;
     if (predefinedBoxTypes.includes(label)) {
@@ -377,6 +380,9 @@ function LocateSamples() {
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
   function sketchAoiButtonClick() {
     if (!map || !aoiSketchVM) return;
+
+    // save changes from other sketchVM
+    if (sketchVM) sketchVM.complete();
 
     // activate the sketch tool
     aoiSketchVM.create('polygon');
