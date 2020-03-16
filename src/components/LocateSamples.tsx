@@ -281,7 +281,9 @@ function LocateSamples() {
     };
 
     // add the sketch layer to the map
-    setLayers([...layers, tempSketchLayer]);
+    setLayers((layers) => {
+      return [...layers, tempSketchLayer];
+    });
     map.add(graphicsLayer);
     setSketchLayer(tempSketchLayer);
   }, [GraphicsLayer, map, layers, setLayers, sketchLayer, setSketchLayer]);
@@ -318,7 +320,9 @@ function LocateSamples() {
     };
 
     // add the layer to the map
-    setLayers([...layers, aoiSketchLayer]);
+    setLayers((layers) => {
+      return [...layers, aoiSketchLayer];
+    });
     setAoiSketchLayer(aoiSketchLayer);
     map.add(graphicsLayer);
 
