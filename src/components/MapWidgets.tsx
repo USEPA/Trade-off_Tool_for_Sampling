@@ -380,12 +380,15 @@ function MapWidgets({ mapView }: Props) {
               NOTES: '',
               TYPE: 'Area of Interest',
             };
+          } else {
+            graphic.attributes = {
+              ...sampleAttributes[key],
+              OBJECTID: nextId.toString(),
+              NOTES: '',
+            };
           }
-          graphic.attributes = {
-            ...sampleAttributes[key],
-            OBJECTID: nextId.toString(),
-            NOTES: '',
-          };
+
+          // add a popup template to the graphic
           graphic.popupTemplate = new PopupTemplate(
             getSimplePopupTemplate(graphic.attributes),
           );
