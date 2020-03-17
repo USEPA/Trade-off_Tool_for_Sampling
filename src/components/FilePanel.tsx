@@ -12,7 +12,11 @@ import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
-import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  generateUUID,
+  getSimplePopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 // types
 import { LayerType, LayerSelectType } from 'types/Layer';
 // config
@@ -514,6 +518,13 @@ function FilePanel() {
         // add a layer type to the graphic
         if (!graphic?.attributes?.TYPE)
           graphic.attributes['TYPE'] = layerType.value;
+
+        // add a permanent id to the graphic
+        if (!graphic?.attributes?.PERMANENT_IDENTIFIER) {
+          const uuid = generateUUID();
+          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+          graphic.attributes['GLOBALID'] = uuid;
+        }
 
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;

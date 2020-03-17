@@ -306,6 +306,11 @@ function Calculate() {
           alias: 'OBJECTID',
         },
         {
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'PERMANENT_IDENTIFIER',
+        },
+        {
           name: 'GLOBALID',
           type: 'guid',
           alias: 'GlobalID',
@@ -444,13 +449,12 @@ function Calculate() {
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
           // update the cfu attribute of the graphics
           res.results[0].value.features.forEach((resFeature: any) => {
-            const feature = layer.graphics.find(
-              (graphic) =>
-                String(graphic.attributes.OBJECTID) ===
-                  String(resFeature.attributes.OBJECTID) &&
-                String(graphic.attributes.GLOBALID) ===
-                  String(resFeature.attributes.GLOBALID),
-            );
+            const feature = layer.graphics.find((graphic) => {
+              return (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                resFeature.attributes.PERMANENT_IDENTIFIER
+              );
+            });
 
             if (feature) {
               feature.attributes.CFU = resFeature.attributes.CFU;

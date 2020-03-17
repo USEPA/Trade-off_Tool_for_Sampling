@@ -16,7 +16,11 @@ import {
 } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  generateUUID,
+  getSimplePopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
 
@@ -377,9 +381,12 @@ function MapWidgets({ mapView }: Props) {
           }
 
           // get the predefined attributes using the id of the clicked button
+          const uuid = generateUUID();
           if (id === 'aoi') {
             graphic.attributes = {
               OBJECTID: nextId.toString(),
+              PERMANENT_IDENTIFIER: uuid,
+              GLOBALID: uuid,
               NOTES: '',
               TYPE: 'Area of Interest',
             };
@@ -387,6 +394,8 @@ function MapWidgets({ mapView }: Props) {
             graphic.attributes = {
               ...sampleAttributes[key],
               OBJECTID: nextId.toString(),
+              PERMANENT_IDENTIFIER: uuid,
+              GLOBALID: uuid,
               NOTES: '',
             };
           }
@@ -475,7 +484,7 @@ function MapWidgets({ mapView }: Props) {
         let selectedGraphicsIds: Array<string> = [];
         if (event.state !== 'cancel' && event.graphics) {
           event.graphics.forEach((graphic) => {
-            selectedGraphicsIds.push(graphic.attributes.OBJECTID);
+            selectedGraphicsIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
           });
         }
         setSelectedGraphicsIds(selectedGraphicsIds);

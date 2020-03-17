@@ -26,6 +26,7 @@ export const SampleSelectOptions: SampleSelectType[] = [
 
 type SampleProperties =
   | 'OBJECTID'
+  | 'PERMANENT_IDENTIFIER'
   | 'GLOBALID'
   | 'TYPE'
   | 'SA'
@@ -56,6 +57,7 @@ type Attributes = {
 const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Sponge',
     SA: '100',
@@ -79,6 +81,7 @@ const sampleAttributes: Attributes = {
   },
   'Micro Vac': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Micro Vac',
     SA: '144',
@@ -102,6 +105,7 @@ const sampleAttributes: Attributes = {
   },
   'Wet Vac': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Wet Vac',
     SA: '28800',
@@ -125,6 +129,7 @@ const sampleAttributes: Attributes = {
   },
   Robot: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Robot',
     SA: '144000',
@@ -148,6 +153,7 @@ const sampleAttributes: Attributes = {
   },
   'Aggressive Air': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Aggressive Air',
     SA: '12000',
@@ -171,6 +177,7 @@ const sampleAttributes: Attributes = {
   },
   Swab: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Swab',
     SA: '4',
