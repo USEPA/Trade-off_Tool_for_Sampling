@@ -98,7 +98,7 @@ const centerTextStyles = css`
 const sketchAoiButtonStyles = css`
   background-color: white;
   color: black;
-  margin-right: 5px;
+  margin: 0 5px 0 0;
 
   &:hover,
   &:focus {
@@ -122,6 +122,19 @@ const inlineMenuStyles = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
+`;
+
+const addButtonStyles = css`
+  margin: 0;
+  height: 38px; /* same height as ReactSelect */
+`;
+
+const contaminationMapSelectStyles = css`
+  width: 100%;
+`;
+
+const orStyles = css`
+  margin: 0 5px;
 `;
 
 const inputStyles = css`
@@ -734,6 +747,7 @@ function LocateSamples() {
                     </div>
                   </button>
                   <button
+                    css={addButtonStyles}
                     onClick={(ev) => {
                       setGoTo('addData');
                       setGoToOptions({
@@ -779,9 +793,10 @@ function LocateSamples() {
         <AccordionItem title={'Include Contamination Map (Optional)'}>
           <div css={panelContainer}>
             <label htmlFor="contamination-map-select">Contamination map</label>
-            <div>
+            <div css={inlineMenuStyles}>
               <Select
                 inputId="contamination-map-select"
+                css={contaminationMapSelectStyles}
                 isClearable={true}
                 value={contaminationMap}
                 onChange={(ev) => setContaminationMap(ev as LayerType)}
@@ -789,6 +804,19 @@ function LocateSamples() {
                   (layer: any) => layer.layerType === 'Contamination Map',
                 )}
               />
+              <em css={orStyles}>OR</em>
+              <button
+                css={addButtonStyles}
+                onClick={(ev) => {
+                  setGoTo('addData');
+                  setGoToOptions({
+                    from: 'file',
+                    layerType: 'Contamination Map',
+                  });
+                }}
+              >
+                Add
+              </button>
             </div>
           </div>
         </AccordionItem>

@@ -284,7 +284,7 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
-  const { goTo } = React.useContext(NavigationContext);
+  const { goTo, setGoTo } = React.useContext(NavigationContext);
   const {
     sketchLayer,
     sketchVM,
@@ -307,7 +307,9 @@ function NavBar({ height }: Props) {
 
     // open the panel if it was found
     if (goToPanel) setCurrentPanel(goToPanel);
-  }, [goTo]);
+
+    setGoTo('');
+  }, [goTo, setGoTo]);
 
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [expanded, setExpanded] = React.useState(false);

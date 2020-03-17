@@ -98,7 +98,7 @@ const selectStyles = css`
 // --- components (FilePanel) ---
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
-  const { goTo, goToOptions } = React.useContext(NavigationContext);
+  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -137,14 +137,16 @@ function FilePanel() {
 
   // Handle navigation options
   React.useEffect(() => {
-    if (goTo !== 'addData' || goToOptions?.from !== 'file') return;
+    if (goToOptions?.from !== 'file') return;
 
     let optionValue: LayerSelectType | null = null;
     layerOptions.forEach((option) => {
       if (option.value === goToOptions.layerType) optionValue = option;
     });
     if (optionValue) setLayerType(optionValue);
-  }, [goTo, goToOptions]);
+
+    setGoToOptions(null);
+  }, [goToOptions, setGoToOptions]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);

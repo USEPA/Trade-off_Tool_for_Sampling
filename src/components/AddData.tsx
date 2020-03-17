@@ -32,7 +32,7 @@ const panelContainer = css`
 
 // --- components (AddData) ---
 function AddData() {
-  const { goTo, goToOptions } = React.useContext(NavigationContext);
+  const { goToOptions } = React.useContext(NavigationContext);
 
   // filters
   const [
@@ -42,14 +42,14 @@ function AddData() {
 
   // Handle navigation options
   React.useEffect(() => {
-    if (goTo !== 'addData' || !goToOptions?.from) return;
+    if (!goToOptions?.from) return;
 
     let optionValue: LocationType | null = null;
     addFromOptions.forEach((option) => {
       if (option.value === goToOptions.from) optionValue = option;
     });
     if (optionValue) setLocation(optionValue);
-  }, [goTo, goToOptions]);
+  }, [goToOptions]);
 
   return (
     <div css={panelContainer}>
