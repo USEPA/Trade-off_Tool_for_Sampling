@@ -111,7 +111,7 @@ const saveButtonStyles = (status: SaveStatusType) => {
 
 // --- components (FeatureTool) ---
 type FeatureToolProps = {
-  sketchVM: __esri.SketchViewModel;
+  sketchVM: __esri.SketchViewModel | null;
   selectedGraphicsIds: Array<string>;
   onClick: (ev: React.MouseEvent<HTMLElement>, type: string) => void;
 };
@@ -351,7 +351,10 @@ function MapWidgets({ mapView }: Props) {
     setSelectedGraphicsIds, //
   ] = React.useState<Array<string>>([]);
   const setupEvents = React.useCallback(
-    (sketchViewModel: __esri.SketchViewModel) => {
+    (
+      sketchViewModel: __esri.SketchViewModel,
+      setter: React.Dispatch<React.SetStateAction<boolean>>,
+    ) => {
       let nextId = 1;
 
       sketchViewModel.on('create', (event) => {
@@ -434,6 +437,7 @@ function MapWidgets({ mapView }: Props) {
       });
 
       sketchViewModel.on('update', (event) => {
+        let isActive = true;
         // the updates have completed add them to the edits variable
         if (event.state === 'complete' || event.state === 'cancel') {
           // fire the update event if event.state is complete.
@@ -446,6 +450,7 @@ function MapWidgets({ mapView }: Props) {
               if (layer.popupEnabled) layer.popupEnabled = true;
             });
           }
+          isActive = false;
         }
 
         // Swab, Micro Vac, Wet Vac, etc.
@@ -474,6 +479,7 @@ function MapWidgets({ mapView }: Props) {
           });
         }
         setSelectedGraphicsIds(selectedGraphicsIds);
+        setter(isActive);
       });
 
       // handles deleting when the delete key is pressed
@@ -490,13 +496,14 @@ function MapWidgets({ mapView }: Props) {
   );
 
   // Setup the sketch view model events for the base sketchVM
+  const [sketchVMActive, setSketchVMActive] = React.useState(false);
   const [
     sketchEventsInitialized,
     setSketchEventsInitialized, //
   ] = React.useState(false);
   React.useEffect(() => {
     if (!sketchVM || sketchEventsInitialized) return;
-    setupEvents(sketchVM);
+    setupEvents(sketchVM, setSketchVMActive);
 
     setSketchEventsInitialized(true);
   }, [
@@ -507,13 +514,14 @@ function MapWidgets({ mapView }: Props) {
   ]);
 
   // Setup the sketch view model events for the Area of Interest (AOI) sketchVM
+  const [aoiSketchVMActive, setAoiSketchVMActive] = React.useState(false);
   const [
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized, //
   ] = React.useState(false);
   React.useEffect(() => {
     if (!aoiSketchVM || aoiSketchEventsInitialized) return;
-    setupEvents(aoiSketchVM);
+    setupEvents(aoiSketchVM, setAoiSketchVMActive);
 
     setAoiSketchEventsInitialized(true);
   }, [
@@ -522,6 +530,42 @@ function MapWidgets({ mapView }: Props) {
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized,
   ]);
+
+  // Get the active sketchVM
+  type SketchVMName = '' | 'sketchVM' | 'aoiSketchVM';
+  const [
+    targetSketchVM,
+    setTargetSketchVM, //
+  ] = React.useState<SketchVMName>('');
+  const [bothEqualSet, setBothEqualSet] = React.useState(false);
+  React.useEffect(() => {
+    let newTarget: SketchVMName = '';
+    let newBothEqualSet = bothEqualSet;
+
+    // determine what the current sketchVM is
+    if (sketchVMActive && aoiSketchVMActive) {
+      // switch to the latest sketchVM
+      if (targetSketchVM === 'sketchVM') newTarget = 'aoiSketchVM';
+      if (targetSketchVM === 'aoiSketchVM') newTarget = 'sketchVM';
+      newBothEqualSet = true;
+    } else if (sketchVMActive) {
+      newTarget = 'sketchVM';
+      newBothEqualSet = false;
+    } else if (aoiSketchVMActive) {
+      newTarget = 'aoiSketchVM';
+      newBothEqualSet = false;
+    } else {
+      newTarget = '';
+      newBothEqualSet = false;
+    }
+
+    // When both sketchVMs are active only change the targetVM once.
+    if (newBothEqualSet && bothEqualSet) return;
+
+    // set state if it changed
+    if (newTarget !== targetSketchVM) setTargetSketchVM(newTarget);
+    if (newBothEqualSet !== bothEqualSet) setBothEqualSet(newBothEqualSet);
+  }, [sketchVMActive, aoiSketchVMActive, targetSketchVM, bothEqualSet]);
 
   // save the updated graphic to the edits data structure for later publishing
   React.useEffect(() => {
@@ -572,20 +616,38 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, featureTool]);
 
   // Creates and adds the custom edit feature tool to the map.
+  const [
+    lastTargetSketchVM,
+    setLastTargetSketchVM, //
+  ] = React.useState<SketchVMName>('');
   React.useEffect(() => {
     if (!featureTool) return;
 
-    let localSketchVM: __esri.SketchViewModel | null = sketchVM;
-    let tempAoiSketchVM = aoiSketchVM as any;
-    if (tempAoiSketchVM?.activeComponent?.graphics?.length > 0) {
+    let localSketchLayer: LayerType | null = null;
+    let localSketchVM: __esri.SketchViewModel | null = null;
+    let otherSketchVM: __esri.SketchViewModel | null = null;
+
+    // get the last used sketchVM (to be tied to the FeatureTool)
+    if (targetSketchVM === 'sketchVM') {
+      localSketchVM = sketchVM;
+      localSketchLayer = sketchLayer;
+      otherSketchVM = aoiSketchVM;
+    }
+    if (targetSketchVM === 'aoiSketchVM') {
       localSketchVM = aoiSketchVM;
+      localSketchLayer = aoiSketchLayer;
+      otherSketchVM = sketchVM;
     }
 
-    if (!localSketchVM) return;
+    // complete any active sketches on the otherSketchVM
+    if (targetSketchVM !== lastTargetSketchVM) {
+      otherSketchVM?.complete();
+      setLastTargetSketchVM(targetSketchVM);
+    }
 
     // handles the sketch button clicks
     const handleClick = (ev: React.MouseEvent<HTMLElement>, type: string) => {
-      if (!localSketchVM || !sketchLayer) return;
+      if (!localSketchVM || !localSketchLayer) return;
 
       // set the clicked button as active until the drawing is complete
       deactivateButtons();
@@ -600,7 +662,7 @@ function MapWidgets({ mapView }: Props) {
           // make a copy of the edits context variable
           const editsCopy = updateLayerEdits({
             edits,
-            layer: sketchLayer,
+            layer: localSketchLayer,
             type: 'delete',
             changes: tempSketchVM.activeComponent.graphics,
           });
@@ -617,7 +679,7 @@ function MapWidgets({ mapView }: Props) {
           // make a copy of the edits context variable
           const editsCopy = updateLayerEdits({
             edits,
-            layer: sketchLayer,
+            layer: localSketchLayer,
             type: 'update',
             changes: tempSketchVM.activeComponent.graphics,
           });
@@ -640,9 +702,12 @@ function MapWidgets({ mapView }: Props) {
     sketchVM,
     aoiSketchVM,
     sketchLayer,
+    aoiSketchLayer,
     selectedGraphicsIds,
     edits,
     setEdits,
+    targetSketchVM,
+    lastTargetSketchVM,
   ]);
 
   // Gets the graphics to be highlighted and highlights them
