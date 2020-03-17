@@ -46,7 +46,14 @@ type SampleProperties =
   | 'AA'
   | 'AC'
   | 'ITER'
-  | 'CFU';
+  | 'CFU'
+  | 'SCENARIONAME'
+  | 'CREATEDDATE'
+  | 'UPDATEDDATE'
+  | 'USERNAME'
+  | 'ORGANIZATION'
+  | 'SURFACEAREAUNIT'
+  | 'ELEVATIONSERIES';
 
 type Attributes = {
   [key in SampleType]: {
@@ -78,6 +85,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Micro Vac': {
     OBJECTID: '-1',
@@ -102,6 +116,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Wet Vac': {
     OBJECTID: '-1',
@@ -126,6 +147,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   Robot: {
     OBJECTID: '-1',
@@ -150,6 +178,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Aggressive Air': {
     OBJECTID: '-1',
@@ -174,6 +209,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   Swab: {
     OBJECTID: '-1',
@@ -198,6 +240,13 @@ const sampleAttributes: Attributes = {
     AC: '0',
     ITER: '0',
     CFU: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
 };
 

@@ -502,7 +502,7 @@ function FilePanel() {
       }
 
       // get the features from the response and add the correct type value
-      layer.featureSet.features.forEach((feature: any) => {
+      layer.featureSet.features.forEach((feature: any, index: number) => {
         if (
           !feature?.geometry?.spatialReference &&
           file.esriFileType === 'kml'
@@ -519,11 +519,38 @@ function FilePanel() {
         if (!graphic?.attributes?.TYPE)
           graphic.attributes['TYPE'] = layerType.value;
 
-        // add a permanent id to the graphic
-        if (!graphic?.attributes?.PERMANENT_IDENTIFIER) {
-          const uuid = generateUUID();
+        // add ids to the graphic, if the graphic doesn't already have them
+        const uuid = generateUUID();
+        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
           graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+        }
+        if (!graphic.attributes.GLOBALID) {
           graphic.attributes['GLOBALID'] = uuid;
+        }
+        if (!graphic.attributes.OBJECTID) {
+          graphic.attributes['OBJECTID'] = index.toString();
+        }
+
+        // add sample layer specific attributes
+        if (layerType.value === 'Samples') {
+          const {
+            CFU,
+            SCENARIONAME,
+            CREATEDDATE,
+            UPDATEDDATE,
+            USERNAME,
+            ORGANIZATION,
+            SURFACEAREAUNIT,
+            ELEVATIONSERIES,
+          } = graphic.attributes;
+          if (!CFU) graphic.attributes['CFU'] = null;
+          if (!SCENARIONAME) graphic.attributes['SCENARIONAME'] = null;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
+          if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
+          if (!USERNAME) graphic.attributes['USERNAME'] = null;
+          if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
+          if (!SURFACEAREAUNIT) graphic.attributes['SURFACEAREAUNIT'] = null;
+          if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
         }
 
         if (graphic?.geometry?.type === 'polygon') {
