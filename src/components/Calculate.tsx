@@ -448,17 +448,21 @@ function Calculate() {
         if (res?.results?.[0]?.value?.features) {
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
           // update the cfu attribute of the graphics
-          res.results[0].value.features.forEach((resFeature: any) => {
-            const feature = layer.graphics.find((graphic) => {
-              return (
+          const resFeatures = res.results[0].value.features;
+          layer.graphics.forEach((graphic) => {
+            const resFeature = resFeatures.find(
+              (feature: any) =>
                 graphic.attributes.PERMANENT_IDENTIFIER ===
-                resFeature.attributes.PERMANENT_IDENTIFIER
-              );
-            });
+                feature.attributes.PERMANENT_IDENTIFIER,
+            );
 
-            if (feature) {
-              feature.attributes.CFU = resFeature.attributes.CFU;
+            // if the graphic was not found in the response, set cfu to null,
+            // otherwise use the cfu value found in the response.
+            let cfuValue = null;
+            if (resFeature) {
+              cfuValue = resFeature.attributes.CFU;
             }
+            graphic.attributes.CFU = cfuValue;
           });
 
           // make a copy of the edits context variable
