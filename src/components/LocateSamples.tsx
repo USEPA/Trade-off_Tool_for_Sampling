@@ -6,6 +6,7 @@ import Select from 'react-select';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import MessageBox from 'components/MessageBox';
+import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -37,6 +38,13 @@ function getSketchableAoiLayers(layers: LayerType[]) {
 
 // --- styles (SketchButton) ---
 const panelContainer = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+`;
+
+const sectionContainer = css`
   padding: 20px;
 `;
 
@@ -547,281 +555,292 @@ function LocateSamples() {
   }
 
   return (
-    <React.Fragment>
-      <div css={panelContainer}>
-        <div css={headerContainer}>
-          <h2>Create Plan</h2>
-          <button
-            css={deleteButtonStyles}
-            onClick={() => {
-              if (!sketchVM || !sketchLayer) return;
+    <div css={panelContainer}>
+      <div>
+        <div css={sectionContainer}>
+          <div css={headerContainer}>
+            <h2>Create Plan</h2>
+            <button
+              css={deleteButtonStyles}
+              onClick={() => {
+                if (!sketchVM || !sketchLayer) return;
 
-              // make a copy of the edits context variable
-              const editsCopy = updateLayerEdits({
-                edits,
-                layer: sketchLayer,
-                type: 'delete',
-                changes: sketchVM.layer.graphics,
-              });
+                // make a copy of the edits context variable
+                const editsCopy = updateLayerEdits({
+                  edits,
+                  layer: sketchLayer,
+                  type: 'delete',
+                  changes: sketchVM.layer.graphics,
+                });
 
-              setEdits(editsCopy);
+                setEdits(editsCopy);
 
-              sketchVM.layer.removeAll();
-            }}
-          >
-            <i className="fas fa-trash-alt" />
-            <br />
-            Delete All Samples
-          </button>
+                sketchVM.layer.removeAll();
+              }}
+            >
+              <i className="fas fa-trash-alt" />
+              <br />
+              Delete All Samples
+            </button>
+          </div>
         </div>
-      </div>
-      <div css={lineSeparatorStyles} />
-      <div css={panelContainer}>
-        <label htmlFor="sampling-layer-select">Specify Sampling Layer</label>
-        <Select
-          inputId="sampling-layer-select"
-          css={layerSelectStyles}
-          value={sketchLayer}
-          onChange={(ev) => setSketchLayer(ev as LayerType)}
-          options={getSketchableLayers(layers)}
-        />
+        <div css={lineSeparatorStyles} />
+        <div css={sectionContainer}>
+          <label htmlFor="sampling-layer-select">Specify Sampling Layer</label>
+          <Select
+            inputId="sampling-layer-select"
+            css={layerSelectStyles}
+            value={sketchLayer}
+            onChange={(ev) => setSketchLayer(ev as LayerType)}
+            options={getSketchableLayers(layers)}
+          />
 
-        {sketchLayer && (
-          <React.Fragment>
-            <label htmlFor="scenario-name-input">Scenario Name</label>
-            <input
-              id="scenario-name-input"
-              disabled={!sketchLayer}
-              css={inputStyles}
-              value={sketchLayer.scenarioName}
-              onChange={(ev) => {
-                const newValue = ev.target.value;
-                setSaveStatus('changes');
-                if (sketchLayer) {
-                  setSketchLayer((sketchLayer: LayerType | null) => {
-                    if (!sketchLayer) return sketchLayer;
-                    return { ...sketchLayer, scenarioName: newValue };
-                  });
-                }
-              }}
-            />
-
-            <label htmlFor="scenario-description-input">
-              Scenario Description
-            </label>
-            <input
-              id="scenario-description-input"
-              disabled={!sketchLayer}
-              css={inputStyles}
-              value={sketchLayer.scenarioDescription}
-              onChange={(ev) => {
-                const newValue = ev.target.value;
-                setSaveStatus('changes');
-                if (sketchLayer) {
-                  setSketchLayer((sketchLayer: LayerType | null) => {
-                    if (!sketchLayer) return sketchLayer;
-                    return { ...sketchLayer, scenarioDescription: newValue };
-                  });
-                }
-              }}
-            />
-
-            <div css={saveButtonContainerStyles}>
-              <button
-                css={saveButtonStyles(saveStatus)}
-                disabled={saveStatus !== 'changes'}
-                onClick={(ev) => {
-                  if (sketchLayer) updateLayersState(sketchLayer);
+          {sketchLayer && (
+            <React.Fragment>
+              <label htmlFor="scenario-name-input">Scenario Name</label>
+              <input
+                id="scenario-name-input"
+                disabled={!sketchLayer}
+                css={inputStyles}
+                value={sketchLayer.scenarioName}
+                onChange={(ev) => {
+                  const newValue = ev.target.value;
+                  setSaveStatus('changes');
+                  if (sketchLayer) {
+                    setSketchLayer((sketchLayer: LayerType | null) => {
+                      if (!sketchLayer) return sketchLayer;
+                      return { ...sketchLayer, scenarioName: newValue };
+                    });
+                  }
                 }}
-              >
-                {(!saveStatus || saveStatus === 'changes') && 'Save'}
-                {saveStatus === 'success' && (
-                  <React.Fragment>
-                    <i className="fas fa-check" /> Saved
-                  </React.Fragment>
-                )}
-                {saveStatus === 'failure' && (
-                  <React.Fragment>
-                    <i className="fas fa-exclamation-triangle" /> Error
-                  </React.Fragment>
-                )}
-              </button>
-            </div>
-          </React.Fragment>
-        )}
-      </div>
-      <AccordionList>
-        <AccordionItem title={'Add Targeted Samples'} initiallyExpanded={true}>
-          <div css={sketchButtonContainerStyles}>
-            <SketchButton
-              label="Sponge"
-              iconClass="fas fa-pen-fancy"
-              onClick={() => sketchButtonClick('Sponge')}
-            />
-            <SketchButton
-              label="Micro Vac"
-              iconClass="fas fa-pen-fancy"
-              onClick={() => sketchButtonClick('Micro Vac')}
-            />
-            <SketchButton
-              label="Wet Vac"
-              iconClass="fas fa-draw-polygon"
-              onClick={() => sketchButtonClick('Wet Vac')}
-            />
-            <SketchButton
-              label="Robot"
-              iconClass="fas fa-draw-polygon"
-              onClick={() => sketchButtonClick('Robot')}
-            />
-            <SketchButton
-              label="Aggressive Air"
-              iconClass="fas fa-draw-polygon"
-              onClick={() => sketchButtonClick('Aggressive Air')}
-            />
-            <SketchButton
-              label="Swab"
-              iconClass="fas fa-pen-fancy"
-              onClick={() => sketchButtonClick('Swab')}
-            />
-          </div>
-        </AccordionItem>
-        <AccordionItem title={'Add Multiple Random Samples'}>
-          <div css={panelContainer}>
-            {sketchLayer?.layerType === 'VSP' && (
-              <MessageBox
-                severity="warning"
-                title="Cannot Use With VSP"
-                message="Multiple Random Samples cannot be used in combination with VSP-Created Sampling Plans"
               />
-            )}
-            {sketchLayer?.layerType !== 'VSP' && (
-              <React.Fragment>
-                <label htmlFor="number-of-samples-input">
-                  Number of Samples
-                </label>
-                <input
-                  id="number-of-samples-input"
-                  css={inputStyles}
-                  value={numberRandomSamples}
-                  onChange={(ev) => setNumberRandomSamples(ev.target.value)}
-                />
-                <label htmlFor="sample-type-select">Sample Type</label>
-                <Select
-                  inputId="sample-type-select"
-                  value={sampleType}
-                  onChange={(ev) => setSampleType(ev as SampleSelectionType)}
-                  options={[
-                    { value: 'Sponge', label: 'Sponge' },
-                    { value: 'Micro Vac', label: 'Micro Vac' },
-                    { value: 'Wet Vac', label: 'Wet Vac' },
-                    { value: 'Robot', label: 'Robot' },
-                    { value: 'Aggressive Air', label: 'Aggressive Air' },
-                    { value: 'Swab', label: 'Swab' },
-                  ]}
-                />
-                <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
-                <Select
-                  inputId="aoi-mask-select"
-                  isClearable={true}
-                  value={aoiSketchLayer}
-                  onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
-                  options={layers.filter(
-                    (layer) => layer.layerType === 'Area of Interest',
+
+              <label htmlFor="scenario-description-input">
+                Scenario Description
+              </label>
+              <input
+                id="scenario-description-input"
+                disabled={!sketchLayer}
+                css={inputStyles}
+                value={sketchLayer.scenarioDescription}
+                onChange={(ev) => {
+                  const newValue = ev.target.value;
+                  setSaveStatus('changes');
+                  if (sketchLayer) {
+                    setSketchLayer((sketchLayer: LayerType | null) => {
+                      if (!sketchLayer) return sketchLayer;
+                      return { ...sketchLayer, scenarioDescription: newValue };
+                    });
+                  }
+                }}
+              />
+
+              <div css={saveButtonContainerStyles}>
+                <button
+                  css={saveButtonStyles(saveStatus)}
+                  disabled={saveStatus !== 'changes'}
+                  onClick={(ev) => {
+                    if (sketchLayer) updateLayersState(sketchLayer);
+                  }}
+                >
+                  {(!saveStatus || saveStatus === 'changes') && 'Save'}
+                  {saveStatus === 'success' && (
+                    <React.Fragment>
+                      <i className="fas fa-check" /> Saved
+                    </React.Fragment>
                   )}
+                  {saveStatus === 'failure' && (
+                    <React.Fragment>
+                      <i className="fas fa-exclamation-triangle" /> Error
+                    </React.Fragment>
+                  )}
+                </button>
+              </div>
+            </React.Fragment>
+          )}
+        </div>
+        <AccordionList>
+          <AccordionItem
+            title={'Add Targeted Samples'}
+            initiallyExpanded={true}
+          >
+            <div css={sketchButtonContainerStyles}>
+              <SketchButton
+                label="Sponge"
+                iconClass="fas fa-pen-fancy"
+                onClick={() => sketchButtonClick('Sponge')}
+              />
+              <SketchButton
+                label="Micro Vac"
+                iconClass="fas fa-pen-fancy"
+                onClick={() => sketchButtonClick('Micro Vac')}
+              />
+              <SketchButton
+                label="Wet Vac"
+                iconClass="fas fa-draw-polygon"
+                onClick={() => sketchButtonClick('Wet Vac')}
+              />
+              <SketchButton
+                label="Robot"
+                iconClass="fas fa-draw-polygon"
+                onClick={() => sketchButtonClick('Robot')}
+              />
+              <SketchButton
+                label="Aggressive Air"
+                iconClass="fas fa-draw-polygon"
+                onClick={() => sketchButtonClick('Aggressive Air')}
+              />
+              <SketchButton
+                label="Swab"
+                iconClass="fas fa-pen-fancy"
+                onClick={() => sketchButtonClick('Swab')}
+              />
+            </div>
+          </AccordionItem>
+          <AccordionItem title={'Add Multiple Random Samples'}>
+            <div css={sectionContainer}>
+              {sketchLayer?.layerType === 'VSP' && (
+                <MessageBox
+                  severity="warning"
+                  title="Cannot Use With VSP"
+                  message="Multiple Random Samples cannot be used in combination with VSP-Created Sampling Plans"
                 />
-                <br />
-                <div css={centerTextStyles}>
-                  <em>OR</em>
-                </div>
-                <div css={inlineMenuStyles}>
-                  <button
-                    id="aoi"
-                    title="Draw Area of Interest Mask"
-                    className="sketch-button"
-                    onClick={sketchAoiButtonClick}
-                    css={sketchAoiButtonStyles}
-                  >
-                    <div css={sketchAoiTextStyles}>
-                      <i className="fas fa-draw-polygon" />{' '}
-                      <span>Draw Area of Interest Mask</span>
-                    </div>
-                  </button>
-                  <button
-                    css={addButtonStyles}
-                    onClick={(ev) => {
-                      setGoTo('addData');
-                      setGoToOptions({
-                        from: 'file',
-                        layerType: 'Area of Interest',
-                      });
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-                {generateRandomResponse.status === 'success' && (
-                  <MessageBox
-                    severity="info"
-                    title="Samples Added"
-                    message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.name}" layer`}
+              )}
+              {sketchLayer?.layerType !== 'VSP' && (
+                <React.Fragment>
+                  <label htmlFor="number-of-samples-input">
+                    Number of Samples
+                  </label>
+                  <input
+                    id="number-of-samples-input"
+                    css={inputStyles}
+                    value={numberRandomSamples}
+                    onChange={(ev) => setNumberRandomSamples(ev.target.value)}
                   />
-                )}
-                {generateRandomResponse.status === 'failure' && (
-                  <MessageBox
-                    severity="error"
-                    title="Web Service Error"
-                    message="An error occurred in the web service"
+                  <label htmlFor="sample-type-select">Sample Type</label>
+                  <Select
+                    inputId="sample-type-select"
+                    value={sampleType}
+                    onChange={(ev) => setSampleType(ev as SampleSelectionType)}
+                    options={[
+                      { value: 'Sponge', label: 'Sponge' },
+                      { value: 'Micro Vac', label: 'Micro Vac' },
+                      { value: 'Wet Vac', label: 'Wet Vac' },
+                      { value: 'Robot', label: 'Robot' },
+                      { value: 'Aggressive Air', label: 'Aggressive Air' },
+                      { value: 'Swab', label: 'Swab' },
+                    ]}
                   />
-                )}
-                {numberRandomSamples &&
-                  aoiSketchLayer?.sketchLayer.type === 'graphics' &&
-                  aoiSketchLayer.sketchLayer.graphics.length > 0 && (
-                    <button css={submitButtonStyles} onClick={randomSamples}>
-                      {generateRandomResponse.status !== 'fetching' && 'Submit'}
-                      {generateRandomResponse.status === 'fetching' && (
-                        <React.Fragment>
-                          <i className="fas fa-spinner fa-pulse" />
-                          &nbsp;&nbsp;Loading...
-                        </React.Fragment>
-                      )}
+                  <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
+                  <Select
+                    inputId="aoi-mask-select"
+                    isClearable={true}
+                    value={aoiSketchLayer}
+                    onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
+                    options={layers.filter(
+                      (layer) => layer.layerType === 'Area of Interest',
+                    )}
+                  />
+                  <br />
+                  <div css={centerTextStyles}>
+                    <em>OR</em>
+                  </div>
+                  <div css={inlineMenuStyles}>
+                    <button
+                      id="aoi"
+                      title="Draw Area of Interest Mask"
+                      className="sketch-button"
+                      onClick={sketchAoiButtonClick}
+                      css={sketchAoiButtonStyles}
+                    >
+                      <div css={sketchAoiTextStyles}>
+                        <i className="fas fa-draw-polygon" />{' '}
+                        <span>Draw Area of Interest Mask</span>
+                      </div>
                     </button>
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        setGoTo('addData');
+                        setGoToOptions({
+                          from: 'file',
+                          layerType: 'Area of Interest',
+                        });
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {generateRandomResponse.status === 'success' && (
+                    <MessageBox
+                      severity="info"
+                      title="Samples Added"
+                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.name}" layer`}
+                    />
                   )}
-              </React.Fragment>
-            )}
-          </div>
-        </AccordionItem>
-        <AccordionItem title={'Include Contamination Map (Optional)'}>
-          <div css={panelContainer}>
-            <label htmlFor="contamination-map-select">Contamination map</label>
-            <div css={inlineMenuStyles}>
-              <Select
-                inputId="contamination-map-select"
-                css={contaminationMapSelectStyles}
-                isClearable={true}
-                value={contaminationMap}
-                onChange={(ev) => setContaminationMap(ev as LayerType)}
-                options={layers.filter(
-                  (layer: any) => layer.layerType === 'Contamination Map',
-                )}
-              />
-              <em css={orStyles}>OR</em>
-              <button
-                css={addButtonStyles}
-                onClick={(ev) => {
-                  setGoTo('addData');
-                  setGoToOptions({
-                    from: 'file',
-                    layerType: 'Contamination Map',
-                  });
-                }}
-              >
-                Add
-              </button>
+                  {generateRandomResponse.status === 'failure' && (
+                    <MessageBox
+                      severity="error"
+                      title="Web Service Error"
+                      message="An error occurred in the web service"
+                    />
+                  )}
+                  {numberRandomSamples &&
+                    aoiSketchLayer?.sketchLayer.type === 'graphics' &&
+                    aoiSketchLayer.sketchLayer.graphics.length > 0 && (
+                      <button css={submitButtonStyles} onClick={randomSamples}>
+                        {generateRandomResponse.status !== 'fetching' &&
+                          'Submit'}
+                        {generateRandomResponse.status === 'fetching' && (
+                          <React.Fragment>
+                            <i className="fas fa-spinner fa-pulse" />
+                            &nbsp;&nbsp;Loading...
+                          </React.Fragment>
+                        )}
+                      </button>
+                    )}
+                </React.Fragment>
+              )}
             </div>
-          </div>
-        </AccordionItem>
-      </AccordionList>
-    </React.Fragment>
+          </AccordionItem>
+          <AccordionItem title={'Include Contamination Map (Optional)'}>
+            <div css={sectionContainer}>
+              <label htmlFor="contamination-map-select">
+                Contamination map
+              </label>
+              <div css={inlineMenuStyles}>
+                <Select
+                  inputId="contamination-map-select"
+                  css={contaminationMapSelectStyles}
+                  isClearable={true}
+                  value={contaminationMap}
+                  onChange={(ev) => setContaminationMap(ev as LayerType)}
+                  options={layers.filter(
+                    (layer: any) => layer.layerType === 'Contamination Map',
+                  )}
+                />
+                <em css={orStyles}>OR</em>
+                <button
+                  css={addButtonStyles}
+                  onClick={(ev) => {
+                    setGoTo('addData');
+                    setGoToOptions({
+                      from: 'file',
+                      layerType: 'Contamination Map',
+                    });
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </AccordionItem>
+        </AccordionList>
+      </div>
+      <div css={sectionContainer}>
+        <NavigationButton goToPanel="calculate" />
+      </div>
+    </div>
   );
 }
 

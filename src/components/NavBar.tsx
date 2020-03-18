@@ -296,34 +296,41 @@ function NavBar({ height }: Props) {
     currentPanel,
     setCurrentPanel, //
   ] = React.useState<PanelType | null>(null);
+  const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
+  const [expanded, setExpanded] = React.useState(false);
+  const toggleExpand = React.useCallback(
+    (panel: PanelType, panelIndex: number) => {
+      if (panel === currentPanel) {
+        setExpanded(false);
+        setCurrentPanel(null);
+      } else {
+        setExpanded(true);
+        setCurrentPanel(panel);
+      }
+
+      if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
+    },
+    [currentPanel, latestStepIndex],
+  );
+
   React.useEffect(() => {
     if (!goTo) return;
 
     // find the requested panel
     let goToPanel: PanelType | null = null;
-    panels.forEach((panel) => {
-      if (panel.value === goTo) goToPanel = panel;
+    let goToPanelIndex: number = -1;
+    panels.forEach((panel, index: number) => {
+      if (panel.value === goTo) {
+        goToPanel = panel;
+        goToPanelIndex = index;
+      }
     });
 
     // open the panel if it was found
-    if (goToPanel) setCurrentPanel(goToPanel);
+    if (goToPanel) toggleExpand(goToPanel, goToPanelIndex);
 
     setGoTo('');
-  }, [goTo, setGoTo]);
-
-  const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
-  const [expanded, setExpanded] = React.useState(false);
-  const toggleExpand = (panel: PanelType, panelIndex: number) => {
-    if (panel === currentPanel) {
-      setExpanded(false);
-      setCurrentPanel(null);
-    } else {
-      setExpanded(true);
-      setCurrentPanel(panel);
-    }
-
-    if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
-  };
+  }, [goTo, setGoTo, toggleExpand]);
 
   const [resultsExpanded, setResultsExpanded] = React.useState(false);
   React.useEffect(() => {

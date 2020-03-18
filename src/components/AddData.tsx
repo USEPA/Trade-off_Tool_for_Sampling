@@ -7,6 +7,7 @@ import Select from 'react-select';
 import FilePanel from 'components/FilePanel';
 import SearchPanel from 'components/SearchPanel';
 import URLPanel from 'components/URLPanel';
+import NavigationButton from 'components/NavigationButton';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 
@@ -27,6 +28,10 @@ const panelSelectStyles = css`
 `;
 
 const panelContainer = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
   padding: 20px;
 `;
 
@@ -53,17 +58,20 @@ function AddData() {
 
   return (
     <div css={panelContainer}>
-      <h2>Add Data</h2>
-      <Select
-        css={panelSelectStyles}
-        data-testid="tots-add-data-select"
-        value={location}
-        onChange={(ev) => setLocation(ev as LocationType)}
-        options={addFromOptions}
-      />
-      {location.value === 'search' && <SearchPanel />}
-      {location.value === 'url' && <URLPanel />}
-      {location.value === 'file' && <FilePanel />}
+      <div>
+        <h2>Add Data</h2>
+        <Select
+          css={panelSelectStyles}
+          data-testid="tots-add-data-select"
+          value={location}
+          onChange={(ev) => setLocation(ev as LocationType)}
+          options={addFromOptions}
+        />
+        {location.value === 'search' && <SearchPanel />}
+        {location.value === 'url' && <URLPanel />}
+        {location.value === 'file' && <FilePanel />}
+      </div>
+      <NavigationButton goToPanel="locateSamples" />
     </div>
   );
 }
