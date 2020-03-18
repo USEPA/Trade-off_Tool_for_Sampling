@@ -7,7 +7,7 @@ import { jsx, css } from '@emotion/core';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 // types
-import { LayerType } from 'types/Layer';
+import { LayerType, LayerTypeName } from 'types/Layer';
 // config
 import {
   predefinedBoxTypes,
@@ -18,7 +18,7 @@ import { polygonSymbol } from 'config/symbols';
 // utils
 import {
   generateUUID,
-  getSimplePopupTemplate,
+  getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 // styles
@@ -382,13 +382,15 @@ function MapWidgets({ mapView }: Props) {
 
           // get the predefined attributes using the id of the clicked button
           const uuid = generateUUID();
+          let layerType: LayerTypeName = 'Samples';
           if (id === 'aoi') {
+            layerType = 'Area of Interest';
             graphic.attributes = {
               OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               NOTES: '',
-              TYPE: 'Area of Interest',
+              TYPE: layerType,
             };
           } else {
             graphic.attributes = {
@@ -402,7 +404,7 @@ function MapWidgets({ mapView }: Props) {
 
           // add a popup template to the graphic
           graphic.popupTemplate = new PopupTemplate(
-            getSimplePopupTemplate(graphic.attributes),
+            getPopupTemplate(layerType),
           );
           nextId = nextId + 1;
 

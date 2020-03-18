@@ -14,7 +14,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import {
   generateUUID,
-  getSimplePopupTemplate,
+  getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 // types
@@ -557,9 +557,9 @@ function FilePanel() {
           graphic.symbol = polygonSymbol;
         }
 
-        // generate a basic popup
+        // add the popup template
         graphic.popupTemplate = new PopupTemplate(
-          getSimplePopupTemplate(graphic.attributes),
+          getPopupTemplate(layerType.value),
         );
 
         graphics.push(graphic);
