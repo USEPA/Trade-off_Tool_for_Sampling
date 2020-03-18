@@ -1,6 +1,6 @@
 // types
 import { EditsType, LayerEditsType } from 'types/Edits';
-import { LayerType } from 'types/Layer';
+import { LayerType, LayerTypeName } from 'types/Layer';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -200,22 +200,90 @@ export function updateLayerEdits({
 }
 
 /**
- * Creates a simple popup that contains all of the attributes on the
- * graphic.
+ * Creates a popup that contains all of the attributes with human readable labels.
+ * The attributes displayed depends on the type provided.
+ * Note: Reference layers will return an empty object. Reference layers should not use
+ *  this function for getting the popup.
  *
- * @param attributes Attributes to be placed in the popup content
+ * @param type - The layer type to get the popup for.
  * @returns the json object to pass to the Esri PopupTemplate constructor.
  */
-export function getSimplePopupTemplate(attributes: any) {
-  return {
-    title: '',
-    content: [
-      {
-        type: 'fields',
-        fieldInfos: Object.keys(attributes).map((key) => {
-          return { fieldName: key, label: key };
-        }),
-      },
-    ],
-  };
+export function getPopupTemplate(type: LayerTypeName) {
+  if (type === 'Area of Interest') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Type' },
+            { fieldName: 'NOTES', label: 'Notes' },
+          ],
+        },
+      ],
+    };
+  }
+  if (type === 'Contamination Map') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Type' },
+            { fieldName: 'CFU', label: 'Colony-Forming Units' },
+          ],
+        },
+      ],
+    };
+  }
+  if (type === 'Samples' || type === 'VSP') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Sample Type' },
+            {
+              fieldName: 'TTPK',
+              label: 'Time to Prepare Kits (person hrs/sample)',
+            },
+            { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
+            { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
+            {
+              fieldName: 'TTPS',
+              label: 'Total Time per Sample (person hrs/sample)',
+            },
+            { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
+            {
+              fieldName: 'LOD_NON',
+              label: 'Limit of Detection (CFU) Nonporous',
+            },
+            { fieldName: 'MCPS', label: 'Material Cost ($/sample)' },
+            {
+              fieldName: 'TCPS',
+              label: 'Total Cost Per Sample (Labor + Material + Waste)',
+            },
+            { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
+            { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
+            { fieldName: 'SA', label: 'Surface Area (sq inch)' },
+            { fieldName: 'NOTES', label: 'Notes' },
+            { fieldName: 'ALC', label: 'Analysis Labor Cost' },
+            { fieldName: 'AMC', label: 'Analysis Material Cost' },
+            { fieldName: 'CFU', label: 'Colony-Forming Units' },
+            { fieldName: 'SCENARIONAME', label: 'Scenario Name' },
+            { fieldName: 'CREATEDDATE', label: 'Create Date' },
+            { fieldName: 'UPDATEDDATE', label: 'Update Date' },
+            { fieldName: 'USERNAME', label: 'Created By' },
+            { fieldName: 'ORGANIZATION', label: 'Organization' },
+            { fieldName: 'SURFACEAREAUNIT', label: 'Surface Area Units' },
+            { fieldName: 'ELEVATIONSERIES', label: 'Elevation Series' },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {};
 }
