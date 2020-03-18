@@ -12,7 +12,7 @@ import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
-import { getSimplePopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 // types
 import { LayerType, LayerSelectType } from 'types/Layer';
 // config
@@ -519,9 +519,9 @@ function FilePanel() {
           graphic.symbol = polygonSymbol;
         }
 
-        // generate a basic popup
+        // add the popup template
         graphic.popupTemplate = new PopupTemplate(
-          getSimplePopupTemplate(graphic.attributes),
+          getPopupTemplate(layerType.value),
         );
 
         graphics.push(graphic);
