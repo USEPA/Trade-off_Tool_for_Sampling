@@ -6,8 +6,10 @@
     "Shape_Area" : "Shape_Area",
     "GLOBALID" : "GlobalID",
     "PERMANENT_IDENTIFIER": "Permanent_Identifier",
+    "CONTAM_TYPE": "Contamination Type",
+    "CONTAM_VALUE": "Contamination Value",
+    "CONTAM_UNIT": "Contamination Unit",
     "SCENARIONAME" : "Scenario Name",
-    "CFU" : "CFU",
     "NOTES" : "Notes"
   },
   "geometryType" : "esriGeometryPolygon",
@@ -42,15 +44,27 @@
       "alias" : "Permanent_Identifier"
     },
     {
+      "name" : "CONTAM_TYPE",
+      "type" : "esriFieldTypeString",
+      "alias" : "Contamination Type",
+      "length" : 64
+    },
+    {
+      "name" : "CONTAM_VALUE",
+      "type" : "esriFieldTypeDouble",
+      "alias" : "Contamination Value"
+    },
+    {
+      "name" : "CONTAM_UNIT",
+      "type" : "esriFieldTypeString",
+      "alias" : "Contamination Unit",
+      "length" : 64
+    },
+    {
       "name" : "SCENARIONAME",
       "type" : "esriFieldTypeString",
       "alias" : "Scenario Name",
       "length" : 255
-    },
-    {
-      "name" : "CFU",
-      "type" : "esriFieldTypeDouble",
-      "alias" : "CFU"
     },
     {
       "name" : "NOTES",
@@ -67,8 +81,10 @@
         "Shape_Area" : 0.070760839682005194,
         "GLOBALID" : "{d6fdb530-565a-4ea9-a54d-42eb2e43aac5}",
         "PERMANENT_IDENTIFIER" : "{cdd9aa30-7c14-4be8-8b4f-28ef9d9be09f}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -133,8 +149,10 @@
         "Shape_Area" : 0.367005990195716,
         "GLOBALID" : "{85432d3c-c124-406c-b19a-12ca837a7a01}",
         "PERMANENT_IDENTIFIER" : "{caabd156-041a-422d-b1a8-4aa97d6a62b9}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -289,8 +307,10 @@
         "Shape_Area" : 0.20078497069032372,
         "GLOBALID" : "{b4328816-108c-47be-a209-91d276f2282c}",
         "PERMANENT_IDENTIFIER" : "{defb347c-8c19-4673-a06c-cb8e55f6637f}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -405,8 +425,10 @@
         "Shape_Area" : 0.074964714878387601,
         "GLOBALID" : "{1a316a43-72c1-4a38-834a-2f7f2da8c6a1}",
         "PERMANENT_IDENTIFIER" : "{8e23186e-e079-4395-90cb-23b5c678f721}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -451,8 +473,10 @@
         "Shape_Area" : 0.84393003875325157,
         "GLOBALID" : "{5ecd2f9a-db09-43e4-9d74-d54959cb9dd2}",
         "PERMANENT_IDENTIFIER" : "{0aeee3eb-afbc-4086-9403-485cb9ff4e9e}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -695,8 +719,10 @@
         "Shape_Area" : 11.229095759950516,
         "GLOBALID" : "{55bea83c-2b25-471e-b356-e30de3c5741d}",
         "PERMANENT_IDENTIFIER" : "{9a7c346f-e6a7-4b5e-a38a-4efda416fb9c}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -869,8 +895,10 @@
         "Shape_Area" : 6.3149167198679432,
         "GLOBALID" : "{80c313c2-ec39-482a-a1a9-1756c038b2d1}",
         "PERMANENT_IDENTIFIER" : "{997fe9b6-2f97-48cf-afb1-b8767bbfb0c2}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -1023,8 +1051,10 @@
         "Shape_Area" : 3.5557198243592301,
         "GLOBALID" : "{4d2ab044-1069-4013-9cdc-ca2ceb16cbe7}",
         "PERMANENT_IDENTIFIER" : "{65526529-d1de-48b8-b5ba-c2aa63a5aa92}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -1189,8 +1219,10 @@
         "Shape_Area" : 2.1353364421572847,
         "GLOBALID" : "{0360e050-dc4c-4903-aef9-e2e6a0ed5f44}",
         "PERMANENT_IDENTIFIER" : "{ebe9c417-0942-4f8b-bf2d-44f1c85f61db}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -1367,8 +1399,10 @@
         "Shape_Area" : 0.86228370449908276,
         "GLOBALID" : "{eeae4ca1-dcce-4e64-ba7b-7777a0ae17b4}",
         "PERMANENT_IDENTIFIER" : "{3772ed44-8047-4d0f-93cc-a80b41fd7a05}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
@@ -1513,8 +1547,10 @@
         "Shape_Area" : 0.40364949997860194,
         "GLOBALID" : "{591f88b8-fc3c-42d8-b4c2-2fc0aa3bcb77}",
         "PERMANENT_IDENTIFIER" : "{2804a1ed-aa42-4619-8b61-803cf979c8b3}",
-        "SCENARIONAME" : "Bradford, 1988",
-        "CFU" : 11,
+        "CONTAM_TYPE" : "biological",
+        "CONTAM_VALUE" : 11222333,
+        "CONTAM_UNIT" : "cfu",
+        "SCENARIONAME" : "BRADFORD88",
         "NOTES" : null
       },
       "geometry" : {
