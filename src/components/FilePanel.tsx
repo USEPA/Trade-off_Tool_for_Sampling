@@ -4,6 +4,9 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { useDropzone } from 'react-dropzone';
 import Select from 'react-select';
+// components
+import LoadingSpinner from 'components/LoadingSpinner';
+import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -86,6 +89,15 @@ const selectStyles = css`
 `;
 
 // --- components (FilePanel) ---
+type UploadStatusType =
+  | ''
+  | 'fetching'
+  | 'success'
+  | 'failure'
+  | 'no-data'
+  | 'invalid-file-type'
+  | 'file-read-error';
+
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
   const {
@@ -117,6 +129,7 @@ function FilePanel() {
   const [analyzeCalled, setAnalyzeCalled] = React.useState(false);
   const [generateCalled, setGenerateCalled] = React.useState(false);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
+  const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
 
   const [
     layerType,
@@ -133,9 +146,17 @@ function FilePanel() {
       acceptedFiles.length === 0 ||
       !acceptedFiles[0].name
     ) {
-      alert('No file provided or the file does not have a name.');
       return;
     }
+
+    // reset state management values
+    setUploadStatus('fetching');
+    setLastFileName('');
+    setAnalyzeResponse(null);
+    setGenerateResponse(null);
+    setAnalyzeCalled(false);
+    setGenerateCalled(false);
+    setFeaturesAdded(false);
 
     // get the filetype
     const file = acceptedFiles[0];
@@ -147,20 +168,14 @@ function FilePanel() {
     if (file.name.endsWith('.geo.json')) fileType = 'geojson';
     if (file.name.endsWith('.gpx')) fileType = 'gpx';
 
-    if (!fileType) {
-      alert(`${file.name} is an invalid file type.`);
-      return;
-    }
-
+    // set the file state
     file['esriFileType'] = fileType;
     setFile(file);
 
-    // reset state management values
-    setAnalyzeResponse(null);
-    setGenerateResponse(null);
-    setAnalyzeResponse(false);
-    setGenerateCalled(false);
-    setFeaturesAdded(false);
+    if (!fileType) {
+      setUploadStatus('invalid-file-type');
+      return;
+    }
   }, []);
 
   // Configuration for the dropzone component
@@ -230,7 +245,7 @@ function FilePanel() {
 
   // analyze csv files
   React.useEffect(() => {
-    if (!file || !sharingUrl || analyzeCalled) return;
+    if (!file?.esriFileType || !sharingUrl || analyzeCalled) return;
     if (file.name === lastFileName || file.esriFileType !== 'csv') return;
     setAnalyzeCalled(true);
 
@@ -256,7 +271,10 @@ function FilePanel() {
         console.log('analyzeResponse: ', res);
         setAnalyzeResponse(res);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setUploadStatus('failure');
+      });
   }, [
     file,
     lastFileName,
@@ -275,7 +293,7 @@ function FilePanel() {
     if (
       !mapView ||
       !layerType ||
-      !file ||
+      !file?.esriFileType ||
       !sharingUrl ||
       file.name === lastFileName ||
       generateCalled
@@ -423,9 +441,15 @@ function FilePanel() {
               },
             });
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+            setUploadStatus('failure');
+          });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setUploadStatus('failure');
+      });
   }, [
     generalizeFeatures,
     generateCalled,
@@ -451,12 +475,22 @@ function FilePanel() {
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
   React.useEffect(() => {
-    if (!map || !mapView || !layerType || !file || featuresAdded) return;
-    if (layerType.value === 'Reference Layer') return;
     if (
-      !generateResponse?.featureCollection?.layers ||
+      !map ||
+      !mapView ||
+      !layerType ||
+      !file?.esriFileType ||
+      featuresAdded
+    ) {
+      return;
+    }
+    if (layerType.value === 'Reference Layer') return;
+    if (!generateResponse) return;
+    if (
+      !generateResponse.featureCollection?.layers ||
       generateResponse.featureCollection.layers.length === 0
     ) {
+      setUploadStatus('no-data');
       return;
     }
 
@@ -526,6 +560,8 @@ function FilePanel() {
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
     if (graphics.length > 0) mapView.goTo(graphics);
+
+    setUploadStatus('success');
   }, [
     // esri modules
     GraphicsLayer,
@@ -550,12 +586,22 @@ function FilePanel() {
   // add features to the map as feature layers. This is only for reference layer
   // types. This is so users can view popups but not edit the features.
   React.useEffect(() => {
-    if (!map || !mapView || !layerType || !file || featuresAdded) return;
-    if (layerType.value !== 'Reference Layer') return;
     if (
-      !generateResponse?.featureCollection?.layers ||
+      !map ||
+      !mapView ||
+      !layerType ||
+      !file?.esriFileType ||
+      featuresAdded
+    ) {
+      return;
+    }
+    if (layerType.value !== 'Reference Layer') return;
+    if (!generateResponse) return;
+    if (
+      !generateResponse.featureCollection?.layers ||
       generateResponse.featureCollection.layers.length === 0
     ) {
+      setUploadStatus('no-data');
       return;
     }
 
@@ -661,6 +707,8 @@ function FilePanel() {
     setLayers([...layers, ...layersAdded]);
     map.addMany(featureLayers);
     if (graphicsAdded.length > 0) mapView.goTo(graphicsAdded);
+
+    setUploadStatus('success');
   }, [
     // esri modules
     FeatureLayer,
@@ -684,15 +732,15 @@ function FilePanel() {
 
   // handle loading of the KMLLayer
   React.useEffect(() => {
-    if (!file || !mapView || file.esriFileType !== 'kml') return;
+    if (!file?.esriFileType || !mapView || file.esriFileType !== 'kml') return;
     if (file.name === lastFileName) return;
 
     // read in the file
     const reader = new FileReader();
     reader.onload = function(event: Event) {
       if (reader.error || !event || !reader.result) {
-        console.error('FileReader Error: ', reader.error);
-        alert(`FileReader Error: ${reader.error}`);
+        console.error('File Read Error: ', reader.error);
+        setUploadStatus('file-read-error');
         return;
       }
 
@@ -711,14 +759,17 @@ function FilePanel() {
           console.log('kml res: ', res);
           setGenerateResponse(res);
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error(err);
+          setUploadStatus('failure');
+        });
     };
 
     try {
       reader.readAsText(file);
     } catch (ex) {
-      console.error('FileReader Error: ', ex);
-      alert(`FileReader Error: ${ex}`);
+      console.error('File Read Error: ', ex);
+      setUploadStatus('file-read-error');
     }
   }, [KMLLayer, mapView, file, lastFileName]);
 
@@ -729,7 +780,10 @@ function FilePanel() {
         inputId="layer-type-select"
         css={selectStyles}
         value={layerType}
-        onChange={(ev) => setLayerType(ev as LayerSelectType)}
+        onChange={(ev) => {
+          setLayerType(ev as LayerSelectType);
+          setUploadStatus('');
+        }}
         options={[
           { value: 'Contamination Map', label: 'Contamination Map' },
           { value: 'Samples', label: 'Samples' },
@@ -747,7 +801,10 @@ function FilePanel() {
                 inputId="sample-type-select"
                 css={selectStyles}
                 value={sampleType}
-                onChange={(ev) => setSampleType(ev as SampleSelectType)}
+                onChange={(ev) => {
+                  setSampleType(ev as SampleSelectType);
+                  setUploadStatus('');
+                }}
                 options={SampleSelectOptions}
               />
             </React.Fragment>
@@ -755,34 +812,76 @@ function FilePanel() {
           {(layerType.value !== 'VSP' ||
             (layerType.value === 'VSP' && sampleType)) && (
             <React.Fragment>
-              <input
-                id="generalize-features-input"
-                type="checkbox"
-                checked={generalizeFeatures}
-                onChange={(ev) => setGeneralizeFeatures(!generalizeFeatures)}
-              />
-              <label htmlFor="generalize-features-input">
-                Generalize features for web display
-              </label>
-              <br />
-              <div {...getRootProps({ className: 'dropzone' })}>
-                <input {...getInputProps()} />
-                {isDragActive ? (
-                  <p>Drop the files here ...</p>
-                ) : (
-                  <div>
-                    <FileIcon label="Shape File" />
-                    <FileIcon label="CSV" />
-                    <FileIcon label="KML" />
-                    <FileIcon label="GPX" />
-                    <FileIcon label="Geo JSON" />
-                    <br />
-                    Drop or Browse
-                    <br />
-                    <button onClick={open}>Browse</button>
+              {uploadStatus === 'fetching' && <LoadingSpinner />}
+              {uploadStatus !== 'fetching' && (
+                <React.Fragment>
+                  {uploadStatus === 'invalid-file-type' && (
+                    <MessageBox
+                      severity="error"
+                      title="Invalid File Type"
+                      message={`${file.name} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
+                    />
+                  )}
+                  {uploadStatus === 'file-read-error' && (
+                    <MessageBox
+                      severity="error"
+                      title="File Read Error"
+                      message={`Failed to read the ${file.name} file. Check the console log for details.`}
+                    />
+                  )}
+                  {uploadStatus === 'no-data' && (
+                    <MessageBox
+                      severity="error"
+                      title="No Data"
+                      message={`The ${file.name} file did not have any data to display on the map`}
+                    />
+                  )}
+                  {uploadStatus === 'failure' && (
+                    <MessageBox
+                      severity="error"
+                      title="Web Service Error"
+                      message="An error occurred in the web service"
+                    />
+                  )}
+                  {uploadStatus === 'success' && (
+                    <MessageBox
+                      severity="info"
+                      title="Upload Succeeded"
+                      message={`${file.name} was successfully uploaded`}
+                    />
+                  )}
+                  <input
+                    id="generalize-features-input"
+                    type="checkbox"
+                    checked={generalizeFeatures}
+                    onChange={(ev) =>
+                      setGeneralizeFeatures(!generalizeFeatures)
+                    }
+                  />
+                  <label htmlFor="generalize-features-input">
+                    Generalize features for web display
+                  </label>
+                  <br />
+                  <div {...getRootProps({ className: 'dropzone' })}>
+                    <input {...getInputProps()} />
+                    {isDragActive ? (
+                      <p>Drop the files here ...</p>
+                    ) : (
+                      <div>
+                        <FileIcon label="Shape File" />
+                        <FileIcon label="CSV" />
+                        <FileIcon label="KML" />
+                        <FileIcon label="GPX" />
+                        <FileIcon label="Geo JSON" />
+                        <br />
+                        Drop or Browse
+                        <br />
+                        <button onClick={open}>Browse</button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </React.Fragment>
+              )}
             </React.Fragment>
           )}
         </React.Fragment>
