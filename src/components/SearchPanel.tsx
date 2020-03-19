@@ -133,7 +133,7 @@ type SortByType = {
 };
 
 type SearchResultsType = {
-  status: '' | 'fetching' | 'success' | 'failure';
+  status: '' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
   data: __esri.PortalQueryResult | null;
 };
 
@@ -204,7 +204,7 @@ function SearchPanel() {
     // where to search ArcGISOnline is the default
     if (location.value === 'My Content') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults({ status: 'success', data: null });
+        setSearchResults({ status: 'not-logged-in', data: null });
         return;
       }
       query = appendToQuery(
@@ -214,7 +214,7 @@ function SearchPanel() {
     }
     if (location.value === 'My Organization') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults({ status: 'success', data: null });
+        setSearchResults({ status: 'not-logged-in', data: null });
         return;
       }
       query = appendToQuery(
@@ -507,6 +507,13 @@ function SearchPanel() {
       <hr />
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
+        {searchResults.status === 'not-logged-in' && (
+          <MessageBox
+            severity="warning"
+            title="Not Logged In"
+            message="Please login to use this feature"
+          />
+        )}
         {searchResults.status === 'failure' && (
           <MessageBox
             severity="error"
