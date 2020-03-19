@@ -5,6 +5,7 @@ import { jsx, css } from '@emotion/core';
 // components
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
+import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { SketchContext } from 'contexts/Sketch';
 // utils
@@ -29,16 +30,26 @@ const layerInfo = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const { portal } = React.useContext(AuthenticationContext);
+  const { IdentityManager } = useEsriModulesContext();
+  const {
+    oAuthInfo,
+    portal,
+    signedIn, //
+  } = React.useContext(AuthenticationContext);
   const {
     edits,
     sketchLayer, //
   } = React.useContext(SketchContext);
 
   function runPublish() {
-    if (!portal) return;
-
+    if (!oAuthInfo) return;
     if (!sketchLayer) return;
+
+    // have the user login if necessary
+    if (!portal || !signedIn) {
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+      return;
+    }
 
     const layerEdits = edits.edits.filter(
       (editLayer) =>
