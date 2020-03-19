@@ -4,6 +4,8 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 import Select from 'react-select';
 // components
+import LoadingSpinner from 'components/LoadingSpinner';
+import MessageBox from 'components/MessageBox';
 import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -130,6 +132,11 @@ type SortByType = {
   defaultSort: 'asc' | 'desc';
 };
 
+type SearchResultsType = {
+  status: '' | 'fetching' | 'success' | 'failure';
+  data: __esri.PortalQueryResult | null;
+};
+
 function SearchPanel() {
   const { portal } = React.useContext(AuthenticationContext);
   const { mapView } = React.useContext(SketchContext);
@@ -155,8 +162,8 @@ function SearchPanel() {
 
   const [
     searchResults,
-    setSearchResults,
-  ] = React.useState<__esri.PortalQueryResult | null>(null);
+    setSearchResults, //
+  ] = React.useState<SearchResultsType>({ status: '', data: null });
   const [
     currentExtent,
     setCurrentExtent,
@@ -171,6 +178,8 @@ function SearchPanel() {
 
   // Builds and executes the search query on search button click
   React.useEffect(() => {
+    setSearchResults({ status: 'fetching', data: null });
+
     const tmpPortal = portal ? portal : new Portal();
 
     function appendToQuery(
@@ -195,7 +204,7 @@ function SearchPanel() {
     // where to search ArcGISOnline is the default
     if (location.value === 'My Content') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults(null);
+        setSearchResults({ status: 'success', data: null });
         return;
       }
       query = appendToQuery(
@@ -205,7 +214,7 @@ function SearchPanel() {
     }
     if (location.value === 'My Organization') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults(null);
+        setSearchResults({ status: 'success', data: null });
         return;
       }
       query = appendToQuery(
@@ -260,15 +269,21 @@ function SearchPanel() {
     }
 
     // perform the query
-    tmpPortal.queryItems(queryParams).then((res: __esri.PortalQueryResult) => {
-      if (res.total > 0) {
-        setSearchResults(res);
-        setPageNumber(1);
-      } else {
-        setSearchResults(null);
-        setPageNumber(1);
-      }
-    });
+    tmpPortal
+      .queryItems(queryParams)
+      .then((res: __esri.PortalQueryResult) => {
+        if (res.total > 0) {
+          setSearchResults({ status: 'success', data: res });
+          setPageNumber(1);
+        } else {
+          setSearchResults({ status: 'success', data: null });
+          setPageNumber(1);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setSearchResults({ status: 'failure', data: null });
+      });
   }, [
     currentExtent,
     Portal,
@@ -290,20 +305,20 @@ function SearchPanel() {
   // Runs the query for changing pages of the result set
   const [lastPageNumber, setLastPageNumber] = React.useState(1);
   React.useEffect(() => {
-    if (!searchResults || pageNumber === lastPageNumber) return;
+    if (!searchResults.data || pageNumber === lastPageNumber) return;
 
     // prevent running the same query multiple times
     setLastPageNumber(pageNumber);
 
     // get the query
-    let queryParams = searchResults.queryParams;
+    let queryParams = searchResults.data.queryParams;
     if (pageNumber === 1) {
       // going to first page
       queryParams.start = 1;
     }
     if (pageNumber > lastPageNumber) {
       // going to next page
-      queryParams = searchResults.nextQueryParams;
+      queryParams = searchResults.data.nextQueryParams;
     }
     if (pageNumber < lastPageNumber) {
       // going to previous page
@@ -315,9 +330,12 @@ function SearchPanel() {
     tmpPortal
       .queryItems(queryParams)
       .then((res) => {
-        setSearchResults(res);
+        setSearchResults({ status: 'success', data: res });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setSearchResults({ status: 'failure', data: null });
+      });
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
@@ -488,51 +506,63 @@ function SearchPanel() {
       </div>
       <hr />
       <div>
-        {searchResults && searchResults.results && (
+        {searchResults.status === 'fetching' && <LoadingSpinner />}
+        {searchResults.status === 'failure' && (
+          <MessageBox
+            severity="error"
+            title="Web Service Error"
+            message="An error occurred in the web service"
+          />
+        )}
+        {searchResults.status === 'success' && (
           <React.Fragment>
-            {searchResults.results.map((result, index) => {
-              return (
-                <React.Fragment key={index}>
-                  <ResultCard result={result} />
-                  <hr />
-                </React.Fragment>
-              );
-            })}
+            <div>
+              {searchResults.data?.results.map((result, index) => {
+                return (
+                  <React.Fragment key={index}>
+                    <ResultCard result={result} />
+                    <hr />
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            {!searchResults.data && (
+              <div>No items for this search criteria.</div>
+            )}
+            {searchResults.data && (
+              <div css={footerBar}>
+                <div>
+                  <button
+                    css={pageControlStyles}
+                    disabled={pageNumber === 1}
+                    onClick={() => setPageNumber(1)}
+                  >
+                    <i className="fas fa-angle-double-left"></i>
+                  </button>
+                  <button
+                    css={pageControlStyles}
+                    disabled={pageNumber === 1}
+                    onClick={() => setPageNumber(pageNumber - 1)}
+                  >
+                    <i className="fas fa-angle-left"></i>
+                  </button>
+                  <span>{pageNumber}</span>
+                  <button
+                    css={pageControlStyles}
+                    disabled={searchResults.data.nextQueryParams.start === -1}
+                    onClick={() => setPageNumber(pageNumber + 1)}
+                  >
+                    <i className="fas fa-angle-right"></i>
+                  </button>
+                  <span css={totalStyles}>
+                    {searchResults.data.total.toLocaleString()} Items
+                  </span>
+                </div>
+              </div>
+            )}
           </React.Fragment>
         )}
       </div>
-      {!searchResults && <div>No items for this search criteria.</div>}
-      {searchResults && (
-        <div css={footerBar}>
-          <div>
-            <button
-              css={pageControlStyles}
-              disabled={pageNumber === 1}
-              onClick={() => setPageNumber(1)}
-            >
-              <i className="fas fa-angle-double-left"></i>
-            </button>
-            <button
-              css={pageControlStyles}
-              disabled={pageNumber === 1}
-              onClick={() => setPageNumber(pageNumber - 1)}
-            >
-              <i className="fas fa-angle-left"></i>
-            </button>
-            <span>{pageNumber}</span>
-            <button
-              css={pageControlStyles}
-              disabled={searchResults.nextQueryParams.start === -1}
-              onClick={() => setPageNumber(pageNumber + 1)}
-            >
-              <i className="fas fa-angle-right"></i>
-            </button>
-            <span css={totalStyles}>
-              {searchResults.total.toLocaleString()} Items
-            </span>
-          </div>
-        </div>
-      )}
     </React.Fragment>
   );
 }
