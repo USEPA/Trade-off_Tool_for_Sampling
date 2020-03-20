@@ -281,7 +281,7 @@ function Calculate() {
           alias: 'Scenario Name',
         },
         {
-          name: 'NOTES',
+          name: 'Notes',
           type: 'string',
           alias: 'Notes',
         },

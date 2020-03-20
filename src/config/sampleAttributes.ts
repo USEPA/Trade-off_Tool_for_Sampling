@@ -82,7 +82,7 @@ const sampleAttributes: Attributes = {
     WWPS: '4.3',
     ALC: '118',
     AMC: '239',
-    Notes: '239',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
