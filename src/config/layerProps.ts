@@ -206,10 +206,10 @@ export const defaultLayerProps = {
       defaultValue: null,
     },
     {
-      name: 'NOTES',
+      name: 'Notes',
       type: 'esriFieldTypeString',
       actualType: 'nvarchar',
-      alias: 'NOTES',
+      alias: 'Notes',
       sqlType: 'sqlTypeNVarchar',
       length: 255,
       nullable: true,

@@ -42,7 +42,7 @@ type SampleProperties =
   | 'WWPS'
   | 'ALC'
   | 'AMC'
-  | 'NOTES'
+  | 'Notes'
   | 'AA'
   | 'AC'
   | 'ITER'
@@ -82,7 +82,7 @@ const sampleAttributes: Attributes = {
     WWPS: '4.3',
     ALC: '118',
     AMC: '239',
-    NOTES: '239',
+    Notes: '239',
     AA: '0',
     AC: '0',
     ITER: '0',
@@ -115,7 +115,7 @@ const sampleAttributes: Attributes = {
     WWPS: '4.3',
     ALC: '151',
     AMC: '288',
-    NOTES: '',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
@@ -148,7 +148,7 @@ const sampleAttributes: Attributes = {
     WWPS: '28.5',
     ALC: '151',
     AMC: '200',
-    NOTES: '',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
@@ -181,7 +181,7 @@ const sampleAttributes: Attributes = {
     WWPS: '10.5',
     ALC: '200',
     AMC: '288',
-    NOTES: '',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
@@ -214,7 +214,7 @@ const sampleAttributes: Attributes = {
     WWPS: '10.5',
     ALC: '118',
     AMC: '239',
-    NOTES: '',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
@@ -247,7 +247,7 @@ const sampleAttributes: Attributes = {
     WWPS: '0',
     ALC: '118',
     AMC: '239',
-    NOTES: '',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',

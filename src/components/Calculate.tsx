@@ -368,12 +368,12 @@ function Calculate() {
         {
           name: 'LOD_P',
           type: 'double',
-          alias: 'Limit of DetectionÂ Porous',
+          alias: 'Limit of Detection Porous',
         },
         {
           name: 'LOD_NON',
           type: 'double',
-          alias: 'Limit of DetectionÂ Nonporous',
+          alias: 'Limit of Detection Nonporous',
         },
         {
           name: 'MCPS',

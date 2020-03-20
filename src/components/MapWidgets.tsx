@@ -144,7 +144,7 @@ function FeatureTool({
 
     // Get the note from the graphics attributes
     if (tempSketchVM?.activeComponent?.graphics?.[0]?.attributes) {
-      const newNote = tempSketchVM.activeComponent.graphics[0].attributes.NOTES;
+      const newNote = tempSketchVM.activeComponent.graphics[0].attributes.Notes;
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
         setNote(newNote);
@@ -205,7 +205,7 @@ function FeatureTool({
                 // set the notes
                 if (tempSketchVM.activeComponent?.graphics) {
                   const firstGraphic = tempSketchVM.activeComponent.graphics[0];
-                  firstGraphic.attributes['NOTES'] = note;
+                  firstGraphic.attributes['Notes'] = note;
                   setGraphicNote(note);
 
                   onClick(ev, 'Save');
@@ -389,7 +389,7 @@ function MapWidgets({ mapView }: Props) {
               OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
-              NOTES: '',
+              Notes: '',
               TYPE: layerType,
             };
           } else {
@@ -398,7 +398,7 @@ function MapWidgets({ mapView }: Props) {
               OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
-              NOTES: '',
+              Notes: '',
             };
           }
 
