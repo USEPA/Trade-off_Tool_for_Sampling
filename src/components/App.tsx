@@ -13,6 +13,7 @@ import Map from 'components/Map';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider } from 'contexts/Calculate';
+import { NavigationProvider } from 'contexts/Navigation';
 import { SketchProvider } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
@@ -117,9 +118,11 @@ export default function AppContainer() {
     <EsriModulesProvider>
       <AuthenticationProvider>
         <CalculateProvider>
-          <SketchProvider>
-            <App />
-          </SketchProvider>
+          <NavigationProvider>
+            <SketchProvider>
+              <App />
+            </SketchProvider>
+          </NavigationProvider>
         </CalculateProvider>
       </AuthenticationProvider>
     </EsriModulesProvider>

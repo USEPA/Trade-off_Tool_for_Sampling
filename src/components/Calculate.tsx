@@ -246,19 +246,44 @@ function Calculate() {
       },
       fields: [
         {
-          name: 'FID',
+          name: 'OBJECTID',
           type: 'oid',
-          alias: 'FID',
+          alias: 'OBJECTID',
         },
         {
-          name: 'Id',
-          type: 'integer',
-          alias: 'Id',
+          name: 'GLOBALID',
+          type: 'guid',
+          alias: 'GlobalID',
         },
         {
-          name: 'CFU',
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'Permanent Identifier',
+        },
+        {
+          name: 'CONTAM_TYPE',
+          type: 'string',
+          alias: 'Contamination Type',
+        },
+        {
+          name: 'CONTAM_VALUE',
           type: 'double',
-          alias: 'CFU',
+          alias: 'Contamination Value',
+        },
+        {
+          name: 'CONTAM_UNIT',
+          type: 'string',
+          alias: 'Contamination Unit',
+        },
+        {
+          name: 'SCENARIONAME',
+          type: 'string',
+          alias: 'Scenario Name',
+        },
+        {
+          name: 'Notes',
+          type: 'string',
+          alias: 'Notes',
         },
         {
           name: 'Shape_Length',
@@ -309,99 +334,131 @@ function Calculate() {
           name: 'GLOBALID',
           type: 'guid',
           alias: 'GlobalID',
-          length: 38,
+        },
+        {
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'Permanent Identifier',
         },
         {
           name: 'TYPE',
           type: 'string',
-          alias: 'Type',
-          length: 255,
+          alias: 'Sampling Method Type',
         },
         {
           name: 'TTPK',
           type: 'double',
-          alias: 'TTPK',
+          alias: 'Time to Prepare Kits',
         },
         {
           name: 'TTC',
           type: 'double',
-          alias: 'TTC',
+          alias: 'Time to Collect',
         },
         {
           name: 'TTA',
           type: 'double',
-          alias: 'TTA',
+          alias: 'Time to Analyze',
         },
         {
           name: 'TTPS',
           type: 'double',
-          alias: 'TTPS',
+          alias: 'Total Time per Sample',
         },
         {
           name: 'LOD_P',
           type: 'double',
-          alias: 'LOD_P',
+          alias: 'Limit of Detection Porous',
         },
         {
           name: 'LOD_NON',
           type: 'double',
-          alias: 'LOD_NON',
+          alias: 'Limit of Detection Nonporous',
         },
         {
           name: 'MCPS',
           type: 'double',
-          alias: 'MCPS',
+          alias: 'Material Cost per Sample',
         },
         {
           name: 'TCPS',
           type: 'double',
-          alias: 'TCPS',
+          alias: 'Total Cost Per Sample',
         },
         {
           name: 'WVPS',
           type: 'double',
-          alias: 'WVPS',
+          alias: 'Waste Volume per Sample',
         },
         {
           name: 'WWPS',
           type: 'double',
-          alias: 'WWPS',
+          alias: 'Waste Weight per Sample',
         },
         {
           name: 'SA',
           type: 'double',
-          alias: 'SA',
+          alias: 'Sampling Surface Area',
         },
         {
-          name: 'AA',
-          type: 'double',
-          alias: 'AA',
-        },
-        {
-          name: 'AC',
-          type: 'integer',
-          alias: 'AC',
-        },
-        {
-          name: 'ITER',
-          type: 'integer',
-          alias: 'ITER',
-        },
-        {
-          name: 'NOTES',
+          name: 'Notes',
           type: 'string',
           alias: 'Notes',
-          length: 2000,
         },
         {
           name: 'ALC',
           type: 'double',
-          alias: 'ALC',
+          alias: 'Analysis Labor Cost',
         },
         {
           name: 'AMC',
           type: 'double',
-          alias: 'AMC',
+          alias: 'Analysis Material Cost',
+        },
+        {
+          name: 'CONTAM_TYPE',
+          type: 'string',
+          alias: 'Contamination Type',
+        },
+        {
+          name: 'CONTAM_VALUE',
+          type: 'double',
+          alias: 'Contamination Value',
+        },
+        {
+          name: 'CONTAM_UNIT',
+          type: 'string',
+          alias: 'Contamination Unit',
+        },
+        {
+          name: 'SCENARIONAME',
+          type: 'string',
+          alias: 'Scenario Name',
+        },
+        {
+          name: 'CREATEDDATE',
+          type: 'date',
+          alias: 'Created Date',
+        },
+        {
+          name: 'UPDATEDDATE',
+          type: 'date',
+          alias: 'Updated Date',
+        },
+        {
+          name: 'USERNAME',
+          type: 'string',
+          alias: 'Username',
+        },
+        {
+          name: 'ORGANIZATION',
+          type: 'string',
+          alias: 'Organization',
+        },
+        {
+          name: 'ELEVATIONSERIES',
+          type: 'string',
+          alias: 'Elevation Series',
         },
         {
           name: 'Shape_Length',
@@ -442,19 +499,28 @@ function Calculate() {
         // save the data to state, use an empty array if there is no data
         if (res?.results?.[0]?.value?.features) {
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-          // update the cfu attribute of the graphics
-          res.results[0].value.features.forEach((resFeature: any) => {
-            const feature = layer.graphics.find(
-              (graphic) =>
-                String(graphic.attributes.OBJECTID) ===
-                  String(resFeature.attributes.OBJECTID) &&
-                String(graphic.attributes.GLOBALID) ===
-                  String(resFeature.attributes.GLOBALID),
+          // update the contam value attribute of the graphics
+          const resFeatures = res.results[0].value.features;
+          layer.graphics.forEach((graphic) => {
+            const resFeature = resFeatures.find(
+              (feature: any) =>
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                feature.attributes.PERMANENT_IDENTIFIER,
             );
 
-            if (feature) {
-              feature.attributes.CFU = resFeature.attributes.CFU;
+            // if the graphic was not found in the response, set contam value to null,
+            // otherwise use the contam value value found in the response.
+            let contamValue = null;
+            let contamType = graphic.attributes.CONTAM_TYPE;
+            let contamUnit = graphic.attributes.CONTAM_UNIT;
+            if (resFeature) {
+              contamValue = resFeature.attributes.CONTAM_VALUE;
+              contamType = resFeature.attributes.CONTAM_TYPE;
+              contamUnit = resFeature.attributes.CONTAM_UNIT;
             }
+            graphic.attributes.CONTAM_VALUE = contamValue;
+            graphic.attributes.CONTAM_TYPE = contamType;
+            graphic.attributes.CONTAM_UNIT = contamUnit;
           });
 
           // make a copy of the edits context variable

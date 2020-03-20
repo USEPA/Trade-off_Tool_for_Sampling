@@ -14,7 +14,7 @@ export type AddedFrom = 'file' | 'sketch';
 
 export type LayerType = {
   id: number;
-  layerId?: string;
+  layerId: string;
   value: string;
   name: string;
   label: string;
