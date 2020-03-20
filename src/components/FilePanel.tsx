@@ -18,7 +18,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 // types
-import { LayerType, LayerSelectType } from 'types/Layer';
+import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
@@ -31,6 +31,64 @@ const layerOptions: LayerSelectType[] = [
   { value: 'Area of Interest', label: 'Area of Interest' },
   { value: 'VSP', label: 'VSP' },
 ];
+
+function fileVerification(type: LayerTypeName, attributes: any) {
+  const contaminationRequiredFields = [
+    'OBJECTID',
+    'GLOBALID',
+    'PERMANENT_IDENTIFIER',
+    'TYPE',
+    'CONTAM_TYPE',
+    'CONTAM_VALUE',
+    'CONTAM_UNIT',
+  ];
+  const samplesRequiredFields = [
+    'OBJECTID',
+    'GLOBALID',
+    'PERMANENT_IDENTIFIER',
+    'TYPE',
+    'TTPK',
+    'TTC',
+    'TTA',
+    'TTPS',
+    'LOD_P',
+    'LOD_NON',
+    'MCPS',
+    'TCPS',
+    'WVPS',
+    'WWPS',
+    'SA',
+    'Notes',
+    'ALC',
+    'AMC',
+    'CONTAM_TYPE',
+    'CONTAM_VALUE',
+    'CONTAM_UNIT',
+    'SCENARIONAME',
+    'CREATEDDATE',
+    'UPDATEDDATE',
+    'USERNAME',
+    'ORGANIZATION',
+    'SURFACEAREAUNIT',
+    'ELEVATIONSERIES',
+    'Shape_Length',
+    'Shape_Area',
+  ];
+
+  let valid = true;
+  if (type === 'Contamination Map') {
+    contaminationRequiredFields.forEach((field) => {
+      if (!(field in attributes)) valid = false;
+    });
+  }
+  if (type === 'Samples') {
+    samplesRequiredFields.forEach((field) => {
+      if (!(field in attributes)) valid = false;
+    });
+  }
+
+  return valid;
+}
 
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
@@ -493,6 +551,7 @@ function FilePanel() {
     setFeaturesAdded(true);
 
     const graphics: __esri.Graphic[] = [];
+    let validAttributes = true;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
         !layer?.featureSet?.features ||
@@ -516,8 +575,9 @@ function FilePanel() {
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
         // add a layer type to the graphic
-        if (!graphic?.attributes?.TYPE)
+        if (!graphic?.attributes?.TYPE) {
           graphic.attributes['TYPE'] = layerType.value;
+        }
 
         // add ids to the graphic, if the graphic doesn't already have them
         const uuid = generateUUID();
@@ -557,6 +617,10 @@ function FilePanel() {
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
         }
 
+        // verify the graphic has all required attributes
+        const valid = fileVerification(layerType.value, graphic.attributes);
+        if (!valid) validAttributes = false;
+
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;
         }
@@ -569,6 +633,11 @@ function FilePanel() {
         graphics.push(graphic);
       });
     });
+
+    if (!validAttributes) {
+      alert('The file does not contain all of the required attributes.');
+      return;
+    }
 
     const graphicsLayer = new GraphicsLayer({
       graphics,
