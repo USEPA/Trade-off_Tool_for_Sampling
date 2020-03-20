@@ -74,23 +74,34 @@ function fileVerification(type: LayerTypeName, attributes: any) {
     'ORGANIZATION',
     'SURFACEAREAUNIT',
     'ELEVATIONSERIES',
-    'Shape_Length',
-    'Shape_Area',
   ];
 
   let valid = true;
+  const missingFields: string[] = [];
   if (type === 'Contamination Map') {
     contaminationRequiredFields.forEach((field) => {
-      if (!(field in attributes)) valid = false;
+      // check if the required field is in the attributes object
+      if (!(field in attributes)) {
+        valid = false;
+
+        // build a list of fields that are missing
+        if (missingFields.indexOf(field) === -1) missingFields.push(field);
+      }
     });
   }
   if (type === 'Samples') {
     samplesRequiredFields.forEach((field) => {
-      if (!(field in attributes)) valid = false;
+      // check if the required field is in the attributes object
+      if (!(field in attributes)) {
+        valid = false;
+
+        // build a list of fields that are missing
+        if (missingFields.indexOf(field) === -1) missingFields.push(field);
+      }
     });
   }
 
-  return valid;
+  return { valid, missingFields };
 }
 
 // --- styles (FileIcon) ---
@@ -652,7 +663,7 @@ function FilePanel() {
         }
 
         // verify the graphic has all required attributes
-        const valid = fileVerification(layerType.value, graphic.attributes);
+        const { valid } = fileVerification(layerType.value, graphic.attributes);
         if (!valid) validAttributes = false;
 
         if (graphic?.geometry?.type === 'polygon') {
