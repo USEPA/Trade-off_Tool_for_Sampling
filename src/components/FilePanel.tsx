@@ -32,22 +32,6 @@ const layerOptions: LayerSelectType[] = [
   { value: 'VSP', label: 'VSP' },
 ];
 
-type ContaminationTypeSelect = {
-  value: 'chemical' | 'radiological' | 'biological';
-  label: string;
-  disabled?: boolean;
-};
-
-const contaminationTypeOptions: ContaminationTypeSelect[] = [
-  { value: 'chemical', label: 'Chemical' },
-  {
-    value: 'radiological',
-    label: 'Radiological (future version)',
-    disabled: true,
-  },
-  { value: 'biological', label: 'Biological (future version)', disabled: true },
-];
-
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
   width: 2em;
@@ -316,12 +300,6 @@ function FilePanel() {
     sampleType,
     setSampleType, //
   ] = React.useState<SampleSelectType | null>(null);
-  const [
-    contaminationType,
-    setContaminationType, //
-  ] = React.useState<ContaminationTypeSelect | null>(
-    contaminationTypeOptions[0],
-  );
   React.useEffect(() => {
     if (
       !mapView ||
@@ -836,21 +814,6 @@ function FilePanel() {
       />
       {layerType && (
         <React.Fragment>
-          {layerType.value === 'Contamination Map' && (
-            <React.Fragment>
-              <label htmlFor="contamination-type-select">Sample Type</label>
-              <Select
-                inputId="contamination-type-select"
-                css={selectStyles}
-                value={contaminationType}
-                onChange={(ev) =>
-                  setContaminationType(ev as ContaminationTypeSelect)
-                }
-                options={contaminationTypeOptions}
-                isOptionDisabled={(option) => (option.disabled ? true : false)}
-              />
-            </React.Fragment>
-          )}
           {layerType.value === 'VSP' && (
             <React.Fragment>
               <label htmlFor="sample-type-select">Sample Type</label>
@@ -863,10 +826,8 @@ function FilePanel() {
               />
             </React.Fragment>
           )}
-          {((layerType.value !== 'VSP' &&
-            layerType.value !== 'Contamination Map') ||
-            (layerType.value === 'VSP' && sampleType) ||
-            (layerType.value === 'Contamination Map' && contaminationType)) && (
+          {(layerType.value !== 'VSP' ||
+            (layerType.value === 'VSP' && sampleType)) && (
             <React.Fragment>
               <input
                 id="generalize-features-input"
