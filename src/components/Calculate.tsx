@@ -388,7 +388,7 @@ function Calculate() {
           alias: 'ITER',
         },
         {
-          name: 'NOTES',
+          name: 'Notes',
           type: 'string',
           alias: 'Notes',
           length: 2000,

@@ -217,7 +217,7 @@ export function getPopupTemplate(type: LayerTypeName) {
           type: 'fields',
           fieldInfos: [
             { fieldName: 'TYPE', label: 'Type' },
-            { fieldName: 'NOTES', label: 'Notes' },
+            { fieldName: 'Notes', label: 'Notes' },
           ],
         },
       ],
@@ -268,7 +268,7 @@ export function getPopupTemplate(type: LayerTypeName) {
             { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
             { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
             { fieldName: 'SA', label: 'Surface Area (sq inch)' },
-            { fieldName: 'NOTES', label: 'Notes' },
+            { fieldName: 'Notes', label: 'Notes' },
             { fieldName: 'ALC', label: 'Analysis Labor Cost' },
             { fieldName: 'AMC', label: 'Analysis Material Cost' },
             { fieldName: 'CFU', label: 'Colony-Forming Units' },
