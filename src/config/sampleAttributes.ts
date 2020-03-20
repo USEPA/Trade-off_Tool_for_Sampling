@@ -46,7 +46,9 @@ type SampleProperties =
   | 'AA'
   | 'AC'
   | 'ITER'
-  | 'CFU'
+  | 'CONTAM_TYPE'
+  | 'CONTAM_VALUE'
+  | 'CONTAM_UNIT'
   | 'SCENARIONAME'
   | 'CREATEDDATE'
   | 'UPDATEDDATE'
@@ -84,7 +86,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
@@ -115,7 +119,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
@@ -146,7 +152,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
@@ -177,7 +185,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
@@ -208,7 +218,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
@@ -239,7 +251,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
     SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,

@@ -556,7 +556,9 @@ function FilePanel() {
         // add sample layer specific attributes
         if (layerType.value === 'Samples') {
           const {
-            CFU,
+            CONTAM_TYPE,
+            CONTAM_VALUE,
+            CONTAM_UNIT,
             SCENARIONAME,
             CREATEDDATE,
             UPDATEDDATE,
@@ -565,7 +567,9 @@ function FilePanel() {
             SURFACEAREAUNIT,
             ELEVATIONSERIES,
           } = graphic.attributes;
-          if (!CFU) graphic.attributes['CFU'] = null;
+          if (!CONTAM_TYPE) graphic.attributes['CONTAM_TYPE'] = null;
+          if (!CONTAM_VALUE) graphic.attributes['CONTAM_VALUE'] = null;
+          if (!CONTAM_UNIT) graphic.attributes['CONTAM_UNIT'] = null;
           if (!SCENARIONAME) graphic.attributes['SCENARIONAME'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;

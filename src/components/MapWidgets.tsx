@@ -738,16 +738,16 @@ function MapWidgets({ mapView }: Props) {
       return;
     }
 
-    // Get any graphics that have a CFU value
+    // Get any graphics that have a contam value
     const highlightGraphics: __esri.Graphic[] = [];
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.attributes.CFU) {
+      if (graphic.attributes.CONTAM_VALUE) {
         highlightGraphics.push(graphic);
       }
     });
     setHighlightGraphics(highlightGraphics);
 
-    // Highlight the graphics with a CFU
+    // Highlight the graphics with a contam value
     if (highlightGraphics.length > 0) {
       mapView.whenLayerView(sketchLayer.sketchLayer).then((layerView) => {
         setNextHighlight(layerView.highlight(highlightGraphics));
