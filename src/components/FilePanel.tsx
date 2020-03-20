@@ -76,14 +76,11 @@ function fileVerification(type: LayerTypeName, attributes: any) {
     'ELEVATIONSERIES',
   ];
 
-  let valid = true;
   const missingFields: string[] = [];
   if (type === 'Contamination Map') {
     contaminationRequiredFields.forEach((field) => {
       // check if the required field is in the attributes object
       if (!(field in attributes)) {
-        valid = false;
-
         // build a list of fields that are missing
         if (missingFields.indexOf(field) === -1) missingFields.push(field);
       }
@@ -93,15 +90,13 @@ function fileVerification(type: LayerTypeName, attributes: any) {
     samplesRequiredFields.forEach((field) => {
       // check if the required field is in the attributes object
       if (!(field in attributes)) {
-        valid = false;
-
         // build a list of fields that are missing
         if (missingFields.indexOf(field) === -1) missingFields.push(field);
       }
     });
   }
 
-  return { valid, missingFields };
+  return missingFields;
 }
 
 // --- styles (FileIcon) ---
@@ -179,6 +174,7 @@ type UploadStatusType =
   | 'failure'
   | 'no-data'
   | 'invalid-file-type'
+  | 'missing-attributes'
   | 'file-read-error';
 
 function FilePanel() {
@@ -215,6 +211,7 @@ function FilePanel() {
   const [generateCalled, setGenerateCalled] = React.useState(false);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
+  const [missingAttributes, setMissingAttributes] = React.useState('');
 
   const [
     layerType,
@@ -255,6 +252,7 @@ function FilePanel() {
     setAnalyzeCalled(false);
     setGenerateCalled(false);
     setFeaturesAdded(false);
+    setMissingAttributes('');
 
     // get the filetype
     const file = acceptedFiles[0];
@@ -596,7 +594,7 @@ function FilePanel() {
     setFeaturesAdded(true);
 
     const graphics: __esri.Graphic[] = [];
-    let validAttributes = true;
+    let missingAttributes: string[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
         !layer?.featureSet?.features ||
@@ -663,8 +661,13 @@ function FilePanel() {
         }
 
         // verify the graphic has all required attributes
-        const { valid } = fileVerification(layerType.value, graphic.attributes);
-        if (!valid) validAttributes = false;
+        const missingFields = fileVerification(
+          layerType.value,
+          graphic.attributes,
+        );
+        if (missingFields.length > 0) {
+          missingAttributes = missingAttributes.concat(missingFields);
+        }
 
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;
@@ -679,8 +682,15 @@ function FilePanel() {
       });
     });
 
-    if (!validAttributes) {
-      alert('The file does not contain all of the required attributes.');
+    if (missingAttributes.length > 0) {
+      setUploadStatus('missing-attributes');
+      const sortedMissingAttributes = missingAttributes.sort();
+      const missingAttributesStr =
+        sortedMissingAttributes.slice(0, -1).join(', ') +
+        ' and ' +
+        sortedMissingAttributes.slice(-1);
+
+      setMissingAttributes(missingAttributesStr);
       return;
     }
 
@@ -988,6 +998,13 @@ function FilePanel() {
                       severity="error"
                       title="No Data"
                       message={`The ${file.name} file did not have any data to display on the map`}
+                    />
+                  )}
+                  {uploadStatus === 'missing-attributes' && (
+                    <MessageBox
+                      severity="error"
+                      title="Missing Required Attributes"
+                      message={`Features in the ${file.name} are missing the following required attributes: ${missingAttributes}`}
                     />
                   )}
                   {uploadStatus === 'failure' && (
