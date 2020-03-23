@@ -10,7 +10,7 @@ function Select({ ...props }: Props) {
       // ensures the entire select menu is visible and closes open
       // select menus when the user scrolls any parent components
       classNamePrefix="select"
-      menuPosition={'fixed'}
+      menuPosition="fixed"
       closeMenuOnScroll={(e: any) =>
         !e?.target?.classList?.contains?.('select__menu-list')
       }
