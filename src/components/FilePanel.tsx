@@ -18,6 +18,20 @@ import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 
+/**
+ * Determines if the desired name has already been used. If it has
+ * it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+function getLayerName(layers: LayerType[], desiredName: string) {
+  let duplicateCount = 0;
+  layers.forEach((layer) => {
+    if (layer.value === desiredName) duplicateCount += 1;
+  });
+
+  if (duplicateCount > 0) return `${desiredName} (${duplicateCount})`;
+  else return desiredName;
+}
+
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
   width: 2em;
@@ -493,17 +507,19 @@ function FilePanel() {
       });
     });
 
+    const layerName = getLayerName(layers, file.name);
+
     const graphicsLayer = new GraphicsLayer({
       graphics,
-      title: file.name,
+      title: layerName,
     });
 
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
-      value: `-1 - ${file.name}`,
-      name: file.name,
-      label: file.name,
+      value: file.name,
+      name: layerName,
+      label: layerName,
       layerType: layerType.value,
       scenarioName: '',
       scenarioDescription: '',
@@ -622,12 +638,13 @@ function FilePanel() {
         popupTemplate,
       });
 
+      const layerName = getLayerName(layers, file.name);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
         objectIdField: layer.layerDefinition.objectIdField,
         outFields: ['*'],
         source: features,
-        title: file.name,
+        title: layerName,
         renderer,
         popupTemplate,
       };
@@ -645,9 +662,9 @@ function FilePanel() {
       // add the layers, from the uploaded file, to the map
       layersAdded.push({
         id: -1,
-        value: `-1 - ${file.name}`,
-        name: file.name,
-        label: file.name,
+        value: file.name,
+        name: layerName,
+        label: layerName,
         layerType: layerType.value,
         scenarioName: '',
         scenarioDescription: '',
