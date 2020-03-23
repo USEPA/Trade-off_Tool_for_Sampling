@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-import Select from 'react-select';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
+import Select from 'components/Select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';

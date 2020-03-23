@@ -2,11 +2,11 @@
 
 import { jsx, css } from '@emotion/core';
 import React from 'react';
-import Select from 'react-select';
 // components
 import FilePanel from 'components/FilePanel';
 import SearchPanel from 'components/SearchPanel';
 import URLPanel from 'components/URLPanel';
+import Select from 'components/Select';
 
 // --- styles (AddData) ---
 const panelSelectStyles = css`
