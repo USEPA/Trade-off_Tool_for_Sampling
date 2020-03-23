@@ -666,7 +666,10 @@ function FilePanel() {
           graphic.attributes,
         );
         if (missingFields.length > 0) {
-          missingAttributes = missingAttributes.concat(missingFields);
+          missingAttributes = missingAttributes.concat(
+            // filter out duplicates
+            missingFields.filter((item) => missingAttributes.indexOf(item) < 0),
+          );
         }
 
         if (graphic?.geometry?.type === 'polygon') {
