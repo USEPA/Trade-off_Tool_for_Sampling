@@ -44,11 +44,172 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+function useMapPositionStorage() {
+  const key = 'tots_map_extent';
+
+  const { Extent, watchUtils } = useEsriModulesContext();
+  const { mapView } = React.useContext(SketchContext);
+
+  // Retreives the map position and zoom level from session storage when the app loads
+  const [
+    localMapPositionInitialized,
+    setLocalMapPositionInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!mapView || localMapPositionInitialized) return;
+
+    setLocalMapPositionInitialized(true);
+
+    const positionStr = readFromStorage(key);
+    if (!positionStr) return;
+
+    const extent = JSON.parse(positionStr) as any;
+    mapView.extent = Extent.fromJSON(extent);
+
+    setLocalMapPositionInitialized(true);
+  }, [Extent, mapView, localMapPositionInitialized]);
+
+  // Saves the home widget's viewpoint to session storage whenever it changes
+  const [
+    watchExtentInitialized,
+    setWatchExtentInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!mapView || watchExtentInitialized) return;
+
+    watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
+      writeToStorage(key, newVal.toJSON());
+    });
+
+    setWatchExtentInitialized(true);
+  }, [
+    watchUtils,
+    mapView,
+    watchExtentInitialized,
+    localMapPositionInitialized,
+  ]);
+}
+
+function useHomeWidgetStorage() {
+  const key = 'tots_home_viewpoint';
+
+  const { Viewpoint, watchUtils } = useEsriModulesContext();
+  const { homeWidget } = React.useContext(SketchContext);
+
+  // Retreives the home widget viewpoint from session storage when the app loads
+  const [
+    localHomeWidgetInitialized,
+    setLocalHomeWidgetInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!homeWidget || localHomeWidgetInitialized) return;
+
+    setLocalHomeWidgetInitialized(true);
+
+    const viewpointStr = readFromStorage(key);
+
+    if (viewpointStr) {
+      const viewpoint = JSON.parse(viewpointStr) as any;
+      homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
+    }
+  }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
+
+  // Saves the extent to session storage whenever it changes
+  const [
+    watchHomeWidgetInitialized,
+    setWatchHomeWidgetInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!homeWidget || watchHomeWidgetInitialized) return;
+
+    watchUtils.watch(
+      homeWidget,
+      'viewpoint',
+      (newVal, oldVal, propName, target) => {
+        writeToStorage(key, homeWidget.viewpoint.toJSON());
+      },
+    );
+
+    setWatchHomeWidgetInitialized(true);
+  }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
+}
+
+function useSamplesLayerStorage() {
+  const key = 'tots_selected_sample_layer';
+
+  const { layers, sketchLayer, setSketchLayer } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives the selected sample layer (sketchLayer) from session storage
+  // when the app loads
+  const [
+    localSampleLayerInitialized,
+    setLocalSampleLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (layers.length === 0 || localSampleLayerInitialized) return;
+
+    setLocalSampleLayerInitialized(true);
+
+    const layerId = readFromStorage(key);
+    if (!layerId) return;
+
+    setSketchLayer(getLayerById(layers, layerId));
+  }, [layers, setSketchLayer, localSampleLayerInitialized]);
+
+  // Saves the selected sample layer (sketchLayer) to session storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleLayerInitialized) return;
+
+    const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
+    writeToStorage(key, data);
+  }, [sketchLayer, localSampleLayerInitialized]);
+}
+
+function useContaminationMapStorage() {
+  const key = 'tots_selected_contamination_layer';
+  const { layers } = React.useContext(SketchContext);
+  const {
+    contaminationMap,
+    setContaminationMap, //
+  } = React.useContext(CalculateContext);
+
+  // Retreives the selected contamination map from session storage
+  // when the app loads
+  const [
+    localContaminationLayerInitialized,
+    setLocalContaminationLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (layers.length === 0 || localContaminationLayerInitialized) return;
+
+    setLocalContaminationLayerInitialized(true);
+
+    const layerId = readFromStorage(key);
+    if (!layerId) return;
+
+    setContaminationMap(getLayerById(layers, layerId));
+  }, [layers, setContaminationMap, localContaminationLayerInitialized]);
+
+  // Saves the selected contamination map to session storage whenever it changes
+  React.useEffect(() => {
+    if (!localContaminationLayerInitialized) return;
+
+    const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
+    writeToStorage(key, data);
+  }, [contaminationMap, localContaminationLayerInitialized]);
+}
+
 // Saves/Retrieves data to session storage
 export function useSessionStorage() {
+  useMapPositionStorage();
+  useHomeWidgetStorage();
+  useSamplesLayerStorage();
+  useContaminationMapStorage();
+
   const {
     CSVLayer,
-    Extent,
     FeatureLayer,
     Field,
     geometryJsonUtils,
@@ -60,31 +221,21 @@ export function useSessionStorage() {
     Polygon,
     PortalItem,
     rendererJsonUtils,
-    Viewpoint,
-    watchUtils,
     WMSLayer,
   } = useEsriModulesContext();
   const {
     edits,
     setEdits,
-    homeWidget,
     layers,
     setLayers,
     map,
-    mapView,
     portalLayers,
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
-    sketchLayer,
-    setSketchLayer,
     urlLayers,
     setUrlLayers,
   } = React.useContext(SketchContext);
-  const {
-    contaminationMap,
-    setContaminationMap, //
-  } = React.useContext(CalculateContext);
 
   // Retreives edit data from session storage when the app loads
   const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
@@ -348,125 +499,6 @@ export function useSessionStorage() {
     if (!localReferenceLayerInitialized) return;
     writeToStorage('tots_reference_layers', referenceLayers);
   }, [referenceLayers, localReferenceLayerInitialized]);
-
-  // Retreives the map position and zoom level from session storage when the app loads
-  const [
-    localMapPositionInitialized,
-    setLocalMapPositionInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!mapView || localMapPositionInitialized) return;
-
-    setLocalMapPositionInitialized(true);
-
-    const positionStr = readFromStorage('tots_map_extent');
-    if (!positionStr) return;
-
-    const extent = JSON.parse(positionStr) as any;
-    mapView.extent = Extent.fromJSON(extent);
-  }, [Extent, mapView, localMapPositionInitialized]);
-
-  // Saves the home widget's viewpoint to session storage whenever it changes
-  const [
-    watchExtentInitialized,
-    setWatchExtentInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!mapView || watchExtentInitialized) return;
-
-    watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
-      writeToStorage('tots_map_extent', mapView.extent.toJSON());
-    });
-
-    setWatchExtentInitialized(true);
-  }, [watchUtils, mapView, watchExtentInitialized]);
-
-  // Retreives the home widget viewpoint from session storage when the app loads
-  const [
-    localHomeWidgetInitialized,
-    setLocalHomeWidgetInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!homeWidget || localHomeWidgetInitialized) return;
-
-    setLocalHomeWidgetInitialized(true);
-
-    const viewpointStr = readFromStorage('tots_home_viewpoint');
-
-    if (viewpointStr) {
-      const viewpoint = JSON.parse(viewpointStr) as any;
-      homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
-    }
-  }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
-
-  // Saves the extent to session storage whenever it changes
-  const [
-    watchHomeWidgetInitialized,
-    setWatchHomeWidgetInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!homeWidget || watchHomeWidgetInitialized) return;
-
-    watchUtils.watch(
-      homeWidget,
-      'viewpoint',
-      (newVal, oldVal, propName, target) => {
-        writeToStorage('tots_home_viewpoint', homeWidget.viewpoint.toJSON());
-      },
-    );
-
-    setWatchHomeWidgetInitialized(true);
-  }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
-
-  // Retreives the selected sample layer (sketchLayer) from session storage
-  // when the app loads
-  const [
-    localSampleLayerInitialized,
-    setLocalSampleLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (layers.length === 0 || localSampleLayerInitialized) return;
-
-    setLocalSampleLayerInitialized(true);
-
-    const layerId = readFromStorage('tots_selected_sample_layer');
-    if (!layerId) return;
-
-    setSketchLayer(getLayerById(layers, layerId));
-  }, [layers, setSketchLayer, localSampleLayerInitialized]);
-
-  // Saves the selected sample layer (sketchLayer) to session storage whenever it changes
-  React.useEffect(() => {
-    if (!localSampleLayerInitialized) return;
-
-    const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
-    writeToStorage('tots_selected_sample_layer', data);
-  }, [sketchLayer, localSampleLayerInitialized]);
-
-  // Retreives the selected contamination map from session storage
-  // when the app loads
-  const [
-    localContaminationLayerInitialized,
-    setLocalContaminationLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (layers.length === 0 || localContaminationLayerInitialized) return;
-
-    setLocalContaminationLayerInitialized(true);
-
-    const layerId = readFromStorage('tots_selected_contamination_layer');
-    if (!layerId) return;
-
-    setContaminationMap(getLayerById(layers, layerId));
-  }, [layers, setContaminationMap, localContaminationLayerInitialized]);
-
-  // Saves the selected contamination map to session storage whenever it changes
-  React.useEffect(() => {
-    if (!localContaminationLayerInitialized) return;
-
-    const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
-    writeToStorage('tots_selected_contamination_layer', data);
-  }, [contaminationMap, localContaminationLayerInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
