@@ -413,6 +413,95 @@ function useContaminationMapStorage() {
   }, [contaminationMap, localContaminationLayerInitialized]);
 }
 
+function useCalculateSettingsStorage() {
+  const key = 'tots_calculate_settings';
+  const {
+    numLabs,
+    setNumLabs,
+    numLabHours,
+    setNumLabHours,
+    numSamplingHours,
+    setNumSamplingHours,
+    numSamplingPersonnel,
+    setNumSamplingPersonnel,
+    numSamplingShifts,
+    setNumSamplingShifts,
+    numSamplingTeams,
+    setNumSamplingTeams,
+    samplingLaborCost,
+    setSamplingLaborCost,
+    surfaceArea,
+    setSurfaceArea,
+  } = React.useContext(CalculateContext);
+
+  type CalculateSettingsType = {
+    numLabs: number;
+    numLabHours: number;
+    numSamplingHours: number;
+    numSamplingPersonnel: number;
+    numSamplingShifts: number;
+    numSamplingTeams: number;
+    samplingLaborCost: number;
+    surfaceArea: number;
+  };
+
+  // Reads the calculate settings from session storage.
+  const [settingsInitialized, setSettingsInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (settingsInitialized) return;
+    const settingsStr = readFromStorage(key);
+
+    setSettingsInitialized(true);
+
+    if (!settingsStr) return;
+    const settings: CalculateSettingsType = JSON.parse(settingsStr);
+
+    setNumLabs(settings.numLabs);
+    setNumLabHours(settings.numLabHours);
+    setNumSamplingHours(settings.numSamplingHours);
+    setNumSamplingPersonnel(settings.numSamplingPersonnel);
+    setNumSamplingShifts(settings.numSamplingShifts);
+    setNumSamplingTeams(settings.numSamplingTeams);
+    setSamplingLaborCost(settings.samplingLaborCost);
+    setSurfaceArea(settings.surfaceArea);
+  }, [
+    setNumLabs,
+    setNumLabHours,
+    setNumSamplingHours,
+    setNumSamplingPersonnel,
+    setNumSamplingShifts,
+    setNumSamplingTeams,
+    setSamplingLaborCost,
+    setSurfaceArea,
+    settingsInitialized,
+  ]);
+
+  // Saves the calculate settings to session storage
+  React.useEffect(() => {
+    const settings: CalculateSettingsType = {
+      numLabs,
+      numLabHours,
+      numSamplingHours,
+      numSamplingPersonnel,
+      numSamplingShifts,
+      numSamplingTeams,
+      samplingLaborCost,
+      surfaceArea,
+    };
+
+    writeToStorage(key, settings);
+  }, [
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+  ]);
+}
+
 // Saves/Retrieves data to session storage
 export function useSessionStorage() {
   useReferenceLayerStorage();
@@ -422,6 +511,7 @@ export function useSessionStorage() {
   useHomeWidgetStorage();
   useSamplesLayerStorage();
   useContaminationMapStorage();
+  useCalculateSettingsStorage();
 
   const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
   const { edits, setEdits, layers, setLayers, map } = React.useContext(
