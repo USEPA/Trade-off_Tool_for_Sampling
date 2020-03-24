@@ -44,6 +44,7 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+// Uses browser storage for holding the map's view port extent.
 function useMapPositionStorage() {
   const key = 'tots_map_extent';
 
@@ -90,6 +91,7 @@ function useMapPositionStorage() {
   ]);
 }
 
+// Uses browser storage for holding the home widget's viewpoint.
 function useHomeWidgetStorage() {
   const key = 'tots_home_viewpoint';
 
@@ -134,6 +136,7 @@ function useHomeWidgetStorage() {
   }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
 }
 
+// Uses browser storage for holding the currently selected sample layer.
 function useSamplesLayerStorage() {
   const key = 'tots_selected_sample_layer';
 
@@ -167,6 +170,7 @@ function useSamplesLayerStorage() {
   }, [sketchLayer, localSampleLayerInitialized]);
 }
 
+// Uses browser storage for holding the currently selected contamination map layer.
 function useContaminationMapStorage() {
   const key = 'tots_selected_contamination_layer';
   const { layers } = React.useContext(SketchContext);
