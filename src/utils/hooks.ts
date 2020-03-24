@@ -53,12 +53,14 @@ export function useSessionStorage() {
     Polygon,
     PortalItem,
     rendererJsonUtils,
+    Viewpoint,
     watchUtils,
     WMSLayer,
   } = useEsriModulesContext();
   const {
     edits,
     setEdits,
+    homeWidget,
     layers,
     setLayers,
     map,
@@ -365,6 +367,43 @@ export function useSessionStorage() {
 
     setWatchExtentInitialized(true);
   }, [watchUtils, mapView, watchExtentInitialized]);
+
+  // Retreives the home widget viewpoint from session storage when the app loads
+  const [
+    localHomeWidgetInitialized,
+    setLocalHomeWidgetInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!homeWidget || localHomeWidgetInitialized) return;
+
+    setLocalHomeWidgetInitialized(true);
+
+    const viewpointStr = readFromStorage('tots_home_viewpoint');
+
+    if (viewpointStr) {
+      const viewpoint = JSON.parse(viewpointStr) as any;
+      homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
+    }
+  }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
+
+  // Saves the extent to session storage whenever it changes
+  const [
+    watchHomeWidgetInitialized,
+    setWatchHomeWidgetInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!homeWidget || watchHomeWidgetInitialized) return;
+
+    watchUtils.watch(
+      homeWidget,
+      'viewpoint',
+      (newVal, oldVal, propName, target) => {
+        writeToStorage('tots_home_viewpoint', homeWidget.viewpoint.toJSON());
+      },
+    );
+
+    setWatchHomeWidgetInitialized(true);
+  }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
