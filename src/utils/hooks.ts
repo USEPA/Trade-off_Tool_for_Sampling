@@ -16,7 +16,7 @@ import { LayerType, UrlLayerType } from 'types/Layer';
 import { polygonSymbol } from 'config/symbols';
 
 // Saves data to session storage
-function writeToStorage(key: string, data: any) {
+export function writeToStorage(key: string, data: any) {
   const itemSize = Math.round(JSON.stringify(data).length / 1024);
 
   try {
@@ -33,7 +33,7 @@ function writeToStorage(key: string, data: any) {
 }
 
 // Reads data from session storage
-function readFromStorage(key: string) {
+export function readFromStorage(key: string) {
   return sessionStorage.getItem(key);
 }
 

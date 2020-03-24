@@ -5,6 +5,19 @@ import { jsx } from '@emotion/core';
 // types
 import { CalculateResultsType } from 'types/CalculateResults';
 import { LayerType } from 'types/Layer';
+// utils
+import { readFromStorage, writeToStorage } from 'utils/hooks';
+
+type CalculateSettingsType = {
+  numLabs: number;
+  numLabHours: number;
+  numSamplingHours: number;
+  numSamplingPersonnel: number;
+  numSamplingShifts: number;
+  numSamplingTeams: number;
+  samplingLaborCost: number;
+  surfaceArea: number;
+};
 
 type CalculateType = {
   calculateResults: CalculateResultsType;
@@ -77,6 +90,48 @@ export function CalculateProvider({ children }: Props) {
   const [numSamplingTeams, setNumSamplingTeams] = React.useState(1);
   const [samplingLaborCost, setSamplingLaborCost] = React.useState(420);
   const [surfaceArea, setSurfaceArea] = React.useState(7400);
+
+  // Reads the calculate settings from session storage.
+  React.useEffect(() => {
+    const settingsStr = readFromStorage('tots_calculate_settings');
+
+    if (!settingsStr) return;
+    const settings: CalculateSettingsType = JSON.parse(settingsStr);
+
+    setNumLabs(settings.numLabs);
+    setNumLabHours(settings.numLabHours);
+    setNumSamplingHours(settings.numSamplingHours);
+    setNumSamplingPersonnel(settings.numSamplingPersonnel);
+    setNumSamplingShifts(settings.numSamplingShifts);
+    setNumSamplingTeams(settings.numSamplingTeams);
+    setSamplingLaborCost(settings.samplingLaborCost);
+    setSurfaceArea(settings.surfaceArea);
+  }, []);
+
+  // Saves the calculate settings to session storage
+  React.useEffect(() => {
+    const settings: CalculateSettingsType = {
+      numLabs,
+      numLabHours,
+      numSamplingHours,
+      numSamplingPersonnel,
+      numSamplingShifts,
+      numSamplingTeams,
+      samplingLaborCost,
+      surfaceArea,
+    };
+
+    writeToStorage('tots_calculate_settings', settings);
+  }, [
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+  ]);
 
   return (
     <CalculateContext.Provider
