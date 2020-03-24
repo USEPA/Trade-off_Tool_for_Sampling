@@ -41,6 +41,7 @@ function readFromStorage(key: string) {
 export function useSessionStorage() {
   const {
     CSVLayer,
+    Extent,
     FeatureLayer,
     Field,
     geometryJsonUtils,
@@ -52,6 +53,7 @@ export function useSessionStorage() {
     Polygon,
     PortalItem,
     rendererJsonUtils,
+    watchUtils,
     WMSLayer,
   } = useEsriModulesContext();
   const {
@@ -60,6 +62,7 @@ export function useSessionStorage() {
     layers,
     setLayers,
     map,
+    mapView,
     portalLayers,
     setPortalLayers,
     referenceLayers,
@@ -330,6 +333,38 @@ export function useSessionStorage() {
     if (!localReferenceLayerInitialized) return;
     writeToStorage('tots_reference_layers', referenceLayers);
   }, [referenceLayers, localReferenceLayerInitialized]);
+
+  // Retreives the map position and zoom level from session storage when the app loads
+  const [
+    localMapPositionInitialized,
+    setLocalMapPositionInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!mapView || localMapPositionInitialized) return;
+
+    setLocalMapPositionInitialized(true);
+
+    const positionStr = readFromStorage('tots_map_extent');
+    if (!positionStr) return;
+
+    const extent = JSON.parse(positionStr) as any;
+    mapView.extent = Extent.fromJSON(extent);
+  }, [Extent, mapView, localMapPositionInitialized]);
+
+  // Saves the home widget's viewpoint to session storage whenever it changes
+  const [
+    watchExtentInitialized,
+    setWatchExtentInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!mapView || watchExtentInitialized) return;
+
+    watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
+      writeToStorage('tots_map_extent', mapView.extent.toJSON());
+    });
+
+    setWatchExtentInitialized(true);
+  }, [watchUtils, mapView, watchExtentInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
