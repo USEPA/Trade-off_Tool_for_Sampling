@@ -44,6 +44,214 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+function useReferenceLayerStorage() {
+  const key = 'tots_reference_layers';
+  const {
+    FeatureLayer,
+    Field,
+    geometryJsonUtils,
+    rendererJsonUtils,
+  } = useEsriModulesContext();
+  const { map, referenceLayers, setReferenceLayers } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives reference layers from session storage when the app loads
+  const [
+    localReferenceLayerInitialized,
+    setLocalReferenceLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!map || !setReferenceLayers || localReferenceLayerInitialized) return;
+
+    setLocalReferenceLayerInitialized(true);
+    const referenceLayersStr = readFromStorage(key);
+    if (!referenceLayersStr) return;
+
+    const referenceLayers = JSON.parse(referenceLayersStr);
+
+    // add the portal layers to the map
+    const layersToAdd: __esri.FeatureLayer[] = [];
+    referenceLayers.forEach((layer: any) => {
+      const fields: __esri.Field[] = [];
+      layer.fields.forEach((field: __esri.Field) => {
+        fields.push(Field.fromJSON(field));
+      });
+
+      const source: any[] = [];
+      layer.source.forEach((feature: any) => {
+        source.push({
+          attributes: feature.attributes,
+          geometry: geometryJsonUtils.fromJSON(feature.geometry),
+          popupTemplate: feature.popupTemplate,
+          symbol: feature.symbol,
+        });
+      });
+
+      const layerProps = {
+        fields,
+        source,
+        id: layer.layerId,
+        objectIdField: layer.objectIdField,
+        outFields: layer.outFields,
+        title: layer.title,
+        renderer: rendererJsonUtils.fromJSON(layer.renderer),
+        popupTemplate: layer.popupTemplate,
+      };
+
+      layersToAdd.push(new FeatureLayer(layerProps));
+    });
+
+    map.addMany(layersToAdd);
+    setReferenceLayers(referenceLayers);
+  }, [
+    FeatureLayer,
+    Field,
+    geometryJsonUtils,
+    localReferenceLayerInitialized,
+    map,
+    rendererJsonUtils,
+    setReferenceLayers,
+  ]);
+
+  // Saves the reference layers to session storage everytime they change
+  React.useEffect(() => {
+    if (!localReferenceLayerInitialized) return;
+    writeToStorage(key, referenceLayers);
+  }, [referenceLayers, localReferenceLayerInitialized]);
+}
+
+// Uses browser storage for holding the url layers that have been added.
+function useUrlLayerStorage() {
+  const key = 'tots_url_layers';
+  const {
+    CSVLayer,
+    GeoRSSLayer,
+    KMLLayer,
+    Layer,
+    WMSLayer,
+  } = useEsriModulesContext();
+  const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
+
+  // Retreives url layers from session storage when the app loads
+  const [
+    localUrlLayerInitialized,
+    setLocalUrlLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!map || !setUrlLayers || localUrlLayerInitialized) return;
+
+    setLocalUrlLayerInitialized(true);
+    const urlLayersStr = readFromStorage(key);
+    if (!urlLayersStr) return;
+
+    const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
+
+    // add the portal layers to the map
+    urlLayers.forEach((urlLayer) => {
+      const type = urlLayer.type;
+      const url = urlLayer.url;
+
+      let layer;
+      if (type === 'ArcGIS') {
+        layer = Layer.fromArcGISServerUrl({ url });
+      }
+      if (type === 'WMS') {
+        layer = new WMSLayer({ url });
+      }
+      /* // not supported in 4.x js api
+      if(type === 'WFS') {
+        layer = new WFSLayer({ url });
+      } */
+      if (type === 'KML') {
+        layer = new KMLLayer({ url });
+      }
+      if (type === 'GeoRSS') {
+        layer = new GeoRSSLayer({ url });
+      }
+      if (type === 'CSV') {
+        layer = new CSVLayer({ url });
+      }
+
+      // add the layer if isn't null
+      if (layer) {
+        map.add(layer);
+
+        const urlLayer = { url, type };
+        setUrlLayers([...urlLayers, urlLayer]);
+      }
+    });
+
+    setUrlLayers(urlLayers);
+  }, [
+    // Esri Modules
+    CSVLayer,
+    GeoRSSLayer,
+    KMLLayer,
+    Layer,
+    WMSLayer,
+
+    localUrlLayerInitialized,
+    map,
+    setUrlLayers,
+  ]);
+
+  // Saves the url layers to session storage everytime they change
+  React.useEffect(() => {
+    if (!localUrlLayerInitialized) return;
+    writeToStorage(key, urlLayers);
+  }, [urlLayers, localUrlLayerInitialized]);
+}
+
+// Uses browser storage for holding the portal layers that have been added.
+function usePortalLayerStorage() {
+  const key = 'tots_portal_layers';
+  const { Layer, PortalItem } = useEsriModulesContext();
+  const { map, portalLayers, setPortalLayers } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives portal layers from session storage when the app loads
+  const [
+    localPortalLayerInitialized,
+    setLocalPortalLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!map || !setPortalLayers || localPortalLayerInitialized) return;
+
+    setLocalPortalLayerInitialized(true);
+    const portalLayersStr = readFromStorage(key);
+    if (!portalLayersStr) return;
+
+    const portalLayers = JSON.parse(portalLayersStr);
+
+    // add the portal layers to the map
+    portalLayers.forEach((layerId: string) => {
+      const layer = Layer.fromPortalItem({
+        portalItem: new PortalItem({
+          id: layerId,
+        }),
+      });
+      map.add(layer);
+    });
+
+    setPortalLayers(portalLayers);
+  }, [
+    Layer,
+    PortalItem,
+    localPortalLayerInitialized,
+    map,
+    portalLayers,
+    setPortalLayers,
+  ]);
+
+  // Saves the portal layers to session storage everytime they change
+  React.useEffect(() => {
+    if (!localPortalLayerInitialized) return;
+    writeToStorage(key, portalLayers);
+  }, [portalLayers, localPortalLayerInitialized]);
+}
+
 // Uses browser storage for holding the map's view port extent.
 function useMapPositionStorage() {
   const key = 'tots_map_extent';
@@ -207,39 +415,18 @@ function useContaminationMapStorage() {
 
 // Saves/Retrieves data to session storage
 export function useSessionStorage() {
+  useReferenceLayerStorage();
+  useUrlLayerStorage();
+  usePortalLayerStorage();
   useMapPositionStorage();
   useHomeWidgetStorage();
   useSamplesLayerStorage();
   useContaminationMapStorage();
 
-  const {
-    CSVLayer,
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    GeoRSSLayer,
-    Graphic,
-    GraphicsLayer,
-    KMLLayer,
-    Layer,
-    Polygon,
-    PortalItem,
-    rendererJsonUtils,
-    WMSLayer,
-  } = useEsriModulesContext();
-  const {
-    edits,
-    setEdits,
-    layers,
-    setLayers,
-    map,
-    portalLayers,
-    setPortalLayers,
-    referenceLayers,
-    setReferenceLayers,
-    urlLayers,
-    setUrlLayers,
-  } = React.useContext(SketchContext);
+  const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
+  const { edits, setEdits, layers, setLayers, map } = React.useContext(
+    SketchContext,
+  );
 
   // Retreives edit data from session storage when the app loads
   const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
@@ -330,179 +517,6 @@ export function useSessionStorage() {
     if (!localStorageInitialized) return;
     writeToStorage('tots_edits', edits);
   }, [edits, localStorageInitialized]);
-
-  // Retreives portal layers from session storage when the app loads
-  const [
-    localPortalLayerInitialized,
-    setLocalPortalLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!map || !setPortalLayers || localPortalLayerInitialized) return;
-
-    setLocalPortalLayerInitialized(true);
-    const portalLayersStr = readFromStorage('tots_portal_layers');
-    if (!portalLayersStr) return;
-
-    const portalLayers = JSON.parse(portalLayersStr);
-
-    // add the portal layers to the map
-    portalLayers.forEach((layerId: string) => {
-      const layer = Layer.fromPortalItem({
-        portalItem: new PortalItem({
-          id: layerId,
-        }),
-      });
-      map.add(layer);
-    });
-
-    setPortalLayers(portalLayers);
-  }, [
-    Layer,
-    PortalItem,
-    localPortalLayerInitialized,
-    map,
-    portalLayers,
-    setPortalLayers,
-  ]);
-
-  // Saves the portal layers to session storage everytime they change
-  React.useEffect(() => {
-    if (!localPortalLayerInitialized) return;
-    writeToStorage('tots_portal_layers', portalLayers);
-  }, [portalLayers, localPortalLayerInitialized]);
-
-  // Retreives url layers from session storage when the app loads
-  const [
-    localUrlLayerInitialized,
-    setLocalUrlLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!map || !setUrlLayers || localUrlLayerInitialized) return;
-
-    setLocalUrlLayerInitialized(true);
-    const urlLayersStr = readFromStorage('tots_url_layers');
-    if (!urlLayersStr) return;
-
-    const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
-
-    // add the portal layers to the map
-    urlLayers.forEach((urlLayer) => {
-      const type = urlLayer.type;
-      const url = urlLayer.url;
-
-      let layer;
-      if (type === 'ArcGIS') {
-        layer = Layer.fromArcGISServerUrl({ url });
-      }
-      if (type === 'WMS') {
-        layer = new WMSLayer({ url });
-      }
-      /* // not supported in 4.x js api
-      if(type === 'WFS') {
-        layer = new WFSLayer({ url });
-      } */
-      if (type === 'KML') {
-        layer = new KMLLayer({ url });
-      }
-      if (type === 'GeoRSS') {
-        layer = new GeoRSSLayer({ url });
-      }
-      if (type === 'CSV') {
-        layer = new CSVLayer({ url });
-      }
-
-      // add the layer if isn't null
-      if (layer) {
-        map.add(layer);
-
-        const urlLayer = { url, type };
-        setUrlLayers([...urlLayers, urlLayer]);
-      }
-    });
-
-    setUrlLayers(urlLayers);
-  }, [
-    // Esri Modules
-    CSVLayer,
-    GeoRSSLayer,
-    KMLLayer,
-    Layer,
-    WMSLayer,
-
-    localUrlLayerInitialized,
-    map,
-    setUrlLayers,
-  ]);
-
-  // Saves the url layers to session storage everytime they change
-  React.useEffect(() => {
-    if (!localUrlLayerInitialized) return;
-    writeToStorage('tots_url_layers', urlLayers);
-  }, [urlLayers, localUrlLayerInitialized]);
-
-  // Retreives reference layers from session storage when the app loads
-  const [
-    localReferenceLayerInitialized,
-    setLocalReferenceLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
-    if (!map || !setReferenceLayers || localReferenceLayerInitialized) return;
-
-    setLocalReferenceLayerInitialized(true);
-    const referenceLayersStr = readFromStorage('tots_reference_layers');
-    if (!referenceLayersStr) return;
-
-    const referenceLayers = JSON.parse(referenceLayersStr);
-
-    // add the portal layers to the map
-    const layersToAdd: __esri.FeatureLayer[] = [];
-    referenceLayers.forEach((layer: any) => {
-      const fields: __esri.Field[] = [];
-      layer.fields.forEach((field: __esri.Field) => {
-        fields.push(Field.fromJSON(field));
-      });
-
-      const source: any[] = [];
-      layer.source.forEach((feature: any) => {
-        source.push({
-          attributes: feature.attributes,
-          geometry: geometryJsonUtils.fromJSON(feature.geometry),
-          popupTemplate: feature.popupTemplate,
-          symbol: feature.symbol,
-        });
-      });
-
-      const layerProps = {
-        fields,
-        source,
-        id: layer.layerId,
-        objectIdField: layer.objectIdField,
-        outFields: layer.outFields,
-        title: layer.title,
-        renderer: rendererJsonUtils.fromJSON(layer.renderer),
-        popupTemplate: layer.popupTemplate,
-      };
-
-      layersToAdd.push(new FeatureLayer(layerProps));
-    });
-
-    map.addMany(layersToAdd);
-    setReferenceLayers(referenceLayers);
-  }, [
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    localReferenceLayerInitialized,
-    map,
-    rendererJsonUtils,
-    setReferenceLayers,
-  ]);
-
-  // Saves the reference layers to session storage everytime they change
-  React.useEffect(() => {
-    if (!localReferenceLayerInitialized) return;
-    writeToStorage('tots_reference_layers', referenceLayers);
-  }, [referenceLayers, localReferenceLayerInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
