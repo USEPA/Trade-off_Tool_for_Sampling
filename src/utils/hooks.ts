@@ -16,11 +16,12 @@ import { LayerType, UrlLayerType } from 'types/Layer';
 import { polygonSymbol } from 'config/symbols';
 
 // Saves data to session storage
-export function writeToStorage(key: string, data: any) {
+export function writeToStorage(key: string, data: string | object) {
   const itemSize = Math.round(JSON.stringify(data).length / 1024);
 
   try {
-    sessionStorage.setItem(key, JSON.stringify(data));
+    if (typeof data === 'string') sessionStorage.setItem(key, data);
+    else sessionStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     const storageSize = Math.round(
       JSON.stringify(sessionStorage).length / 1024,
@@ -35,6 +36,12 @@ export function writeToStorage(key: string, data: any) {
 // Reads data from session storage
 export function readFromStorage(key: string) {
   return sessionStorage.getItem(key);
+}
+
+// Finds the layer by the layer id
+function getLayerById(layers: LayerType[], id: string) {
+  const index = layers.findIndex((layer) => layer.layerId === id);
+  return layers[index];
 }
 
 // Saves/Retrieves data to session storage
@@ -69,9 +76,15 @@ export function useSessionStorage() {
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
+    sketchLayer,
+    setSketchLayer,
     urlLayers,
     setUrlLayers,
   } = React.useContext(SketchContext);
+  const {
+    contaminationMap,
+    setContaminationMap, //
+  } = React.useContext(CalculateContext);
 
   // Retreives edit data from session storage when the app loads
   const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
@@ -404,6 +417,56 @@ export function useSessionStorage() {
 
     setWatchHomeWidgetInitialized(true);
   }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
+
+  // Retreives the selected sample layer (sketchLayer) from session storage
+  // when the app loads
+  const [
+    localSampleLayerInitialized,
+    setLocalSampleLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (layers.length === 0 || localSampleLayerInitialized) return;
+
+    setLocalSampleLayerInitialized(true);
+
+    const layerId = readFromStorage('tots_selected_sample_layer');
+    if (!layerId) return;
+
+    setSketchLayer(getLayerById(layers, layerId));
+  }, [layers, setSketchLayer, localSampleLayerInitialized]);
+
+  // Saves the selected sample layer (sketchLayer) to session storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleLayerInitialized) return;
+
+    const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
+    writeToStorage('tots_selected_sample_layer', data);
+  }, [sketchLayer, localSampleLayerInitialized]);
+
+  // Retreives the selected contamination map from session storage
+  // when the app loads
+  const [
+    localContaminationLayerInitialized,
+    setLocalContaminationLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (layers.length === 0 || localContaminationLayerInitialized) return;
+
+    setLocalContaminationLayerInitialized(true);
+
+    const layerId = readFromStorage('tots_selected_contamination_layer');
+    if (!layerId) return;
+
+    setContaminationMap(getLayerById(layers, layerId));
+  }, [layers, setContaminationMap, localContaminationLayerInitialized]);
+
+  // Saves the selected contamination map to session storage whenever it changes
+  React.useEffect(() => {
+    if (!localContaminationLayerInitialized) return;
+
+    const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
+    writeToStorage('tots_selected_contamination_layer', data);
+  }, [contaminationMap, localContaminationLayerInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
