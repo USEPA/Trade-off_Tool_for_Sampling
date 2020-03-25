@@ -95,8 +95,7 @@ function Publish() {
           // need to loop through each array and check the success flag
           if (layerRes.addResults) {
             layerRes.addResults.forEach((item: any) => {
-              if (item.success) totals.added += 1;
-              else totals.failed += 1;
+              item.success ? (totals.added += 1) : (totals.failed += 1);
             });
           }
           if (layerRes.updateResults) {
