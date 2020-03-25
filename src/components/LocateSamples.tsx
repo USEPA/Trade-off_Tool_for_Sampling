@@ -234,7 +234,7 @@ const saveButtonStyles = (status: string) => {
 
 // --- components (LocateSamples) ---
 type GenerateRandomType = {
-  status: '' | 'fetching' | 'success' | 'failure';
+  status: 'none' | 'fetching' | 'success' | 'failure';
   data: __esri.Graphic[];
 };
 
@@ -433,7 +433,7 @@ function LocateSamples() {
     generateRandomResponse,
     setGenerateRandomResponse, //
   ] = React.useState<GenerateRandomType>({
-    status: '',
+    status: 'none',
     data: [],
   });
   function randomSamples() {
@@ -531,7 +531,7 @@ function LocateSamples() {
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<'' | 'changes' | 'success' | 'failure'>('');
+  ] = React.useState<'none' | 'changes' | 'success' | 'failure'>('none');
   function updateLayersState(sketchLayer: LayerType) {
     // find the layer being edited
     const index = layers.findIndex(
@@ -648,7 +648,8 @@ function LocateSamples() {
                     if (sketchLayer) updateLayersState(sketchLayer);
                   }}
                 >
-                  {(!saveStatus || saveStatus === 'changes') && 'Save'}
+                  {saveStatus === 'none' && 'Save'}
+                  {saveStatus === 'changes' && 'Save'}
                   {saveStatus === 'success' && (
                     <React.Fragment>
                       <i className="fas fa-check" /> Saved
