@@ -14,9 +14,11 @@ import Search from 'components/Search';
 import SplashScreenContent from 'components/SplashScreenContent';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { navPanelWidth } from 'config/appConfig';
+import { panels, PanelType } from 'config/navigation';
 // styles
 import '@reach/dialog/styles.css';
 import { colors } from 'styles';
@@ -27,40 +29,6 @@ const resultsPanelWidth = '500px';
 const panelCollapseButtonWidth = '32px';
 const buttonColor = colors.darkblue2();
 const buttonVisitedColor = colors.darkaqua();
-
-type PanelType = {
-  value: string;
-  label: string;
-  iconClass: string;
-};
-
-const panels: PanelType[] = [
-  {
-    value: 'search',
-    label: 'Search',
-    iconClass: 'fas fa-search',
-  },
-  {
-    value: 'addData',
-    label: 'Add Data',
-    iconClass: 'fas fa-layer-group',
-  },
-  {
-    value: 'locateSamples',
-    label: 'Create Plan',
-    iconClass: 'fas fa-thumbtack',
-  },
-  {
-    value: 'calculate',
-    label: 'Calculate Resources',
-    iconClass: 'fas fa-calculator',
-  },
-  {
-    value: 'publish',
-    label: 'Publish Plan',
-    iconClass: 'fas fa-upload',
-  },
-];
 
 // --- styles (NavButton) ---
 const navButtonStyles = (selected: boolean) => {
@@ -316,11 +284,33 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
-  const { sketchLayer, sketchVM } = React.useContext(SketchContext);
+  const { goTo, setGoTo } = React.useContext(NavigationContext);
+  const {
+    sketchLayer,
+    sketchVM,
+    aoiSketchLayer,
+    aoiSketchVM,
+  } = React.useContext(SketchContext);
+
   const [
     currentPanel,
     setCurrentPanel, //
   ] = React.useState<PanelType | null>(null);
+  React.useEffect(() => {
+    if (!goTo) return;
+
+    // find the requested panel
+    let goToPanel: PanelType | null = null;
+    panels.forEach((panel) => {
+      if (panel.value === goTo) goToPanel = panel;
+    });
+
+    // open the panel if it was found
+    if (goToPanel) setCurrentPanel(goToPanel);
+
+    setGoTo('');
+  }, [goTo, setGoTo]);
+
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [expanded, setExpanded] = React.useState(false);
   const toggleExpand = (panel: PanelType, panelIndex: number) => {
@@ -352,6 +342,17 @@ function NavBar({ height }: Props) {
       sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
   }, [currentPanel, sketchLayer, sketchVM]);
+
+  // Enable the aoi sketchVM for the Create Plan tab and disable for all others.
+  React.useEffect(() => {
+    if (!aoiSketchVM || !currentPanel) return;
+
+    if (currentPanel.value === 'locateSamples' && aoiSketchLayer?.sketchLayer) {
+      aoiSketchVM.layer = aoiSketchLayer.sketchLayer as __esri.GraphicsLayer;
+    } else {
+      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
+  }, [currentPanel, aoiSketchLayer, aoiSketchVM]);
 
   const [helpOpen, setHelpOpen] = React.useState(false);
 
