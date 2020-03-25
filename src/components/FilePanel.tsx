@@ -3,7 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { useDropzone } from 'react-dropzone';
-import Select from 'react-select';
+// components
+import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
