@@ -318,7 +318,7 @@ function NavBar({ height }: Props) {
 
     // find the requested panel
     let goToPanel: PanelType | null = null;
-    let goToPanelIndex: number = -1;
+    let goToPanelIndex = -1;
     panels.forEach((panel, index: number) => {
       if (panel.value === goTo) {
         goToPanel = panel;
