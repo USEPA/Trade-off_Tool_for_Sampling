@@ -460,6 +460,11 @@ function LocateSamples() {
           type: 'oid',
           alias: 'OBJECTID',
         },
+        {
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'PERMANENT_IDENTIFIER',
+        },
       ],
       features: graphics,
     });

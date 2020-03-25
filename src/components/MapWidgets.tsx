@@ -16,7 +16,11 @@ import {
 } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  generateUUID,
+  getPopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
 
@@ -377,11 +381,14 @@ function MapWidgets({ mapView }: Props) {
           }
 
           // get the predefined attributes using the id of the clicked button
+          const uuid = generateUUID();
           let layerType: LayerTypeName = 'Samples';
           if (id === 'aoi') {
             layerType = 'Area of Interest';
             graphic.attributes = {
               OBJECTID: nextId.toString(),
+              PERMANENT_IDENTIFIER: uuid,
+              GLOBALID: uuid,
               Notes: '',
               TYPE: layerType,
             };
@@ -389,6 +396,8 @@ function MapWidgets({ mapView }: Props) {
             graphic.attributes = {
               ...sampleAttributes[key],
               OBJECTID: nextId.toString(),
+              PERMANENT_IDENTIFIER: uuid,
+              GLOBALID: uuid,
               Notes: '',
             };
           }
@@ -477,7 +486,7 @@ function MapWidgets({ mapView }: Props) {
         let selectedGraphicsIds: Array<string> = [];
         if (event.state !== 'cancel' && event.graphics) {
           event.graphics.forEach((graphic) => {
-            selectedGraphicsIds.push(graphic.attributes.OBJECTID);
+            selectedGraphicsIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
           });
         }
         setSelectedGraphicsIds(selectedGraphicsIds);
@@ -729,16 +738,16 @@ function MapWidgets({ mapView }: Props) {
       return;
     }
 
-    // Get any graphics that have a CFU value
+    // Get any graphics that have a contam value
     const highlightGraphics: __esri.Graphic[] = [];
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.attributes.CFU) {
+      if (graphic.attributes.CONTAM_VALUE) {
         highlightGraphics.push(graphic);
       }
     });
     setHighlightGraphics(highlightGraphics);
 
-    // Highlight the graphics with a CFU
+    // Highlight the graphics with a contam value
     if (highlightGraphics.length > 0) {
       mapView.whenLayerView(sketchLayer.sketchLayer).then((layerView) => {
         setNextHighlight(layerView.highlight(highlightGraphics));

@@ -40,6 +40,17 @@ export const defaultLayerProps = {
       defaultValue: null,
     },
     {
+      name: 'PERMANENT_IDENTIFIER',
+      type: 'esriFieldTypeGUID',
+      alias: 'PERMANENT_IDENTIFIER',
+      sqlType: 'sqlTypeOther',
+      length: 38,
+      nullable: false,
+      editable: false,
+      domain: null,
+      defaultValue: 'NEWID() WITH VALUES',
+    },
+    {
       name: 'GlobalID',
       type: 'esriFieldTypeGlobalID',
       alias: 'GlobalID',
