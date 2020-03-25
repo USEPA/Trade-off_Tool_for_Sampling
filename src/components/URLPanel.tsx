@@ -20,16 +20,13 @@ const urlInputStyles = css`
 `;
 
 // --- components (URLPanel) ---
-type UrlType = {
-  value: 'ArcGIS' | 'WMS' | 'WFS' | 'KML' | 'GeoRSS' | 'CSV';
-  label:
-    | 'An ArcGIS Server Web Service'
-    | 'A WMS OGC Web Service'
-    | 'A WFS OGC Web Service'
-    | 'A KML File'
-    | 'A GeoRSS File'
-    | 'A CSV File';
-};
+type UrlType =
+  | { value: 'ArcGIS'; label: 'An ArcGIS Server Web Service' }
+  | { value: 'WMS'; label: 'A WMS OGC Web Service' }
+  | { value: 'WFS'; label: 'A WFS OGC Web Service' }
+  | { value: 'KML'; label: 'A KML File' }
+  | { value: 'GeoRSS'; label: 'A GeoRSS File' }
+  | { value: 'CSV'; label: 'A CSV File' };
 type UrlStatusType =
   | 'none'
   | 'fetching'

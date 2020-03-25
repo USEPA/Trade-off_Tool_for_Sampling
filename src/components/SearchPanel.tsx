@@ -120,11 +120,10 @@ const totalStyles = css`
 `;
 
 // --- components (SearchPanel) ---
-type LocationNameType = 'ArcGIS Online' | 'My Content' | 'My Organization';
-type LocationType = {
-  value: LocationNameType;
-  label: LocationNameType;
-};
+type LocationType =
+  | { value: 'ArcGIS Online'; label: 'ArcGIS Online' }
+  | { value: 'My Content'; label: 'My Content' }
+  | { value: 'My Organization'; label: 'My Organization' };
 
 type SortByType = {
   value: 'none' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
