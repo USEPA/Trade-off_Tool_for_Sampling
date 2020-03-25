@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-import Select from 'react-select';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
+import Select from 'components/Select';
 import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -481,14 +481,16 @@ function SearchPanel() {
             setSortBy(evTyped);
             setSortOrder(evTyped.defaultSort);
           }}
-          options={[
-            { value: '', label: 'Relevance', defaultSort: 'desc' },
-            { value: 'title', label: 'Title', defaultSort: 'asc' },
-            { value: 'owner', label: 'Owner', defaultSort: 'asc' },
-            { value: 'avgrating', label: 'Rating', defaultSort: 'desc' },
-            { value: 'numviews', label: 'Views', defaultSort: 'desc' },
-            { value: 'modified', label: 'Date', defaultSort: 'desc' },
-          ]}
+          options={
+            [
+              { value: '', label: 'Relevance', defaultSort: 'desc' },
+              { value: 'title', label: 'Title', defaultSort: 'asc' },
+              { value: 'owner', label: 'Owner', defaultSort: 'asc' },
+              { value: 'avgrating', label: 'Rating', defaultSort: 'desc' },
+              { value: 'numviews', label: 'Views', defaultSort: 'desc' },
+              { value: 'modified', label: 'Date', defaultSort: 'desc' },
+            ] as SortByType[]
+          }
         />
         <button
           css={sortOrderStyles}

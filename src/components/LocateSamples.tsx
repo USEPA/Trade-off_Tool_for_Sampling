@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-import Select from 'react-select';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
+import Select from 'components/Select';
 import MessageBox from 'components/MessageBox';
 import NavigationButton from 'components/NavigationButton';
 // contexts
