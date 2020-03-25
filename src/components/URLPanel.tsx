@@ -3,6 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import LoadingSpinner from 'components/LoadingSpinner';
+import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -18,16 +20,25 @@ const urlInputStyles = css`
 `;
 
 // --- components (URLPanel) ---
-type UrlType = {
-  value: 'ArcGIS' | 'WMS' | 'WFS' | 'KML' | 'GeoRSS' | 'CSV';
-  label:
-    | 'An ArcGIS Server Web Service'
-    | 'A WMS OGC Web Service'
-    | 'A WFS OGC Web Service'
-    | 'A KML File'
-    | 'A GeoRSS File'
-    | 'A CSV File';
-};
+type UrlType =
+  | { value: 'ArcGIS'; label: 'An ArcGIS Server Web Service' }
+  | { value: 'WMS'; label: 'A WMS OGC Web Service' }
+  | { value: 'WFS'; label: 'A WFS OGC Web Service' }
+  | { value: 'KML'; label: 'A KML File' }
+  | { value: 'GeoRSS'; label: 'A GeoRSS File' }
+  | { value: 'CSV'; label: 'A CSV File' };
+type UrlStatusType =
+  | 'none'
+  | 'fetching'
+  | 'success'
+  | 'failure'
+  | 'unsupported';
+type SupportedUrlLayerTypes =
+  | __esri.Layer
+  | __esri.WMSLayer
+  | __esri.KMLLayer
+  | __esri.GeoRSSLayer
+  | __esri.CSVLayer;
 
 function URLPanel() {
   const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
@@ -50,15 +61,49 @@ function URLPanel() {
   });
   const [url, setUrl] = React.useState('');
   const [showSampleUrls, setShowSampleUrls] = React.useState(false);
+  const [status, setStatus] = React.useState<UrlStatusType>('none');
+
+  const [layer, setLayer] = React.useState<SupportedUrlLayerTypes | null>(null);
+  React.useEffect(() => {
+    if (!map || !layer) return;
+
+    // add the layer to the map
+    map.add(layer);
+
+    layer.on('layerview-create', (event) => {
+      const urlLayer = { url, type: urlType.value };
+      setUrlLayers([...urlLayers, urlLayer]);
+
+      setStatus('success');
+    });
+
+    layer.on('layerview-create-error', (event) => {
+      console.error('create error event: ', event);
+
+      map.remove(layer);
+
+      setStatus('failure');
+    });
+
+    setLayer(null);
+  }, [map, layer, setUrlLayers, url, urlLayers, urlType]);
 
   if (!map) return null;
 
   const handleAdd = (ev: React.MouseEvent<HTMLButtonElement>) => {
+    setStatus('fetching');
+
     const type = urlType.value;
 
-    let layer;
+    let layer: SupportedUrlLayerTypes | null = null;
     if (type === 'ArcGIS') {
-      layer = Layer.fromArcGISServerUrl({ url });
+      Layer.fromArcGISServerUrl({ url })
+        .then((layer) => setLayer(layer))
+        .catch((err) => {
+          console.error(err);
+          setStatus('failure');
+        });
+      return;
     }
     if (type === 'WMS') {
       layer = new WMSLayer({ url });
@@ -77,13 +122,9 @@ function URLPanel() {
       layer = new CSVLayer({ url });
     }
 
-    // add the layer if isn't null
-    if (layer) {
-      map.add(layer);
-
-      const urlLayer = { url, type };
-      setUrlLayers([...urlLayers, urlLayer]);
-    }
+    // unsupported layer type
+    if (layer) setLayer(layer);
+    else setStatus('unsupported');
   };
 
   return (
@@ -91,7 +132,10 @@ function URLPanel() {
       <label>Type</label>
       <Select
         value={urlType}
-        onChange={(ev) => setUrlType(ev as UrlType)}
+        onChange={(ev) => {
+          setUrlType(ev as UrlType);
+          setStatus('none');
+        }}
         options={[
           { value: 'ArcGIS', label: 'An ArcGIS Server Web Service' },
           { value: 'WMS', label: 'A WMS OGC Web Service' },
@@ -107,10 +151,35 @@ function URLPanel() {
         id="url-upload-input"
         css={urlInputStyles}
         value={url}
-        onChange={(ev) => setUrl(ev.target.value)}
+        onChange={(ev) => {
+          setUrl(ev.target.value);
+          setStatus('none');
+        }}
       />
       <br />
       <br />
+      {status === 'fetching' && <LoadingSpinner />}
+      {status === 'success' && (
+        <MessageBox
+          severity="info"
+          title="Success"
+          message="The layer was successfully added to the map"
+        />
+      )}
+      {status === 'failure' && (
+        <MessageBox
+          severity="error"
+          title="Failed to Add Layer"
+          message={`Failed to add the layer at the following url: ${url}`}
+        />
+      )}
+      {status === 'unsupported' && (
+        <MessageBox
+          severity="error"
+          title="Unsupported layer type"
+          message={`The "${urlType.label}" layer type is unsupported`}
+        />
+      )}
       <button onClick={() => setShowSampleUrls(!showSampleUrls)}>
         SAMPLE URL(S)
       </button>

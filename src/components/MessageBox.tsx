@@ -8,6 +8,7 @@ const baseContainerStyles = css`
   align-items: center;
   color: black;
   padding: 5px;
+  margin: 5px 0;
 `;
 
 const errorContainerStyles = css`
@@ -31,6 +32,11 @@ const infoContainerStyles = css`
 const iconContainerStyles = css`
   font-size: 25px;
   margin-right: 5px;
+`;
+
+const textContainerStyles = css`
+  /* width is container width - icon width - some padding */
+  width: calc(100% - 25px - 5px);
 `;
 
 const messageTextStyles = css`
@@ -65,7 +71,7 @@ function MessageBox({ title, message, severity }: Props) {
       <div css={iconContainerStyles}>
         <i className={iconClass} />
       </div>
-      <div>
+      <div css={textContainerStyles}>
         <strong>{title}</strong>
         <br />
         <span css={messageTextStyles}>{message}</span>

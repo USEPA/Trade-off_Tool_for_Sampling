@@ -28,7 +28,7 @@ const sponge_SA = 0.254 / 2;
 const vac_SA = 0.3048 / 2;
 const swab_SA = 0.0508 / 2;
 
-type SaveStatusType = '' | 'success' | 'failure';
+type SaveStatusType = 'none' | 'success' | 'failure';
 
 // Makes all sketch buttons no longer active by removing
 // the sketch-button-selected class.
@@ -128,14 +128,14 @@ function FeatureTool({
   // initializes the note and graphicNote whenever the graphic selection changes
   const [graphicNote, setGraphicNote] = React.useState('');
   const [note, setNote] = React.useState('');
-  const [saveStatus, setSaveStatus] = React.useState<SaveStatusType>('');
+  const [saveStatus, setSaveStatus] = React.useState<SaveStatusType>('none');
   React.useEffect(() => {
     // Reset the note if either no graphics are selected or multiple graphics
     // are selected. The note field only works if one graphic is selected.
     if (selectedGraphicsIds.length !== 1) {
       if (graphicNote) setGraphicNote('');
       if (note) setNote('');
-      if (saveStatus) setSaveStatus('');
+      if (saveStatus !== 'none') setSaveStatus('none');
       return;
     }
 
@@ -148,14 +148,14 @@ function FeatureTool({
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
         setNote(newNote);
-        setSaveStatus('');
+        setSaveStatus('none');
       }
     }
   }, [graphicNote, note, saveStatus, sketchVM, selectedGraphicsIds]);
 
   // Resets the save status if the user changes the note
   React.useEffect(() => {
-    if (graphicNote !== note && saveStatus) setSaveStatus('');
+    if (graphicNote !== note && saveStatus !== 'none') setSaveStatus('none');
   }, [graphicNote, note, saveStatus]);
 
   if (!sketchVM || selectedGraphicsIds.length === 0) return null;
@@ -215,7 +215,7 @@ function FeatureTool({
                 }
               }}
             >
-              {!saveStatus && 'Save'}
+              {saveStatus === 'none' && 'Save'}
               {saveStatus === 'success' && (
                 <React.Fragment>
                   <i className="fas fa-check" /> Saved

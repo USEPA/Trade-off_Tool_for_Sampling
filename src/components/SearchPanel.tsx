@@ -3,6 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import LoadingSpinner from 'components/LoadingSpinner';
+import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
 import Switch from 'components/Switch';
 // contexts
@@ -118,16 +120,20 @@ const totalStyles = css`
 `;
 
 // --- components (SearchPanel) ---
-type LocationNameType = 'ArcGIS Online' | 'My Content' | 'My Organization';
-type LocationType = {
-  value: LocationNameType;
-  label: LocationNameType;
-};
+type LocationType =
+  | { value: 'ArcGIS Online'; label: 'ArcGIS Online' }
+  | { value: 'My Content'; label: 'My Content' }
+  | { value: 'My Organization'; label: 'My Organization' };
 
 type SortByType = {
-  value: '' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
+  value: 'none' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
   label: 'Relevance' | 'Title' | 'Owner' | 'Rating' | 'Views' | 'Date';
   defaultSort: 'asc' | 'desc';
+};
+
+type SearchResultsType = {
+  status: 'none' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
+  data: __esri.PortalQueryResult | null;
 };
 
 function SearchPanel() {
@@ -155,15 +161,15 @@ function SearchPanel() {
 
   const [
     searchResults,
-    setSearchResults,
-  ] = React.useState<__esri.PortalQueryResult | null>(null);
+    setSearchResults, //
+  ] = React.useState<SearchResultsType>({ status: 'none', data: null });
   const [
     currentExtent,
     setCurrentExtent,
   ] = React.useState<__esri.Extent | null>(null);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [sortBy, setSortBy] = React.useState<SortByType>({
-    value: '',
+    value: 'none',
     label: 'Relevance',
     defaultSort: 'desc',
   });
@@ -171,6 +177,8 @@ function SearchPanel() {
 
   // Builds and executes the search query on search button click
   React.useEffect(() => {
+    setSearchResults({ status: 'fetching', data: null });
+
     const tmpPortal = portal ? portal : new Portal();
 
     function appendToQuery(
@@ -195,7 +203,7 @@ function SearchPanel() {
     // where to search ArcGISOnline is the default
     if (location.value === 'My Content') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults(null);
+        setSearchResults({ status: 'not-logged-in', data: null });
         return;
       }
       query = appendToQuery(
@@ -205,7 +213,7 @@ function SearchPanel() {
     }
     if (location.value === 'My Organization') {
       if (!tmpPortal?.user?.username) {
-        setSearchResults(null);
+        setSearchResults({ status: 'not-logged-in', data: null });
         return;
       }
       query = appendToQuery(
@@ -251,7 +259,7 @@ function SearchPanel() {
     if (withinMap && currentExtent) queryParams.extent = currentExtent;
 
     // if a sort by (other than relevance) is selected, add it to the query params
-    if (sortBy.value) {
+    if (sortBy.value !== 'none') {
       queryParams.sortField = sortBy.value as any;
     } else {
       if (!withinMap) {
@@ -260,15 +268,21 @@ function SearchPanel() {
     }
 
     // perform the query
-    tmpPortal.queryItems(queryParams).then((res: __esri.PortalQueryResult) => {
-      if (res.total > 0) {
-        setSearchResults(res);
-        setPageNumber(1);
-      } else {
-        setSearchResults(null);
-        setPageNumber(1);
-      }
-    });
+    tmpPortal
+      .queryItems(queryParams)
+      .then((res: __esri.PortalQueryResult) => {
+        if (res.total > 0) {
+          setSearchResults({ status: 'success', data: res });
+          setPageNumber(1);
+        } else {
+          setSearchResults({ status: 'success', data: null });
+          setPageNumber(1);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setSearchResults({ status: 'failure', data: null });
+      });
   }, [
     currentExtent,
     Portal,
@@ -290,20 +304,20 @@ function SearchPanel() {
   // Runs the query for changing pages of the result set
   const [lastPageNumber, setLastPageNumber] = React.useState(1);
   React.useEffect(() => {
-    if (!searchResults || pageNumber === lastPageNumber) return;
+    if (!searchResults.data || pageNumber === lastPageNumber) return;
 
     // prevent running the same query multiple times
     setLastPageNumber(pageNumber);
 
     // get the query
-    let queryParams = searchResults.queryParams;
+    let queryParams = searchResults.data.queryParams;
     if (pageNumber === 1) {
       // going to first page
       queryParams.start = 1;
     }
     if (pageNumber > lastPageNumber) {
       // going to next page
-      queryParams = searchResults.nextQueryParams;
+      queryParams = searchResults.data.nextQueryParams;
     }
     if (pageNumber < lastPageNumber) {
       // going to previous page
@@ -315,9 +329,12 @@ function SearchPanel() {
     tmpPortal
       .queryItems(queryParams)
       .then((res) => {
-        setSearchResults(res);
+        setSearchResults({ status: 'success', data: res });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setSearchResults({ status: 'failure', data: null });
+      });
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
@@ -465,7 +482,7 @@ function SearchPanel() {
           }}
           options={
             [
-              { value: '', label: 'Relevance', defaultSort: 'desc' },
+              { value: 'none', label: 'Relevance', defaultSort: 'desc' },
               { value: 'title', label: 'Title', defaultSort: 'asc' },
               { value: 'owner', label: 'Owner', defaultSort: 'asc' },
               { value: 'avgrating', label: 'Rating', defaultSort: 'desc' },
@@ -476,10 +493,10 @@ function SearchPanel() {
         />
         <button
           css={sortOrderStyles}
-          disabled={sortBy.value ? false : true}
+          disabled={sortBy.value === 'none' ? true : false}
           onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
         >
-          {sortBy.value && (
+          {sortBy.value !== 'none' && (
             <i
               className={`fas fa-long-arrow-alt-${
                 sortOrder === 'desc' ? 'up' : 'down'
@@ -490,51 +507,70 @@ function SearchPanel() {
       </div>
       <hr />
       <div>
-        {searchResults && searchResults.results && (
+        {searchResults.status === 'fetching' && <LoadingSpinner />}
+        {searchResults.status === 'not-logged-in' && (
+          <MessageBox
+            severity="warning"
+            title="Not Logged In"
+            message="Please login to use this feature"
+          />
+        )}
+        {searchResults.status === 'failure' && (
+          <MessageBox
+            severity="error"
+            title="Web Service Error"
+            message="An error occurred in the web service"
+          />
+        )}
+        {searchResults.status === 'success' && (
           <React.Fragment>
-            {searchResults.results.map((result, index) => {
-              return (
-                <React.Fragment key={index}>
-                  <ResultCard result={result} />
-                  <hr />
-                </React.Fragment>
-              );
-            })}
+            <div>
+              {searchResults.data?.results.map((result, index) => {
+                return (
+                  <React.Fragment key={index}>
+                    <ResultCard result={result} />
+                    <hr />
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            {!searchResults.data && (
+              <div>No items for this search criteria.</div>
+            )}
+            {searchResults.data && (
+              <div css={footerBar}>
+                <div>
+                  <button
+                    css={pageControlStyles}
+                    disabled={pageNumber === 1}
+                    onClick={() => setPageNumber(1)}
+                  >
+                    <i className="fas fa-angle-double-left"></i>
+                  </button>
+                  <button
+                    css={pageControlStyles}
+                    disabled={pageNumber === 1}
+                    onClick={() => setPageNumber(pageNumber - 1)}
+                  >
+                    <i className="fas fa-angle-left"></i>
+                  </button>
+                  <span>{pageNumber}</span>
+                  <button
+                    css={pageControlStyles}
+                    disabled={searchResults.data.nextQueryParams.start === -1}
+                    onClick={() => setPageNumber(pageNumber + 1)}
+                  >
+                    <i className="fas fa-angle-right"></i>
+                  </button>
+                  <span css={totalStyles}>
+                    {searchResults.data.total.toLocaleString()} Items
+                  </span>
+                </div>
+              </div>
+            )}
           </React.Fragment>
         )}
       </div>
-      {!searchResults && <div>No items for this search criteria.</div>}
-      {searchResults && (
-        <div css={footerBar}>
-          <div>
-            <button
-              css={pageControlStyles}
-              disabled={pageNumber === 1}
-              onClick={() => setPageNumber(1)}
-            >
-              <i className="fas fa-angle-double-left"></i>
-            </button>
-            <button
-              css={pageControlStyles}
-              disabled={pageNumber === 1}
-              onClick={() => setPageNumber(pageNumber - 1)}
-            >
-              <i className="fas fa-angle-left"></i>
-            </button>
-            <span>{pageNumber}</span>
-            <button
-              css={pageControlStyles}
-              disabled={searchResults.nextQueryParams.start === -1}
-              onClick={() => setPageNumber(pageNumber + 1)}
-            >
-              <i className="fas fa-angle-right"></i>
-            </button>
-            <span css={totalStyles}>
-              {searchResults.total.toLocaleString()} Items
-            </span>
-          </div>
-        </div>
-      )}
     </React.Fragment>
   );
 }
