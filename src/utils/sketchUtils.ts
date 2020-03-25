@@ -1,6 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 // types
 import { EditsType, LayerEditsType } from 'types/Edits';
-import { LayerType } from 'types/Layer';
+import { LayerType, LayerTypeName } from 'types/Layer';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -127,12 +128,13 @@ export function updateLayerEdits({
     if (type === 'update') {
       changes.forEach((change) => {
         // all updates should have a graphicid
-        if (!change?.attributes?.OBJECTID) return;
+        if (!change?.attributes?.PERMANENT_IDENTIFIER) return;
 
         // attempt to find the graphic in edits.adds
         const addChangeIndex = layerToEdit.adds.findIndex(
           (graphic) =>
-            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+            graphic.attributes.PERMANENT_IDENTIFIER ===
+            change.attributes.PERMANENT_IDENTIFIER,
         );
         if (addChangeIndex > -1) {
           // Update the added item  and exit
@@ -145,7 +147,8 @@ export function updateLayerEdits({
         // attempt to find the graphic in edits
         const existingChangeIndex = layerToEdit.updates.findIndex(
           (graphic) =>
-            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+            graphic.attributes.PERMANENT_IDENTIFIER ===
+            change.attributes.PERMANENT_IDENTIFIER,
         );
 
         // update the existing change, otherwise add the change to the updates
@@ -166,13 +169,15 @@ export function updateLayerEdits({
         // attempt to find this id in adds
         const addChangeIndex = layerToEdit.adds.findIndex(
           (graphic) =>
-            graphic.attributes.OBJECTID === change.attributes.OBJECTID,
+            graphic.attributes.PERMANENT_IDENTIFIER ===
+            change.attributes.PERMANENT_IDENTIFIER,
         );
         if (addChangeIndex > -1) {
           // remove from adds and don't add to deletes
           layerToEdit.adds = layerToEdit.adds.filter(
             (graphic) =>
-              graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
+              graphic.attributes.PERMANENT_IDENTIFIER !==
+              change.attributes.PERMANENT_IDENTIFIER,
           );
 
           return; // essentially a break on the forEach loop
@@ -182,11 +187,12 @@ export function updateLayerEdits({
         // attempt to find the graphic in edits
         layerToEdit.updates = layerToEdit.updates.filter(
           (graphic) =>
-            graphic.attributes.OBJECTID !== change.attributes.OBJECTID,
+            graphic.attributes.PERMANENT_IDENTIFIER !==
+            change.attributes.PERMANENT_IDENTIFIER,
         );
 
         // add the objectids to delete to the deletes array
-        layerToEdit.deletes.push(change.attributes.OBJECTID);
+        layerToEdit.deletes.push(change.attributes.PERMANENT_IDENTIFIER);
       });
     }
 
@@ -197,4 +203,106 @@ export function updateLayerEdits({
   editsCopy.count = editsCopy.count + 1;
 
   return editsCopy;
+}
+
+/**
+ * Creates a popup that contains all of the attributes with human readable labels.
+ * The attributes displayed depends on the type provided.
+ * Note: Reference layers will return an empty object. Reference layers should not use
+ *  this function for getting the popup.
+ *
+ * @param type - The layer type to get the popup for.
+ * @returns the json object to pass to the Esri PopupTemplate constructor.
+ */
+export function getPopupTemplate(type: LayerTypeName) {
+  if (type === 'Area of Interest') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Type' },
+            { fieldName: 'Notes', label: 'Notes' },
+          ],
+        },
+      ],
+    };
+  }
+  if (type === 'Contamination Map') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Type' },
+            { fieldName: 'CONTAM_TYPE', label: 'Contamination Type' },
+            { fieldName: 'CONTAM_VALUE', label: 'Activity' },
+            { fieldName: 'CONTAM_UNIT', label: 'Unit of Measure' },
+          ],
+        },
+      ],
+    };
+  }
+  if (type === 'Samples' || type === 'VSP') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [
+            { fieldName: 'TYPE', label: 'Sample Type' },
+            {
+              fieldName: 'TTPK',
+              label: 'Time to Prepare Kits (person hrs/sample)',
+            },
+            { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
+            { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
+            {
+              fieldName: 'TTPS',
+              label: 'Total Time per Sample (person hrs/sample)',
+            },
+            { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
+            {
+              fieldName: 'LOD_NON',
+              label: 'Limit of Detection (CFU) Nonporous',
+            },
+            { fieldName: 'MCPS', label: 'Material Cost ($/sample)' },
+            {
+              fieldName: 'TCPS',
+              label: 'Total Cost Per Sample (Labor + Material + Waste)',
+            },
+            { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
+            { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
+            { fieldName: 'SA', label: 'Surface Area (sq inch)' },
+            { fieldName: 'Notes', label: 'Notes' },
+            { fieldName: 'ALC', label: 'Analysis Labor Cost' },
+            { fieldName: 'AMC', label: 'Analysis Material Cost' },
+            { fieldName: 'CONTAM_TYPE', label: 'Contamination Type' },
+            { fieldName: 'CONTAM_VALUE', label: 'Activity' },
+            { fieldName: 'CONTAM_UNIT', label: 'Unit of Measure' },
+            { fieldName: 'SCENARIONAME', label: 'Scenario Name' },
+            { fieldName: 'CREATEDDATE', label: 'Create Date' },
+            { fieldName: 'UPDATEDDATE', label: 'Update Date' },
+            { fieldName: 'USERNAME', label: 'Created By' },
+            { fieldName: 'ORGANIZATION', label: 'Organization' },
+            { fieldName: 'SURFACEAREAUNIT', label: 'Surface Area Units' },
+            { fieldName: 'ELEVATIONSERIES', label: 'Elevation Series' },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {};
+}
+
+/**
+ * Generates a unique identifier (uuid) in uppercase.
+ *
+ * @returns string - A unique identifier (uuid).
+ */
+export function generateUUID() {
+  return '{' + uuidv4().toUpperCase() + '}';
 }

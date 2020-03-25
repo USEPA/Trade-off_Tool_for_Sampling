@@ -94,6 +94,18 @@ function CalculateResults() {
               label="Total number of samples"
               value={calculateResults.data['Total Number of Samples']}
             />
+            <LabelValue
+              label="Total Cost ($)"
+              value={calculateResults.data['Total Cost']}
+            />
+            <LabelValue
+              label="Total Time (days)"
+              value={calculateResults.data['Total Time']}
+            />
+            <LabelValue
+              label="Limiting Time Factor"
+              value={calculateResults.data['Limiting Time Factor']}
+            />
             <hr />
 
             <h4>Sampling Operation</h4>

@@ -6,6 +6,7 @@ import { jsx, css } from '@emotion/core';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
+import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -50,6 +51,10 @@ const submitButtonStyles = css`
 `;
 
 const panelContainer = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
   padding: 20px;
 `;
 
@@ -246,19 +251,44 @@ function Calculate() {
       },
       fields: [
         {
-          name: 'FID',
+          name: 'OBJECTID',
           type: 'oid',
-          alias: 'FID',
+          alias: 'OBJECTID',
         },
         {
-          name: 'Id',
-          type: 'integer',
-          alias: 'Id',
+          name: 'GLOBALID',
+          type: 'guid',
+          alias: 'GlobalID',
         },
         {
-          name: 'CFU',
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'Permanent Identifier',
+        },
+        {
+          name: 'CONTAM_TYPE',
+          type: 'string',
+          alias: 'Contamination Type',
+        },
+        {
+          name: 'CONTAM_VALUE',
           type: 'double',
-          alias: 'CFU',
+          alias: 'Contamination Value',
+        },
+        {
+          name: 'CONTAM_UNIT',
+          type: 'string',
+          alias: 'Contamination Unit',
+        },
+        {
+          name: 'SCENARIONAME',
+          type: 'string',
+          alias: 'Scenario Name',
+        },
+        {
+          name: 'Notes',
+          type: 'string',
+          alias: 'Notes',
         },
         {
           name: 'Shape_Length',
@@ -309,99 +339,131 @@ function Calculate() {
           name: 'GLOBALID',
           type: 'guid',
           alias: 'GlobalID',
-          length: 38,
+        },
+        {
+          name: 'PERMANENT_IDENTIFIER',
+          type: 'guid',
+          alias: 'Permanent Identifier',
         },
         {
           name: 'TYPE',
           type: 'string',
-          alias: 'Type',
-          length: 255,
+          alias: 'Sampling Method Type',
         },
         {
           name: 'TTPK',
           type: 'double',
-          alias: 'TTPK',
+          alias: 'Time to Prepare Kits',
         },
         {
           name: 'TTC',
           type: 'double',
-          alias: 'TTC',
+          alias: 'Time to Collect',
         },
         {
           name: 'TTA',
           type: 'double',
-          alias: 'TTA',
+          alias: 'Time to Analyze',
         },
         {
           name: 'TTPS',
           type: 'double',
-          alias: 'TTPS',
+          alias: 'Total Time per Sample',
         },
         {
           name: 'LOD_P',
           type: 'double',
-          alias: 'LOD_P',
+          alias: 'Limit of Detection Porous',
         },
         {
           name: 'LOD_NON',
           type: 'double',
-          alias: 'LOD_NON',
+          alias: 'Limit of Detection Nonporous',
         },
         {
           name: 'MCPS',
           type: 'double',
-          alias: 'MCPS',
+          alias: 'Material Cost per Sample',
         },
         {
           name: 'TCPS',
           type: 'double',
-          alias: 'TCPS',
+          alias: 'Total Cost Per Sample',
         },
         {
           name: 'WVPS',
           type: 'double',
-          alias: 'WVPS',
+          alias: 'Waste Volume per Sample',
         },
         {
           name: 'WWPS',
           type: 'double',
-          alias: 'WWPS',
+          alias: 'Waste Weight per Sample',
         },
         {
           name: 'SA',
           type: 'double',
-          alias: 'SA',
+          alias: 'Sampling Surface Area',
         },
         {
-          name: 'AA',
-          type: 'double',
-          alias: 'AA',
-        },
-        {
-          name: 'AC',
-          type: 'integer',
-          alias: 'AC',
-        },
-        {
-          name: 'ITER',
-          type: 'integer',
-          alias: 'ITER',
-        },
-        {
-          name: 'NOTES',
+          name: 'Notes',
           type: 'string',
           alias: 'Notes',
-          length: 2000,
         },
         {
           name: 'ALC',
           type: 'double',
-          alias: 'ALC',
+          alias: 'Analysis Labor Cost',
         },
         {
           name: 'AMC',
           type: 'double',
-          alias: 'AMC',
+          alias: 'Analysis Material Cost',
+        },
+        {
+          name: 'CONTAM_TYPE',
+          type: 'string',
+          alias: 'Contamination Type',
+        },
+        {
+          name: 'CONTAM_VALUE',
+          type: 'double',
+          alias: 'Contamination Value',
+        },
+        {
+          name: 'CONTAM_UNIT',
+          type: 'string',
+          alias: 'Contamination Unit',
+        },
+        {
+          name: 'SCENARIONAME',
+          type: 'string',
+          alias: 'Scenario Name',
+        },
+        {
+          name: 'CREATEDDATE',
+          type: 'date',
+          alias: 'Created Date',
+        },
+        {
+          name: 'UPDATEDDATE',
+          type: 'date',
+          alias: 'Updated Date',
+        },
+        {
+          name: 'USERNAME',
+          type: 'string',
+          alias: 'Username',
+        },
+        {
+          name: 'ORGANIZATION',
+          type: 'string',
+          alias: 'Organization',
+        },
+        {
+          name: 'ELEVATIONSERIES',
+          type: 'string',
+          alias: 'Elevation Series',
         },
         {
           name: 'Shape_Length',
@@ -442,19 +504,28 @@ function Calculate() {
         // save the data to state, use an empty array if there is no data
         if (res?.results?.[0]?.value?.features) {
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-          // update the cfu attribute of the graphics
-          res.results[0].value.features.forEach((resFeature: any) => {
-            const feature = layer.graphics.find(
-              (graphic) =>
-                String(graphic.attributes.OBJECTID) ===
-                  String(resFeature.attributes.OBJECTID) &&
-                String(graphic.attributes.GLOBALID) ===
-                  String(resFeature.attributes.GLOBALID),
+          // update the contam value attribute of the graphics
+          const resFeatures = res.results[0].value.features;
+          layer.graphics.forEach((graphic) => {
+            const resFeature = resFeatures.find(
+              (feature: any) =>
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                feature.attributes.PERMANENT_IDENTIFIER,
             );
 
-            if (feature) {
-              feature.attributes.CFU = resFeature.attributes.CFU;
+            // if the graphic was not found in the response, set contam value to null,
+            // otherwise use the contam value value found in the response.
+            let contamValue = null;
+            let contamType = graphic.attributes.CONTAM_TYPE;
+            let contamUnit = graphic.attributes.CONTAM_UNIT;
+            if (resFeature) {
+              contamValue = resFeature.attributes.CONTAM_VALUE;
+              contamType = resFeature.attributes.CONTAM_TYPE;
+              contamUnit = resFeature.attributes.CONTAM_UNIT;
             }
+            graphic.attributes.CONTAM_VALUE = contamValue;
+            graphic.attributes.CONTAM_TYPE = contamType;
+            graphic.attributes.CONTAM_UNIT = contamUnit;
           });
 
           // make a copy of the edits context variable
@@ -493,202 +564,208 @@ function Calculate() {
 
   return (
     <div css={panelContainer}>
-      <h2>Calculate</h2>
+      <div>
+        <h2>Calculate</h2>
 
-      <div css={sectionContainer}>
-        <p css={layerInfo}>
-          <strong>Layer Name: </strong>
-          {sketchLayer?.name}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Name: </strong>
-          {sketchLayer?.scenarioName}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Description: </strong>
-          <ShowLessMore
-            text={sketchLayer?.scenarioDescription}
-            charLimit={20}
+        <div css={sectionContainer}>
+          <p css={layerInfo}>
+            <strong>Layer Name: </strong>
+            {sketchLayer?.name}
+          </p>
+          <p css={layerInfo}>
+            <strong>Scenario Name: </strong>
+            {sketchLayer?.scenarioName}
+          </p>
+          <p css={layerInfo}>
+            <strong>Scenario Description: </strong>
+            <ShowLessMore
+              text={sketchLayer?.scenarioDescription}
+              charLimit={20}
+            />
+          </p>
+        </div>
+
+        <div css={sectionContainer}>
+          <label htmlFor="number-teams-input">
+            Number of Available Teams for Sampling
+          </label>
+          <input
+            id="number-teams-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingTeams}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingTeams(Number(ev.target.value));
+              }
+            }}
           />
-        </p>
+
+          <label htmlFor="personnel-per-team-input">
+            Personnel per Sampling Team
+          </label>
+          <input
+            id="personnel-per-team-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingPersonnel}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingPersonnel(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="sampling-hours-input">
+            Sampling Team Hours per Shift
+          </label>
+          <input
+            id="sampling-hours-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingHours}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingHours(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
+          <input
+            id="shifts-per-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingShifts}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingShifts(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
+          <input
+            id="labor-cost-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputSamplingLaborCost}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputSamplingLaborCost(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="number-of-labs-input">
+            Number of Available Labs for Analysis
+          </label>
+          <input
+            id="number-of-labs-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumLabs}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumLabs(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
+          <input
+            id="lab-hours-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumLabHours}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumLabHours(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="surface-area-input">
+            Surface Area (ft<sup>2</sup>) (optional)
+          </label>
+          <input
+            id="surface-area-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputSurfaceArea}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputSurfaceArea(Number(ev.target.value));
+              }
+            }}
+          />
+        </div>
+
+        {contaminationResults.status === 'fetching' && <LoadingSpinner />}
+        {contaminationResults.status === 'failure' && (
+          <MessageBox
+            severity="error"
+            title="Web Service Error"
+            message="An error occurred in the web service"
+          />
+        )}
+        {contaminationResults.status === 'no-map' && (
+          <MessageBox
+            severity="error"
+            title="No Contamination Map Found"
+            message="Return to Create Plan and add and/or select a contamination map"
+          />
+        )}
+        {contaminationResults.status === 'no-layer' && (
+          <MessageBox
+            severity="error"
+            title="No Samples"
+            message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
+          />
+        )}
+        {contaminationResults.status === 'no-graphics' && (
+          <MessageBox
+            severity="error"
+            title="No Samples"
+            message="There are no samples to run calculations on"
+          />
+        )}
+        {contaminationResults.status === 'no-contamination-graphics' && (
+          <MessageBox
+            severity="error"
+            title="No Features In Contamination Map"
+            message="There are no features in the contamination map to run calculations on"
+          />
+        )}
+        {contaminationResults.status === 'success' && (
+          <MessageBox
+            severity="info"
+            title="Contamination Hits"
+            message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
+          />
+        )}
+
+        <div css={submitButtonContainerStyles}>
+          <button css={submitButtonStyles} onClick={runCalculation}>
+            View Detailed Results
+          </button>
+          <button
+            css={submitButtonStyles}
+            onClick={runContaminationCalculation}
+          >
+            View Contamination Hits
+          </button>
+        </div>
       </div>
-
-      <div css={sectionContainer}>
-        <label htmlFor="number-teams-input">
-          Number of Available Teams for Sampling
-        </label>
-        <input
-          id="number-teams-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingTeams}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingTeams(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="personnel-per-team-input">
-          Personnel per Sampling Team
-        </label>
-        <input
-          id="personnel-per-team-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingPersonnel}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingPersonnel(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="sampling-hours-input">
-          Sampling Team Hours per Shift
-        </label>
-        <input
-          id="sampling-hours-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingHours}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingHours(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
-        <input
-          id="shifts-per-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingShifts}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingShifts(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
-        <input
-          id="labor-cost-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputSamplingLaborCost}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputSamplingLaborCost(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="number-of-labs-input">
-          Number of Available Labs for Analysis
-        </label>
-        <input
-          id="number-of-labs-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumLabs}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumLabs(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
-        <input
-          id="lab-hours-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumLabHours}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumLabHours(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="surface-area-input">
-          Surface Area (ft<sup>2</sup>) (optional)
-        </label>
-        <input
-          id="surface-area-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputSurfaceArea}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputSurfaceArea(Number(ev.target.value));
-            }
-          }}
-        />
-      </div>
-
-      {contaminationResults.status === 'fetching' && <LoadingSpinner />}
-      {contaminationResults.status === 'failure' && (
-        <MessageBox
-          severity="error"
-          title="Web Service Error"
-          message="An error occurred in the web service"
-        />
-      )}
-      {contaminationResults.status === 'no-map' && (
-        <MessageBox
-          severity="error"
-          title="No Contamination Map Found"
-          message="Return to Create Plan and add and/or select a contamination map"
-        />
-      )}
-      {contaminationResults.status === 'no-layer' && (
-        <MessageBox
-          severity="error"
-          title="No Samples"
-          message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
-        />
-      )}
-      {contaminationResults.status === 'no-graphics' && (
-        <MessageBox
-          severity="error"
-          title="No Samples"
-          message="There are no samples to run calculations on"
-        />
-      )}
-      {contaminationResults.status === 'no-contamination-graphics' && (
-        <MessageBox
-          severity="error"
-          title="No Features In Contamination Map"
-          message="There are no features in the contamination map to run calculations on"
-        />
-      )}
-      {contaminationResults.status === 'success' && (
-        <MessageBox
-          severity="info"
-          title="Contamination Hits"
-          message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
-        />
-      )}
-
-      <div css={submitButtonContainerStyles}>
-        <button css={submitButtonStyles} onClick={runCalculation}>
-          View Detailed Results
-        </button>
-        <button css={submitButtonStyles} onClick={runContaminationCalculation}>
-          View Contamination Hits
-        </button>
-      </div>
+      <NavigationButton goToPanel="publish" />
     </div>
   );
 }

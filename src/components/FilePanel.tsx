@@ -3,20 +3,119 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { useDropzone } from 'react-dropzone';
-import Select from 'react-select';
+// components
+import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import {
+  generateUUID,
+  getPopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 // types
-import { LayerType, LayerSelectType } from 'types/Layer';
+import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
+
+/**
+ * Determines if the desired name has already been used. If it has
+ * it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+function getLayerName(layers: LayerType[], desiredName: string) {
+  let duplicateCount = 0;
+  layers.forEach((layer) => {
+    if (layer.value === desiredName) duplicateCount += 1;
+  });
+
+  return duplicateCount > 0
+    ? `${desiredName} (${duplicateCount})`
+    : desiredName;
+}
+
+const layerOptions: LayerSelectType[] = [
+  { value: 'Contamination Map', label: 'Contamination Map' },
+  { value: 'Samples', label: 'Samples' },
+  { value: 'Reference Layer', label: 'Reference Layer' },
+  { value: 'Area of Interest', label: 'Area of Interest' },
+  { value: 'VSP', label: 'VSP' },
+];
+
+function fileVerification(type: LayerTypeName, attributes: any) {
+  const contaminationRequiredFields = [
+    'OBJECTID',
+    'GLOBALID',
+    'PERMANENT_IDENTIFIER',
+    'TYPE',
+    'CONTAM_TYPE',
+    'CONTAM_VALUE',
+    'CONTAM_UNIT',
+  ];
+  const samplesRequiredFields = [
+    'OBJECTID',
+    'GLOBALID',
+    'PERMANENT_IDENTIFIER',
+    'TYPE',
+    'TTPK',
+    'TTC',
+    'TTA',
+    'TTPS',
+    'LOD_P',
+    'LOD_NON',
+    'MCPS',
+    'TCPS',
+    'WVPS',
+    'WWPS',
+    'SA',
+    'Notes',
+    'ALC',
+    'AMC',
+    'CONTAM_TYPE',
+    'CONTAM_VALUE',
+    'CONTAM_UNIT',
+    'SCENARIONAME',
+    'CREATEDDATE',
+    'UPDATEDDATE',
+    'USERNAME',
+    'ORGANIZATION',
+    'SURFACEAREAUNIT',
+    'ELEVATIONSERIES',
+  ];
+
+  let valid = true;
+  const missingFields: string[] = [];
+  if (type === 'Contamination Map') {
+    contaminationRequiredFields.forEach((field) => {
+      // check if the required field is in the attributes object
+      if (!(field in attributes)) {
+        valid = false;
+
+        // build a list of fields that are missing
+        if (missingFields.indexOf(field) === -1) missingFields.push(field);
+      }
+    });
+  }
+  if (type === 'Samples') {
+    samplesRequiredFields.forEach((field) => {
+      // check if the required field is in the attributes object
+      if (!(field in attributes)) {
+        valid = false;
+
+        // build a list of fields that are missing
+        if (missingFields.indexOf(field) === -1) missingFields.push(field);
+      }
+    });
+  }
+
+  return { valid, missingFields };
+}
 
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
@@ -88,6 +187,7 @@ const selectStyles = css`
 // --- components (FilePanel) ---
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
+  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -107,6 +207,7 @@ function FilePanel() {
     Graphic,
     Geoprocessor,
     KMLLayer,
+    PopupTemplate,
     rendererJsonUtils,
     SpatialReference,
   } = useEsriModulesContext();
@@ -122,6 +223,19 @@ function FilePanel() {
     layerType,
     setLayerType, //
   ] = React.useState<LayerSelectType | null>(null);
+
+  // Handle navigation options
+  React.useEffect(() => {
+    if (goToOptions?.from !== 'file') return;
+
+    let optionValue: LayerSelectType | null = null;
+    layerOptions.forEach((option) => {
+      if (option.value === goToOptions.layerType) optionValue = option;
+    });
+    if (optionValue) setLayerType(optionValue);
+
+    setGoToOptions(null);
+  }, [goToOptions, setGoToOptions]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -464,6 +578,7 @@ function FilePanel() {
     setFeaturesAdded(true);
 
     const graphics: __esri.Graphic[] = [];
+    let validAttributes = true;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
         !layer?.featureSet?.features ||
@@ -473,7 +588,7 @@ function FilePanel() {
       }
 
       // get the features from the response and add the correct type value
-      layer.featureSet.features.forEach((feature: any) => {
+      layer.featureSet.features.forEach((feature: any, index: number) => {
         if (
           !feature?.geometry?.spatialReference &&
           file.esriFileType === 'kml'
@@ -486,24 +601,84 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
+        // add a layer type to the graphic
+        if (!graphic?.attributes?.TYPE) {
+          graphic.attributes['TYPE'] = layerType.value;
+        }
+
+        // add ids to the graphic, if the graphic doesn't already have them
+        const uuid = generateUUID();
+        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
+          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+        }
+        if (!graphic.attributes.GLOBALID) {
+          graphic.attributes['GLOBALID'] = uuid;
+        }
+        if (!graphic.attributes.OBJECTID) {
+          graphic.attributes['OBJECTID'] = index.toString();
+        }
+
+        // add sample layer specific attributes
+        if (layerType.value === 'Samples') {
+          const {
+            CONTAM_TYPE,
+            CONTAM_VALUE,
+            CONTAM_UNIT,
+            SCENARIONAME,
+            CREATEDDATE,
+            UPDATEDDATE,
+            USERNAME,
+            ORGANIZATION,
+            SURFACEAREAUNIT,
+            ELEVATIONSERIES,
+          } = graphic.attributes;
+          if (!CONTAM_TYPE) graphic.attributes['CONTAM_TYPE'] = null;
+          if (!CONTAM_VALUE) graphic.attributes['CONTAM_VALUE'] = null;
+          if (!CONTAM_UNIT) graphic.attributes['CONTAM_UNIT'] = null;
+          if (!SCENARIONAME) graphic.attributes['SCENARIONAME'] = null;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
+          if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
+          if (!USERNAME) graphic.attributes['USERNAME'] = null;
+          if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
+          if (!SURFACEAREAUNIT) graphic.attributes['SURFACEAREAUNIT'] = null;
+          if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+        }
+
+        // verify the graphic has all required attributes
+        const { valid } = fileVerification(layerType.value, graphic.attributes);
+        if (!valid) validAttributes = false;
+
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;
         }
+
+        // add the popup template
+        graphic.popupTemplate = new PopupTemplate(
+          getPopupTemplate(layerType.value),
+        );
+
         graphics.push(graphic);
       });
     });
 
+    if (!validAttributes) {
+      alert('The file does not contain all of the required attributes.');
+      return;
+    }
+
+    const layerName = getLayerName(layers, file.name);
     const graphicsLayer = new GraphicsLayer({
       graphics,
-      title: file.name,
+      title: layerName,
     });
 
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
-      value: `-1 - ${file.name}`,
-      name: file.name,
-      label: file.name,
+      layerId: graphicsLayer.id,
+      value: file.name,
+      name: layerName,
+      label: layerName,
       layerType: layerType.value,
       scenarioName: '',
       scenarioDescription: '',
@@ -532,6 +707,7 @@ function FilePanel() {
     Field,
     geometryJsonUtils,
     Graphic,
+    PopupTemplate,
     rendererJsonUtils,
 
     // app
@@ -622,12 +798,13 @@ function FilePanel() {
         popupTemplate,
       });
 
+      const layerName = getLayerName(layers, file.name);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
         objectIdField: layer.layerDefinition.objectIdField,
         outFields: ['*'],
         source: features,
-        title: file.name,
+        title: layerName,
         renderer,
         popupTemplate,
       };
@@ -645,9 +822,10 @@ function FilePanel() {
       // add the layers, from the uploaded file, to the map
       layersAdded.push({
         id: -1,
-        value: `-1 - ${file.name}`,
-        name: file.name,
-        label: file.name,
+        layerId: layerToAdd.id,
+        value: file.name,
+        name: layerName,
+        label: layerName,
         layerType: layerType.value,
         scenarioName: '',
         scenarioDescription: '',
@@ -730,13 +908,7 @@ function FilePanel() {
         css={selectStyles}
         value={layerType}
         onChange={(ev) => setLayerType(ev as LayerSelectType)}
-        options={[
-          { value: 'Contamination Map', label: 'Contamination Map' },
-          { value: 'Samples', label: 'Samples' },
-          { value: 'Reference Layer', label: 'Reference Layer' },
-          { value: 'Area of Interest', label: 'Area of Interest' },
-          { value: 'VSP', label: 'VSP' },
-        ]}
+        options={layerOptions}
       />
       {layerType && (
         <React.Fragment>
