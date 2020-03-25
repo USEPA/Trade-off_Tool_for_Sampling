@@ -100,14 +100,12 @@ function Publish() {
           }
           if (layerRes.updateResults) {
             layerRes.updateResults.forEach((item: any) => {
-              if (item.success) totals.updated += 1;
-              else totals.failed += 1;
+              item.success ? (totals.updated += 1) : (totals.failed += 1);
             });
           }
           if (layerRes.deleteResults) {
             layerRes.deleteResults.forEach((item: any) => {
-              if (item.success) totals.deleted += 1;
-              else totals.failed += 1;
+              item.success ? (totals.deleted += 1) : (totals.failed += 1);
             });
           }
         });
