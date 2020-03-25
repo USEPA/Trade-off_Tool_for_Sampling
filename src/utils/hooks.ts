@@ -14,6 +14,8 @@ import { EditsType } from 'types/Edits';
 import { LayerType, UrlLayerType } from 'types/Layer';
 // config
 import { polygonSymbol } from 'config/symbols';
+// utils
+import { getPopupTemplate } from 'utils/sketchUtils';
 
 // Saves data to session storage
 function writeToStorage(key: string, data: any) {
@@ -104,17 +106,7 @@ export function useSessionStorage() {
               },
               rings: graphic.geometry.rings,
             }),
-            popupTemplate: {
-              title: '',
-              content: [
-                {
-                  type: 'fields',
-                  fieldInfos: Object.keys(graphic.attributes).map((key) => {
-                    return { fieldName: key, label: key };
-                  }),
-                },
-              ],
-            },
+            popupTemplate: getPopupTemplate(editsLayer.layerType),
           }),
         );
       });
@@ -677,15 +669,13 @@ export function useCalculatePlan() {
     };
 
     // display loading spinner for 1 second
-    setTimeout(() => {
-      setCalculateResults((calculateResults: CalculateResultsType) => {
-        return {
-          status: 'success',
-          panelOpen: calculateResults.panelOpen,
-          data: resultObject,
-        };
-      });
-    }, 500);
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        status: 'success',
+        panelOpen: calculateResults.panelOpen,
+        data: resultObject,
+      };
+    });
   }, [
     calcGraphics,
     totals,
