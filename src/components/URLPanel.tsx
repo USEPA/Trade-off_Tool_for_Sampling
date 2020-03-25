@@ -30,6 +30,12 @@ type UrlType = {
     | 'A GeoRSS File'
     | 'A CSV File';
 };
+type UrlStatusType =
+  | 'none'
+  | 'fetching'
+  | 'success'
+  | 'failure'
+  | 'unsupported';
 type SupportedUrlLayerTypes =
   | __esri.Layer
   | __esri.WMSLayer
@@ -58,12 +64,7 @@ function URLPanel() {
   });
   const [url, setUrl] = React.useState('');
   const [showSampleUrls, setShowSampleUrls] = React.useState(false);
-  const [
-    status,
-    setStatus, //
-  ] = React.useState<
-    'none' | 'fetching' | 'success' | 'failure' | 'unsupported'
-  >('none');
+  const [status, setStatus] = React.useState<UrlStatusType>('none');
 
   const [layer, setLayer] = React.useState<SupportedUrlLayerTypes | null>(null);
   React.useEffect(() => {
