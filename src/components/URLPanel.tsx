@@ -61,9 +61,9 @@ function URLPanel() {
   const [
     status,
     setStatus, //
-  ] = React.useState<'' | 'fetching' | 'success' | 'failure' | 'unsupported'>(
-    '',
-  );
+  ] = React.useState<
+    'none' | 'fetching' | 'success' | 'failure' | 'unsupported'
+  >('none');
 
   const [layer, setLayer] = React.useState<SupportedUrlLayerTypes | null>(null);
   React.useEffect(() => {
@@ -136,7 +136,7 @@ function URLPanel() {
         value={urlType}
         onChange={(ev) => {
           setUrlType(ev as UrlType);
-          setStatus('');
+          setStatus('none');
         }}
         options={[
           { value: 'ArcGIS', label: 'An ArcGIS Server Web Service' },
@@ -155,7 +155,7 @@ function URLPanel() {
         value={url}
         onChange={(ev) => {
           setUrl(ev.target.value);
-          setStatus('');
+          setStatus('none');
         }}
       />
       <br />

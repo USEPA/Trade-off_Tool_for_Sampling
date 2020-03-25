@@ -127,13 +127,13 @@ type LocationType = {
 };
 
 type SortByType = {
-  value: '' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
+  value: 'none' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
   label: 'Relevance' | 'Title' | 'Owner' | 'Rating' | 'Views' | 'Date';
   defaultSort: 'asc' | 'desc';
 };
 
 type SearchResultsType = {
-  status: '' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
+  status: 'none' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
   data: __esri.PortalQueryResult | null;
 };
 
@@ -163,14 +163,14 @@ function SearchPanel() {
   const [
     searchResults,
     setSearchResults, //
-  ] = React.useState<SearchResultsType>({ status: '', data: null });
+  ] = React.useState<SearchResultsType>({ status: 'none', data: null });
   const [
     currentExtent,
     setCurrentExtent,
   ] = React.useState<__esri.Extent | null>(null);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [sortBy, setSortBy] = React.useState<SortByType>({
-    value: '',
+    value: 'none',
     label: 'Relevance',
     defaultSort: 'desc',
   });
@@ -260,7 +260,7 @@ function SearchPanel() {
     if (withinMap && currentExtent) queryParams.extent = currentExtent;
 
     // if a sort by (other than relevance) is selected, add it to the query params
-    if (sortBy.value) {
+    if (sortBy.value !== 'none') {
       queryParams.sortField = sortBy.value as any;
     } else {
       if (!withinMap) {
@@ -483,7 +483,7 @@ function SearchPanel() {
           }}
           options={
             [
-              { value: '', label: 'Relevance', defaultSort: 'desc' },
+              { value: 'none', label: 'Relevance', defaultSort: 'desc' },
               { value: 'title', label: 'Title', defaultSort: 'asc' },
               { value: 'owner', label: 'Owner', defaultSort: 'asc' },
               { value: 'avgrating', label: 'Rating', defaultSort: 'desc' },
@@ -494,10 +494,10 @@ function SearchPanel() {
         />
         <button
           css={sortOrderStyles}
-          disabled={sortBy.value ? false : true}
+          disabled={sortBy.value === 'none' ? true : false}
           onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
         >
-          {sortBy.value && (
+          {sortBy.value !== 'none' && (
             <i
               className={`fas fa-long-arrow-alt-${
                 sortOrder === 'desc' ? 'up' : 'down'

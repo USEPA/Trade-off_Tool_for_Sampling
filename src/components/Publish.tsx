@@ -32,7 +32,7 @@ const layerInfo = css`
 
 // --- components (Publish) ---
 type PublishType = {
-  status: '' | 'fetching' | 'success' | 'failure';
+  status: 'none' | 'fetching' | 'success' | 'failure';
   summary: {
     success: string;
     failed: string;
@@ -53,7 +53,7 @@ function Publish() {
   } = React.useContext(SketchContext);
 
   const [publishResponse, setPublishResponse] = React.useState<PublishType>({
-    status: '',
+    status: 'none',
     summary: { success: '', failed: '' },
     rawData: null,
   });
