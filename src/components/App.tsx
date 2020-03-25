@@ -150,9 +150,10 @@ function App() {
     sizeCheckInitialized,
     setSizeCheckInitialized, //
   ] = React.useState(false);
-  const [smallScreenDialogOpen, setSmallScreenDialogOpen] = React.useState(
-    false,
-  );
+  const [
+    smallScreenDialogOpen,
+    setSmallScreenDialogOpen, //
+  ] = React.useState(false);
   React.useEffect(() => {
     if (sizeCheckInitialized) return;
 
