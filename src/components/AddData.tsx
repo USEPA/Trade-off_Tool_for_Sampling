@@ -11,10 +11,10 @@ import NavigationButton from 'components/NavigationButton';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 
-type LocationType = {
-  value: 'search' | 'url' | 'file';
-  label: 'Search for Layers' | 'Add Layer from Web' | 'Add Layer from File';
-};
+type LocationType =
+  | { value: 'search'; label: 'Search for Layers' }
+  | { value: 'url'; label: 'Add Layer from Web' }
+  | { value: 'file'; label: 'Add Layer from File' };
 
 const addFromOptions: LocationType[] = [
   { value: 'search', label: 'Search for Layers' },
