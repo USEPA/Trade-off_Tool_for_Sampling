@@ -26,6 +26,7 @@ export const SampleSelectOptions: SampleSelectType[] = [
 
 type SampleProperties =
   | 'OBJECTID'
+  | 'PERMANENT_IDENTIFIER'
   | 'GLOBALID'
   | 'TYPE'
   | 'SA'
@@ -45,7 +46,16 @@ type SampleProperties =
   | 'AA'
   | 'AC'
   | 'ITER'
-  | 'CFU';
+  | 'CONTAM_TYPE'
+  | 'CONTAM_VALUE'
+  | 'CONTAM_UNIT'
+  | 'SCENARIONAME'
+  | 'CREATEDDATE'
+  | 'UPDATEDDATE'
+  | 'USERNAME'
+  | 'ORGANIZATION'
+  | 'SURFACEAREAUNIT'
+  | 'ELEVATIONSERIES';
 
 type Attributes = {
   [key in SampleType]: {
@@ -56,6 +66,7 @@ type Attributes = {
 const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Sponge',
     SA: '100',
@@ -71,14 +82,24 @@ const sampleAttributes: Attributes = {
     WWPS: '4.3',
     ALC: '118',
     AMC: '239',
-    Notes: '239',
+    Notes: '',
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Micro Vac': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Micro Vac',
     SA: '144',
@@ -98,10 +119,20 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Wet Vac': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Wet Vac',
     SA: '28800',
@@ -121,10 +152,20 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   Robot: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Robot',
     SA: '144000',
@@ -144,10 +185,20 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   'Aggressive Air': {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Aggressive Air',
     SA: '12000',
@@ -167,10 +218,20 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
   Swab: {
     OBJECTID: '-1',
+    PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Swab',
     SA: '4',
@@ -190,7 +251,16 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CFU: null,
+    CONTAM_TYPE: null,
+    CONTAM_VALUE: null,
+    CONTAM_UNIT: null,
+    SCENARIONAME: null,
+    CREATEDDATE: null,
+    UPDATEDDATE: null,
+    USERNAME: null,
+    ORGANIZATION: null,
+    SURFACEAREAUNIT: null,
+    ELEVATIONSERIES: null,
   },
 };
 
