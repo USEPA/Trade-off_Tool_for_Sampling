@@ -6,6 +6,7 @@ import { jsx, css } from '@emotion/core';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
+import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -50,6 +51,10 @@ const submitButtonStyles = css`
 `;
 
 const panelContainer = css`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
   padding: 20px;
 `;
 
@@ -559,202 +564,208 @@ function Calculate() {
 
   return (
     <div css={panelContainer}>
-      <h2>Calculate</h2>
+      <div>
+        <h2>Calculate</h2>
 
-      <div css={sectionContainer}>
-        <p css={layerInfo}>
-          <strong>Layer Name: </strong>
-          {sketchLayer?.name}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Name: </strong>
-          {sketchLayer?.scenarioName}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Description: </strong>
-          <ShowLessMore
-            text={sketchLayer?.scenarioDescription}
-            charLimit={20}
+        <div css={sectionContainer}>
+          <p css={layerInfo}>
+            <strong>Layer Name: </strong>
+            {sketchLayer?.name}
+          </p>
+          <p css={layerInfo}>
+            <strong>Scenario Name: </strong>
+            {sketchLayer?.scenarioName}
+          </p>
+          <p css={layerInfo}>
+            <strong>Scenario Description: </strong>
+            <ShowLessMore
+              text={sketchLayer?.scenarioDescription}
+              charLimit={20}
+            />
+          </p>
+        </div>
+
+        <div css={sectionContainer}>
+          <label htmlFor="number-teams-input">
+            Number of Available Teams for Sampling
+          </label>
+          <input
+            id="number-teams-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingTeams}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingTeams(Number(ev.target.value));
+              }
+            }}
           />
-        </p>
+
+          <label htmlFor="personnel-per-team-input">
+            Personnel per Sampling Team
+          </label>
+          <input
+            id="personnel-per-team-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingPersonnel}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingPersonnel(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="sampling-hours-input">
+            Sampling Team Hours per Shift
+          </label>
+          <input
+            id="sampling-hours-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingHours}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingHours(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
+          <input
+            id="shifts-per-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumSamplingShifts}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumSamplingShifts(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
+          <input
+            id="labor-cost-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputSamplingLaborCost}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputSamplingLaborCost(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="number-of-labs-input">
+            Number of Available Labs for Analysis
+          </label>
+          <input
+            id="number-of-labs-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumLabs}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumLabs(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
+          <input
+            id="lab-hours-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputNumLabHours}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputNumLabHours(Number(ev.target.value));
+              }
+            }}
+          />
+
+          <label htmlFor="surface-area-input">
+            Surface Area (ft<sup>2</sup>) (optional)
+          </label>
+          <input
+            id="surface-area-input"
+            type="text"
+            pattern="[0-9]*"
+            css={inputStyles}
+            value={inputSurfaceArea}
+            onChange={(ev) => {
+              if (ev.target.validity.valid) {
+                setInputSurfaceArea(Number(ev.target.value));
+              }
+            }}
+          />
+        </div>
+
+        {contaminationResults.status === 'fetching' && <LoadingSpinner />}
+        {contaminationResults.status === 'failure' && (
+          <MessageBox
+            severity="error"
+            title="Web Service Error"
+            message="An error occurred in the web service"
+          />
+        )}
+        {contaminationResults.status === 'no-map' && (
+          <MessageBox
+            severity="error"
+            title="No Contamination Map Found"
+            message="Return to Create Plan and add and/or select a contamination map"
+          />
+        )}
+        {contaminationResults.status === 'no-layer' && (
+          <MessageBox
+            severity="error"
+            title="No Samples"
+            message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
+          />
+        )}
+        {contaminationResults.status === 'no-graphics' && (
+          <MessageBox
+            severity="error"
+            title="No Samples"
+            message="There are no samples to run calculations on"
+          />
+        )}
+        {contaminationResults.status === 'no-contamination-graphics' && (
+          <MessageBox
+            severity="error"
+            title="No Features In Contamination Map"
+            message="There are no features in the contamination map to run calculations on"
+          />
+        )}
+        {contaminationResults.status === 'success' && (
+          <MessageBox
+            severity="info"
+            title="Contamination Hits"
+            message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
+          />
+        )}
+
+        <div css={submitButtonContainerStyles}>
+          <button css={submitButtonStyles} onClick={runCalculation}>
+            View Detailed Results
+          </button>
+          <button
+            css={submitButtonStyles}
+            onClick={runContaminationCalculation}
+          >
+            View Contamination Hits
+          </button>
+        </div>
       </div>
-
-      <div css={sectionContainer}>
-        <label htmlFor="number-teams-input">
-          Number of Available Teams for Sampling
-        </label>
-        <input
-          id="number-teams-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingTeams}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingTeams(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="personnel-per-team-input">
-          Personnel per Sampling Team
-        </label>
-        <input
-          id="personnel-per-team-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingPersonnel}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingPersonnel(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="sampling-hours-input">
-          Sampling Team Hours per Shift
-        </label>
-        <input
-          id="sampling-hours-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingHours}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingHours(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="shifts-per-input">Sampling Team Shifts per Day</label>
-        <input
-          id="shifts-per-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumSamplingShifts}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumSamplingShifts(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="labor-cost-input">Sampling Team Labor Cost ($)</label>
-        <input
-          id="labor-cost-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputSamplingLaborCost}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputSamplingLaborCost(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="number-of-labs-input">
-          Number of Available Labs for Analysis
-        </label>
-        <input
-          id="number-of-labs-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumLabs}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumLabs(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="lab-hours-input">Analysis Lab Hours per Day</label>
-        <input
-          id="lab-hours-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputNumLabHours}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputNumLabHours(Number(ev.target.value));
-            }
-          }}
-        />
-
-        <label htmlFor="surface-area-input">
-          Surface Area (ft<sup>2</sup>) (optional)
-        </label>
-        <input
-          id="surface-area-input"
-          type="text"
-          pattern="[0-9]*"
-          css={inputStyles}
-          value={inputSurfaceArea}
-          onChange={(ev) => {
-            if (ev.target.validity.valid) {
-              setInputSurfaceArea(Number(ev.target.value));
-            }
-          }}
-        />
-      </div>
-
-      {contaminationResults.status === 'fetching' && <LoadingSpinner />}
-      {contaminationResults.status === 'failure' && (
-        <MessageBox
-          severity="error"
-          title="Web Service Error"
-          message="An error occurred in the web service"
-        />
-      )}
-      {contaminationResults.status === 'no-map' && (
-        <MessageBox
-          severity="error"
-          title="No Contamination Map Found"
-          message="Return to Create Plan and add and/or select a contamination map"
-        />
-      )}
-      {contaminationResults.status === 'no-layer' && (
-        <MessageBox
-          severity="error"
-          title="No Samples"
-          message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
-        />
-      )}
-      {contaminationResults.status === 'no-graphics' && (
-        <MessageBox
-          severity="error"
-          title="No Samples"
-          message="There are no samples to run calculations on"
-        />
-      )}
-      {contaminationResults.status === 'no-contamination-graphics' && (
-        <MessageBox
-          severity="error"
-          title="No Features In Contamination Map"
-          message="There are no features in the contamination map to run calculations on"
-        />
-      )}
-      {contaminationResults.status === 'success' && (
-        <MessageBox
-          severity="info"
-          title="Contamination Hits"
-          message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
-        />
-      )}
-
-      <div css={submitButtonContainerStyles}>
-        <button css={submitButtonStyles} onClick={runCalculation}>
-          View Detailed Results
-        </button>
-        <button css={submitButtonStyles} onClick={runContaminationCalculation}>
-          View Contamination Hits
-        </button>
-      </div>
+      <NavigationButton goToPanel="publish" />
     </div>
   );
 }
