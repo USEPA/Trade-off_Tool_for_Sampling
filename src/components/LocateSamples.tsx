@@ -746,10 +746,10 @@ function LocateSamples() {
                     onClick={sketchAoiButtonClick}
                     css={sketchAoiButtonStyles}
                   >
-                    <div css={sketchAoiTextStyles}>
+                    <span css={sketchAoiTextStyles}>
                       <i className="fas fa-draw-polygon" />{' '}
                       <span>Draw Area of Interest Mask</span>
-                    </div>
+                    </span>
                   </button>
                   <button
                     css={addButtonStyles}
