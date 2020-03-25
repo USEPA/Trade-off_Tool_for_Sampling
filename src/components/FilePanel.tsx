@@ -35,8 +35,9 @@ function getLayerName(layers: LayerType[], desiredName: string) {
     if (layer.value === desiredName) duplicateCount += 1;
   });
 
-  if (duplicateCount > 0) return `${desiredName} (${duplicateCount})`;
-  else return desiredName;
+  return duplicateCount > 0
+    ? `${desiredName} (${duplicateCount})`
+    : desiredName;
 }
 
 const layerOptions: LayerSelectType[] = [
