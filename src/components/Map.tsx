@@ -6,6 +6,7 @@ import { jsx, css } from '@emotion/core';
 import MapWidgets from 'components/MapWidgets';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 
 // --- styles (Map) ---
@@ -26,6 +27,7 @@ function Map({ height }: Props) {
 
   const mapRef = React.useRef<HTMLDivElement>(null);
 
+  const { contaminationMap } = React.useContext(CalculateContext);
   const {
     homeWidget,
     map,
@@ -33,6 +35,7 @@ function Map({ height }: Props) {
     mapView,
     setMapView,
     sketchLayer,
+    aoiSketchLayer,
   } = React.useContext(SketchContext);
 
   // Creates the map and view
@@ -114,7 +117,19 @@ function Map({ height }: Props) {
 
     let zoomGraphics: __esri.Graphic[] = [];
     if (sketchLayer?.sketchLayer?.type === 'graphics') {
-      zoomGraphics = sketchLayer.sketchLayer.graphics.toArray();
+      zoomGraphics = zoomGraphics.concat(
+        sketchLayer.sketchLayer.graphics.toArray(),
+      );
+    }
+    if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
+      zoomGraphics = zoomGraphics.concat(
+        aoiSketchLayer.sketchLayer.graphics.toArray(),
+      );
+    }
+    if (contaminationMap?.sketchLayer?.type === 'graphics') {
+      zoomGraphics = zoomGraphics.concat(
+        contaminationMap.sketchLayer.graphics.toArray(),
+      );
     }
 
     if (zoomGraphics.length > 0) {
@@ -125,7 +140,15 @@ function Map({ height }: Props) {
         });
       });
     }
-  }, [map, mapView, sketchLayer, homeWidget, Viewpoint]);
+  }, [
+    map,
+    mapView,
+    contaminationMap,
+    aoiSketchLayer,
+    sketchLayer,
+    homeWidget,
+    Viewpoint,
+  ]);
 
   return (
     <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">

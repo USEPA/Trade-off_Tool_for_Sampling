@@ -8,9 +8,11 @@ import Select from 'react-select';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 // types
 import { LayerType, LayerSelectType } from 'types/Layer';
 // config
@@ -31,6 +33,15 @@ function getLayerName(layers: LayerType[], desiredName: string) {
   if (duplicateCount > 0) return `${desiredName} (${duplicateCount})`;
   else return desiredName;
 }
+
+const layerOptions: LayerSelectType[] = [
+  { value: 'Contamination Map', label: 'Contamination Map' },
+  { value: 'Samples', label: 'Samples' },
+  { value: 'Reference Layer', label: 'Reference Layer' },
+  { value: 'Area of Interest', label: 'Area of Interest' },
+  { value: 'VSP', label: 'VSP' },
+];
+
 
 // --- styles (FileIcon) ---
 const fileIconOuterContainer = css`
@@ -102,6 +113,7 @@ const selectStyles = css`
 // --- components (FilePanel) ---
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
+  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -121,6 +133,7 @@ function FilePanel() {
     Graphic,
     Geoprocessor,
     KMLLayer,
+    PopupTemplate,
     rendererJsonUtils,
     SpatialReference,
   } = useEsriModulesContext();
@@ -136,6 +149,19 @@ function FilePanel() {
     layerType,
     setLayerType, //
   ] = React.useState<LayerSelectType | null>(null);
+
+  // Handle navigation options
+  React.useEffect(() => {
+    if (goToOptions?.from !== 'file') return;
+
+    let optionValue: LayerSelectType | null = null;
+    layerOptions.forEach((option) => {
+      if (option.value === goToOptions.layerType) optionValue = option;
+    });
+    if (optionValue) setLayerType(optionValue);
+
+    setGoToOptions(null);
+  }, [goToOptions, setGoToOptions]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -500,9 +526,19 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
+        // add a layer type to the graphic
+        if (!graphic?.attributes?.TYPE)
+          graphic.attributes['TYPE'] = layerType.value;
+
         if (graphic?.geometry?.type === 'polygon') {
           graphic.symbol = polygonSymbol;
         }
+
+        // add the popup template
+        graphic.popupTemplate = new PopupTemplate(
+          getPopupTemplate(layerType.value),
+        );
+
         graphics.push(graphic);
       });
     });
@@ -517,6 +553,7 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      layerId: graphicsLayer.id,
       value: file.name,
       name: layerName,
       label: layerName,
@@ -548,6 +585,7 @@ function FilePanel() {
     Field,
     geometryJsonUtils,
     Graphic,
+    PopupTemplate,
     rendererJsonUtils,
 
     // app
@@ -662,6 +700,7 @@ function FilePanel() {
       // add the layers, from the uploaded file, to the map
       layersAdded.push({
         id: -1,
+        layerId: layerToAdd.id,
         value: file.name,
         name: layerName,
         label: layerName,
@@ -747,13 +786,7 @@ function FilePanel() {
         css={selectStyles}
         value={layerType}
         onChange={(ev) => setLayerType(ev as LayerSelectType)}
-        options={[
-          { value: 'Contamination Map', label: 'Contamination Map' },
-          { value: 'Samples', label: 'Samples' },
-          { value: 'Reference Layer', label: 'Reference Layer' },
-          { value: 'Area of Interest', label: 'Area of Interest' },
-          { value: 'VSP', label: 'VSP' },
-        ]}
+        options={layerOptions}
       />
       {layerType && (
         <React.Fragment>
