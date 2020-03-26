@@ -681,7 +681,9 @@ function useCurrentTabSettings() {
       data = JSON.parse(dataStr);
     }
 
-    // update the data values
+    // Update the data values only if they have values.
+    // This is because other components clear these once they have been applied
+    // but the browser storage needs to hold onto it.
     if (goTo) data['goTo'] = goTo;
     if (goToOptions) data['goToOptions'] = goToOptions;
 

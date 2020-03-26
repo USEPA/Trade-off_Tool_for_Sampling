@@ -1,9 +1,10 @@
 // types
 import { LayerTypeName } from 'types/Layer';
 
-export type AddDataFileOptions = {
-  from: 'file';
+type Options = {
+  from?: 'file';
   layerType?: LayerTypeName;
+  continuePublish?: boolean;
 };
 
-export type GoToOptions = null | AddDataFileOptions;
+export type GoToOptions = null | Options;

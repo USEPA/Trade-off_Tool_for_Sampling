@@ -9,6 +9,7 @@ import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { publish } from 'utils/arcGisRestUtils';
@@ -47,22 +48,48 @@ function Publish() {
     portal,
     signedIn, //
   } = React.useContext(AuthenticationContext);
+  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     sketchLayer, //
   } = React.useContext(SketchContext);
 
+  // Checks browser storage to determine if the user clicked publish and logged in.
+  const [publishButtonClicked, setPublishButtonClicked] = React.useState(false);
+  const [continueInitialized, setContinueInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (continueInitialized) return;
+
+    // continue publish is not true, exit early
+    if (!goToOptions?.continuePublish) {
+      setContinueInitialized(true);
+      return;
+    }
+
+    // wait until TOTS is signed in before trying to continue the publish
+    if (!portal || !signedIn) return;
+
+    // continue with publishing
+    setPublishButtonClicked(true);
+    setGoToOptions({ continuePublish: false });
+    setContinueInitialized(true);
+  }, [portal, signedIn, goToOptions, setGoToOptions, continueInitialized]);
+
+  // Run the publish
   const [publishResponse, setPublishResponse] = React.useState<PublishType>({
     status: 'none',
     summary: { success: '', failed: '' },
     rawData: null,
   });
-  function runPublish() {
+  React.useEffect(() => {
     if (!oAuthInfo) return;
-    if (!sketchLayer) return;
+    if (!sketchLayer || !publishButtonClicked) return;
+
+    setPublishButtonClicked(false);
 
     // have the user login if necessary
     if (!portal || !signedIn) {
+      setGoToOptions({ continuePublish: true });
       IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
       return;
     }
@@ -154,7 +181,16 @@ function Publish() {
           rawData: err,
         });
       });
-  }
+  }, [
+    IdentityManager,
+    edits,
+    portal,
+    oAuthInfo,
+    setGoToOptions,
+    signedIn,
+    sketchLayer,
+    publishButtonClicked,
+  ]);
 
   return (
     <div css={panelContainer}>
@@ -205,7 +241,10 @@ function Publish() {
         />
       )}
       <div>
-        <button css={submitButtonStyles} onClick={runPublish}>
+        <button
+          css={submitButtonStyles}
+          onClick={() => setPublishButtonClicked(true)}
+        >
           Publish
         </button>
       </div>
