@@ -374,7 +374,7 @@ function useMapPositionStorage() {
     setLocalMapPositionInitialized(true);
   }, [Extent, mapView, localMapPositionInitialized]);
 
-  // Saves the home widget's viewpoint to browser storage whenever it changes
+  // Saves the map position and zoom level to browser storage whenever it changes
   const [
     watchExtentInitialized,
     setWatchExtentInitialized, //
@@ -420,7 +420,7 @@ function useHomeWidgetStorage() {
     }
   }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
 
-  // Saves the extent to browser storage whenever it changes
+  // Saves the home widget viewpoint to browser storage whenever it changes
   const [
     watchHomeWidgetInitialized,
     setWatchHomeWidgetInitialized, //
@@ -509,7 +509,7 @@ function useContaminationMapStorage() {
   }, [contaminationMap, localContaminationLayerInitialized]);
 }
 
-// Uses browser storage for holding the currently selected contamination map layer.
+// Uses browser storage for holding the currently selected area of interest layer.
 function useAreaOfInterestStorage() {
   const key = 'tots_selected_area_of_interest_layer';
   const { layers } = React.useContext(SketchContext);
@@ -518,7 +518,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer, //
   } = React.useContext(SketchContext);
 
-  // Retreives the selected contamination map from browser storage
+  // Retreives the selected area of interest from browser storage
   // when the app loads
   const [
     localAoiLayerInitialized,
@@ -535,7 +535,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer(getLayerById(layers, layerId));
   }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
 
-  // Saves the selected contamination map to browser storage whenever it changes
+  // Saves the selected area of interest to browser storage whenever it changes
   React.useEffect(() => {
     if (!localAoiLayerInitialized) return;
 
