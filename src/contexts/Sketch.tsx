@@ -7,6 +7,10 @@ import { EditsType } from 'types/Edits';
 import { LayerType, UrlLayerType } from 'types/Layer';
 
 type SketchType = {
+  basemapWidget: __esri.BasemapGallery | null;
+  setBasemapWidget: React.Dispatch<
+    React.SetStateAction<__esri.BasemapGallery | null>
+  >;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   featureService: any;
@@ -46,6 +50,8 @@ type SketchType = {
 };
 
 export const SketchContext = React.createContext<SketchType>({
+  basemapWidget: null,
+  setBasemapWidget: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   featureService: null,
@@ -83,6 +89,10 @@ export const SketchContext = React.createContext<SketchType>({
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const [
+    basemapWidget,
+    setBasemapWidget, //
+  ] = React.useState<__esri.BasemapGallery | null>(null);
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [featureService, setFeatureService] = React.useState<any>(null);
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
@@ -114,6 +124,8 @@ export function SketchProvider({ children }: Props) {
   return (
     <SketchContext.Provider
       value={{
+        basemapWidget,
+        setBasemapWidget,
         edits,
         setEdits,
         featureService,

@@ -690,6 +690,80 @@ function useCurrentTabSettings() {
   }, [goTo, goToOptions, localTabDataInitialized]);
 }
 
+// Uses browser storage for holding the currently selected basemap.
+function useBasemapStorage() {
+  const key = 'tots_selected_basemap_layer';
+
+  const { basemapWidget } = React.useContext(SketchContext);
+
+  // Retreives the selected basemap from browser storage when the app loads
+  const [
+    localBasemapInitialized,
+    setLocalBasemapInitialized, //
+  ] = React.useState(false);
+  const [
+    watchHandler,
+    setWatchHandler, //
+  ] = React.useState<__esri.WatchHandle | null>(null);
+  React.useEffect(() => {
+    if (!basemapWidget || watchHandler || localBasemapInitialized) return;
+
+    const portalId = readFromStorage(key);
+    if (!portalId) {
+      // early return since this field isn't in storage
+      setLocalBasemapInitialized(true);
+      return;
+    }
+
+    // create the watch handler for finding the selected basemap
+    const newWatchHandle = basemapWidget.watch(
+      'source.basemaps.length',
+      (newValue) => {
+        // wait for the basemaps to be populated
+        if (newValue === 0) return;
+
+        setLocalBasemapInitialized(true);
+
+        // Search for the basemap with the matching portal id
+        let selectedBasemap: __esri.Basemap | null = null;
+        basemapWidget.source.basemaps.forEach((basemap) => {
+          if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
+        });
+
+        // Set the activeBasemap to the basemap that was found
+        if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
+      },
+    );
+
+    setWatchHandler(newWatchHandle);
+  }, [basemapWidget, watchHandler, localBasemapInitialized]);
+
+  // destroys the watch handler after initialization completes
+  React.useEffect(() => {
+    if (!watchHandler || !localBasemapInitialized) return;
+
+    watchHandler.remove();
+    setWatchHandler(null);
+  }, [watchHandler, localBasemapInitialized]);
+
+  // Saves the selected basemap to browser storage whenever it changes
+  const [
+    watchBasemapInitialized,
+    setWatchBasemapInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!basemapWidget || !localBasemapInitialized || watchBasemapInitialized) {
+      return;
+    }
+
+    basemapWidget.watch('activeBasemap.portalItem.id', (newValue) => {
+      writeToStorage(key, newValue);
+    });
+
+    setWatchBasemapInitialized(true);
+  }, [basemapWidget, localBasemapInitialized, watchBasemapInitialized]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useEditsLayerStorage();
@@ -703,6 +777,7 @@ export function useSessionStorage() {
   useAreaOfInterestStorage();
   useCalculateSettingsStorage();
   useCurrentTabSettings();
+  useBasemapStorage();
 }
 
 // Runs sampling plan calculations whenever the

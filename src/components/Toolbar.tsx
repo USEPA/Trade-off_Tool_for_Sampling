@@ -125,6 +125,7 @@ function Toolbar() {
     PortalBasemapsSource,
   } = useEsriModulesContext();
   const {
+    setBasemapWidget,
     edits,
     setEdits,
     map,
@@ -369,13 +370,21 @@ function Toolbar() {
       },
     });
 
-    new BasemapGallery({
-      container: 'basemap-container',
-      view: mapView,
-      source: basemapsSource,
-    });
+    setBasemapWidget(
+      new BasemapGallery({
+        container: 'basemap-container',
+        view: mapView,
+        source: basemapsSource,
+      }),
+    );
     setBasemapInitialized(true);
-  }, [BasemapGallery, PortalBasemapsSource, mapView, basemapInitialized]);
+  }, [
+    BasemapGallery,
+    PortalBasemapsSource,
+    mapView,
+    basemapInitialized,
+    setBasemapWidget,
+  ]);
 
   return (
     <div css={toolBarStyles}>
