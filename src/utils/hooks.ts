@@ -505,6 +505,41 @@ function useContaminationMapStorage() {
   }, [contaminationMap, localContaminationLayerInitialized]);
 }
 
+// Uses browser storage for holding the currently selected contamination map layer.
+function useAreaOfInterestStorage() {
+  const key = 'tots_selected_area_of_interest_layer';
+  const { layers } = React.useContext(SketchContext);
+  const {
+    aoiSketchLayer,
+    setAoiSketchLayer, //
+  } = React.useContext(SketchContext);
+
+  // Retreives the selected contamination map from session storage
+  // when the app loads
+  const [
+    localAoiLayerInitialized,
+    setLocalAoiLayerInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (layers.length === 0 || localAoiLayerInitialized) return;
+
+    setLocalAoiLayerInitialized(true);
+
+    const layerId = readFromStorage(key);
+    if (!layerId) return;
+
+    setAoiSketchLayer(getLayerById(layers, layerId));
+  }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
+
+  // Saves the selected contamination map to session storage whenever it changes
+  React.useEffect(() => {
+    if (!localAoiLayerInitialized) return;
+
+    const data = aoiSketchLayer?.layerId ? aoiSketchLayer.layerId : '';
+    writeToStorage(key, data);
+  }, [aoiSketchLayer, localAoiLayerInitialized]);
+}
+
 function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
   const {
@@ -604,6 +639,7 @@ export function useSessionStorage() {
   useHomeWidgetStorage();
   useSamplesLayerStorage();
   useContaminationMapStorage();
+  useAreaOfInterestStorage();
   useCalculateSettingsStorage();
 }
 

@@ -314,6 +314,11 @@ function LocateSamples() {
   React.useEffect(() => {
     if (!map || aoiLayerInitialized) return;
 
+    if (aoiSketchLayer) {
+      setAoiLayerInitialized(true);
+      return;
+    }
+
     // get the first layer that can be used for aoi sketching and return
     const sketchableLayers = getSketchableAoiLayers(layers);
     if (sketchableLayers.length > 0) {
@@ -325,7 +330,7 @@ function LocateSamples() {
     const graphicsLayer = new GraphicsLayer({
       title: 'Sketched Area of Interest',
     });
-    const aoiSketchLayer: LayerType = {
+    const newAoiSketchLayer: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
       value: 'sketchAoi',
@@ -342,9 +347,9 @@ function LocateSamples() {
 
     // add the layer to the map
     setLayers((layers) => {
-      return [...layers, aoiSketchLayer];
+      return [...layers, newAoiSketchLayer];
     });
-    setAoiSketchLayer(aoiSketchLayer);
+    setAoiSketchLayer(newAoiSketchLayer);
     map.add(graphicsLayer);
 
     setAoiLayerInitialized(true);
@@ -354,6 +359,7 @@ function LocateSamples() {
     layers,
     setLayers,
     aoiLayerInitialized,
+    aoiSketchLayer,
     setAoiSketchLayer,
   ]);
 
