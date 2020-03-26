@@ -46,6 +46,96 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+// Uses browser storage for holding any editable layers.
+function useEditsLayerStorage() {
+  const key = 'tots_edits';
+  const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
+  const { edits, setEdits, layers, setLayers, map } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives edit data from session storage when the app loads
+  const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
+    false,
+  );
+  React.useEffect(() => {
+    if (!map || !setEdits || !setLayers || localStorageInitialized) return;
+
+    setLocalStorageInitialized(true);
+    const editsStr = readFromStorage(key);
+    if (!editsStr) return;
+
+    const edits: EditsType = JSON.parse(editsStr);
+    setEdits(edits);
+
+    const newLayers: LayerType[] = [];
+    const graphicsLayers: __esri.GraphicsLayer[] = [];
+    edits.edits.forEach((editsLayer) => {
+      const sketchLayer = new GraphicsLayer({
+        title: editsLayer.name,
+        id: editsLayer.layerId,
+      });
+
+      const features: __esri.Graphic[] = [];
+      const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
+      // add graphics to the map
+      displayedFeatures.forEach((graphic) => {
+        features.push(
+          new Graphic({
+            attributes: graphic.attributes,
+            symbol: polygonSymbol,
+            geometry: new Polygon({
+              spatialReference: {
+                wkid: 3857,
+              },
+              rings: graphic.geometry.rings,
+            }),
+            popupTemplate: getPopupTemplate(editsLayer.layerType),
+          }),
+        );
+      });
+      sketchLayer.addMany(features);
+      graphicsLayers.push(sketchLayer);
+
+      newLayers.push({
+        id: editsLayer.id,
+        layerId: editsLayer.layerId,
+        value: `${editsLayer.id} - ${editsLayer.name} - from session`,
+        name: editsLayer.name,
+        label: editsLayer.name,
+        layerType: editsLayer.layerType,
+        scenarioName: editsLayer.scenarioName,
+        scenarioDescription: editsLayer.scenarioDescription,
+        addedFrom: editsLayer.addedFrom,
+        defaultVisibility: true,
+        geometryType: 'esriGeometryPolygon',
+        sketchLayer,
+      });
+    });
+
+    if (newLayers.length > 0) {
+      setLayers([...layers, ...newLayers]);
+      map.addMany(graphicsLayers);
+    }
+  }, [
+    Graphic,
+    GraphicsLayer,
+    Polygon,
+    setEdits,
+    setLayers,
+    layers,
+    localStorageInitialized,
+    map,
+  ]);
+
+  // Saves the edits to session storage everytime they change
+  React.useEffect(() => {
+    if (!localStorageInitialized) return;
+    writeToStorage(key, edits);
+  }, [edits, localStorageInitialized]);
+}
+
+// Uses browser storage for holding the reference layers that have been added.
 function useReferenceLayerStorage() {
   const key = 'tots_reference_layers';
   const {
@@ -506,6 +596,7 @@ function useCalculateSettingsStorage() {
 
 // Saves/Retrieves data to session storage
 export function useSessionStorage() {
+  useEditsLayerStorage();
   useReferenceLayerStorage();
   useUrlLayerStorage();
   usePortalLayerStorage();
@@ -514,91 +605,6 @@ export function useSessionStorage() {
   useSamplesLayerStorage();
   useContaminationMapStorage();
   useCalculateSettingsStorage();
-
-  const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
-  const { edits, setEdits, layers, setLayers, map } = React.useContext(
-    SketchContext,
-  );
-
-  // Retreives edit data from session storage when the app loads
-  const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
-    false,
-  );
-  React.useEffect(() => {
-    if (!map || !setEdits || !setLayers || localStorageInitialized) return;
-
-    setLocalStorageInitialized(true);
-    const editsStr = readFromStorage('tots_edits');
-    if (!editsStr) return;
-
-    const edits: EditsType = JSON.parse(editsStr);
-    setEdits(edits);
-
-    const newLayers: LayerType[] = [];
-    const graphicsLayers: __esri.GraphicsLayer[] = [];
-    edits.edits.forEach((editsLayer) => {
-      const sketchLayer = new GraphicsLayer({
-        title: editsLayer.name,
-        id: editsLayer.layerId,
-      });
-
-      const features: __esri.Graphic[] = [];
-      const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
-      // add graphics to the map
-      displayedFeatures.forEach((graphic) => {
-        features.push(
-          new Graphic({
-            attributes: graphic.attributes,
-            symbol: polygonSymbol,
-            geometry: new Polygon({
-              spatialReference: {
-                wkid: 3857,
-              },
-              rings: graphic.geometry.rings,
-            }),
-            popupTemplate: getPopupTemplate(editsLayer.layerType),
-          }),
-        );
-      });
-      sketchLayer.addMany(features);
-      graphicsLayers.push(sketchLayer);
-
-      newLayers.push({
-        id: editsLayer.id,
-        layerId: editsLayer.layerId,
-        value: `${editsLayer.id} - ${editsLayer.name} - from session`,
-        name: editsLayer.name,
-        label: editsLayer.name,
-        layerType: editsLayer.layerType,
-        scenarioName: editsLayer.scenarioName,
-        scenarioDescription: editsLayer.scenarioDescription,
-        addedFrom: editsLayer.addedFrom,
-        defaultVisibility: true,
-        geometryType: 'esriGeometryPolygon',
-        sketchLayer,
-      });
-    });
-
-    if (newLayers.length > 0) {
-      setLayers([...layers, ...newLayers]);
-      map.addMany(graphicsLayers);
-    }
-  }, [
-    Graphic,
-    GraphicsLayer,
-    Polygon,
-    setEdits,
-    setLayers,
-    layers,
-    localStorageInitialized,
-    map,
-  ]);
-
-  // Saves the edits to session storage everytime they change
-  React.useEffect(() => {
-    if (!localStorageInitialized) return;
-    writeToStorage('tots_edits', edits);
-  }, [edits, localStorageInitialized]);
 }
 
 // Runs sampling plan calculations whenever the
