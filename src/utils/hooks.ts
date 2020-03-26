@@ -4,6 +4,7 @@ import React from 'react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -13,9 +14,11 @@ import {
 import { EditsType } from 'types/Edits';
 import { LayerType, UrlLayerType } from 'types/Layer';
 // config
+import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
 // utils
 import { getPopupTemplate } from 'utils/sketchUtils';
+import { GoToOptions } from 'types/Navigation';
 
 // Saves data to session storage
 export function writeToStorage(key: string, data: string | object) {
@@ -54,10 +57,11 @@ function useEditsLayerStorage() {
     SketchContext,
   );
 
-  // Retreives edit data from session storage when the app loads
-  const [localStorageInitialized, setLocalStorageInitialized] = React.useState(
-    false,
-  );
+  // Retreives edit data from browser storage when the app loads
+  const [
+    localStorageInitialized,
+    setLocalStorageInitialized, //
+  ] = React.useState(false);
   React.useEffect(() => {
     if (!map || !setEdits || !setLayers || localStorageInitialized) return;
 
@@ -128,7 +132,7 @@ function useEditsLayerStorage() {
     map,
   ]);
 
-  // Saves the edits to session storage everytime they change
+  // Saves the edits to browser storage everytime they change
   React.useEffect(() => {
     if (!localStorageInitialized) return;
     writeToStorage(key, edits);
@@ -148,7 +152,7 @@ function useReferenceLayerStorage() {
     SketchContext,
   );
 
-  // Retreives reference layers from session storage when the app loads
+  // Retreives reference layers from browser storage when the app loads
   const [
     localReferenceLayerInitialized,
     setLocalReferenceLayerInitialized,
@@ -206,7 +210,7 @@ function useReferenceLayerStorage() {
     setReferenceLayers,
   ]);
 
-  // Saves the reference layers to session storage everytime they change
+  // Saves the reference layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localReferenceLayerInitialized) return;
     writeToStorage(key, referenceLayers);
@@ -225,7 +229,7 @@ function useUrlLayerStorage() {
   } = useEsriModulesContext();
   const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
 
-  // Retreives url layers from session storage when the app loads
+  // Retreives url layers from browser storage when the app loads
   const [
     localUrlLayerInitialized,
     setLocalUrlLayerInitialized,
@@ -288,7 +292,7 @@ function useUrlLayerStorage() {
     setUrlLayers,
   ]);
 
-  // Saves the url layers to session storage everytime they change
+  // Saves the url layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localUrlLayerInitialized) return;
     writeToStorage(key, urlLayers);
@@ -303,7 +307,7 @@ function usePortalLayerStorage() {
     SketchContext,
   );
 
-  // Retreives portal layers from session storage when the app loads
+  // Retreives portal layers from browser storage when the app loads
   const [
     localPortalLayerInitialized,
     setLocalPortalLayerInitialized,
@@ -337,7 +341,7 @@ function usePortalLayerStorage() {
     setPortalLayers,
   ]);
 
-  // Saves the portal layers to session storage everytime they change
+  // Saves the portal layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localPortalLayerInitialized) return;
     writeToStorage(key, portalLayers);
@@ -351,7 +355,7 @@ function useMapPositionStorage() {
   const { Extent, watchUtils } = useEsriModulesContext();
   const { mapView } = React.useContext(SketchContext);
 
-  // Retreives the map position and zoom level from session storage when the app loads
+  // Retreives the map position and zoom level from browser storage when the app loads
   const [
     localMapPositionInitialized,
     setLocalMapPositionInitialized,
@@ -370,7 +374,7 @@ function useMapPositionStorage() {
     setLocalMapPositionInitialized(true);
   }, [Extent, mapView, localMapPositionInitialized]);
 
-  // Saves the home widget's viewpoint to session storage whenever it changes
+  // Saves the home widget's viewpoint to browser storage whenever it changes
   const [
     watchExtentInitialized,
     setWatchExtentInitialized, //
@@ -398,7 +402,7 @@ function useHomeWidgetStorage() {
   const { Viewpoint, watchUtils } = useEsriModulesContext();
   const { homeWidget } = React.useContext(SketchContext);
 
-  // Retreives the home widget viewpoint from session storage when the app loads
+  // Retreives the home widget viewpoint from browser storage when the app loads
   const [
     localHomeWidgetInitialized,
     setLocalHomeWidgetInitialized,
@@ -416,7 +420,7 @@ function useHomeWidgetStorage() {
     }
   }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
 
-  // Saves the extent to session storage whenever it changes
+  // Saves the extent to browser storage whenever it changes
   const [
     watchHomeWidgetInitialized,
     setWatchHomeWidgetInitialized, //
@@ -444,7 +448,7 @@ function useSamplesLayerStorage() {
     SketchContext,
   );
 
-  // Retreives the selected sample layer (sketchLayer) from session storage
+  // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
   const [
     localSampleLayerInitialized,
@@ -461,7 +465,7 @@ function useSamplesLayerStorage() {
     setSketchLayer(getLayerById(layers, layerId));
   }, [layers, setSketchLayer, localSampleLayerInitialized]);
 
-  // Saves the selected sample layer (sketchLayer) to session storage whenever it changes
+  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
   React.useEffect(() => {
     if (!localSampleLayerInitialized) return;
 
@@ -479,7 +483,7 @@ function useContaminationMapStorage() {
     setContaminationMap, //
   } = React.useContext(CalculateContext);
 
-  // Retreives the selected contamination map from session storage
+  // Retreives the selected contamination map from browser storage
   // when the app loads
   const [
     localContaminationLayerInitialized,
@@ -496,7 +500,7 @@ function useContaminationMapStorage() {
     setContaminationMap(getLayerById(layers, layerId));
   }, [layers, setContaminationMap, localContaminationLayerInitialized]);
 
-  // Saves the selected contamination map to session storage whenever it changes
+  // Saves the selected contamination map to browser storage whenever it changes
   React.useEffect(() => {
     if (!localContaminationLayerInitialized) return;
 
@@ -514,7 +518,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer, //
   } = React.useContext(SketchContext);
 
-  // Retreives the selected contamination map from session storage
+  // Retreives the selected contamination map from browser storage
   // when the app loads
   const [
     localAoiLayerInitialized,
@@ -531,7 +535,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer(getLayerById(layers, layerId));
   }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
 
-  // Saves the selected contamination map to session storage whenever it changes
+  // Saves the selected contamination map to browser storage whenever it changes
   React.useEffect(() => {
     if (!localAoiLayerInitialized) return;
 
@@ -540,6 +544,7 @@ function useAreaOfInterestStorage() {
   }, [aoiSketchLayer, localAoiLayerInitialized]);
 }
 
+// Uses browser storage for holding the current calculate settings.
 function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
   const {
@@ -572,7 +577,7 @@ function useCalculateSettingsStorage() {
     surfaceArea: number;
   };
 
-  // Reads the calculate settings from session storage.
+  // Reads the calculate settings from browser storage.
   const [settingsInitialized, setSettingsInitialized] = React.useState(false);
   React.useEffect(() => {
     if (settingsInitialized) return;
@@ -603,7 +608,7 @@ function useCalculateSettingsStorage() {
     settingsInitialized,
   ]);
 
-  // Saves the calculate settings to session storage
+  // Saves the calculate settings to browser storage
   React.useEffect(() => {
     const settings: CalculateSettingsType = {
       numLabs,
@@ -629,7 +634,63 @@ function useCalculateSettingsStorage() {
   ]);
 }
 
-// Saves/Retrieves data to session storage
+// Uses browser storage for holding the current tab and current tab's options.
+function useCurrentTabSettings() {
+  const key = 'tots_current_tab';
+
+  type PanelSettingsType = {
+    goTo: PanelValueType | '';
+    goToOptions: GoToOptions;
+  };
+
+  const {
+    goTo,
+    setGoTo,
+    goToOptions,
+    setGoToOptions, //
+  } = React.useContext(NavigationContext);
+
+  // Retreives the current tab and current tab's options from browser storage
+  const [
+    localTabDataInitialized,
+    setLocalTabDataInitialized, //
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localTabDataInitialized) return;
+
+    setLocalTabDataInitialized(true);
+
+    const dataStr = readFromStorage(key);
+    if (!dataStr) return;
+
+    const data: PanelSettingsType = JSON.parse(dataStr);
+
+    setGoTo(data.goTo);
+    setGoToOptions(data.goToOptions);
+  }, [setGoTo, setGoToOptions, localTabDataInitialized]);
+
+  // Saves the current tab and optiosn to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localTabDataInitialized) return;
+
+    let data: PanelSettingsType = { goTo: '', goToOptions: null };
+
+    // get the current value from storage, if it exists
+    const dataStr = readFromStorage(key);
+    if (dataStr) {
+      data = JSON.parse(dataStr);
+    }
+
+    // update the data values
+    if (goTo) data['goTo'] = goTo;
+    if (goToOptions) data['goToOptions'] = goToOptions;
+
+    // save to storage
+    writeToStorage(key, data);
+  }, [goTo, goToOptions, localTabDataInitialized]);
+}
+
+// Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useEditsLayerStorage();
   useReferenceLayerStorage();
@@ -641,6 +702,7 @@ export function useSessionStorage() {
   useContaminationMapStorage();
   useAreaOfInterestStorage();
   useCalculateSettingsStorage();
+  useCurrentTabSettings();
 }
 
 // Runs sampling plan calculations whenever the
