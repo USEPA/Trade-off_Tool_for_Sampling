@@ -20,7 +20,12 @@ const panelContainer = css`
   padding: 20px;
 `;
 
-const submitButtonStyles = css`
+const publishButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const publishButtonStyles = css`
   margin-top: 10px;
 `;
 
@@ -232,16 +237,13 @@ function Publish() {
         </p>
         {publishResponse.status === 'name-not-available' && (
           <EditLayerMetaData
+            buttonText="Publish"
             initialStatus="name-not-available"
             onSave={(status) => {
-              // don't do anything for these statuses
+              // let the component handle all statuses except for success
               if (status !== 'success') return;
 
-              setPublishResponse({
-                status: 'none',
-                summary: { success: '', failed: '' },
-                rawData: null,
-              });
+              setPublishButtonClicked(true);
             }}
           />
         )}
@@ -288,14 +290,16 @@ function Publish() {
           )}
         </React.Fragment>
       )}
-      <div>
-        <button
-          css={submitButtonStyles}
-          onClick={() => setPublishButtonClicked(true)}
-        >
-          Publish
-        </button>
-      </div>
+      {publishResponse.status !== 'name-not-available' && (
+        <div css={publishButtonContainerStyles}>
+          <button
+            css={publishButtonStyles}
+            onClick={() => setPublishButtonClicked(true)}
+          >
+            Publish
+          </button>
+        </div>
+      )}
     </div>
   );
 }

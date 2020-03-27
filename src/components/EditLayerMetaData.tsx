@@ -57,11 +57,16 @@ const saveButtonStyles = (status: string) => {
 
 // --- components (EditLayerMetaData) ---
 type Props = {
+  buttonText?: string;
   initialStatus?: SaveStatusType;
   onSave?: (saveStatus: SaveStatusType) => void;
 };
 
-function EditLayerMetaData({ initialStatus = 'none', onSave }: Props) {
+function EditLayerMetaData({
+  buttonText = 'Save',
+  initialStatus = 'none',
+  onSave,
+}: Props) {
   const {
     portal,
     signedIn, //
@@ -216,7 +221,7 @@ function EditLayerMetaData({ initialStatus = 'none', onSave }: Props) {
           {(saveStatus === 'none' ||
             saveStatus === 'changes' ||
             saveStatus === 'fetching') &&
-            'Save'}
+            buttonText}
           {saveStatus === 'success' && (
             <React.Fragment>
               <i className="fas fa-check" /> Saved
