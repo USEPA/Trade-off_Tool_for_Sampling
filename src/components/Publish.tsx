@@ -294,34 +294,34 @@ function Publish() {
           message="An error occurred in the web service"
         />
       )}
-      {publishResponse.status === 'success' && (
-        <React.Fragment>
-          {publishResponse.summary.success && (
-            <MessageBox
-              severity="info"
-              title="Publish Succeeded"
-              message={publishResponse.summary.success}
-            />
-          )}
-          {publishResponse.summary.failed && (
-            <MessageBox
-              severity="error"
-              title="Some item(s) failed to publish"
-              message={publishResponse.summary.failed}
-            />
-          )}
-        </React.Fragment>
+      {publishResponse.status === 'success' &&
+        publishResponse.summary.failed && (
+          <MessageBox
+            severity="error"
+            title="Some item(s) failed to publish"
+            message={publishResponse.summary.failed}
+          />
+        )}
+      {(publishResponse.summary.success ||
+        (sketchLayer && sketchLayer.id > -1)) && (
+        <MessageBox
+          severity="info"
+          title="Publish Succeeded"
+          message={publishResponse.summary.success}
+        />
       )}
-      {publishResponse.status !== 'name-not-available' && (
-        <div css={publishButtonContainerStyles}>
-          <button
-            css={publishButtonStyles}
-            onClick={() => setPublishButtonClicked(true)}
-          >
-            Publish
-          </button>
-        </div>
-      )}
+      {publishResponse.status !== 'name-not-available' &&
+        sketchLayer &&
+        sketchLayer.id === -1 && (
+          <div css={publishButtonContainerStyles}>
+            <button
+              css={publishButtonStyles}
+              onClick={() => setPublishButtonClicked(true)}
+            >
+              Publish
+            </button>
+          </div>
+        )}
     </div>
   );
 }
