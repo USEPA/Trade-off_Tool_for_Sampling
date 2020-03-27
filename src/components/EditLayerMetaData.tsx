@@ -2,14 +2,28 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
+// components
+import LoadingSpinner from 'components/LoadingSpinner';
+import MessageBox from 'components/MessageBox';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
 // utils
+import { isServiceNameAvailable } from 'utils/arcGisRestUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
+
+type SaveStatusType =
+  | 'none'
+  | 'changes'
+  | 'fetching'
+  | 'success'
+  | 'failure'
+  | 'fetch-failure'
+  | 'name-not-available';
 
 // --- styles (EditLayerMetaData) ---
 const inputStyles = css`
@@ -44,6 +58,10 @@ const saveButtonStyles = (status: string) => {
 // --- components (EditLayerMetaData) ---
 function EditLayerMetaData() {
   const {
+    portal,
+    signedIn, //
+  } = React.useContext(AuthenticationContext);
+  const {
     edits,
     setEdits,
     layers,
@@ -55,8 +73,11 @@ function EditLayerMetaData() {
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<'none' | 'changes' | 'success' | 'failure'>('none');
-  function updateLayersState(sketchLayer: LayerType) {
+  ] = React.useState<SaveStatusType>('none');
+
+  function updateLayersState() {
+    if (!sketchLayer) return;
+
     // find the layer being edited
     const index = layers.findIndex(
       (layer) => layer.id === sketchLayer.id && layer.name === sketchLayer.name,
@@ -81,6 +102,37 @@ function EditLayerMetaData() {
       ]);
       setSaveStatus('success');
     }
+  }
+
+  // Handles saving of the layer's scenario name and description fields.
+  // Also checks the uniqueness of the scenario name, if the user is signed in.
+  function handleSave() {
+    if (!sketchLayer) return;
+
+    // if the user hasn't signed in go ahead and save the
+    // scenario name and description
+    if (!portal || !signedIn) {
+      updateLayersState();
+      return;
+    }
+
+    setSaveStatus('fetching');
+
+    // if the user is signed in, go ahead and check if the
+    // service (scenario) name is availble before continuing
+    isServiceNameAvailable(portal, sketchLayer.scenarioName)
+      .then((res: any) => {
+        if (!res.available) {
+          setSaveStatus('name-not-available');
+          return;
+        }
+
+        updateLayersState();
+      })
+      .catch((err: any) => {
+        console.error('isServiceNameAvailable error', err);
+        setSaveStatus('failure');
+      });
   }
 
   if (!sketchLayer) return null;
@@ -123,22 +175,43 @@ function EditLayerMetaData() {
         }}
       />
 
+      {saveStatus === 'fetching' && <LoadingSpinner />}
+      {saveStatus === 'failure' && (
+        <MessageBox
+          severity="error"
+          title="Web Service Error"
+          message="An error occurred in the web service"
+        />
+      )}
+      {saveStatus === 'name-not-available' && (
+        <MessageBox
+          severity="warning"
+          title="Scenario Name Not Available"
+          message={`The "${sketchLayer?.scenarioName}" name is already in use. Please rename the scenario and try again.`}
+        />
+      )}
       <div css={saveButtonContainerStyles}>
         <button
           css={saveButtonStyles(saveStatus)}
-          disabled={saveStatus !== 'changes'}
-          onClick={(ev) => {
-            if (sketchLayer) updateLayersState(sketchLayer);
-          }}
+          disabled={
+            saveStatus === 'none' ||
+            saveStatus === 'fetching' ||
+            saveStatus === 'success'
+          }
+          onClick={handleSave}
         >
-          {saveStatus === 'none' && 'Save'}
-          {saveStatus === 'changes' && 'Save'}
+          {(saveStatus === 'none' ||
+            saveStatus === 'changes' ||
+            saveStatus === 'fetching') &&
+            'Save'}
           {saveStatus === 'success' && (
             <React.Fragment>
               <i className="fas fa-check" /> Saved
             </React.Fragment>
           )}
-          {saveStatus === 'failure' && (
+          {(saveStatus === 'failure' ||
+            saveStatus === 'fetch-failure' ||
+            saveStatus === 'name-not-available') && (
             <React.Fragment>
               <i className="fas fa-exclamation-triangle" /> Error
             </React.Fragment>
