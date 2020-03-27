@@ -3,6 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import EditLayerMetaData from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
@@ -33,7 +34,13 @@ const layerInfo = css`
 
 // --- components (Publish) ---
 type PublishType = {
-  status: 'none' | 'fetching' | 'success' | 'failure' | 'name-not-available';
+  status:
+    | 'none'
+    | 'fetching'
+    | 'success'
+    | 'failure'
+    | 'fetch-failure'
+    | 'name-not-available';
   summary: {
     success: string;
     failed: string;
@@ -189,7 +196,7 @@ function Publish() {
           .catch((err) => {
             console.error('publish error: ', err);
             setPublishResponse({
-              status: 'failure',
+              status: 'fetch-failure',
               summary: { success: '', failed: '' },
               rawData: err,
             });
@@ -198,7 +205,7 @@ function Publish() {
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
         setPublishResponse({
-          status: 'failure',
+          status: 'fetch-failure',
           summary: { success: '', failed: '' },
           rawData: err,
         });
@@ -223,32 +230,44 @@ function Publish() {
           <strong>Layer Name: </strong>
           {sketchLayer?.name}
         </p>
-        <p css={layerInfo}>
-          <strong>Scenario Name: </strong>
-          {sketchLayer?.scenarioName}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Description: </strong>
-          <ShowLessMore
-            text={sketchLayer?.scenarioDescription}
-            charLimit={20}
+        {publishResponse.status === 'name-not-available' && (
+          <EditLayerMetaData
+            initialStatus="name-not-available"
+            onSave={(status) => {
+              // don't do anything for these statuses
+              if (status !== 'success') return;
+
+              setPublishResponse({
+                status: 'none',
+                summary: { success: '', failed: '' },
+                rawData: null,
+              });
+            }}
           />
-        </p>
+        )}
+        {publishResponse.status !== 'name-not-available' && (
+          <React.Fragment>
+            <p css={layerInfo}>
+              <strong>Scenario Name: </strong>
+              {sketchLayer?.scenarioName}
+            </p>
+            <p css={layerInfo}>
+              <strong>Scenario Description: </strong>
+              <ShowLessMore
+                text={sketchLayer?.scenarioDescription}
+                charLimit={20}
+              />
+            </p>
+          </React.Fragment>
+        )}
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishResponse.status === 'failure' && (
+      {publishResponse.status === 'fetch-failure' && (
         <MessageBox
           severity="error"
           title="Web Service Error"
           message="An error occurred in the web service"
-        />
-      )}
-      {publishResponse.status === 'name-not-available' && (
-        <MessageBox
-          severity="warning"
-          title="Scenario Name Not Available"
-          message={`The "${sketchLayer?.scenarioName}" name is already in use. Please rename the scenario and try again.`}
         />
       )}
       {publishResponse.status === 'success' && (

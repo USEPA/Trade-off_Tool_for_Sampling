@@ -16,7 +16,7 @@ import { updateLayerEdits } from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
 
-type SaveStatusType =
+export type SaveStatusType =
   | 'none'
   | 'changes'
   | 'fetching'
@@ -56,7 +56,12 @@ const saveButtonStyles = (status: string) => {
 };
 
 // --- components (EditLayerMetaData) ---
-function EditLayerMetaData() {
+type Props = {
+  initialStatus?: SaveStatusType;
+  onSave?: (saveStatus: SaveStatusType) => void;
+};
+
+function EditLayerMetaData({ initialStatus = 'none', onSave }: Props) {
   const {
     portal,
     signedIn, //
@@ -73,8 +78,16 @@ function EditLayerMetaData() {
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveStatusType>('none');
+  ] = React.useState<SaveStatusType>(initialStatus);
 
+  // Runs the callback for setting the parent's state.
+  React.useEffect(() => {
+    if (!onSave) return;
+
+    onSave(saveStatus);
+  }, [onSave, saveStatus]);
+
+  // Saves the scenario name and description to the layer and edits objects.
   function updateLayersState() {
     if (!sketchLayer) return;
 
