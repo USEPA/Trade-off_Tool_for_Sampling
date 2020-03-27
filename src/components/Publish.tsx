@@ -12,7 +12,7 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
-import { publish } from 'utils/arcGisRestUtils';
+import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -33,7 +33,7 @@ const layerInfo = css`
 
 // --- components (Publish) ---
 type PublishType = {
-  status: 'none' | 'fetching' | 'success' | 'failure';
+  status: 'none' | 'fetching' | 'success' | 'failure' | 'name-not-available';
   summary: {
     success: string;
     failed: string;
@@ -100,81 +100,103 @@ function Publish() {
       rawData: null,
     });
 
-    const layerEdits = edits.edits.filter(
-      (editLayer) =>
-        editLayer.id === sketchLayer.id && editLayer.name === sketchLayer.name,
-    );
-
-    publish({
-      portal,
-      layers: [sketchLayer],
-      edits: layerEdits,
-    })
+    // check if the service (scenario) name is availble before continuing
+    isServiceNameAvailable(portal, sketchLayer.scenarioName)
       .then((res: any) => {
-        // get totals
-        const totals = {
-          added: 0,
-          updated: 0,
-          deleted: 0,
-          failed: 0,
-        };
-        res.forEach((layerRes: any) => {
-          // need to loop through each array and check the success flag
-          if (layerRes.addResults) {
-            layerRes.addResults.forEach((item: any) => {
-              item.success ? (totals.added += 1) : (totals.failed += 1);
+        if (!res.available) {
+          setPublishResponse({
+            status: 'name-not-available',
+            summary: { success: '', failed: '' },
+            rawData: null,
+          });
+          return;
+        }
+
+        const layerEdits = edits.edits.filter(
+          (editLayer) =>
+            editLayer.id === sketchLayer.id &&
+            editLayer.name === sketchLayer.name,
+        );
+
+        publish({
+          portal,
+          layers: [sketchLayer],
+          edits: layerEdits,
+        })
+          .then((res: any) => {
+            // get totals
+            const totals = {
+              added: 0,
+              updated: 0,
+              deleted: 0,
+              failed: 0,
+            };
+            res.forEach((layerRes: any) => {
+              // need to loop through each array and check the success flag
+              if (layerRes.addResults) {
+                layerRes.addResults.forEach((item: any) => {
+                  item.success ? (totals.added += 1) : (totals.failed += 1);
+                });
+              }
+              if (layerRes.updateResults) {
+                layerRes.updateResults.forEach((item: any) => {
+                  item.success ? (totals.updated += 1) : (totals.failed += 1);
+                });
+              }
+              if (layerRes.deleteResults) {
+                layerRes.deleteResults.forEach((item: any) => {
+                  item.success ? (totals.deleted += 1) : (totals.failed += 1);
+                });
+              }
             });
-          }
-          if (layerRes.updateResults) {
-            layerRes.updateResults.forEach((item: any) => {
-              item.success ? (totals.updated += 1) : (totals.failed += 1);
+
+            // create the message string for each type of change (add, update and delete)
+            const successParts = [];
+            if (totals.added) {
+              successParts.push(`${totals.added} item(s) added`);
+            }
+            if (totals.updated) {
+              successParts.push(`${totals.updated} item(s) updated`);
+            }
+            if (totals.deleted) {
+              successParts.push(`${totals.deleted} item(s) deleted`);
+            }
+
+            // combine the messages
+            let success = '';
+            if (successParts.length === 1) {
+              success = successParts[0];
+            }
+            if (successParts.length > 1) {
+              success =
+                successParts.slice(0, -1).join(', ') +
+                ' and ' +
+                successParts.slice(-1);
+            }
+
+            // create the failed status message
+            const failed = totals.failed
+              ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
+              : '';
+            if (failed) console.error('Some items failed to publish: ', res);
+
+            setPublishResponse({
+              status: 'success',
+              summary: { success, failed },
+              rawData: res,
             });
-          }
-          if (layerRes.deleteResults) {
-            layerRes.deleteResults.forEach((item: any) => {
-              item.success ? (totals.deleted += 1) : (totals.failed += 1);
+          })
+          .catch((err) => {
+            console.error('publish error: ', err);
+            setPublishResponse({
+              status: 'failure',
+              summary: { success: '', failed: '' },
+              rawData: err,
             });
-          }
-        });
-
-        // create the message string for each type of change (add, update and delete)
-        const successParts = [];
-        if (totals.added) {
-          successParts.push(`${totals.added} item(s) added`);
-        }
-        if (totals.updated) {
-          successParts.push(`${totals.updated} item(s) updated`);
-        }
-        if (totals.deleted) {
-          successParts.push(`${totals.deleted} item(s) deleted`);
-        }
-
-        // combine the messages
-        let success = '';
-        if (successParts.length === 1) {
-          success = successParts[0];
-        }
-        if (successParts.length > 1) {
-          success =
-            successParts.slice(0, -1).join(', ') +
-            ' and ' +
-            successParts.slice(-1);
-        }
-
-        // create the failed status message
-        const failed = totals.failed
-          ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
-          : '';
-        if (failed) console.error('Some items failed to publish: ', res);
-
-        setPublishResponse({
-          status: 'success',
-          summary: { success, failed },
-          rawData: res,
-        });
+          });
       })
       .catch((err) => {
-        console.error('publish error: ', err);
+        console.error('isServiceNameAvailable error', err);
         setPublishResponse({
           status: 'failure',
           summary: { success: '', failed: '' },
@@ -215,6 +237,20 @@ function Publish() {
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
+      {publishResponse.status === 'failure' && (
+        <MessageBox
+          severity="error"
+          title="Web Service Error"
+          message="An error occurred in the web service"
+        />
+      )}
+      {publishResponse.status === 'name-not-available' && (
+        <MessageBox
+          severity="warning"
+          title="Scenario Name Not Available"
+          message={`The "${sketchLayer?.scenarioName}" name is already in use. Please rename the scenario and try again.`}
+        />
+      )}
       {publishResponse.status === 'success' && (
         <React.Fragment>
           {publishResponse.summary.success && (
@@ -232,13 +268,6 @@ function Publish() {
             />
           )}
         </React.Fragment>
-      )}
-      {publishResponse.status === 'failure' && (
-        <MessageBox
-          severity="error"
-          title="Web Service Error"
-          message="An error occurred in the web service"
-        />
       )}
       <div>
         <button
