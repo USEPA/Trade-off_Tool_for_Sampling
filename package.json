@@ -15,10 +15,10 @@
   "dependencies": {
     "@emotion/core": "10.0.28",
     "@emotion/styled": "10.0.27",
-    "@reach/dialog": "0.6.2",
-    "@reach/window-size": "0.7.2",
+    "@reach/dialog": "0.9.1",
+    "@reach/window-size": "0.9.0",
     "@types/react-select": "3.0.8",
-    "@types/uuid": "7.0.0",
+    "@types/uuid": "7.0.2",
     "core-js": "3.6.4",
     "esri-loader": "2.12.0",
     "react": "16.12.0",
