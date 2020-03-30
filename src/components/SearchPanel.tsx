@@ -6,7 +6,6 @@ import { jsx, css } from '@emotion/core';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
-import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -388,7 +387,8 @@ function SearchPanel() {
       </div>
       <div css={filterContainerStyles}>
         <div>
-          <Switch
+          <input
+            type="checkbox"
             checked={withinMap}
             onChange={(ev) => setWithinMap(!withinMap)}
           />{' '}
