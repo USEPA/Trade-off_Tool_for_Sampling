@@ -13,8 +13,8 @@
     "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
-    "@emotion/core": "10.0.22",
-    "@emotion/styled": "10.0.23",
+    "@emotion/core": "^10.0.28",
+    "@emotion/styled": "^10.0.27",
     "@reach/dialog": "0.6.2",
     "@reach/window-size": "0.7.2",
     "@types/react-select": "3.0.8",
