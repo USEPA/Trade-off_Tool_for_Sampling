@@ -188,7 +188,6 @@ type UploadStatusType =
   | 'failure'
   | 'no-data'
   | 'invalid-file-type'
-  | 'import-error'
   | 'missing-attributes'
   | 'file-read-error';
 
@@ -475,10 +474,6 @@ function FilePanel() {
       .then((res: any) => {
         console.log('generate res: ', res);
         console.log('file.esriFileType: ', file.esriFileType);
-        if (res.error) {
-          setUploadStatus('import-error');
-          return;
-        }
         if (layerType.value !== 'VSP') {
           console.log('basic');
           setGenerateResponse(res);
@@ -1008,13 +1003,6 @@ function FilePanel() {
                       severity="error"
                       title="Invalid File Type"
                       message={`${file.name} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
-                    />
-                  )}
-                  {uploadStatus === 'import-error' && (
-                    <MessageBox
-                      severity="error"
-                      title="Invalid File Type"
-                      message={`Unable to import this dataset.`}
                     />
                   )}
                   {uploadStatus === 'file-read-error' && (
