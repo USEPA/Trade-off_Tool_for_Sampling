@@ -32,7 +32,8 @@ type UrlStatusType =
   | 'fetching'
   | 'success'
   | 'failure'
-  | 'unsupported';
+  | 'unsupported'
+  | 'already-added';
 type SupportedUrlLayerTypes =
   | __esri.Layer
   | __esri.WMSLayer
@@ -91,6 +92,15 @@ function URLPanel() {
   if (!map) return null;
 
   const handleAdd = (ev: React.MouseEvent<HTMLButtonElement>) => {
+    // make sure the url hasn't already been added
+    const index = urlLayers.findIndex(
+      (layer) => layer.url.toLowerCase() === url.toLowerCase(),
+    );
+    if (index > -1) {
+      setStatus('already-added');
+      return;
+    }
+
     setStatus('fetching');
 
     const type = urlType.value;
@@ -178,6 +188,13 @@ function URLPanel() {
           severity="error"
           title="Unsupported layer type"
           message={`The "${urlType.label}" layer type is unsupported`}
+        />
+      )}
+      {status === 'already-added' && (
+        <MessageBox
+          severity="warning"
+          title="URL Already Added"
+          message={`The "${url}" has already been added. If you want to change the type, please remove the layer first and re-add it.`}
         />
       )}
       <button onClick={() => setShowSampleUrls(!showSampleUrls)}>
