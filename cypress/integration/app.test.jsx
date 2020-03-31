@@ -1,3 +1,5 @@
+import cy from 'cypress';
+
 describe('Homepage', function () {
   beforeEach(function () {
     cy.visit('/');
