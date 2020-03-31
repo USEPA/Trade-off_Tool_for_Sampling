@@ -631,6 +631,7 @@ type ResultCardProps = {
 function ResultCard({ result }: ResultCardProps) {
   const {
     map,
+    mapView,
     portalLayers,
     setPortalLayers, //
   } = React.useContext(SketchContext);
@@ -698,6 +699,22 @@ function ResultCard({ result }: ResultCardProps) {
                               result.id,
                             ]);
                             setStatus('');
+
+                            // set the min/max scale for tile layers
+                            if (layer.type === 'tile') {
+                              const tileLayer = layer as __esri.TileLayer;
+                              tileLayer.minScale = 0;
+                              tileLayer.maxScale = 0;
+                            }
+
+                            if (mapView) {
+                              layer.visible = true;
+
+                              // zoom to the layer if it has an extent
+                              if (layer.fullExtent) {
+                                mapView.goTo(layer.fullExtent);
+                              }
+                            }
                           } else if (loadStatus === 'failed') {
                             setStatus('error');
                           }
