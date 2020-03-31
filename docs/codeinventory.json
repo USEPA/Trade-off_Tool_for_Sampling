@@ -1,0 +1,22 @@
+{
+  "organization": "USEPA",
+  "name": "Trade-off Tool for Sampling (TOTS)",
+  "description": "Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.",
+  "permissions": {
+    "licenses": [
+      {
+        "name": "Creative Commons Zero (CC0)",
+        "URL": "https://github.com/Eastern-Research-Group/EPA-HSRP-TOTS/blob/develop/LICENSE"
+      }
+    ],
+    "usageType": "openSource",
+    "exemptionText": null
+  },
+  "repositoryURL": "https://github.com/Eastern-Research-Group/EPA-HSRP-TOTS",
+  "languages": ["React", "JavaScript", "Node.js", "ArcGIS API for JavaScript"],
+  "tags": ["EPA", "TOTS", "Trade-off Tool for Sampling"],
+  "contact": {
+    "name": "TOTS Team",
+    "email": "<insert email here>"
+  }
+}
