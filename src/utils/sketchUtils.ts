@@ -282,7 +282,6 @@ export function getPopupTemplate(type: LayerTypeName) {
             { fieldName: 'CONTAM_TYPE', label: 'Contamination Type' },
             { fieldName: 'CONTAM_VALUE', label: 'Activity' },
             { fieldName: 'CONTAM_UNIT', label: 'Unit of Measure' },
-            { fieldName: 'SCENARIONAME', label: 'Scenario Name' },
             { fieldName: 'CREATEDDATE', label: 'Create Date' },
             { fieldName: 'UPDATEDDATE', label: 'Update Date' },
             { fieldName: 'USERNAME', label: 'Created By' },

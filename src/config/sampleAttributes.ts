@@ -49,7 +49,6 @@ type SampleProperties =
   | 'CONTAM_TYPE'
   | 'CONTAM_VALUE'
   | 'CONTAM_UNIT'
-  | 'SCENARIONAME'
   | 'CREATEDDATE'
   | 'UPDATEDDATE'
   | 'USERNAME'
@@ -89,7 +88,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -122,7 +120,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -155,7 +152,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -188,7 +184,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -221,7 +216,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -254,7 +248,6 @@ const sampleAttributes: Attributes = {
     CONTAM_TYPE: null,
     CONTAM_VALUE: null,
     CONTAM_UNIT: null,
-    SCENARIONAME: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
