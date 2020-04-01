@@ -3,22 +3,29 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import EditLayerMetaData from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
-import { publish } from 'utils/arcGisRestUtils';
+import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
 
 // --- styles (Publish) ---
 const panelContainer = css`
   padding: 20px;
 `;
 
-const submitButtonStyles = css`
+const publishButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const publishButtonStyles = css`
   margin-top: 10px;
 `;
 
@@ -32,7 +39,13 @@ const layerInfo = css`
 
 // --- components (Publish) ---
 type PublishType = {
-  status: 'none' | 'fetching' | 'success' | 'failure';
+  status:
+    | 'none'
+    | 'fetching'
+    | 'success'
+    | 'failure'
+    | 'fetch-failure'
+    | 'name-not-available';
   summary: {
     success: string;
     failed: string;
@@ -47,22 +60,91 @@ function Publish() {
     portal,
     signedIn, //
   } = React.useContext(AuthenticationContext);
+  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     sketchLayer, //
   } = React.useContext(SketchContext);
 
+  // Checks browser storage to determine if the user clicked publish and logged in.
+  const [publishButtonClicked, setPublishButtonClicked] = React.useState(false);
+  const [continueInitialized, setContinueInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (continueInitialized) return;
+
+    // continue publish is not true, exit early
+    if (!goToOptions?.continuePublish) {
+      setContinueInitialized(true);
+      return;
+    }
+
+    // wait until TOTS is signed in before trying to continue the publish
+    if (!portal || !signedIn) return;
+
+    // continue with publishing
+    setPublishButtonClicked(true);
+    setGoToOptions({ continuePublish: false });
+    setContinueInitialized(true);
+  }, [portal, signedIn, goToOptions, setGoToOptions, continueInitialized]);
+
+  // Check if the scenario name is available
+  const [hasNameBeenChecked, setHasNameBeenChecked] = React.useState(false);
+  React.useEffect(() => {
+    if (
+      !portal ||
+      !sketchLayer ||
+      !publishButtonClicked ||
+      hasNameBeenChecked
+    ) {
+      return;
+    }
+
+    setPublishResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
+
+    // check if the service (scenario) name is availble before continuing
+    isServiceNameAvailable(portal, sketchLayer.scenarioName)
+      .then((res: any) => {
+        if (!res.available) {
+          setPublishButtonClicked(false);
+          setPublishResponse({
+            status: 'name-not-available',
+            summary: { success: '', failed: '' },
+            rawData: null,
+          });
+          return;
+        }
+
+        setHasNameBeenChecked(true);
+      })
+      .catch((err) => {
+        console.error('isServiceNameAvailable error', err);
+        setPublishResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: err,
+        });
+      });
+  }, [portal, sketchLayer, publishButtonClicked, hasNameBeenChecked]);
+
+  // Run the publish
   const [publishResponse, setPublishResponse] = React.useState<PublishType>({
     status: 'none',
     summary: { success: '', failed: '' },
     rawData: null,
   });
-  function runPublish() {
+  React.useEffect(() => {
     if (!oAuthInfo) return;
-    if (!sketchLayer) return;
+    if (!sketchLayer || !publishButtonClicked || !hasNameBeenChecked) return;
+
+    setPublishButtonClicked(false);
 
     // have the user login if necessary
     if (!portal || !signedIn) {
+      setGoToOptions({ continuePublish: true });
       IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
       return;
     }
@@ -147,14 +229,24 @@ function Publish() {
         });
       })
       .catch((err) => {
-        console.error('publish error: ', err);
+        console.error('isServiceNameAvailable error', err);
         setPublishResponse({
-          status: 'failure',
+          status: 'fetch-failure',
           summary: { success: '', failed: '' },
           rawData: err,
         });
       });
-  }
+  }, [
+    IdentityManager,
+    edits,
+    portal,
+    oAuthInfo,
+    setGoToOptions,
+    signedIn,
+    sketchLayer,
+    publishButtonClicked,
+    hasNameBeenChecked,
+  ]);
 
   return (
     <div css={panelContainer}>
@@ -165,50 +257,71 @@ function Publish() {
           <strong>Layer Name: </strong>
           {sketchLayer?.name}
         </p>
-        <p css={layerInfo}>
-          <strong>Scenario Name: </strong>
-          {sketchLayer?.scenarioName}
-        </p>
-        <p css={layerInfo}>
-          <strong>Scenario Description: </strong>
-          <ShowLessMore
-            text={sketchLayer?.scenarioDescription}
-            charLimit={20}
+        {publishResponse.status === 'name-not-available' && (
+          <EditLayerMetaData
+            buttonText="Publish"
+            initialStatus="name-not-available"
+            onSave={(status) => {
+              // let the component handle all statuses except for success
+              if (status !== 'success') return;
+
+              setPublishButtonClicked(true);
+            }}
           />
-        </p>
+        )}
+        {publishResponse.status !== 'name-not-available' && (
+          <React.Fragment>
+            <p css={layerInfo}>
+              <strong>Scenario Name: </strong>
+              {sketchLayer?.scenarioName}
+            </p>
+            <p css={layerInfo}>
+              <strong>Scenario Description: </strong>
+              <ShowLessMore
+                text={sketchLayer?.scenarioDescription}
+                charLimit={20}
+              />
+            </p>
+          </React.Fragment>
+        )}
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishResponse.status === 'success' && (
-        <React.Fragment>
-          {publishResponse.summary.success && (
-            <MessageBox
-              severity="info"
-              title="Publish Succeeded"
-              message={publishResponse.summary.success}
-            />
-          )}
-          {publishResponse.summary.failed && (
-            <MessageBox
-              severity="error"
-              title="Some item(s) failed to publish"
-              message={publishResponse.summary.failed}
-            />
-          )}
-        </React.Fragment>
-      )}
-      {publishResponse.status === 'failure' && (
+      {publishResponse.status === 'fetch-failure' && (
         <MessageBox
           severity="error"
           title="Web Service Error"
           message="An error occurred in the web service"
         />
       )}
-      <div>
-        <button css={submitButtonStyles} onClick={runPublish}>
-          Publish
-        </button>
-      </div>
+      {publishResponse.status === 'success' &&
+        publishResponse.summary.failed && (
+          <MessageBox
+            severity="error"
+            title="Some item(s) failed to publish"
+            message={publishResponse.summary.failed}
+          />
+        )}
+      {(publishResponse.summary.success ||
+        (sketchLayer && sketchLayer.id > -1)) && (
+        <MessageBox
+          severity="info"
+          title="Publish Succeeded"
+          message={publishResponse.summary.success}
+        />
+      )}
+      {publishResponse.status !== 'name-not-available' &&
+        sketchLayer &&
+        sketchLayer.id === -1 && (
+          <div css={publishButtonContainerStyles}>
+            <button
+              css={publishButtonStyles}
+              onClick={() => setPublishButtonClicked(true)}
+            >
+              Publish
+            </button>
+          </div>
+        )}
     </div>
   );
 }

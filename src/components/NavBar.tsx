@@ -79,7 +79,7 @@ type NavButtonProps = {
   panel: PanelType;
   selectedPanel: PanelType | null;
   visitedStepIndex: number;
-  onClick: (panel: PanelType, panelIndex: number) => void;
+  onClick: (ev: React.MouseEvent<HTMLElement>) => void;
 };
 
 function NavButton({
@@ -106,10 +106,7 @@ function NavButton({
       <div
         css={verticalButtonBar(panelIndex < 1 ? 'transparent' : color)}
       ></div>
-      <button
-        onClick={(ev) => onClick(panel, panelIndex)}
-        css={navButtonStyles(selected)}
-      >
+      <button onClick={onClick} css={navButtonStyles(selected)}>
         <i className={iconClass} css={navIconStyles(color)} />
         {label}
       </button>
@@ -409,7 +406,7 @@ function NavBar({ height }: Props) {
                   panel={panel}
                   selectedPanel={currentPanel}
                   visitedStepIndex={latestStepIndex}
-                  onClick={toggleExpand}
+                  onClick={() => setGoTo(panel.value)}
                 />
               );
             })}

@@ -5,14 +5,7 @@ import { jsx } from '@emotion/core';
 // config
 import { PanelValueType } from 'config/navigation';
 // types
-import { LayerTypeName } from 'types/Layer';
-
-type AddDataFileOptions = {
-  from: 'file';
-  layerType?: LayerTypeName;
-};
-
-type GoToOptions = null | AddDataFileOptions;
+import { GoToOptions } from 'types/Navigation';
 
 type NavigateType = {
   goTo: PanelValueType | '';

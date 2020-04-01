@@ -7,23 +7,65 @@ import { defaultLayerProps } from 'config/layerProps';
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { convertToSimpleGraphic } from 'utils/sketchUtils';
 
-const featureServiceName = 'EPA_TOTS_FS';
+type ServiceMetaDataType = {
+  name: string;
+  description: string;
+};
+
+/**
+ * Checks if the feature service name is available.
+ *
+ * @param portal The portal object to check against.
+ * @param serviceName The desired feature service name.
+ */
+export function isServiceNameAvailable(
+  portal: __esri.Portal,
+  serviceName: string,
+) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    // check if the tots feature service already exists
+    const params = {
+      f: 'json',
+      token: tempPortal.credential.token,
+      name: serviceName,
+      type: 'Feature Service',
+    };
+    fetchPost(
+      `${portal.restUrl}/portals/${portal.id}/isServiceNameAvailable`,
+      params,
+    )
+      .then((res) => {
+        resolve(res);
+      })
+      .catch((err) => {
+        console.error(err);
+        reject(err);
+      });
+  });
+}
 
 /**
  * Attempts to get the hosted feature service and creates it if
  * it doesn't already exist
  *
  * @param portal The portal object to retreive the hosted feature service from
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object
  */
-export function getFeatureService(portal: __esri.Portal) {
+export function getFeatureService(
+  portal: __esri.Portal,
+  serviceMetaData: ServiceMetaDataType,
+) {
   return new Promise((resolve, reject) => {
     // check if the tots feature service already exists
-    getFeatureServiceWrapped(portal)
+    getFeatureServiceWrapped(portal, serviceMetaData)
       .then((service) => {
         if (service) resolve(service);
         else {
-          createFeatureService(portal)
+          createFeatureService(portal, serviceMetaData)
             .then((service) => resolve(service))
             .catch((err) => reject(err));
         }
@@ -37,14 +79,17 @@ export function getFeatureService(portal: __esri.Portal) {
  * doesn't already exist
  *
  * @param portal The portal object to retreive the hosted feature service from
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object or
  *  null if the service does not exist
  */
-function getFeatureServiceWrapped(portal: __esri.Portal) {
+function getFeatureServiceWrapped(
+  portal: __esri.Portal,
+  serviceMetaData: ServiceMetaDataType,
+) {
   return new Promise((resolve, reject) => {
-    // check if the tots feature service already exists
     portal
-      .queryItems({ query: `name:${featureServiceName}` })
+      .queryItems({ query: `name:${serviceMetaData.name}` })
       .then((res) => {
         if (res.results.length > 0) {
           const portalService = res.results[0];
@@ -74,32 +119,26 @@ function getFeatureServiceWrapped(portal: __esri.Portal) {
  * Creates and returns the hosted feature service
  *
  * @param portal The portal object to create the hosted feature service on
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object
  */
-export function createFeatureService(portal: __esri.Portal) {
+export function createFeatureService(
+  portal: __esri.Portal,
+  serviceMetaData: ServiceMetaDataType,
+) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
-
-    // feature service creation parameters
-    const folderParams = {
-      f: 'json',
-      token: tempPortal.credential.token,
-      title: 'EPA_TOTS',
-    };
-    fetchPost(`${portal.user.userContentUrl}/createFolder`, folderParams)
-      .then((res) => console.log('res: ', res))
-      .catch((err) => console.error(err));
 
     // feature service creation parameters
     const data = {
       f: 'json',
       token: tempPortal.credential.token,
       outputType: 'featureService',
-      description: '<Add a description>',
-      snippet: '<Add a summary>',
+      description: serviceMetaData.description,
+      snippet: serviceMetaData.description,
       createParameters: {
-        name: featureServiceName,
+        name: serviceMetaData.name,
         hasStaticData: false,
         maxRecordCount: 1000,
         supportedQueryFormats: 'JSON',
@@ -155,7 +194,7 @@ export function createFeatureService(portal: __esri.Portal) {
           indata,
         ).then((res) => {
           // get the feature service from the portal and return it
-          getFeatureServiceWrapped(portal)
+          getFeatureServiceWrapped(portal, serviceMetaData)
             .then((service) => resolve(service))
             .catch((err) => reject(err));
         });
@@ -187,7 +226,7 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
  * Attempts to get the feature service and creates it if it
  * doesn't already exist
  *
- * @param service Object representing the hosted feature service
+ * @param serviceUrl Object representing the hosted feature service
  * @param token Security token
  * @param id ID of the layer to retreive
  * @returns A promise that resolves to the requested layers
@@ -209,17 +248,17 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
  *
  * @param portal The portal object to create feature layers on
  * @param serviceUrl The hosted feature service to save layers to
- * @param layerNames The names of the layers to create
+ * @param layerMetaData Array of service metadata to be added to the layers of a feature service.
  * @returns A promise that resolves to the layers that were saved
  */
 export function createFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
-  layerNames: string[],
+  layerMetaData: ServiceMetaDataType[],
 ) {
   return new Promise((resolve, reject) => {
     const layers: any[] = [];
-    if (layerNames.length === 0) {
+    if (layerMetaData.length === 0) {
       resolve({
         success: true,
         layers: [],
@@ -227,10 +266,11 @@ export function createFeatureLayers(
       return;
     }
 
-    layerNames.forEach((name) => {
+    layerMetaData.forEach((metaData) => {
       layers.push({
         ...defaultLayerProps,
-        name,
+        name: metaData.name,
+        description: metaData.description,
       });
     });
 
@@ -412,28 +452,44 @@ export function publish({
   edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
-    getFeatureService(portal)
+    if (layers.length === 0) {
+      reject('No layers to publish.');
+      return;
+    }
+
+    const serviceLayer = layers[0];
+    const serviceMetaData: ServiceMetaDataType = {
+      name: serviceLayer.scenarioName,
+      description: serviceLayer.scenarioDescription,
+    };
+
+    getFeatureService(portal, serviceMetaData)
       .then((service: any) => {
         // build a list of layers that need to be created
-        const layerNames: string[] = [];
+        const layerMetaData: ServiceMetaDataType[] = [];
         edits.forEach((layer) => {
-          if (layer.id < 0) layerNames.push(layer.name);
+          if (layer.id < 0) {
+            layerMetaData.push({
+              name: layer.scenarioName,
+              description: layer.scenarioDescription,
+            });
+          }
         });
 
         const serviceUrl: string = service.portalService.url;
         // create the layers
-        createFeatureLayers(portal, serviceUrl, layerNames)
+        createFeatureLayers(portal, serviceUrl, layerMetaData)
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
               const layerEdits = edits.find(
                 (layerEdit) =>
-                  layerEdit.id === -1 && layerEdit.name === layer.name,
+                  layerEdit.id === -1 && layerEdit.scenarioName === layer.name,
               );
 
               const mapLayer = layers.find(
                 (mapLayer) =>
-                  mapLayer.id === -1 && mapLayer.name === layer.name,
+                  mapLayer.id === -1 && mapLayer.scenarioName === layer.name,
               );
 
               if (layerEdits) layerEdits.id = layer.id;

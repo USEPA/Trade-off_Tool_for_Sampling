@@ -46,7 +46,7 @@ export const defaultLayerProps = {
       sqlType: 'sqlTypeOther',
       length: 38,
       nullable: false,
-      editable: false,
+      editable: true,
       domain: null,
       defaultValue: 'NEWID() WITH VALUES',
     },
