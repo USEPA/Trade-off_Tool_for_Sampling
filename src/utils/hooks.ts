@@ -787,12 +787,7 @@ export function useSessionStorage() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const {
-    geometryEngine,
-    Polygon,
-    projection,
-    webMercatorUtils,
-  } = useEsriModulesContext();
+  const { geometryEngine, Polygon, webMercatorUtils } = useEsriModulesContext();
   const { edits, sketchLayer } = React.useContext(SketchContext);
   const {
     numLabs,
@@ -805,18 +800,6 @@ export function useCalculatePlan() {
     surfaceArea,
     setCalculateResults,
   } = React.useContext(CalculateContext);
-
-  // Load the esri projection module. This needs
-  // to happen before the projection module will work.
-  const [
-    loadedProjection,
-    setLoadedProjection, //
-  ] = React.useState<__esri.projection | null>(null);
-  React.useEffect(() => {
-    projection.load().then(() => {
-      setLoadedProjection(projection);
-    });
-  });
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
@@ -873,7 +856,6 @@ export function useCalculatePlan() {
   // perform geospatial calculatations
   React.useEffect(() => {
     // exit early checks
-    if (!loadedProjection) return;
     if (!sketchLayer?.sketchLayer || edits.count === 0) return;
     if (sketchLayer.sketchLayer.type !== 'graphics') return;
 
@@ -1019,7 +1001,6 @@ export function useCalculatePlan() {
   }, [
     // esri modules
     geometryEngine,
-    loadedProjection,
     Polygon,
     webMercatorUtils,
 

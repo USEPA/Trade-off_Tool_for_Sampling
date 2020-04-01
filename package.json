@@ -19,7 +19,6 @@
     "@reach/window-size": "0.9.0",
     "@types/react-select": "3.0.11",
     "@types/uuid": "7.0.2",
-    "core-js": "3.6.4",
     "esri-loader": "2.13.0",
     "react": "16.13.1",
     "react-app-polyfill": "1.0.6",
@@ -67,12 +66,14 @@
     "production": [
       ">0.2%",
       "not dead",
-      "not op_mini all"
+      "not op_mini all",
+      "ie 11"
     ],
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
-      "last 1 safari version"
+      "last 1 safari version",
+      "ie 11"
     ]
   }
 }
