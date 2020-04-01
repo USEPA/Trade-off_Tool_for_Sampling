@@ -113,12 +113,14 @@ const fileIconContainer = css`
 
 const fileIcon = css`
   color: #e6e8ed;
+  width: 100%;
 `;
 
 const fileIconText = css`
   font-size: 16px;
   color: #9ea4b3;
   margin-top: 5px;
+  width: 100%;
 `;
 
 // --- components (FileIcon) ---
@@ -912,7 +914,7 @@ function FilePanel() {
 
     // read in the file
     const reader = new FileReader();
-    reader.onload = function(event: Event) {
+    reader.onload = function (event: Event) {
       if (reader.error || !event || !reader.result) {
         console.error('File Read Error: ', reader.error);
         setUploadStatus('file-read-error');
@@ -1051,11 +1053,14 @@ function FilePanel() {
                       <p>Drop the files here ...</p>
                     ) : (
                       <div>
-                        <FileIcon label="Shape File" />
-                        <FileIcon label="CSV" />
-                        <FileIcon label="KML" />
-                        <FileIcon label="GPX" />
-                        <FileIcon label="Geo JSON" />
+                        <div>
+                          <FileIcon label="Shape File" />
+                          <FileIcon label="CSV" />
+                          <FileIcon label="KML" />
+                          <br />
+                          <FileIcon label="GPX" />
+                          <FileIcon label="Geo JSON" />
+                        </div>
                         <br />
                         Drop or Browse
                         <br />
