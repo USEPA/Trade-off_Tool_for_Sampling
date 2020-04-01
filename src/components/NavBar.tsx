@@ -74,6 +74,10 @@ const navIconStyles = (color: string) => {
   `;
 };
 
+const navTextStyles = css`
+  width: 70px;
+`;
+
 // --- components (NavButton) ---
 type NavButtonProps = {
   panel: PanelType;
@@ -108,7 +112,7 @@ function NavButton({
       ></div>
       <button onClick={onClick} css={navButtonStyles(selected)}>
         <i className={iconClass} css={navIconStyles(color)} />
-        {label}
+        <span css={navTextStyles}>{label}</span>
       </button>
     </React.Fragment>
   );
@@ -250,12 +254,12 @@ const floatPanelTableCellContainer = css`
 `;
 
 const collapsePanelButton = css`
+  margin: 0;
   margin-bottom: 10px !important;
   display: flex;
   justify-content: center;
   width: ${panelCollapseButtonWidth};
   padding: 1.5em 1em;
-  margin: 0;
   border-radius: 0;
   background-color: white;
   color: black;
