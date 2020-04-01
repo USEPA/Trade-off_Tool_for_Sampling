@@ -17,6 +17,7 @@
   "tags": ["EPA", "TOTS", "Trade-off Tool for Sampling"],
   "contact": {
     "name": "TOTS Team",
-    "email": "<insert email here>"
+    "email": "<insert email here>",
+    "contactPage": "https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research"
   }
 }
