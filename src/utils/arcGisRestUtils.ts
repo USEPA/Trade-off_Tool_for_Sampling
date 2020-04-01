@@ -16,7 +16,7 @@ type ServiceMetaDataType = {
  * Checks if the feature service name is available.
  *
  * @param portal The portal object to check against.
- * @param name The desired feature service name.
+ * @param serviceName The desired feature service name.
  */
 export function isServiceNameAvailable(
   portal: __esri.Portal,
@@ -52,6 +52,7 @@ export function isServiceNameAvailable(
  * it doesn't already exist
  *
  * @param portal The portal object to retreive the hosted feature service from
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object
  */
 export function getFeatureService(
@@ -78,6 +79,7 @@ export function getFeatureService(
  * doesn't already exist
  *
  * @param portal The portal object to retreive the hosted feature service from
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object or
  *  null if the service does not exist
  */
@@ -117,6 +119,7 @@ function getFeatureServiceWrapped(
  * Creates and returns the hosted feature service
  *
  * @param portal The portal object to create the hosted feature service on
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
  * @returns A promise that resolves to the hosted feature service object
  */
 export function createFeatureService(
@@ -223,7 +226,7 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
  * Attempts to get the feature service and creates it if it
  * doesn't already exist
  *
- * @param service Object representing the hosted feature service
+ * @param serviceUrl Object representing the hosted feature service
  * @param token Security token
  * @param id ID of the layer to retreive
  * @returns A promise that resolves to the requested layers
@@ -245,7 +248,7 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
  *
  * @param portal The portal object to create feature layers on
  * @param serviceUrl The hosted feature service to save layers to
- * @param layerNames The names of the layers to create
+ * @param layerMetaData Array of service metadata to be added to the layers of a feature service.
  * @returns A promise that resolves to the layers that were saved
  */
 export function createFeatureLayers(
