@@ -210,7 +210,7 @@ function Toolbar() {
     const layerList = new LayerList({
       view: mapView,
       container: 'legend-container',
-      listItemCreatedFunction: function(event) {
+      listItemCreatedFunction: function (event) {
         const item = event.item;
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
@@ -326,7 +326,7 @@ function Toolbar() {
     } else if (tempLayerToRemove.url) {
       // this one was added via url panel, remove it from urlLayers
       setUrlLayers(
-        urlLayers.filter((layer) => layer.url !== tempLayerToRemove.url),
+        urlLayers.filter((layer) => layer.layerId !== tempLayerToRemove.id),
       );
     } else {
       // everything else should be removed from referenceLayers

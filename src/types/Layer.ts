@@ -30,4 +30,5 @@ export type LayerType = {
 export type UrlLayerType = {
   url: string;
   type: string;
+  layerId: string;
 };

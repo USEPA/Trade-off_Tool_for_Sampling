@@ -242,43 +242,44 @@ function useUrlLayerStorage() {
     if (!urlLayersStr) return;
 
     const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
+    const newUrlLayers: UrlLayerType[] = [];
 
     // add the portal layers to the map
     urlLayers.forEach((urlLayer) => {
       const type = urlLayer.type;
       const url = urlLayer.url;
+      const id = urlLayer.layerId;
 
       let layer;
       if (type === 'ArcGIS') {
-        layer = Layer.fromArcGISServerUrl({ url });
+        layer = Layer.fromArcGISServerUrl({ url, properties: { id } });
       }
       if (type === 'WMS') {
-        layer = new WMSLayer({ url });
+        layer = new WMSLayer({ url, id });
       }
       /* // not supported in 4.x js api
       if(type === 'WFS') {
-        layer = new WFSLayer({ url });
+        layer = new WFSLayer({ url, id });
       } */
       if (type === 'KML') {
-        layer = new KMLLayer({ url });
+        layer = new KMLLayer({ url, id });
       }
       if (type === 'GeoRSS') {
-        layer = new GeoRSSLayer({ url });
+        layer = new GeoRSSLayer({ url, id });
       }
       if (type === 'CSV') {
-        layer = new CSVLayer({ url });
+        layer = new CSVLayer({ url, id });
       }
 
       // add the layer if isn't null
       if (layer) {
         map.add(layer);
 
-        const urlLayer = { url, type };
-        setUrlLayers([...urlLayers, urlLayer]);
+        newUrlLayers.push(urlLayer);
       }
     });
 
-    setUrlLayers(urlLayers);
+    setUrlLayers(newUrlLayers);
   }, [
     // Esri Modules
     CSVLayer,

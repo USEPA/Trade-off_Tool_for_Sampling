@@ -72,7 +72,7 @@ function URLPanel() {
     map.add(layer);
 
     layer.on('layerview-create', (event) => {
-      const urlLayer = { url, type: urlType.value };
+      const urlLayer = { url, type: urlType.value, layerId: layer.id };
       setUrlLayers([...urlLayers, urlLayer]);
 
       setStatus('success');
