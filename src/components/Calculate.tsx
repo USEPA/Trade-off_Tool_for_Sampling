@@ -281,24 +281,9 @@ function Calculate() {
           alias: 'Contamination Unit',
         },
         {
-          name: 'SCENARIONAME',
-          type: 'string',
-          alias: 'Scenario Name',
-        },
-        {
           name: 'Notes',
           type: 'string',
           alias: 'Notes',
-        },
-        {
-          name: 'Shape_Length',
-          type: 'double',
-          alias: 'Shape_Length',
-        },
-        {
-          name: 'Shape_Area',
-          type: 'double',
-          alias: 'Shape_Area',
         },
       ],
     });
@@ -434,46 +419,6 @@ function Calculate() {
           name: 'CONTAM_UNIT',
           type: 'string',
           alias: 'Contamination Unit',
-        },
-        {
-          name: 'SCENARIONAME',
-          type: 'string',
-          alias: 'Scenario Name',
-        },
-        {
-          name: 'CREATEDDATE',
-          type: 'date',
-          alias: 'Created Date',
-        },
-        {
-          name: 'UPDATEDDATE',
-          type: 'date',
-          alias: 'Updated Date',
-        },
-        {
-          name: 'USERNAME',
-          type: 'string',
-          alias: 'Username',
-        },
-        {
-          name: 'ORGANIZATION',
-          type: 'string',
-          alias: 'Organization',
-        },
-        {
-          name: 'ELEVATIONSERIES',
-          type: 'string',
-          alias: 'Elevation Series',
-        },
-        {
-          name: 'Shape_Length',
-          type: 'double',
-          alias: 'Shape_Length',
-        },
-        {
-          name: 'Shape_Area',
-          type: 'double',
-          alias: 'Shape_Area',
         },
       ],
     });

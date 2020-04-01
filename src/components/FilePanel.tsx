@@ -51,18 +51,11 @@ const layerOptions: LayerSelectType[] = [
 
 function fileVerification(type: LayerTypeName, attributes: any) {
   const contaminationRequiredFields = [
-    'OBJECTID',
-    'GLOBALID',
-    'PERMANENT_IDENTIFIER',
-    'TYPE',
     'CONTAM_TYPE',
     'CONTAM_VALUE',
     'CONTAM_UNIT',
   ];
   const samplesRequiredFields = [
-    'OBJECTID',
-    'GLOBALID',
-    'PERMANENT_IDENTIFIER',
     'TYPE',
     'TTPK',
     'TTC',
@@ -78,16 +71,6 @@ function fileVerification(type: LayerTypeName, attributes: any) {
     'Notes',
     'ALC',
     'AMC',
-    'CONTAM_TYPE',
-    'CONTAM_VALUE',
-    'CONTAM_UNIT',
-    'SCENARIONAME',
-    'CREATEDDATE',
-    'UPDATEDDATE',
-    'USERNAME',
-    'ORGANIZATION',
-    'SURFACEAREAUNIT',
-    'ELEVATIONSERIES',
   ];
 
   const missingFields: string[] = [];
@@ -659,7 +642,6 @@ function FilePanel() {
             CONTAM_TYPE,
             CONTAM_VALUE,
             CONTAM_UNIT,
-            SCENARIONAME,
             CREATEDDATE,
             UPDATEDDATE,
             USERNAME,
@@ -670,7 +652,6 @@ function FilePanel() {
           if (!CONTAM_TYPE) graphic.attributes['CONTAM_TYPE'] = null;
           if (!CONTAM_VALUE) graphic.attributes['CONTAM_VALUE'] = null;
           if (!CONTAM_UNIT) graphic.attributes['CONTAM_UNIT'] = null;
-          if (!SCENARIONAME) graphic.attributes['SCENARIONAME'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
