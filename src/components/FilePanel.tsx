@@ -51,10 +51,6 @@ const layerOptions: LayerSelectType[] = [
 
 function fileVerification(type: LayerTypeName, attributes: any) {
   const contaminationRequiredFields = [
-    'OBJECTID',
-    'GLOBALID',
-    'PERMANENT_IDENTIFIER',
-    'TYPE',
     'CONTAM_TYPE',
     'CONTAM_VALUE',
     'CONTAM_UNIT',
