@@ -713,9 +713,9 @@ class ContaminationResults(object):
       flds = [
           "PERMANENT_IDENTIFIER"
          ,"TYPE"
-         ,"CONTAM_TYPE_1"
-         ,"CONTAM_VALUE_1"
-         ,"CONTAM_UNIT_1"
+         ,"CONTAMTYPE_1"
+         ,"CONTAMVAL_1"
+         ,"CONTAMUNIT_1"
          ,"NOTES_1"
       ];
       
@@ -775,9 +775,9 @@ class ContaminationResults(object):
              ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,None,None,'']
             ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent_Identifier'        ,None,None,'']
             ,['TYPE'                ,'TEXT'  ,'Type'                        ,255 ,None,'']
-            ,['CONTAM_TYPE'         ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
-            ,['CONTAM_VALUE'        ,'DOUBLE','Contamination Value'         ,None,None,'']
-            ,['CONTAM_UNIT'         ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
+            ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+            ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+            ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
             ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
           ]
       );
@@ -787,9 +787,9 @@ class ContaminationResults(object):
           "GLOBALID"
          ,"PERMANENT_IDENTIFIER"
          ,"TYPE"
-         ,"CONTAM_TYPE"
-         ,"CONTAM_VALUE"
-         ,"CONTAM_UNIT"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
          ,"NOTES"
       ];
       
@@ -1046,10 +1046,9 @@ def sampling_scratch_fc(p_preset,p_fcprefix=None):
          ,['Notes'               ,'TEXT'  ,'Notes'                       ,2000,None,'']
          ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
          ,['AMC'                 ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
-         ,['CONTAM_TYPE'         ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
-         ,['CONTAM_VALUE'        ,'DOUBLE','Contamination Value'         ,None,None,'']
-         ,['CONTAM_UNIT'         ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
          ,['CREATEDDATE'         ,'DATE'  ,'Created Date'                ,None,None,'']
          ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                ,None,None,'']
          ,['USERNAME'            ,'TEXT'  ,'Username'                    ,255 ,None,'']
@@ -1109,10 +1108,9 @@ def contamination_scratch_fc(p_preset,p_fcprefix=None):
       ,field_description = [
           ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
          ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
-         ,['CONTAM_TYPE'         ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
-         ,['CONTAM_VALUE'        ,'DOUBLE','Contamination Value'         ,None,None,'']
-         ,['CONTAM_UNIT'         ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
          ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
        ]
    );
@@ -1169,7 +1167,6 @@ def aoi_scratch_fc(p_preset,p_fcprefix=None):
           ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
          ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
          ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
        ]
    );
    
