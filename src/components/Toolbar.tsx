@@ -268,16 +268,18 @@ function Toolbar() {
           };
         }
 
-        // add a delete button for each layer
-        item.actionsSections = [
-          [
-            {
-              title: 'Delete Layer',
-              className: 'esri-icon-trash',
-              id: 'delete-layer',
-            },
-          ],
-        ];
+        // add a delete button for each layer, but don't add it to sublayers
+        if (!item.parent) {
+          item.actionsSections = [
+            [
+              {
+                title: 'Delete Layer',
+                className: 'esri-icon-trash',
+                id: 'delete-layer',
+              },
+            ],
+          ];
+        }
       },
     });
 
@@ -323,18 +325,24 @@ function Toolbar() {
       setPortalLayers(
         portalLayers.filter((id) => id !== tempLayerToRemove.portalItem.id),
       );
-    } else if (tempLayerToRemove.url) {
-      // this one was added via url panel, remove it from urlLayers
-      setUrlLayers(
-        urlLayers.filter((layer) => layer.layerId !== tempLayerToRemove.id),
-      );
     } else {
-      // everything else should be removed from referenceLayers
-      setReferenceLayers(
-        referenceLayers.filter(
-          (layer: any) => layer.layerId !== layerToRemove.id,
-        ),
+      // first attempt to remove from url layers
+      const newUrlLayers = urlLayers.filter(
+        (layer) => layer.layerId !== layerToRemove.id,
       );
+      if (newUrlLayers.length < urlLayers.length) {
+        setUrlLayers(newUrlLayers);
+        return;
+      }
+
+      // then attempt to remove from reference layers
+      const newRefLayers = referenceLayers.filter(
+        (layer: any) => layer.layerId !== layerToRemove.id,
+      );
+      if (newRefLayers.length < referenceLayers.length) {
+        setReferenceLayers(newRefLayers);
+        return;
+      }
     }
   }, [
     map,
