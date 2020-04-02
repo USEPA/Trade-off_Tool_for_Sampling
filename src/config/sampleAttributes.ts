@@ -46,9 +46,9 @@ type SampleProperties =
   | 'AA'
   | 'AC'
   | 'ITER'
-  | 'CONTAM_TYPE'
-  | 'CONTAM_VALUE'
-  | 'CONTAM_UNIT'
+  | 'CONTAMTYPE'
+  | 'CONTAMVAL'
+  | 'CONTAMUNIT'
   | 'CREATEDDATE'
   | 'UPDATEDDATE'
   | 'USERNAME'
@@ -85,9 +85,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -117,9 +117,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -149,9 +149,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -181,9 +181,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -213,9 +213,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,
@@ -245,9 +245,9 @@ const sampleAttributes: Attributes = {
     AA: '0',
     AC: '0',
     ITER: '0',
-    CONTAM_TYPE: null,
-    CONTAM_VALUE: null,
-    CONTAM_UNIT: null,
+    CONTAMTYPE: null,
+    CONTAMVAL: null,
+    CONTAMUNIT: null,
     CREATEDDATE: null,
     UPDATEDDATE: null,
     USERNAME: null,

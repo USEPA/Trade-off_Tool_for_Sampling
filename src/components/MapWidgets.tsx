@@ -741,7 +741,7 @@ function MapWidgets({ mapView }: Props) {
     // Get any graphics that have a contam value
     const highlightGraphics: __esri.Graphic[] = [];
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.attributes.CONTAM_VALUE) {
+      if (graphic.attributes.CONTAMVAL) {
         highlightGraphics.push(graphic);
       }
     });

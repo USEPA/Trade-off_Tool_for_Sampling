@@ -266,17 +266,17 @@ function Calculate() {
           alias: 'Permanent Identifier',
         },
         {
-          name: 'CONTAM_TYPE',
+          name: 'CONTAMTYPE',
           type: 'string',
           alias: 'Contamination Type',
         },
         {
-          name: 'CONTAM_VALUE',
+          name: 'CONTAMVAL',
           type: 'double',
           alias: 'Contamination Value',
         },
         {
-          name: 'CONTAM_UNIT',
+          name: 'CONTAMUNIT',
           type: 'string',
           alias: 'Contamination Unit',
         },
@@ -406,17 +406,17 @@ function Calculate() {
           alias: 'Analysis Material Cost',
         },
         {
-          name: 'CONTAM_TYPE',
+          name: 'CONTAMTYPE',
           type: 'string',
           alias: 'Contamination Type',
         },
         {
-          name: 'CONTAM_VALUE',
+          name: 'CONTAMVAL',
           type: 'double',
           alias: 'Contamination Value',
         },
         {
-          name: 'CONTAM_UNIT',
+          name: 'CONTAMUNIT',
           type: 'string',
           alias: 'Contamination Unit',
         },
@@ -461,16 +461,16 @@ function Calculate() {
             // if the graphic was not found in the response, set contam value to null,
             // otherwise use the contam value value found in the response.
             let contamValue = null;
-            let contamType = graphic.attributes.CONTAM_TYPE;
-            let contamUnit = graphic.attributes.CONTAM_UNIT;
+            let contamType = graphic.attributes.CONTAMTYPE;
+            let contamUnit = graphic.attributes.CONTAMUNIT;
             if (resFeature) {
-              contamValue = resFeature.attributes.CONTAM_VALUE;
-              contamType = resFeature.attributes.CONTAM_TYPE;
-              contamUnit = resFeature.attributes.CONTAM_UNIT;
+              contamValue = resFeature.attributes.CONTAMVAL;
+              contamType = resFeature.attributes.CONTAMTYPE;
+              contamUnit = resFeature.attributes.CONTAMUNIT;
             }
-            graphic.attributes.CONTAM_VALUE = contamValue;
-            graphic.attributes.CONTAM_TYPE = contamType;
-            graphic.attributes.CONTAM_UNIT = contamUnit;
+            graphic.attributes.CONTAMVAL = contamValue;
+            graphic.attributes.CONTAMTYPE = contamType;
+            graphic.attributes.CONTAMUNIT = contamUnit;
           });
 
           // make a copy of the edits context variable

@@ -50,11 +50,7 @@ const layerOptions: LayerSelectType[] = [
 ];
 
 function fileVerification(type: LayerTypeName, attributes: any) {
-  const contaminationRequiredFields = [
-    'CONTAM_TYPE',
-    'CONTAM_VALUE',
-    'CONTAM_UNIT',
-  ];
+  const contaminationRequiredFields = ['CONTAMTYPE', 'CONTAMVAL', 'CONTAMUNIT'];
   const samplesRequiredFields = [
     'TYPE',
     'TTPK',
@@ -641,9 +637,9 @@ function FilePanel() {
         // add sample layer specific attributes
         if (layerType.value === 'Samples') {
           const {
-            CONTAM_TYPE,
-            CONTAM_VALUE,
-            CONTAM_UNIT,
+            CONTAMTYPE,
+            CONTAMVAL,
+            CONTAMUNIT,
             CREATEDDATE,
             UPDATEDDATE,
             USERNAME,
@@ -651,9 +647,9 @@ function FilePanel() {
             SURFACEAREAUNIT,
             ELEVATIONSERIES,
           } = graphic.attributes;
-          if (!CONTAM_TYPE) graphic.attributes['CONTAM_TYPE'] = null;
-          if (!CONTAM_VALUE) graphic.attributes['CONTAM_VALUE'] = null;
-          if (!CONTAM_UNIT) graphic.attributes['CONTAM_UNIT'] = null;
+          if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
+          if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
+          if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
