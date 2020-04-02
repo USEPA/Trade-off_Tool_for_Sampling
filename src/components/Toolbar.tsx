@@ -268,16 +268,18 @@ function Toolbar() {
           };
         }
 
-        // add a delete button for each layer
-        item.actionsSections = [
-          [
-            {
-              title: 'Delete Layer',
-              className: 'esri-icon-trash',
-              id: 'delete-layer',
-            },
-          ],
-        ];
+        // add a delete button for each layer, but don't add it to sublayers
+        if (!item.parent) {
+          item.actionsSections = [
+            [
+              {
+                title: 'Delete Layer',
+                className: 'esri-icon-trash',
+                id: 'delete-layer',
+              },
+            ],
+          ];
+        }
       },
     });
 
