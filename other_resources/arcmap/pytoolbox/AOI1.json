@@ -6,7 +6,6 @@
     "Shape_Area" : "Shape_Area",
     "GLOBALID" : "GlobalID",
     "PERMANENT_IDENTIFIER": "Permanent_Identifier",
-    "SCENARIONAME" : "Scenario Name",
     "NOTES" : "Notes"
   },
   "geometryType" : "esriGeometryPolygon",
@@ -41,12 +40,6 @@
       "alias" : "Permanent_Identifier"
     },
     {
-      "name" : "SCENARIONAME",
-      "type" : "esriFieldTypeString",
-      "alias" : "Scenario Name",
-      "length" : 255
-    },
-    {
       "name" : "NOTES",
       "type" : "esriFieldTypeString",
       "alias" : "Notes",
@@ -61,7 +54,6 @@
         "Shape_Area" : 106812.19606400309,
         "GLOBALID" : "{f7335f53-7029-4d42-8c4f-bdaf8b32a6c7}",
         "PERMANENT_IDENTIFIER" : "{10b1694e-cce6-4720-a4aa-a7f94f7ac5a8}",
-        "SCENARIONAME" : "Bradford, 1988",
         "NOTES" : null
       },
       "geometry" : {

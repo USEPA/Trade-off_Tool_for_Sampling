@@ -690,6 +690,71 @@ class ContaminationResults(object):
          fc_contamination_map = scratch_full_mask;
       
       #########################################################################
+      # Contamination results join
+      scratch_full_c = arcpy.CreateScratchName(
+          prefix    = "SpatialJoin"
+         ,suffix    = ""
+         ,data_type = "FeatureClass"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
+
+      arcpy.SpatialJoin_analysis(
+          target_features   = fc_samples_in
+         ,join_features     = fc_contamination_map
+         ,out_feature_class = scratch_full_c
+         ,join_operation    = 'JOIN_ONE_TO_MANY'
+         ,join_type         = 'KEEP_COMMON'
+         ,match_option      = 'INTERSECT'
+      );
+
+      #########################################################################
+      # Sampling Results
+      flds = [
+          "PERMANENT_IDENTIFIER"
+         ,"TYPE"
+         ,"CONTAMTYPE_1"
+         ,"CONTAMVAL_1"
+         ,"CONTAMUNIT_1"
+         ,"NOTES_1"
+      ];
+      
+      rez = {};
+      with arcpy.da.SearchCursor(
+          in_table    = scratch_full_c
+         ,field_names = flds
+      ) as search_curs:
+      
+         for row in search_curs:
+            samp_permid      = row[0];
+            samp_type        = row[1];
+            map_contam_type  = row[2];
+            map_contam_value = row[3];
+            map_contam_unit  = row[4];
+            map_notes        = row[5];
+         
+            if samp_permid not in rez:
+               rez[samp_permid] = {
+                   "samp_permid"     : samp_permid
+                  ,"samp_type"       : samp_type
+                  ,"map_contam_type" : map_contam_type
+                  ,"map_contam_value": map_contam_value
+                  ,"map_contam_unit" : map_contam_unit
+                  ,"map_notes"       : map_notes
+               };
+             
+            else:
+               if map_contam_value > rez[samp_permid]["map_contam_value"]:
+                  rez[samp_permid] = {
+                      "samp_permid"     : samp_permid
+                     ,"samp_type"       : samp_type
+                     ,"map_contam_type" : map_contam_type
+                     ,"map_contam_value": map_contam_value
+                     ,"map_contam_unit" : map_contam_unit
+                     ,"map_notes"       : map_notes
+                  };
+      
+      #########################################################################
       scratch_full_o = arcpy.CreateScratchName(
           prefix    = "TOTSResults"
          ,suffix    = ""
@@ -707,59 +772,24 @@ class ContaminationResults(object):
       dz_addfields(
           in_table = scratch_full_o
          ,field_description = [
-             ['GLOBALID'            ,'GUID'  ,'GlobalID'            ,None,None,'']
-            ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent_Identifier',None,None,'']
-            ,['TYPE'                ,'TEXT'  ,'Type'                ,255 ,None,'']
-            ,['CFU'                 ,'LONG'  ,'CFU'                 ,None,None,'']
-            ,['Notes'               ,'TEXT'  ,'Notes'               ,255 ,None,'']
+             ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,None,None,'']
+            ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent_Identifier'        ,None,None,'']
+            ,['TYPE'                ,'TEXT'  ,'Type'                        ,255 ,None,'']
+            ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+            ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+            ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
+            ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
           ]
       );
-
-      #########################################################################
-      # Contamination results join
-      scratch_full_c = arcpy.CreateScratchName(
-          prefix    = "SpatialJoin"
-         ,suffix    = ""
-         ,data_type = "FeatureClass"
-         ,workspace = arcpy.env.scratchGDB
-      );
-      scratch_path_c,scratch_name_c = os.path.split(scratch_full_c);
       
-      fldmaps_in = arcpy.FieldMappings();
-      fldmaps_in.addTable(fc_samples_in);
-      fldmaps_in.addTable(fc_contamination_map);
-
-      fldmaps_out = arcpy.FieldMappings();
-      
-      for i in range(fldmaps_in.fieldCount):
-         map  = fldmaps_in.getFieldMap(i);
-         name = map.getInputFieldName(0);
-         if name == "CFU":
-            map.mergeRule = "Max";
-         if name == "PERMANENT_IDENTIFIER":
-            map.mergeRule = "First";
-         if name == "SCENARIOID":
-            map.mergeRule = "First";
-         if name == "NOTES":
-            map.mergeRule = "First";
-         fldmaps_out.addFieldMap(map)
-
-      arcpy.SpatialJoin_analysis(
-          target_features   = fc_samples_in
-         ,join_features     = fc_contamination_map
-         ,out_feature_class = scratch_full_c
-         ,join_operation    = 'JOIN_ONE_TO_ONE'
-         ,join_type         = 'KEEP_COMMON'
-         ,field_mapping     = fldmaps_out
-      );
-
       #########################################################################
-      # Sampling Results
       flds = [
           "GLOBALID"
          ,"PERMANENT_IDENTIFIER"
          ,"TYPE"
-         ,"CFU"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
          ,"NOTES"
       ];
       
@@ -768,22 +798,16 @@ class ContaminationResults(object):
          ,field_names = flds
       ) as insert_curs:
       
-         with arcpy.da.SearchCursor(
-             in_table    = scratch_full_c
-            ,field_names = flds
-         ) as search_curs:
-         
-            for row in search_curs:
-            
-               if row[3] is not None:
-               
-                  insert_curs.insertRow((
-                      '{' + str(uuid.uuid4()) + '}'
-                     ,row[1]
-                     ,row[2]
-                     ,row[3]
-                     ,row[4]
-                  ));
+         for key in rez:
+            insert_curs.insertRow((
+                '{' + str(uuid.uuid4()) + '}'
+               ,rez[key]["samp_permid"]
+               ,rez[key]["samp_type"]
+               ,rez[key]["map_contam_type"]
+               ,rez[key]["map_contam_value"]
+               ,rez[key]["map_contam_unit"]
+               ,rez[key]["map_notes"]
+            ));
                   
       #########################################################################
       arcpy.SetParameterAsText(2,scratch_full_o);
@@ -880,13 +904,25 @@ class SampleData(object):
       
       #########################################################################
       arcpy.AddMessage("  Building Sampling Feature Class");
-      (a,b,scratch_full_sam) = sampling_scratch_fc(int_preset);
+      (a,b,scratch_full_sam) = sampling_scratch_fc(
+          p_preset   = int_preset
+         ,p_fcprefix = 'SampleSet_Samples'    
+      );
       arcpy.AddMessage("  Building Contamination Map Feature Class");
-      (a,b,scratch_full_con) = contamination_scratch_fc(int_preset);
+      (a,b,scratch_full_con) = contamination_scratch_fc(
+          p_preset   = int_preset
+         ,p_fcprefix = 'SampleSet_ContaminationMap'    
+      );
       arcpy.AddMessage("  Building Area of Interest Feature Class");
-      (a,b,scratch_full_aoi) = aoi_scratch_fc(int_preset);
+      (a,b,scratch_full_aoi) = aoi_scratch_fc(
+          p_preset   = int_preset
+         ,p_fcprefix = 'SampleSet_AreaOfInterest'    
+      );
       arcpy.AddMessage("  Building VSP Feature Class");
-      (a,b,scratch_full_vsp) = vsp_scratch_fc(int_preset);
+      (a,b,scratch_full_vsp) = vsp_scratch_fc(
+          p_preset   = int_preset
+         ,p_fcprefix = 'SampleSet_VSP'    
+      );
 
       #########################################################################
       arcpy.SetParameterAsText(1,scratch_full_sam);
@@ -967,10 +1003,15 @@ class Debug(object):
 
 
 ###############################################################################
-def sampling_scratch_fc(p_preset):
+def sampling_scratch_fc(p_preset,p_fcprefix=None):
 
+   if p_fcprefix is None:
+      str_fcprefix = "TOTS_Samples";
+   else:
+      str_fcprefix = p_fcprefix;
+      
    scratch_full_o = arcpy.CreateScratchName(
-       prefix    = "TOTS_Sampling"
+       prefix    = str_fcprefix
       ,suffix    = ""
       ,data_type = "FeatureClass"
       ,workspace = arcpy.env.scratchGDB
@@ -1001,20 +1042,17 @@ def sampling_scratch_fc(p_preset):
          ,['TCPS'                ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
          ,['WVPS'                ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
          ,['WWPS'                ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
-         ,['CFU'                 ,'DOUBLE','CFU'                         ,None,None,'']
          ,['SA'                  ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
-         ,['AA'                  ,'DOUBLE','AA'                          ,None,None,'']
-         ,['AC'                  ,'LONG'  ,'AC'                          ,None,None,'']
-         ,['ITER'                ,'LONG'  ,'ITER'                        ,None,None,'']
          ,['Notes'               ,'TEXT'  ,'Notes'                       ,2000,None,'']
          ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
          ,['AMC'                 ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
+         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
          ,['CREATEDDATE'         ,'DATE'  ,'Created Date'                ,None,None,'']
          ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                ,None,None,'']
          ,['USERNAME'            ,'TEXT'  ,'Username'                    ,255 ,None,'']
          ,['ORGANIZATION'        ,'TEXT'  ,'Organization'                ,255 ,None,'']
-         ,['SURFACEAREAUNIT'     ,'TEXT'  ,'Surface Area Unit'           ,255 ,None,'']
          ,['ELEVATIONSERIES'     ,'TEXT'  ,'Elevation Series'            ,255 ,None,'']
        ]
    );
@@ -1042,10 +1080,15 @@ def sampling_scratch_fc(p_preset):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def contamination_scratch_fc(p_preset):
+def contamination_scratch_fc(p_preset,p_fcprefix=None):
 
+   if p_fcprefix is None:
+      str_fcprefix = "TOTS_Contamination";
+   else:
+      str_fcprefix = p_fcprefix;
+   
    scratch_full_o = arcpy.CreateScratchName(
-       prefix    = "TOTS_Contamination"
+       prefix    = str_fcprefix
       ,suffix    = ""
       ,data_type = "FeatureClass"
       ,workspace = arcpy.env.scratchGDB
@@ -1065,8 +1108,9 @@ def contamination_scratch_fc(p_preset):
       ,field_description = [
           ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
          ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
-         ,['CFU'                 ,'DOUBLE','CFU'                         ,255 ,None,'']
+         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
+         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
+         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
          ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
        ]
    );
@@ -1094,10 +1138,15 @@ def contamination_scratch_fc(p_preset):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def aoi_scratch_fc(p_preset):
+def aoi_scratch_fc(p_preset,p_fcprefix=None):
 
+   if p_fcprefix is None:
+      str_fcprefix = "TOTS_Contamination";
+   else:
+      str_fcprefix = p_fcprefix;
+   
    scratch_full_o = arcpy.CreateScratchName(
-       prefix    = "TOTS_AOI"
+       prefix    = str_fcprefix
       ,suffix    = ""
       ,data_type = "FeatureClass"
       ,workspace = arcpy.env.scratchGDB
@@ -1117,7 +1166,6 @@ def aoi_scratch_fc(p_preset):
       ,field_description = [
           ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,40  ,None,'']
          ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
-         ,['SCENARIONAME'        ,'TEXT'  ,'Scenario Name'               ,255 ,None,'']
          ,['NOTES'               ,'TEXT'  ,'Notes'                       ,255 ,None,'']
        ]
    );
@@ -1145,10 +1193,15 @@ def aoi_scratch_fc(p_preset):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def vsp_scratch_fc(p_preset):
+def vsp_scratch_fc(p_preset,p_fcprefix=None):
+
+   if p_fcprefix is None:
+      str_fcprefix = "TOTS_VSP";
+   else:
+      str_fcprefix = p_fcprefix;
 
    scratch_full_o = arcpy.CreateScratchName(
-       prefix    = "TOTS_VSP"
+       prefix    = str_fcprefix
       ,suffix    = ""
       ,data_type = "FeatureClass"
       ,workspace = arcpy.env.scratchGDB
