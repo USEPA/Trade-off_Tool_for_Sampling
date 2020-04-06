@@ -87,6 +87,24 @@ function Publish() {
     setContinueInitialized(true);
   }, [portal, signedIn, goToOptions, setGoToOptions, continueInitialized]);
 
+  // Sign in if necessary
+  React.useEffect(() => {
+    if (!oAuthInfo || !publishButtonClicked) return;
+
+    // have the user login if necessary
+    if (!portal || !signedIn) {
+      setGoToOptions({ continuePublish: true });
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+    }
+  }, [
+    IdentityManager,
+    setGoToOptions,
+    portal,
+    signedIn,
+    oAuthInfo,
+    publishButtonClicked,
+  ]);
+
   // Check if the scenario name is available
   const [hasNameBeenChecked, setHasNameBeenChecked] = React.useState(false);
   React.useEffect(() => {
@@ -137,17 +155,10 @@ function Publish() {
     rawData: null,
   });
   React.useEffect(() => {
-    if (!oAuthInfo) return;
+    if (!oAuthInfo || !portal || !signedIn) return;
     if (!sketchLayer || !publishButtonClicked || !hasNameBeenChecked) return;
 
     setPublishButtonClicked(false);
-
-    // have the user login if necessary
-    if (!portal || !signedIn) {
-      setGoToOptions({ continuePublish: true });
-      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
-      return;
-    }
 
     setPublishResponse({
       status: 'fetching',
@@ -307,7 +318,18 @@ function Publish() {
         <MessageBox
           severity="info"
           title="Publish Succeeded"
-          message={publishResponse.summary.success}
+          message={
+            'To view or share your plan with others, go to the ' +
+            'My Content menu in the Content section of your ArcGIS ' +
+            'Online organization.'
+          }
+        />
+      )}
+      {!signedIn && (
+        <MessageBox
+          severity="warning"
+          title="Not Logged In"
+          message="Please login to use this feature"
         />
       )}
       {publishResponse.status !== 'name-not-available' &&
