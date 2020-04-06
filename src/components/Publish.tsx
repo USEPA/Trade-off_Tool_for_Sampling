@@ -318,7 +318,11 @@ function Publish() {
         <MessageBox
           severity="info"
           title="Publish Succeeded"
-          message={publishResponse.summary.success}
+          message={
+            'To view or share your plan with others, go to the ' +
+            'My Content menu in the Content section of your ArcGIS ' +
+            'Online organization.'
+          }
         />
       )}
       {!signedIn && (
