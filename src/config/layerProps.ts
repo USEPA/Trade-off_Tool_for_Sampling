@@ -10,15 +10,8 @@ export const defaultLayerProps = {
     lastEditDate: 1455126059440,
   },
   geometryType: 'esriGeometryPolygon',
-  extent: {
-    xmin: -13090714.767112788,
-    ymin: 3841739.0914657288,
-    xmax: -12922032.654624918,
-    ymax: 3962581.2727843975,
-    spatialReference: {
-      wkid: 3857,
-    },
-  },
+  minScale: 0,
+  maxScale: 0,
   allowGeometryUpdates: true,
   hasAttachments: false,
   htmlPopupType: 'esriServerHTMLPopupTypeNone',
