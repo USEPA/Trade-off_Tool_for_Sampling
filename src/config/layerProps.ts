@@ -67,7 +67,7 @@ export const defaultLayerProps = {
       actualType: 'nvarchar',
       alias: 'TYPE',
       sqlType: 'sqlTypeNVarchar',
-      length: 8,
+      length: 25,
       nullable: true,
       editable: true,
       domain: null,
