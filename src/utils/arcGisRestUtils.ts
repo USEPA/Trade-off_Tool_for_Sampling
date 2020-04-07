@@ -6,6 +6,7 @@ import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { convertToSimpleGraphic } from 'utils/sketchUtils';
+import { escapeForLucene } from 'utils/utils';
 
 type ServiceMetaDataType = {
   name: string;
@@ -89,10 +90,18 @@ function getFeatureServiceWrapped(
 ) {
   return new Promise((resolve, reject) => {
     portal
-      .queryItems({ query: `name:${serviceMetaData.name}` })
+      .queryItems({
+        query: `orgid:${escapeForLucene(portal.user.orgId)} AND name:${
+          serviceMetaData.name
+        }`,
+      })
       .then((res) => {
-        if (res.results.length > 0) {
-          const portalService = res.results[0];
+        const exactMatch = res.results.find(
+          (layer: any) => layer.name === serviceMetaData.name,
+        );
+
+        if (exactMatch) {
+          const portalService = exactMatch;
 
           // Workaround for esri.Portal not having credential
           const tempPortal: any = portal;
@@ -145,15 +154,6 @@ export function createFeatureService(
         capabilities: 'Create,Delete,Query,Update,Editing',
         spatialReference: {
           wkid: 3857,
-        },
-        initialExtent: {
-          xmin: -20037507.0671618,
-          ymin: -30240971.9583862,
-          xmax: 20037507.0671618,
-          ymax: 18398924.324645,
-          spatialReference: {
-            wkid: 3857,
-          },
         },
         allowGeometryUpdates: true,
         units: 'esriMeters',
@@ -254,23 +254,39 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
 export function createFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
-  layerMetaData: ServiceMetaDataType[],
+  layers: LayerType[],
 ) {
   return new Promise((resolve, reject) => {
-    const layers: any[] = [];
-    if (layerMetaData.length === 0) {
+    const layersParams: any[] = [];
+    if (layers.length === 0) {
       resolve({
         success: true,
-        layers: [],
+        layersParams: [],
       });
       return;
     }
 
-    layerMetaData.forEach((metaData) => {
-      layers.push({
+    layers.forEach((layer) => {
+      // get the current extent, so we can go back
+      let graphicsExtent: __esri.Extent | null = null;
+
+      // get the extent from the array of graphics
+      if (layer.sketchLayer.type === 'graphics') {
+        layer.sketchLayer.graphics.forEach((graphic) => {
+          graphicsExtent === null
+            ? (graphicsExtent = graphic.geometry.extent)
+            : graphicsExtent.union(graphic.geometry.extent);
+        });
+      }
+      if (layer.sketchLayer.type === 'feature') {
+        graphicsExtent = layer.sketchLayer.fullExtent;
+      }
+
+      layersParams.push({
         ...defaultLayerProps,
-        name: metaData.name,
-        description: metaData.description,
+        name: layer.scenarioName,
+        description: layer.scenarioDescription,
+        extent: graphicsExtent,
       });
     });
 
@@ -280,7 +296,7 @@ export function createFeatureLayers(
       f: 'json',
       token: tempPortal.credential.token,
       addToDefinition: {
-        layers,
+        layers: layersParams,
       },
     };
 
@@ -427,9 +443,7 @@ export function applyEdits({
       honorSequenceOfEdits: true,
     };
     fetchPost(`${serviceUrl}/applyEdits`, data)
-      .then((res) => {
-        resolve(res);
-      })
+      .then((res) => resolve(res))
       .catch((err) => reject(err));
   });
 }
@@ -465,20 +479,9 @@ export function publish({
 
     getFeatureService(portal, serviceMetaData)
       .then((service: any) => {
-        // build a list of layers that need to be created
-        const layerMetaData: ServiceMetaDataType[] = [];
-        edits.forEach((layer) => {
-          if (layer.id < 0) {
-            layerMetaData.push({
-              name: layer.scenarioName,
-              description: layer.scenarioDescription,
-            });
-          }
-        });
-
         const serviceUrl: string = service.portalService.url;
         // create the layers
-        createFeatureLayers(portal, serviceUrl, layerMetaData)
+        createFeatureLayers(portal, serviceUrl, layers)
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
