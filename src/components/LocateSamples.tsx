@@ -262,7 +262,7 @@ function LocateSamples() {
 
     // get the first layer that can be used for sketching and return
     const sketchableLayers = getSketchableLayers(layers);
-    if (sketchableLayers.length > 0) {
+    if (!sketchLayer && sketchableLayers.length > 0) {
       setSketchLayer(sketchableLayers[0]);
     }
 
@@ -272,7 +272,7 @@ function LocateSamples() {
     const defaultIndex = sketchableLayers.findIndex(
       (layer) => layer.name === 'Default Sample Layer',
     );
-    if (defaultIndex > 0) return;
+    if (defaultIndex > -1) return;
 
     // no sketchable layers were available, create one
     const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
@@ -298,7 +298,9 @@ function LocateSamples() {
     });
 
     // if the sketch layer wasn't set above, set it now
-    if (sketchableLayers.length === 0) setSketchLayer(tempSketchLayer);
+    if (!sketchLayer && sketchableLayers.length === 0) {
+      setSketchLayer(tempSketchLayer);
+    }
   }, [
     GraphicsLayer,
     map,
