@@ -231,6 +231,7 @@ function LocateSamples() {
   const {
     edits,
     setEdits,
+    layersInitialized,
     layers,
     setLayers,
     map,
@@ -252,18 +253,29 @@ function LocateSamples() {
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
   // created.
+  const [
+    sketchLayerInitialized,
+    setSketchLayerInitialized, //
+  ] = React.useState(false);
   React.useEffect(() => {
-    if (!map || sketchLayer) return;
+    if (!map || !layersInitialized || sketchLayerInitialized) return;
 
     // get the first layer that can be used for sketching and return
     const sketchableLayers = getSketchableLayers(layers);
     if (sketchableLayers.length > 0) {
       setSketchLayer(sketchableLayers[0]);
-      return;
     }
 
+    setSketchLayerInitialized(true);
+
+    // check if the default sketch layer has been added already or not
+    const defaultIndex = sketchableLayers.findIndex(
+      (layer) => layer.name === 'Default Sample Layer',
+    );
+    if (defaultIndex > 0) return;
+
     // no sketchable layers were available, create one
-    const graphicsLayer = new GraphicsLayer({ title: 'Sketch Layer' });
+    const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
 
     const tempSketchLayer: LayerType = {
       id: -1,
@@ -284,9 +296,19 @@ function LocateSamples() {
     setLayers((layers) => {
       return [...layers, tempSketchLayer];
     });
-    map.add(graphicsLayer);
-    setSketchLayer(tempSketchLayer);
-  }, [GraphicsLayer, map, layers, setLayers, sketchLayer, setSketchLayer]);
+
+    // if the sketch layer wasn't set above, set it now
+    if (sketchableLayers.length === 0) setSketchLayer(tempSketchLayer);
+  }, [
+    GraphicsLayer,
+    map,
+    layersInitialized,
+    layers,
+    setLayers,
+    sketchLayer,
+    setSketchLayer,
+    sketchLayerInitialized,
+  ]);
 
   // Initializes the aoi layer for performance reasons
   const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
@@ -350,7 +372,13 @@ function LocateSamples() {
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
-    if (!sketchVM) return;
+    if (!sketchVM || !map || !sketchLayer) return;
+
+    // put the sketch layer on the map, if it isn't there already
+    const layerIndex = map.layers.findIndex(
+      (layer) => layer.id === sketchLayer.layerId,
+    );
+    if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
 
     // save changes from other sketchVM
     if (aoiSketchVM) aoiSketchVM.complete();
