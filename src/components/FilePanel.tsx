@@ -31,14 +31,22 @@ import { polygonSymbol } from 'config/symbols';
  * it appends in index to the end (i.e. '<desiredName> (2)').
  */
 function getLayerName(layers: LayerType[], desiredName: string) {
-  let duplicateCount = 0;
+  // get a list of names in use
+  let usedNames: string[] = [];
   layers.forEach((layer) => {
-    if (layer.name === desiredName) duplicateCount += 1;
+    usedNames.push(layer.label);
   });
 
-  return duplicateCount > 0
-    ? `${desiredName} (${duplicateCount})`
-    : desiredName;
+  // Find a name where there is not a collision.
+  // Most of the time this loop will be skipped.
+  let duplicateCount = 0;
+  let newName = desiredName;
+  while (usedNames.includes(newName)) {
+    duplicateCount += 1;
+    newName = `${desiredName} (${duplicateCount})`;
+  }
+
+  return newName;
 }
 
 const layerOptions: LayerSelectType[] = [
