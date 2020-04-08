@@ -25,11 +25,9 @@ export function findLayerInEdits(
   edits: LayerEditsType[],
   layerToFind: LayerType,
 ) {
-  const nameToFind = layerToFind.name ? layerToFind.name : layerToFind.id;
-
   // find the layer in the edits using it's id and name
   const index = edits.findIndex(
-    (layer) => layer.id === layerToFind.id && layer.name === nameToFind,
+    (layer) => layer.layerId === layerToFind.layerId,
   );
   const layer = edits[index];
 
@@ -47,6 +45,7 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     id: layerToEdit.id,
     layerId: layerToEdit.sketchLayer.id,
     name: layerToEdit.name,
+    label: layerToEdit.label,
     layerType: layerToEdit.layerType,
     scenarioName: layerToEdit.scenarioName,
     scenarioDescription: layerToEdit.scenarioDescription,
