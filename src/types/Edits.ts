@@ -9,6 +9,7 @@ export type LayerEditsType = {
   id: number; // layer id
   layerId: string; // id from esri layer
   name: string; // layer name
+  label: string; // layer label
   layerType: LayerTypeName; // type of tots layer (sample, contamination, etc.)
   addedFrom: AddedFrom; // how the layer was added (file, url, etc.)
   scenarioName: string; // user defined scenario name

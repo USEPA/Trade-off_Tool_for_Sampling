@@ -33,7 +33,7 @@ import { polygonSymbol } from 'config/symbols';
 function getLayerName(layers: LayerType[], desiredName: string) {
   let duplicateCount = 0;
   layers.forEach((layer) => {
-    if (layer.value === desiredName) duplicateCount += 1;
+    if (layer.name === desiredName) duplicateCount += 1;
   });
 
   return duplicateCount > 0
@@ -705,8 +705,8 @@ function FilePanel() {
     const layerToAdd: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
-      value: file.name,
-      name: layerName,
+      value: layerName,
+      name: file.name,
       label: layerName,
       layerType: layerType.value,
       scenarioName: '',
@@ -864,8 +864,8 @@ function FilePanel() {
       layersAdded.push({
         id: -1,
         layerId: layerToAdd.id,
-        value: file.name,
-        name: layerName,
+        value: layerName,
+        name: file.name,
         label: layerName,
         layerType: layerType.value,
         scenarioName: '',

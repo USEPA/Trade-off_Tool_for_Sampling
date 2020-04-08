@@ -98,7 +98,7 @@ function EditLayerMetaData({
 
     // find the layer being edited
     const index = layers.findIndex(
-      (layer) => layer.id === sketchLayer.id && layer.name === sketchLayer.name,
+      (layer) => layer.layerId === sketchLayer.layerId,
     );
 
     if (index === -1) {

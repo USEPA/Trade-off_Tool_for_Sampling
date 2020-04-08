@@ -515,7 +515,7 @@ function Calculate() {
         <div css={sectionContainer}>
           <p css={layerInfo}>
             <strong>Layer Name: </strong>
-            {sketchLayer?.name}
+            {sketchLayer?.label}
           </p>
           <p css={layerInfo}>
             <strong>Scenario Name: </strong>

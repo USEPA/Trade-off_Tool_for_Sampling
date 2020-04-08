@@ -672,7 +672,7 @@ function LocateSamples() {
                     <MessageBox
                       severity="info"
                       title="Samples Added"
-                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.name}" layer`}
+                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.label}" layer`}
                     />
                   )}
                   {generateRandomResponse.status === 'failure' && (
