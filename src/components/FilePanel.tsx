@@ -578,6 +578,7 @@ function FilePanel() {
 
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
+  const [newLayerName, setNewLayerName] = React.useState('');
   React.useEffect(() => {
     if (
       !map ||
@@ -704,6 +705,7 @@ function FilePanel() {
     }
 
     const layerName = getLayerName(layers, file.name);
+    setNewLayerName(layerName);
     const graphicsLayer = new GraphicsLayer({
       graphics,
       title: layerName,
@@ -848,6 +850,7 @@ function FilePanel() {
       });
 
       const layerName = getLayerName(layers, file.name);
+      setNewLayerName(layerName);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
         objectIdField: layer.layerDefinition.objectIdField,
@@ -1033,11 +1036,22 @@ function FilePanel() {
                     />
                   )}
                   {uploadStatus === 'success' && (
-                    <MessageBox
-                      severity="info"
-                      title="Upload Succeeded"
-                      message={`${file.name} was successfully uploaded`}
-                    />
+                    <React.Fragment>
+                      {file.name === newLayerName && (
+                        <MessageBox
+                          severity="info"
+                          title="Upload Succeeded"
+                          message={`"${file.name}" was successfully uploaded`}
+                        />
+                      )}
+                      {file.name !== newLayerName && (
+                        <MessageBox
+                          severity="info"
+                          title="Upload Succeeded"
+                          message={`"${file.name}" was successfully uploaded as "${newLayerName}"`}
+                        />
+                      )}
+                    </React.Fragment>
                   )}
                   <input
                     id="generalize-features-input"
