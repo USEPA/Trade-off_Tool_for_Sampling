@@ -2,6 +2,8 @@
 
 import React, { ReactNode } from 'react';
 import { jsx, css } from '@emotion/core';
+import exceljs from 'exceljs';
+import { saveAs } from 'file-saver';
 // components
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
@@ -63,6 +65,47 @@ const downloadButtonContainerStyles = css`
 function CalculateResults() {
   const { calculateResults } = React.useContext(CalculateContext);
   const { sketchLayer } = React.useContext(SketchContext);
+
+  async function downloadResults() {
+    const workbook = new exceljs.Workbook();
+
+    // create/add the content for each work sheet
+    createSummarySheet(workbook);
+    createParameterSheet(workbook);
+    createResultsSheet(workbook);
+    createSamplesSheet(workbook);
+
+    // download the file
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), 'abc.xlsx');
+  }
+
+  function createSummarySheet(workbook: exceljs.Workbook) {
+    const summarySheet = workbook.addWorksheet('Summary');
+    let row = summarySheet.addRow(['Trade-off Tool for Sampling (TOTS)']);
+    row.font = { bold: true, size: 18 };
+
+    row = summarySheet.addRow(['Version: 1.0']);
+    row.font = { size: 11 };
+  }
+
+  function createParameterSheet(workbook: exceljs.Workbook) {
+    const parameterSheet = workbook.addWorksheet('Parameters');
+    let row = parameterSheet.addRow(['Parameters']);
+    row.font = { bold: true, size: 18 };
+  }
+
+  function createResultsSheet(workbook: exceljs.Workbook) {
+    const resultsSheet = workbook.addWorksheet('Detailed Results');
+    let row = resultsSheet.addRow(['Detailed Results']);
+    row.font = { bold: true, size: 18 };
+  }
+
+  function createSamplesSheet(workbook: exceljs.Workbook) {
+    const samplesSheet = workbook.addWorksheet('Sample Details');
+    let row = samplesSheet.addRow(['Sample Details']);
+    row.font = { bold: true, size: 18 };
+  }
 
   return (
     <div css={panelContainer}>
@@ -245,9 +288,7 @@ function CalculateResults() {
             />
           </div>
           <div css={downloadButtonContainerStyles}>
-            <button onClick={() => alert('Feature coming soon.')}>
-              Download
-            </button>
+            <button onClick={() => downloadResults()}>Download</button>
           </div>
         </React.Fragment>
       )}
