@@ -162,6 +162,8 @@ function EditLayerMetaData({
         id="scenario-name-input"
         disabled={!sketchLayer}
         css={inputStyles}
+        maxLength={250}
+        placeholder="Name used for published plan."
         value={sketchLayer.scenarioName}
         onChange={(ev) => {
           const newValue = ev.target.value;
@@ -180,6 +182,8 @@ function EditLayerMetaData({
         id="scenario-description-input"
         disabled={!sketchLayer}
         css={inputStyles}
+        maxLength={2048}
+        placeholder="Plan description metadata (limit: 2048 characters)"
         value={sketchLayer.scenarioDescription}
         onChange={(ev) => {
           const newValue = ev.target.value;
