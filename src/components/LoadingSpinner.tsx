@@ -95,6 +95,7 @@ function LoadingSpinner({ ...props }: Props) {
   if (isIE()) {
     return (
       <svg
+        data-testid="hmw-loading-spinner"
         css={ieSvgStyles}
         width="50"
         height="50"
@@ -107,7 +108,14 @@ function LoadingSpinner({ ...props }: Props) {
   }
 
   return (
-    <svg css={svgStyles} width="50" height="50" viewBox="0 0 50 50" {...props}>
+    <svg
+      data-testid="hmw-loading-spinner"
+      css={svgStyles}
+      width="50"
+      height="50"
+      viewBox="0 0 50 50"
+      {...props}
+    >
       <circle css={circleStyles} cx="25" cy="25" r="20" />
     </svg>
   );

@@ -584,9 +584,12 @@ function LocateSamples() {
         </div>
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
-          <label htmlFor="sampling-layer-select">Specify Sampling Layer</label>
+          <label htmlFor="sampling-layer-select-input">
+            Specify Sampling Layer
+          </label>
           <Select
-            inputId="sampling-layer-select"
+            id="sampling-layer-select"
+            inputId="sampling-layer-select-input"
             css={layerSelectStyles}
             value={sketchLayer}
             onChange={(ev) => setSketchLayer(ev as LayerType)}
@@ -653,9 +656,10 @@ function LocateSamples() {
                     value={numberRandomSamples}
                     onChange={(ev) => setNumberRandomSamples(ev.target.value)}
                   />
-                  <label htmlFor="sample-type-select">Sample Type</label>
+                  <label htmlFor="sample-type-select-input">Sample Type</label>
                   <Select
-                    inputId="sample-type-select"
+                    id="sample-type-select"
+                    inputId="sample-type-select-input"
                     value={sampleType}
                     onChange={(ev) => setSampleType(ev as SampleSelectionType)}
                     options={[
@@ -667,9 +671,12 @@ function LocateSamples() {
                       { value: 'Swab', label: 'Swab' },
                     ]}
                   />
-                  <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
+                  <label htmlFor="aoi-mask-select-input">
+                    Area of Interest Mask
+                  </label>
                   <Select
-                    inputId="aoi-mask-select"
+                    id="aoi-mask-select"
+                    inputId="aoi-mask-select-input"
                     isClearable={true}
                     value={aoiSketchLayer}
                     onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
@@ -741,12 +748,13 @@ function LocateSamples() {
           </AccordionItem>
           <AccordionItem title={'Include Contamination Map (Optional)'}>
             <div css={sectionContainer}>
-              <label htmlFor="contamination-map-select">
+              <label htmlFor="contamination-map-select-input">
                 Contamination map
               </label>
               <div css={inlineMenuStyles}>
                 <Select
-                  inputId="contamination-map-select"
+                  id="contamination-map-select"
+                  inputId="contamination-map-select-input"
                   css={contaminationMapSelectStyles}
                   isClearable={true}
                   value={contaminationMap}

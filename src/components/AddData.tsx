@@ -61,8 +61,8 @@ function AddData() {
       <div>
         <h2>Add Data</h2>
         <Select
+          id="add-data-select"
           css={panelSelectStyles}
-          data-testid="tots-add-data-select"
           value={location}
           onChange={(ev) => setLocation(ev as LocationType)}
           options={addFromOptions}
