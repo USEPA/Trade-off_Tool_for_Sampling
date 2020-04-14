@@ -614,11 +614,11 @@ function CalculateResults() {
         .number(calculateResults.data['Time to Complete Sampling']);
 
       resultsSheet
-        .cell(11, 3)
+        .cell(12, 3)
         .string('Total Sampling Labor Cost')
         .style(labelStyle);
       resultsSheet
-        .cell(11, 4)
+        .cell(12, 4)
         .number(calculateResults.data['Total Sampling Labor Cost'])
         .style(currencyStyle);
 
