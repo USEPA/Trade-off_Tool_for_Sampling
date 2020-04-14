@@ -9,6 +9,8 @@ import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import LoadingSpinner from './LoadingSpinner';
+// styles
+import { colors } from 'styles';
 
 // --- styles (LabelValue) ---
 const labelValueStyles = css`
@@ -19,6 +21,11 @@ const labelValueStyles = css`
 
 const valueStyles = css`
   padding-left: 10px;
+`;
+
+const resourceTallySeparator = css`
+  border-top: none;
+  border-bottom: 3px solid ${colors.darkaqua()};
 `;
 
 // --- components (LabelValue) ---
@@ -106,7 +113,7 @@ function CalculateResults() {
               label="Limiting Time Factor"
               value={calculateResults.data['Limiting Time Factor']}
             />
-            <hr />
+            <hr css={resourceTallySeparator} />
 
             <h4>Sampling Operation</h4>
             <LabelValue
@@ -125,7 +132,7 @@ function CalculateResults() {
               label="Total Sampling Material Cost ($)"
               value={calculateResults.data['Material Cost']}
             />
-            <hr />
+            <hr css={resourceTallySeparator} />
 
             <h4>Analysis Operation</h4>
             <LabelValue
@@ -168,7 +175,7 @@ function CalculateResults() {
               label="Percent of Area Sampled"
               value={calculateResults.data['Percent of Area Sampled']}
             />
-            <hr />
+            <hr css={resourceTallySeparator} />
 
             <h4>Sampling</h4>
             <LabelValue
@@ -209,7 +216,7 @@ function CalculateResults() {
               label="Total Sampling Labor Cost ($)"
               value={calculateResults.data['Total Sampling Labor Cost']}
             />
-            <hr />
+            <hr css={resourceTallySeparator} />
 
             <h4>Analysis</h4>
             <LabelValue

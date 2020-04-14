@@ -167,8 +167,7 @@ function Publish() {
     });
 
     const layerEdits = edits.edits.filter(
-      (editLayer) =>
-        editLayer.id === sketchLayer.id && editLayer.name === sketchLayer.name,
+      (editLayer) => editLayer.layerId === sketchLayer.layerId,
     );
 
     publish({
@@ -266,7 +265,7 @@ function Publish() {
       <div css={sectionContainer}>
         <p css={layerInfo}>
           <strong>Layer Name: </strong>
-          {sketchLayer?.name}
+          {sketchLayer?.label}
         </p>
         {publishResponse.status === 'name-not-available' && (
           <EditLayerMetaData

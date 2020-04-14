@@ -98,7 +98,7 @@ function EditLayerMetaData({
 
     // find the layer being edited
     const index = layers.findIndex(
-      (layer) => layer.id === sketchLayer.id && layer.name === sketchLayer.name,
+      (layer) => layer.layerId === sketchLayer.layerId,
     );
 
     if (index === -1) {
@@ -156,12 +156,18 @@ function EditLayerMetaData({
   if (!sketchLayer) return null;
 
   return (
-    <div>
+    <form
+      onSubmit={(ev) => {
+        ev.preventDefault();
+      }}
+    >
       <label htmlFor="scenario-name-input">Scenario Name</label>
       <input
         id="scenario-name-input"
         disabled={!sketchLayer}
         css={inputStyles}
+        maxLength={250}
+        placeholder="Published layer name"
         value={sketchLayer.scenarioName}
         onChange={(ev) => {
           const newValue = ev.target.value;
@@ -180,6 +186,8 @@ function EditLayerMetaData({
         id="scenario-description-input"
         disabled={!sketchLayer}
         css={inputStyles}
+        maxLength={2048}
+        placeholder="Layer description (2048 characters)"
         value={sketchLayer.scenarioDescription}
         onChange={(ev) => {
           const newValue = ev.target.value;
@@ -211,6 +219,7 @@ function EditLayerMetaData({
       <div css={saveButtonContainerStyles}>
         <button
           css={saveButtonStyles(saveStatus)}
+          type="submit"
           disabled={
             saveStatus === 'none' ||
             saveStatus === 'fetching' ||
@@ -236,7 +245,7 @@ function EditLayerMetaData({
           )}
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 

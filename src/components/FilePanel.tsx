@@ -31,14 +31,22 @@ import { polygonSymbol } from 'config/symbols';
  * it appends in index to the end (i.e. '<desiredName> (2)').
  */
 function getLayerName(layers: LayerType[], desiredName: string) {
-  let duplicateCount = 0;
+  // get a list of names in use
+  let usedNames: string[] = [];
   layers.forEach((layer) => {
-    if (layer.value === desiredName) duplicateCount += 1;
+    usedNames.push(layer.label);
   });
 
-  return duplicateCount > 0
-    ? `${desiredName} (${duplicateCount})`
-    : desiredName;
+  // Find a name where there is not a collision.
+  // Most of the time this loop will be skipped.
+  let duplicateCount = 0;
+  let newName = desiredName;
+  while (usedNames.includes(newName)) {
+    duplicateCount += 1;
+    newName = `${desiredName} (${duplicateCount})`;
+  }
+
+  return newName;
 }
 
 const layerOptions: LayerSelectType[] = [
@@ -240,16 +248,6 @@ function FilePanel() {
       return;
     }
 
-    // reset state management values
-    setUploadStatus('fetching');
-    setLastFileName('');
-    setAnalyzeResponse(null);
-    setGenerateResponse(null);
-    setAnalyzeCalled(false);
-    setGenerateCalled(false);
-    setFeaturesAdded(false);
-    setMissingAttributes('');
-
     // get the filetype
     const file = acceptedFiles[0];
     let fileType = '';
@@ -263,6 +261,16 @@ function FilePanel() {
     // set the file state
     file['esriFileType'] = fileType;
     setFile(file);
+
+    // reset state management values
+    setUploadStatus('fetching');
+    setLastFileName('');
+    setAnalyzeResponse(null);
+    setGenerateResponse(null);
+    setAnalyzeCalled(false);
+    setGenerateCalled(false);
+    setFeaturesAdded(false);
+    setMissingAttributes('');
 
     if (!fileType) {
       setUploadStatus('invalid-file-type');
@@ -570,6 +578,7 @@ function FilePanel() {
 
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
+  const [newLayerName, setNewLayerName] = React.useState('');
   React.useEffect(() => {
     if (
       !map ||
@@ -696,6 +705,7 @@ function FilePanel() {
     }
 
     const layerName = getLayerName(layers, file.name);
+    setNewLayerName(layerName);
     const graphicsLayer = new GraphicsLayer({
       graphics,
       title: layerName,
@@ -705,8 +715,8 @@ function FilePanel() {
     const layerToAdd: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
-      value: file.name,
-      name: layerName,
+      value: layerName,
+      name: file.name,
       label: layerName,
       layerType: layerType.value,
       scenarioName: '',
@@ -840,6 +850,7 @@ function FilePanel() {
       });
 
       const layerName = getLayerName(layers, file.name);
+      setNewLayerName(layerName);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
         objectIdField: layer.layerDefinition.objectIdField,
@@ -864,8 +875,8 @@ function FilePanel() {
       layersAdded.push({
         id: -1,
         layerId: layerToAdd.id,
-        value: file.name,
-        name: layerName,
+        value: layerName,
+        name: file.name,
         label: layerName,
         layerType: layerType.value,
         scenarioName: '',
@@ -1027,11 +1038,22 @@ function FilePanel() {
                     />
                   )}
                   {uploadStatus === 'success' && (
-                    <MessageBox
-                      severity="info"
-                      title="Upload Succeeded"
-                      message={`${file.name} was successfully uploaded`}
-                    />
+                    <React.Fragment>
+                      {file.name === newLayerName && (
+                        <MessageBox
+                          severity="info"
+                          title="Upload Succeeded"
+                          message={`"${file.name}" was successfully uploaded`}
+                        />
+                      )}
+                      {file.name !== newLayerName && (
+                        <MessageBox
+                          severity="info"
+                          title="Upload Succeeded"
+                          message={`"${file.name}" was successfully uploaded as "${newLayerName}"`}
+                        />
+                      )}
+                    </React.Fragment>
                   )}
                   <input
                     id="generalize-features-input"

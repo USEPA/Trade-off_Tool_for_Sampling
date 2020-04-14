@@ -136,12 +136,9 @@ const addButtonStyles = css`
   height: 38px; /* same height as ReactSelect */
 `;
 
-const contaminationMapSelectStyles = css`
+const fullWidthSelectStyles = css`
   width: 100%;
-`;
-
-const orStyles = css`
-  margin: 0 5px;
+  margin-right: 10px;
 `;
 
 const inputStyles = css`
@@ -674,33 +671,18 @@ function LocateSamples() {
                   <label htmlFor="aoi-mask-select-input">
                     Area of Interest Mask
                   </label>
-                  <Select
-                    id="aoi-mask-select"
-                    inputId="aoi-mask-select-input"
-                    isClearable={true}
-                    value={aoiSketchLayer}
-                    onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
-                    options={layers.filter(
-                      (layer) => layer.layerType === 'Area of Interest',
-                    )}
-                  />
-                  <br />
-                  <div css={centerTextStyles}>
-                    <em>OR</em>
-                  </div>
                   <div css={inlineMenuStyles}>
-                    <button
-                      id="aoi"
-                      title="Draw Area of Interest Mask"
-                      className="sketch-button"
-                      onClick={sketchAoiButtonClick}
-                      css={sketchAoiButtonStyles}
-                    >
-                      <span css={sketchAoiTextStyles}>
-                        <i className="fas fa-draw-polygon" />{' '}
-                        <span>Draw Area of Interest Mask</span>
-                      </span>
-                    </button>
+                    <Select
+                      id="aoi-mask-select"
+                      inputId="aoi-mask-select-input"
+                      css={fullWidthSelectStyles}
+                      isClearable={true}
+                      value={aoiSketchLayer}
+                      onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
+                      options={layers.filter(
+                        (layer) => layer.layerType === 'Area of Interest',
+                      )}
+                    />
                     <button
                       css={addButtonStyles}
                       onClick={(ev) => {
@@ -714,11 +696,27 @@ function LocateSamples() {
                       Add
                     </button>
                   </div>
+                  <br />
+                  <div css={centerTextStyles}>
+                    <em>OR</em>
+                  </div>
+                  <button
+                    id="aoi"
+                    title="Draw Area of Interest Mask"
+                    className="sketch-button"
+                    onClick={sketchAoiButtonClick}
+                    css={sketchAoiButtonStyles}
+                  >
+                    <span css={sketchAoiTextStyles}>
+                      <i className="fas fa-draw-polygon" />{' '}
+                      <span>Draw Area of Interest Mask</span>
+                    </span>
+                  </button>
                   {generateRandomResponse.status === 'success' && (
                     <MessageBox
                       severity="info"
                       title="Samples Added"
-                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.name}" layer`}
+                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.label}" layer`}
                     />
                   )}
                   {generateRandomResponse.status === 'failure' && (
@@ -755,7 +753,7 @@ function LocateSamples() {
                 <Select
                   id="contamination-map-select"
                   inputId="contamination-map-select-input"
-                  css={contaminationMapSelectStyles}
+                  css={fullWidthSelectStyles}
                   isClearable={true}
                   value={contaminationMap}
                   onChange={(ev) => setContaminationMap(ev as LayerType)}
@@ -763,7 +761,6 @@ function LocateSamples() {
                     (layer: any) => layer.layerType === 'Contamination Map',
                   )}
                 />
-                <em css={orStyles}>OR</em>
                 <button
                   css={addButtonStyles}
                   onClick={(ev) => {

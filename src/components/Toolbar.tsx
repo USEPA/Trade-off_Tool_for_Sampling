@@ -270,8 +270,14 @@ function Toolbar() {
 
         // add a delete button for each layer, but don't add it to sublayers
         if (!item.parent) {
+          item.actionsOpen = true;
           item.actionsSections = [
             [
+              {
+                title: 'Zoom to Layer',
+                className: 'esri-icon-zoom-in-magnifying-glass',
+                id: 'zoom-layer',
+              },
               {
                 title: 'Delete Layer',
                 className: 'esri-icon-trash',
@@ -287,6 +293,27 @@ function Toolbar() {
     layerList.on('trigger-action', (event) => {
       const id = event.action.id;
 
+      if (id === 'zoom-layer') {
+        if (event.item.layer.type === 'graphics') {
+          const graphicsLayer = event.item.layer as __esri.GraphicsLayer;
+          mapView.goTo(graphicsLayer.graphics);
+          return;
+        }
+        if (event.item.layer.type === 'group') {
+          const groupLayer = event.item.layer as __esri.GroupLayer;
+          let fullExtent: __esri.Extent | null = null;
+          groupLayer.layers.forEach((layer) => {
+            if (!fullExtent) fullExtent = layer.fullExtent;
+            else fullExtent.union(layer.fullExtent);
+          });
+
+          if (fullExtent) mapView.goTo(fullExtent);
+          return;
+        }
+
+        const fullExtent = event.item.layer.fullExtent;
+        if (fullExtent) mapView.goTo(fullExtent);
+      }
       if (id === 'delete-layer') {
         // remove the layer from the map
         setLayerToRemove(event.item.layer);

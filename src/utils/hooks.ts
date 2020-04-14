@@ -80,7 +80,7 @@ function useEditsLayerStorage() {
     const graphicsLayers: __esri.GraphicsLayer[] = [];
     edits.edits.forEach((editsLayer) => {
       const sketchLayer = new GraphicsLayer({
-        title: editsLayer.name,
+        title: editsLayer.label,
         id: editsLayer.layerId,
       });
 
@@ -108,9 +108,9 @@ function useEditsLayerStorage() {
       newLayers.push({
         id: editsLayer.id,
         layerId: editsLayer.layerId,
-        value: `${editsLayer.id} - ${editsLayer.name} - from session`,
+        value: editsLayer.label,
         name: editsLayer.name,
-        label: editsLayer.name,
+        label: editsLayer.label,
         layerType: editsLayer.layerType,
         scenarioName: editsLayer.scenarioName,
         scenarioDescription: editsLayer.scenarioDescription,
