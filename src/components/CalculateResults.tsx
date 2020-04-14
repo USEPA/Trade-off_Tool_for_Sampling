@@ -222,6 +222,20 @@ function CalculateResults() {
     addResultsSheet();
     addSampleSheet();
 
+    // download the file
+    workbook
+      .writeToBuffer()
+      .then((buffer: any) => {
+        saveAs(new Blob([buffer]), `tots_${sketchLayer?.scenarioName}.xlsx`);
+        setDownloadStatus('success');
+      })
+      .catch((err: any) => {
+        console.error(err);
+        setDownloadStatus('excel-failure');
+      });
+
+    // --- functions for creating the content for each sheet ---
+
     function addSummarySheet() {
       // only here to satisfy typescript
       if (!sketchLayer || !calculateResults.data) return;
@@ -721,18 +735,6 @@ function CalculateResults() {
         currentRow += 1;
       });
     }
-
-    // download the file
-    workbook
-      .writeToBuffer()
-      .then((buffer: any) => {
-        saveAs(new Blob([buffer]), `tots_${sketchLayer?.scenarioName}.xlsx`);
-        setDownloadStatus('success');
-      })
-      .catch((err: any) => {
-        console.error(err);
-        setDownloadStatus('excel-failure');
-      });
   }, [sketchLayer, base64Screenshot, downloadStatus, calculateResults]);
 
   return (
