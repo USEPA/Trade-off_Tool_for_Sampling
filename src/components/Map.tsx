@@ -8,6 +8,8 @@ import MapWidgets from 'components/MapWidgets';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
+// utils
+import { getGraphicsArray } from 'utils/sketchUtils';
 
 // --- styles (Map) ---
 const mapStyles = (height: number) => {
@@ -115,22 +117,11 @@ function Map({ height }: Props) {
     if (!map || !mapView || !homeWidget) return;
     if (!sketchLayer?.sketchLayer) return;
 
-    let zoomGraphics: __esri.Graphic[] = [];
-    if (sketchLayer?.sketchLayer?.type === 'graphics') {
-      zoomGraphics = zoomGraphics.concat(
-        sketchLayer.sketchLayer.graphics.toArray(),
-      );
-    }
-    if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
-      zoomGraphics = zoomGraphics.concat(
-        aoiSketchLayer.sketchLayer.graphics.toArray(),
-      );
-    }
-    if (contaminationMap?.sketchLayer?.type === 'graphics') {
-      zoomGraphics = zoomGraphics.concat(
-        contaminationMap.sketchLayer.graphics.toArray(),
-      );
-    }
+    const zoomGraphics = getGraphicsArray([
+      sketchLayer,
+      aoiSketchLayer,
+      contaminationMap,
+    ]);
 
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics).then(() => {

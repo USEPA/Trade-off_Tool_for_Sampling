@@ -2,7 +2,8 @@
 
 import React, { ReactNode } from 'react';
 import { jsx, css } from '@emotion/core';
-import exceljs from 'exceljs';
+// @ts-ignore
+import xl from 'excel4node';
 import { saveAs } from 'file-saver';
 // components
 import ShowLessMore from 'components/ShowLessMore';
@@ -10,9 +11,11 @@ import ShowLessMore from 'components/ShowLessMore';
 import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // utils
+import { getGraphicsArray } from 'utils/sketchUtils';
 import LoadingSpinner from './LoadingSpinner';
 // styles
 import { colors } from 'styles';
+import MessageBox from './MessageBox';
 
 // --- styles (LabelValue) ---
 const labelValueStyles = css`
@@ -61,51 +64,309 @@ const downloadButtonContainerStyles = css`
   margin-top: 15px;
 `;
 
+type DownloadStatus =
+  | 'none'
+  | 'fetching'
+  | 'success'
+  | 'screenshot-failure'
+  | 'base64-failure'
+  | 'excel-failure';
+
 // --- components (CalculateResults) ---
 function CalculateResults() {
-  const { calculateResults } = React.useContext(CalculateContext);
-  const { sketchLayer } = React.useContext(SketchContext);
+  const {
+    calculateResults,
+    contaminationMap, //
+  } = React.useContext(CalculateContext);
+  const {
+    mapView,
+    sketchLayer,
+    aoiSketchLayer, //
+  } = React.useContext(SketchContext);
 
-  async function downloadResults() {
-    const workbook = new exceljs.Workbook();
+  const [
+    downloadStatus,
+    setDownloadStatus, //
+  ] = React.useState<DownloadStatus>('none');
 
-    // create/add the content for each work sheet
-    createSummarySheet(workbook);
-    createParameterSheet(workbook);
-    createResultsSheet(workbook);
-    createSamplesSheet(workbook);
+  // take the screenshot
+  const [
+    screenshotInitialized,
+    setScreenshotInitialized, //
+  ] = React.useState(false);
+  const [
+    screenshot,
+    setScreenshot, //
+  ] = React.useState<__esri.Screenshot | null>(null);
+  React.useEffect(() => {
+    if (screenshotInitialized) return;
+    if (!mapView || downloadStatus !== 'fetching') return;
+
+    // save the current extent
+    const initialExtent = mapView.extent;
+
+    // zoom to the graphics for the active layers
+    const zoomGraphics = getGraphicsArray([
+      sketchLayer,
+      aoiSketchLayer,
+      contaminationMap,
+    ]);
+    if (zoomGraphics.length > 0) {
+      mapView.goTo(zoomGraphics, { animate: false }).then(() => {
+        // allow some time for the layers to load in prior to taking the screenshot
+        setTimeout(() => {
+          // const mapImageRes = await printTask.execute(params);
+          mapView
+            .takeScreenshot()
+            .then((data) => {
+              setScreenshot(data);
+
+              // zoom back to the initial extent
+              mapView.goTo(initialExtent, { animate: false });
+            })
+            .catch((err) => {
+              console.error(err);
+              setDownloadStatus('screenshot-failure');
+
+              // zoom back to the initial extent
+              mapView.goTo(initialExtent, { animate: false });
+            });
+        }, 1500);
+      });
+    }
+
+    setScreenshotInitialized(true);
+  }, [
+    mapView,
+    sketchLayer,
+    aoiSketchLayer,
+    contaminationMap,
+    downloadStatus,
+    screenshotInitialized,
+  ]);
+
+  // convert the screenshot to base64
+  const [base64Initialized, setBase64Initialized] = React.useState(false);
+  const [base64Screenshot, setBase64Screenshot] = React.useState('');
+  React.useEffect(() => {
+    if (base64Initialized) return;
+    if (downloadStatus !== 'fetching' || !screenshot) return;
+
+    let canvas: any = document.createElement('CANVAS');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onerror = function () {
+      setDownloadStatus('base64-failure');
+    };
+    img.oninvalid = function () {
+      setDownloadStatus('base64-failure');
+    };
+    img.onload = function () {
+      // draw the img on a canvas
+      canvas.height = img.height;
+      canvas.width = img.width;
+      ctx.drawImage(img, 0, 0);
+
+      // get the data url
+      const url = canvas.toDataURL('image/jpeg');
+      url ? setBase64Screenshot(url) : setDownloadStatus('base64-failure');
+
+      // Clean up
+      canvas = null;
+    };
+    img.src = screenshot.dataUrl;
+
+    setBase64Initialized(true);
+  }, [screenshot, downloadStatus, base64Initialized]);
+
+  // export the excel doc
+  React.useEffect(() => {
+    if (
+      !sketchLayer ||
+      downloadStatus !== 'fetching' ||
+      !base64Screenshot ||
+      calculateResults.status !== 'success' ||
+      !calculateResults.data
+    ) {
+      return;
+    }
+
+    const workbook = new xl.Workbook({
+      defaultFont: {
+        size: 12,
+        name: 'Calibri',
+      },
+    });
+
+    // create the styles
+    const valueColumnWidth = 19.29;
+    const sheetTitleStyle = workbook.createStyle({
+      font: { bold: true, size: 18 },
+    });
+    const labelStyle = workbook.createStyle({ font: { bold: true } });
+    const underlinedLabelStyle = workbook.createStyle({
+      font: { bold: true, underline: true },
+    });
+    const currencyStyle = workbook.createStyle({
+      numberFormat: '$#,##0.00; ($#,##.00); -',
+    });
+
+    // create the sheets
+    const summarySheet = workbook.addWorksheet('Summary');
+    const parameterSheet = workbook.addWorksheet('Parameters');
+    const resultsSheet = workbook.addWorksheet('Detailed Results');
+    const samplesSheet = workbook.addWorksheet('Sample Details');
+
+    // ----- BEGIN summary sheet -----
+    summarySheet.column(1).setWidth(22.25);
+    summarySheet.column(2).setWidth(valueColumnWidth);
+    summarySheet.column(3).setWidth(35.88);
+    summarySheet.column(4).setWidth(valueColumnWidth);
+    summarySheet.column(5).setWidth(33.13);
+    summarySheet.column(6).setWidth(valueColumnWidth);
+    summarySheet
+      .cell(1, 1)
+      .string('Trade-off Tool for Sampling (TOTS) Summary')
+      .style(sheetTitleStyle);
+    summarySheet.cell(2, 1).string('Version: 1.0');
+    summarySheet.cell(4, 1).string('Scenario Name').style(underlinedLabelStyle);
+    summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
+    summarySheet.cell(5, 1).string('Scenario Description').style(labelStyle);
+    summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
+
+    // col 1 & 2
+    summarySheet.cell(7, 1).string('Sampling Plan').style(underlinedLabelStyle);
+    summarySheet.cell(8, 1).string('Total Number of Samples').style(labelStyle);
+    summarySheet
+      .cell(8, 2)
+      .number(calculateResults.data['Total Number of Samples']);
+
+    summarySheet.cell(9, 1).string('Total Cost').style(labelStyle);
+    summarySheet
+      .cell(9, 2)
+      .number(calculateResults.data['Total Cost'])
+      .style(currencyStyle);
+
+    summarySheet.cell(10, 1).string('Total Time (days)').style(labelStyle);
+    summarySheet.cell(10, 2).number(calculateResults.data['Total Time']);
+
+    summarySheet.cell(11, 1).string('Limiting Time Factor').style(labelStyle);
+    summarySheet
+      .cell(11, 2)
+      .string(calculateResults.data['Limiting Time Factor']);
+
+    // col 3 & 4
+    summarySheet
+      .cell(7, 3)
+      .string('Sampling Operation')
+      .style(underlinedLabelStyle);
+    summarySheet
+      .cell(8, 3)
+      .string('Total Required Sampling Time (team hrs)')
+      .style(labelStyle);
+    summarySheet
+      .cell(8, 4)
+      .number(calculateResults.data['Total Required Sampling Time']);
+    summarySheet
+      .cell(9, 3)
+      .string('Time to Complete Sampling (days)')
+      .style(labelStyle);
+    summarySheet
+      .cell(9, 4)
+      .number(calculateResults.data['Time to Complete Sampling']);
+    summarySheet
+      .cell(10, 3)
+      .string('Total Sampling Labor Cost')
+      .style(labelStyle);
+    summarySheet
+      .cell(10, 4)
+      .number(calculateResults.data['Total Sampling Labor Cost'])
+      .style(currencyStyle);
+    summarySheet
+      .cell(11, 3)
+      .string('Total Sampling Material Cost')
+      .style(labelStyle);
+    summarySheet
+      .cell(11, 4)
+      .number(calculateResults.data['Material Cost'])
+      .style(currencyStyle);
+
+    // col 4 & 5
+    summarySheet
+      .cell(7, 5)
+      .string('Analysis Operation')
+      .style(underlinedLabelStyle);
+    summarySheet
+      .cell(8, 5)
+      .string('Total Required Analysis Time (lab hrs)')
+      .style(labelStyle);
+    summarySheet.cell(8, 6).number(calculateResults.data['Time to Analyze']);
+    summarySheet
+      .cell(9, 5)
+      .string('Time to Complete Analyses (days)')
+      .style(labelStyle);
+    summarySheet
+      .cell(9, 6)
+      .number(calculateResults.data['Time to Complete Analyses']);
+    summarySheet
+      .cell(10, 5)
+      .string('Total Analysis Labor Cost')
+      .style(labelStyle);
+    summarySheet
+      .cell(10, 6)
+      .number(calculateResults.data['Analysis Labor Cost'])
+      .style(currencyStyle);
+    summarySheet
+      .cell(11, 5)
+      .string('Total Analysis Material Cost')
+      .style(labelStyle);
+    summarySheet
+      .cell(11, 6)
+      .number(calculateResults.data['Analysis Material Cost'])
+      .style(currencyStyle);
+
+    const base64 = base64Screenshot.replace(/^data:image\/jpeg;base64,/, '');
+    summarySheet.addImage({
+      image: Buffer.from(base64, 'base64'),
+      name: 'logo', // name is not required param
+      type: 'picture',
+      position: {
+        type: 'oneCellAnchor',
+        from: {
+          col: 2,
+          colOff: 0,
+          row: 14,
+          rowOff: 0,
+        },
+      },
+    });
+    // ----- END summary sheet -----
+
+    // ----- BEGIN parameters sheet -----
+    parameterSheet.cell(1, 1).string('Parameters').style(sheetTitleStyle);
+    // ----- END parameters sheet -----
+
+    // ----- BEGIN detailed results sheet -----
+    resultsSheet.cell(1, 1).string('Detailed Results').style(sheetTitleStyle);
+    // ----- END detailed results sheet -----
+
+    // ----- BEGIN sample details sheet -----
+    samplesSheet.cell(1, 1).string('Sample Details').style(sheetTitleStyle);
+    // ----- END sample details sheet -----
 
     // download the file
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), 'abc.xlsx');
-  }
-
-  function createSummarySheet(workbook: exceljs.Workbook) {
-    const summarySheet = workbook.addWorksheet('Summary');
-    let row = summarySheet.addRow(['Trade-off Tool for Sampling (TOTS)']);
-    row.font = { bold: true, size: 18 };
-
-    row = summarySheet.addRow(['Version: 1.0']);
-    row.font = { size: 11 };
-  }
-
-  function createParameterSheet(workbook: exceljs.Workbook) {
-    const parameterSheet = workbook.addWorksheet('Parameters');
-    let row = parameterSheet.addRow(['Parameters']);
-    row.font = { bold: true, size: 18 };
-  }
-
-  function createResultsSheet(workbook: exceljs.Workbook) {
-    const resultsSheet = workbook.addWorksheet('Detailed Results');
-    let row = resultsSheet.addRow(['Detailed Results']);
-    row.font = { bold: true, size: 18 };
-  }
-
-  function createSamplesSheet(workbook: exceljs.Workbook) {
-    const samplesSheet = workbook.addWorksheet('Sample Details');
-    let row = samplesSheet.addRow(['Sample Details']);
-    row.font = { bold: true, size: 18 };
-  }
+    workbook
+      .writeToBuffer()
+      .then((buffer: any) => {
+        saveAs(new Blob([buffer]), `tots_${sketchLayer?.scenarioName}.xlsx`);
+        setDownloadStatus('success');
+      })
+      .catch((err: any) => {
+        console.error(err);
+        setDownloadStatus('excel-failure');
+      });
+  }, [sketchLayer, base64Screenshot, downloadStatus, calculateResults]);
 
   return (
     <div css={panelContainer}>
@@ -287,8 +548,50 @@ function CalculateResults() {
               value={calculateResults.data['Waste Weight']}
             />
           </div>
-          <div css={downloadButtonContainerStyles}>
-            <button onClick={() => downloadResults()}>Download</button>
+          <div>
+            {downloadStatus === 'fetching' && <LoadingSpinner />}
+            {downloadStatus === 'screenshot-failure' && (
+              <MessageBox
+                severity="error"
+                title="Download Error"
+                message="An error occurred while taking a screenshot of the map."
+              />
+            )}
+            {downloadStatus === 'base64-failure' && (
+              <MessageBox
+                severity="error"
+                title="Download Error"
+                message="An error occurred while converting the map screenshot."
+              />
+            )}
+            {downloadStatus === 'excel-failure' && (
+              <MessageBox
+                severity="error"
+                title="Download Error"
+                message="An error occurred while creating the excel document."
+              />
+            )}
+            {downloadStatus === 'success' && (
+              <MessageBox
+                severity="info"
+                title="Success"
+                message="The file was successfully downloaded."
+              />
+            )}
+            <div css={downloadButtonContainerStyles}>
+              <button
+                onClick={() => {
+                  // reset everything so the download happens
+                  setDownloadStatus('fetching');
+                  setScreenshotInitialized(false);
+                  setScreenshot(null);
+                  setBase64Initialized(false);
+                  setBase64Screenshot('');
+                }}
+              >
+                Download
+              </button>
+            </div>
           </div>
         </React.Fragment>
       )}
