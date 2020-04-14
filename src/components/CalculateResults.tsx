@@ -213,147 +213,187 @@ function CalculateResults() {
     });
 
     // create the sheets
-    const summarySheet = workbook.addWorksheet('Summary');
-    const parameterSheet = workbook.addWorksheet('Parameters');
-    const resultsSheet = workbook.addWorksheet('Detailed Results');
-    const samplesSheet = workbook.addWorksheet('Sample Details');
+    addSummarySheet();
+    addParameterSheet();
+    addResultsSheet();
+    addSampleSheet();
 
-    // ----- BEGIN summary sheet -----
-    summarySheet.column(1).setWidth(22.25);
-    summarySheet.column(2).setWidth(valueColumnWidth);
-    summarySheet.column(3).setWidth(35.88);
-    summarySheet.column(4).setWidth(valueColumnWidth);
-    summarySheet.column(5).setWidth(33.13);
-    summarySheet.column(6).setWidth(valueColumnWidth);
-    summarySheet
-      .cell(1, 1)
-      .string('Trade-off Tool for Sampling (TOTS) Summary')
-      .style(sheetTitleStyle);
-    summarySheet.cell(2, 1).string('Version: 1.0');
-    summarySheet.cell(4, 1).string('Scenario Name').style(underlinedLabelStyle);
-    summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
-    summarySheet.cell(5, 1).string('Scenario Description').style(labelStyle);
-    summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
+    function addSummarySheet() {
+      // only here to satisfy typescript
+      if (!sketchLayer || !calculateResults.data) return;
 
-    // col 1 & 2
-    summarySheet.cell(7, 1).string('Sampling Plan').style(underlinedLabelStyle);
-    summarySheet.cell(8, 1).string('Total Number of Samples').style(labelStyle);
-    summarySheet
-      .cell(8, 2)
-      .number(calculateResults.data['Total Number of Samples']);
+      // add the sheet
+      const summarySheet = workbook.addWorksheet('Summary');
 
-    summarySheet.cell(9, 1).string('Total Cost').style(labelStyle);
-    summarySheet
-      .cell(9, 2)
-      .number(calculateResults.data['Total Cost'])
-      .style(currencyStyle);
+      // setup column widths
+      summarySheet.column(1).setWidth(22.25);
+      summarySheet.column(2).setWidth(valueColumnWidth);
+      summarySheet.column(3).setWidth(35.88);
+      summarySheet.column(4).setWidth(valueColumnWidth);
+      summarySheet.column(5).setWidth(33.13);
+      summarySheet.column(6).setWidth(valueColumnWidth);
 
-    summarySheet.cell(10, 1).string('Total Time (days)').style(labelStyle);
-    summarySheet.cell(10, 2).number(calculateResults.data['Total Time']);
+      // add the header
+      summarySheet
+        .cell(1, 1)
+        .string('Trade-off Tool for Sampling (TOTS) Summary')
+        .style(sheetTitleStyle);
+      summarySheet.cell(2, 1).string('Version: 1.0');
+      summarySheet
+        .cell(4, 1)
+        .string('Scenario Name')
+        .style(underlinedLabelStyle);
+      summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
+      summarySheet.cell(5, 1).string('Scenario Description').style(labelStyle);
+      summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
 
-    summarySheet.cell(11, 1).string('Limiting Time Factor').style(labelStyle);
-    summarySheet
-      .cell(11, 2)
-      .string(calculateResults.data['Limiting Time Factor']);
+      // col 1 & 2
+      summarySheet
+        .cell(7, 1)
+        .string('Sampling Plan')
+        .style(underlinedLabelStyle);
+      summarySheet
+        .cell(8, 1)
+        .string('Total Number of Samples')
+        .style(labelStyle);
+      summarySheet
+        .cell(8, 2)
+        .number(calculateResults.data['Total Number of Samples']);
 
-    // col 3 & 4
-    summarySheet
-      .cell(7, 3)
-      .string('Sampling Operation')
-      .style(underlinedLabelStyle);
-    summarySheet
-      .cell(8, 3)
-      .string('Total Required Sampling Time (team hrs)')
-      .style(labelStyle);
-    summarySheet
-      .cell(8, 4)
-      .number(calculateResults.data['Total Required Sampling Time']);
-    summarySheet
-      .cell(9, 3)
-      .string('Time to Complete Sampling (days)')
-      .style(labelStyle);
-    summarySheet
-      .cell(9, 4)
-      .number(calculateResults.data['Time to Complete Sampling']);
-    summarySheet
-      .cell(10, 3)
-      .string('Total Sampling Labor Cost')
-      .style(labelStyle);
-    summarySheet
-      .cell(10, 4)
-      .number(calculateResults.data['Total Sampling Labor Cost'])
-      .style(currencyStyle);
-    summarySheet
-      .cell(11, 3)
-      .string('Total Sampling Material Cost')
-      .style(labelStyle);
-    summarySheet
-      .cell(11, 4)
-      .number(calculateResults.data['Material Cost'])
-      .style(currencyStyle);
+      summarySheet.cell(9, 1).string('Total Cost').style(labelStyle);
+      summarySheet
+        .cell(9, 2)
+        .number(calculateResults.data['Total Cost'])
+        .style(currencyStyle);
 
-    // col 4 & 5
-    summarySheet
-      .cell(7, 5)
-      .string('Analysis Operation')
-      .style(underlinedLabelStyle);
-    summarySheet
-      .cell(8, 5)
-      .string('Total Required Analysis Time (lab hrs)')
-      .style(labelStyle);
-    summarySheet.cell(8, 6).number(calculateResults.data['Time to Analyze']);
-    summarySheet
-      .cell(9, 5)
-      .string('Time to Complete Analyses (days)')
-      .style(labelStyle);
-    summarySheet
-      .cell(9, 6)
-      .number(calculateResults.data['Time to Complete Analyses']);
-    summarySheet
-      .cell(10, 5)
-      .string('Total Analysis Labor Cost')
-      .style(labelStyle);
-    summarySheet
-      .cell(10, 6)
-      .number(calculateResults.data['Analysis Labor Cost'])
-      .style(currencyStyle);
-    summarySheet
-      .cell(11, 5)
-      .string('Total Analysis Material Cost')
-      .style(labelStyle);
-    summarySheet
-      .cell(11, 6)
-      .number(calculateResults.data['Analysis Material Cost'])
-      .style(currencyStyle);
+      summarySheet.cell(10, 1).string('Total Time (days)').style(labelStyle);
+      summarySheet.cell(10, 2).number(calculateResults.data['Total Time']);
 
-    const base64 = base64Screenshot.replace(/^data:image\/jpeg;base64,/, '');
-    summarySheet.addImage({
-      image: Buffer.from(base64, 'base64'),
-      name: 'logo', // name is not required param
-      type: 'picture',
-      position: {
-        type: 'oneCellAnchor',
-        from: {
-          col: 2,
-          colOff: 0,
-          row: 14,
-          rowOff: 0,
+      summarySheet.cell(11, 1).string('Limiting Time Factor').style(labelStyle);
+      summarySheet
+        .cell(11, 2)
+        .string(calculateResults.data['Limiting Time Factor']);
+
+      // col 3 & 4
+      summarySheet
+        .cell(7, 3)
+        .string('Sampling Operation')
+        .style(underlinedLabelStyle);
+      summarySheet
+        .cell(8, 3)
+        .string('Total Required Sampling Time (team hrs)')
+        .style(labelStyle);
+      summarySheet
+        .cell(8, 4)
+        .number(calculateResults.data['Total Required Sampling Time']);
+      summarySheet
+        .cell(9, 3)
+        .string('Time to Complete Sampling (days)')
+        .style(labelStyle);
+      summarySheet
+        .cell(9, 4)
+        .number(calculateResults.data['Time to Complete Sampling']);
+      summarySheet
+        .cell(10, 3)
+        .string('Total Sampling Labor Cost')
+        .style(labelStyle);
+      summarySheet
+        .cell(10, 4)
+        .number(calculateResults.data['Total Sampling Labor Cost'])
+        .style(currencyStyle);
+      summarySheet
+        .cell(11, 3)
+        .string('Total Sampling Material Cost')
+        .style(labelStyle);
+      summarySheet
+        .cell(11, 4)
+        .number(calculateResults.data['Material Cost'])
+        .style(currencyStyle);
+
+      // col 4 & 5
+      summarySheet
+        .cell(7, 5)
+        .string('Analysis Operation')
+        .style(underlinedLabelStyle);
+      summarySheet
+        .cell(8, 5)
+        .string('Total Required Analysis Time (lab hrs)')
+        .style(labelStyle);
+      summarySheet.cell(8, 6).number(calculateResults.data['Time to Analyze']);
+      summarySheet
+        .cell(9, 5)
+        .string('Time to Complete Analyses (days)')
+        .style(labelStyle);
+      summarySheet
+        .cell(9, 6)
+        .number(calculateResults.data['Time to Complete Analyses']);
+      summarySheet
+        .cell(10, 5)
+        .string('Total Analysis Labor Cost')
+        .style(labelStyle);
+      summarySheet
+        .cell(10, 6)
+        .number(calculateResults.data['Analysis Labor Cost'])
+        .style(currencyStyle);
+      summarySheet
+        .cell(11, 5)
+        .string('Total Analysis Material Cost')
+        .style(labelStyle);
+      summarySheet
+        .cell(11, 6)
+        .number(calculateResults.data['Analysis Material Cost'])
+        .style(currencyStyle);
+
+      // add the map screenshot
+      const base64 = base64Screenshot.replace(/^data:image\/jpeg;base64,/, '');
+      summarySheet.addImage({
+        image: Buffer.from(base64, 'base64'),
+        name: 'logo', // name is not required param
+        type: 'picture',
+        position: {
+          type: 'oneCellAnchor',
+          from: {
+            col: 2,
+            colOff: 0,
+            row: 14,
+            rowOff: 0,
+          },
         },
-      },
-    });
-    // ----- END summary sheet -----
+      });
+    }
 
-    // ----- BEGIN parameters sheet -----
-    parameterSheet.cell(1, 1).string('Parameters').style(sheetTitleStyle);
-    // ----- END parameters sheet -----
+    function addParameterSheet() {
+      // only here to satisfy typescript
+      if (!sketchLayer || !calculateResults.data) return;
 
-    // ----- BEGIN detailed results sheet -----
-    resultsSheet.cell(1, 1).string('Detailed Results').style(sheetTitleStyle);
-    // ----- END detailed results sheet -----
+      // add the sheet
+      const parameterSheet = workbook.addWorksheet('Parameters');
 
-    // ----- BEGIN sample details sheet -----
-    samplesSheet.cell(1, 1).string('Sample Details').style(sheetTitleStyle);
-    // ----- END sample details sheet -----
+      // add the header
+      parameterSheet.cell(1, 1).string('Parameters').style(sheetTitleStyle);
+    }
+
+    function addResultsSheet() {
+      // only here to satisfy typescript
+      if (!sketchLayer || !calculateResults.data) return;
+
+      // add the sheet
+      const resultsSheet = workbook.addWorksheet('Detailed Results');
+
+      // add the header
+      resultsSheet.cell(1, 1).string('Detailed Results').style(sheetTitleStyle);
+    }
+
+    function addSampleSheet() {
+      // only here to satisfy typescript
+      if (!sketchLayer || !calculateResults.data) return;
+
+      // add the sheet
+      const samplesSheet = workbook.addWorksheet('Sample Details');
+
+      // add the header
+      samplesSheet.cell(1, 1).string('Sample Details').style(sheetTitleStyle);
+    }
 
     // download the file
     workbook
