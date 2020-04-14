@@ -369,7 +369,12 @@ function SearchPanel() {
         ]}
       />
       <label htmlFor="search-input">Search</label>
-      <div css={searchContainerStyles}>
+      <form
+        css={searchContainerStyles}
+        onSubmit={(ev) => {
+          ev.preventDefault();
+        }}
+      >
         <input
           id="search-input"
           css={searchInputStyles}
@@ -380,11 +385,12 @@ function SearchPanel() {
         <span css={searchSeparatorStyles} />
         <button
           css={searchButtonStyles}
+          type="submit"
           onClick={(ev) => setSearch(searchText)}
         >
           <i className="fas fa-search"></i>
         </button>
-      </div>
+      </form>
       <div css={filterContainerStyles}>
         <div>
           <input

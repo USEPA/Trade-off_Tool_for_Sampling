@@ -248,16 +248,6 @@ function FilePanel() {
       return;
     }
 
-    // reset state management values
-    setUploadStatus('fetching');
-    setLastFileName('');
-    setAnalyzeResponse(null);
-    setGenerateResponse(null);
-    setAnalyzeCalled(false);
-    setGenerateCalled(false);
-    setFeaturesAdded(false);
-    setMissingAttributes('');
-
     // get the filetype
     const file = acceptedFiles[0];
     let fileType = '';
@@ -271,6 +261,16 @@ function FilePanel() {
     // set the file state
     file['esriFileType'] = fileType;
     setFile(file);
+
+    // reset state management values
+    setUploadStatus('fetching');
+    setLastFileName('');
+    setAnalyzeResponse(null);
+    setGenerateResponse(null);
+    setAnalyzeCalled(false);
+    setGenerateCalled(false);
+    setFeaturesAdded(false);
+    setMissingAttributes('');
 
     if (!fileType) {
       setUploadStatus('invalid-file-type');
