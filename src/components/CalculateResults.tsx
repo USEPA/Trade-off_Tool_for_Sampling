@@ -491,8 +491,177 @@ function CalculateResults() {
       // add the sheet
       const resultsSheet = workbook.addWorksheet('Detailed Results');
 
+      // setup column widths
+      resultsSheet.column(1).setWidth(35.63);
+      resultsSheet.column(2).setWidth(valueColumnWidth);
+      resultsSheet.column(3).setWidth(36);
+      resultsSheet.column(4).setWidth(valueColumnWidth);
+      resultsSheet.column(5).setWidth(29.5);
+      resultsSheet.column(6).setWidth(valueColumnWidth);
+
       // add the header
       resultsSheet.cell(1, 1).string('Detailed Results').style(sheetTitleStyle);
+
+      // col 1 & 2
+      resultsSheet
+        .cell(3, 1, 3, 2, true)
+        .string('Spatial Information')
+        .style(columnTitleStyle);
+
+      resultsSheet
+        .cell(4, 1)
+        .string([
+          { bold: true },
+          'Total Sampled Area (ft',
+          { bold: true, vertAlign: 'superscript' },
+          '2',
+          { bold: true, vertAlign: 'baseline' },
+          ')',
+        ]);
+      resultsSheet
+        .cell(4, 2)
+        .number(calculateResults.data['Total Sampled Area']);
+
+      resultsSheet
+        .cell(5, 1)
+        .string([
+          { bold: true },
+          'User Specified Total Area of Interest (ft',
+          { bold: true, vertAlign: 'superscript' },
+          '2',
+          { bold: true, vertAlign: 'baseline' },
+          ')',
+        ]);
+      resultsSheet
+        .cell(5, 2)
+        .number(calculateResults.data['User Specified Total AOI']);
+
+      resultsSheet
+        .cell(6, 1)
+        .string('Percent of Area Sampled')
+        .style(labelStyle);
+      resultsSheet
+        .cell(6, 2)
+        .number(calculateResults.data['Percent of Area Sampled']);
+
+      // col 3 & 4
+      resultsSheet
+        .cell(3, 3, 3, 4, true)
+        .string('Sampling')
+        .style(columnTitleStyle);
+
+      resultsSheet
+        .cell(4, 3)
+        .string('Sampling Hours per Day')
+        .style(labelStyle);
+      resultsSheet
+        .cell(4, 4)
+        .number(calculateResults.data['Sampling Hours per Day']);
+
+      resultsSheet
+        .cell(5, 3)
+        .string('Sampling Personnel Hours per Day')
+        .style(labelStyle);
+      resultsSheet
+        .cell(5, 4)
+        .number(calculateResults.data['Sampling Personnel hours per Day']);
+
+      resultsSheet
+        .cell(6, 3)
+        .string('User Specified Sampling Team Labor Cost')
+        .style(labelStyle);
+      resultsSheet
+        .cell(6, 4)
+        .number(
+          calculateResults.data['User Specified Sampling Team Labor Cost'],
+        );
+
+      resultsSheet
+        .cell(7, 3)
+        .string('Time to Prepare Kits (person hours)')
+        .style(labelStyle);
+      resultsSheet
+        .cell(7, 4)
+        .number(calculateResults.data['Time to Prepare Kits']);
+
+      resultsSheet
+        .cell(8, 3)
+        .string('Time to Collect (person hours)')
+        .style(labelStyle);
+      resultsSheet.cell(8, 4).number(calculateResults.data['Time to Collect']);
+
+      resultsSheet.cell(9, 3).string('Material Cost').style(labelStyle);
+      resultsSheet
+        .cell(9, 4)
+        .number(calculateResults.data['Material Cost'])
+        .style(currencyStyle);
+
+      resultsSheet
+        .cell(10, 3)
+        .string('Sampling Personnel Labor Cost')
+        .style(labelStyle);
+      resultsSheet
+        .cell(10, 4)
+        .number(calculateResults.data['Sampling Personnel Labor Cost'])
+        .style(currencyStyle);
+
+      resultsSheet
+        .cell(11, 3)
+        .string('Time to Complete Sampling (days)')
+        .style(labelStyle);
+      resultsSheet
+        .cell(11, 4)
+        .number(calculateResults.data['Time to Complete Sampling']);
+
+      resultsSheet
+        .cell(11, 3)
+        .string('Total Sampling Labor Cost')
+        .style(labelStyle);
+      resultsSheet
+        .cell(11, 4)
+        .number(calculateResults.data['Total Sampling Labor Cost'])
+        .style(currencyStyle);
+
+      // col 5 & 6
+      resultsSheet
+        .cell(3, 5, 3, 6, true)
+        .string('Analysis')
+        .style(columnTitleStyle);
+
+      resultsSheet
+        .cell(4, 5)
+        .string('Time to Complete Analyses (days)')
+        .style(labelStyle);
+      resultsSheet
+        .cell(4, 6)
+        .number(calculateResults.data['Time to Complete Analyses']);
+
+      resultsSheet
+        .cell(5, 5)
+        .string('Time to Analyze (pesron hours)')
+        .style(labelStyle);
+      resultsSheet.cell(5, 6).number(calculateResults.data['Time to Analyze']);
+
+      resultsSheet.cell(6, 5).string('Analysis Labor Cost').style(labelStyle);
+      resultsSheet
+        .cell(6, 6)
+        .number(calculateResults.data['Analysis Labor Cost'])
+        .style(currencyStyle);
+
+      resultsSheet
+        .cell(7, 5)
+        .string('Analysis Material Cost')
+        .style(labelStyle);
+      resultsSheet
+        .cell(7, 6)
+        .number(calculateResults.data['Analysis Material Cost'])
+        .style(currencyStyle);
+
+      resultsSheet.cell(8, 5).string('Waste Volume (L)').style(labelStyle);
+      resultsSheet.cell(8, 6).number(calculateResults.data['Waste Volume']);
+
+      resultsSheet.cell(9, 5).string('Waste Weight (lbs)').style(labelStyle);
+      resultsSheet.cell(9, 6).number(calculateResults.data['Waste Weight']);
     }
 
     function addSampleSheet() {
