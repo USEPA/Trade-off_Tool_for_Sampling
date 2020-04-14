@@ -380,7 +380,7 @@ function CalculateResults() {
 
     function addParameterSheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || !calculateResults.data) return;
+      if (!calculateResults.data) return;
 
       // add the sheet
       const parameterSheet = workbook.addWorksheet('Parameters');
@@ -486,7 +486,7 @@ function CalculateResults() {
 
     function addResultsSheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || !calculateResults.data) return;
+      if (!calculateResults.data) return;
 
       // add the sheet
       const resultsSheet = workbook.addWorksheet('Detailed Results');
@@ -666,13 +666,60 @@ function CalculateResults() {
 
     function addSampleSheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || !calculateResults.data) return;
+      if (!sketchLayer || sketchLayer.sketchLayer.type !== 'graphics') return;
 
       // add the sheet
       const samplesSheet = workbook.addWorksheet('Sample Details');
 
+      // setup column widths
+      samplesSheet.column(1).setWidth(42);
+      samplesSheet.column(2).setWidth(14);
+      samplesSheet.column(3).setWidth(24);
+      samplesSheet.column(4).setWidth(10);
+      samplesSheet.column(5).setWidth(30);
+
       // add the header
       samplesSheet.cell(1, 1).string('Sample Details').style(sheetTitleStyle);
+
+      // add in column headers
+      samplesSheet.cell(3, 1).string('Sample ID').style(labelStyle);
+      samplesSheet.cell(3, 2).string('Sample Type').style(labelStyle);
+      samplesSheet
+        .cell(3, 3)
+        .string('Measured Contamination')
+        .style(labelStyle);
+      samplesSheet.cell(3, 4).string('Units').style(labelStyle);
+      samplesSheet.cell(3, 5).string('Notes').style(labelStyle);
+
+      // add in the rows
+      let currentRow = 4;
+      sketchLayer.sketchLayer.graphics.forEach((graphic) => {
+        const {
+          PERMANENT_IDENTIFIER,
+          TYPE,
+          CONTAMVAL,
+          CONTAMUNIT,
+          Notes,
+        } = graphic.attributes;
+
+        if (PERMANENT_IDENTIFIER) {
+          samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
+        }
+        if (TYPE) {
+          samplesSheet.cell(currentRow, 2).string(TYPE);
+        }
+        if (CONTAMVAL) {
+          samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
+        }
+        if (CONTAMUNIT) {
+          samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
+        }
+        if (Notes) {
+          samplesSheet.cell(currentRow, 5).string(Notes);
+        }
+
+        currentRow += 1;
+      });
     }
 
     // download the file
