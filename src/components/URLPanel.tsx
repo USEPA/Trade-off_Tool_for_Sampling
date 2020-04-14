@@ -138,7 +138,11 @@ function URLPanel() {
   };
 
   return (
-    <div>
+    <form
+      onSubmit={(ev) => {
+        ev.preventDefault();
+      }}
+    >
       <label>Type</label>
       <Select
         value={urlType}
@@ -197,10 +201,10 @@ function URLPanel() {
           message={`The "${url}" has already been added. If you want to change the type, please remove the layer first and re-add it.`}
         />
       )}
-      <button onClick={() => setShowSampleUrls(!showSampleUrls)}>
+      <button type="button" onClick={() => setShowSampleUrls(!showSampleUrls)}>
         SAMPLE URL(S)
       </button>
-      <button css={addButtonStyles} onClick={handleAdd}>
+      <button css={addButtonStyles} type="submit" onClick={handleAdd}>
         ADD
       </button>
 
@@ -254,7 +258,7 @@ function URLPanel() {
           )}
         </React.Fragment>
       )}
-    </div>
+    </form>
   );
 }
 

@@ -156,7 +156,11 @@ function EditLayerMetaData({
   if (!sketchLayer) return null;
 
   return (
-    <div>
+    <form
+      onSubmit={(ev) => {
+        ev.preventDefault();
+      }}
+    >
       <label htmlFor="scenario-name-input">Scenario Name</label>
       <input
         id="scenario-name-input"
@@ -215,6 +219,7 @@ function EditLayerMetaData({
       <div css={saveButtonContainerStyles}>
         <button
           css={saveButtonStyles(saveStatus)}
+          type="submit"
           disabled={
             saveStatus === 'none' ||
             saveStatus === 'fetching' ||
@@ -240,7 +245,7 @@ function EditLayerMetaData({
           )}
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 
