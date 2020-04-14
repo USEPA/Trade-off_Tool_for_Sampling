@@ -385,8 +385,103 @@ function CalculateResults() {
       // add the sheet
       const parameterSheet = workbook.addWorksheet('Parameters');
 
+      // setup column widths
+      parameterSheet.column(1).setWidth(35.88);
+      parameterSheet.column(2).setWidth(valueColumnWidth);
+
       // add the header
       parameterSheet.cell(1, 1).string('Parameters').style(sheetTitleStyle);
+
+      // col 1 & 2
+      parameterSheet
+        .cell(3, 1)
+        .string('Number of Available Teams for Sampling')
+        .style(labelStyle);
+      parameterSheet
+        .cell(3, 2)
+        .number(
+          calculateResults.data[
+            'User Specified Number of Available Teams for Sampling'
+          ],
+        );
+
+      parameterSheet
+        .cell(4, 1)
+        .string('Personnel per Sampling Team')
+        .style(labelStyle);
+      parameterSheet
+        .cell(4, 2)
+        .number(
+          calculateResults.data['User Specified Personnel per Sampling Team'],
+        );
+
+      parameterSheet
+        .cell(5, 1)
+        .string('Sampling Team Hours per Shift')
+        .style(labelStyle);
+      parameterSheet
+        .cell(5, 2)
+        .number(
+          calculateResults.data['User Specified Sampling Team Hours per Shift'],
+        );
+
+      parameterSheet
+        .cell(6, 1)
+        .string('Sampling Team Shifts per Day')
+        .style(labelStyle);
+      parameterSheet
+        .cell(6, 2)
+        .number(
+          calculateResults.data['User Specified Sampling Team Shifts per Day'],
+        );
+
+      parameterSheet
+        .cell(7, 1)
+        .string('Sampling Team Labor Cost')
+        .style(labelStyle);
+      parameterSheet
+        .cell(7, 2)
+        .number(
+          calculateResults.data['User Specified Sampling Team Labor Cost'],
+        )
+        .style(currencyStyle);
+
+      parameterSheet
+        .cell(8, 1)
+        .string('Number of Available Labs for Analysis')
+        .style(labelStyle);
+      parameterSheet
+        .cell(8, 2)
+        .number(
+          calculateResults.data[
+            'User Specified Number of Available Labs for Analysis'
+          ],
+        );
+
+      parameterSheet
+        .cell(9, 1)
+        .string('Analysis Lab Hours per Day')
+        .style(labelStyle);
+      parameterSheet
+        .cell(9, 2)
+        .number(
+          calculateResults.data['User Specified Analysis Lab Hours per Day'],
+        );
+
+      //parameterSheet.cell(10, 1).string('Surface Area (ft2)').style(labelStyle);
+      parameterSheet
+        .cell(10, 1)
+        .string([
+          { bold: true },
+          'Surface Area (ft',
+          { bold: true, vertAlign: 'superscript' },
+          '2',
+          { bold: true, vertAlign: 'baseline' },
+          ')',
+        ]);
+      parameterSheet
+        .cell(10, 2)
+        .number(calculateResults.data['User Specified Surface Area']);
     }
 
     function addResultsSheet() {

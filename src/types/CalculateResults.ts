@@ -11,6 +11,7 @@ export type CalculateResultsDataType = {
   'User Specified Personnel per Sampling Team': number;
   'User Specified Sampling Team Hours per Shift': number;
   'User Specified Sampling Team Shifts per Day': number;
+  'User Specified Surface Area': number;
   'Total Required Sampling Time': number;
   'Sampling Hours per Day': number;
   'Sampling Personnel hours per Day': number;
