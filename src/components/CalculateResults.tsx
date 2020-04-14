@@ -204,6 +204,10 @@ function CalculateResults() {
     const sheetTitleStyle = workbook.createStyle({
       font: { bold: true, size: 18 },
     });
+    const columnTitleStyle = workbook.createStyle({
+      alignment: { horizontal: 'center' },
+      font: { bold: true, underline: true },
+    });
     const labelStyle = workbook.createStyle({ font: { bold: true } });
     const underlinedLabelStyle = workbook.createStyle({
       font: { bold: true, underline: true },
@@ -244,14 +248,18 @@ function CalculateResults() {
         .string('Scenario Name')
         .style(underlinedLabelStyle);
       summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
-      summarySheet.cell(5, 1).string('Scenario Description').style(labelStyle);
+      summarySheet
+        .cell(5, 1)
+        .string('Scenario Description')
+        .style(underlinedLabelStyle);
       summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
 
       // col 1 & 2
       summarySheet
-        .cell(7, 1)
+        .cell(7, 1, 7, 2, true)
         .string('Sampling Plan')
-        .style(underlinedLabelStyle);
+        .style(columnTitleStyle);
+
       summarySheet
         .cell(8, 1)
         .string('Total Number of Samples')
@@ -276,9 +284,10 @@ function CalculateResults() {
 
       // col 3 & 4
       summarySheet
-        .cell(7, 3)
+        .cell(7, 3, 7, 4, true)
         .string('Sampling Operation')
-        .style(underlinedLabelStyle);
+        .style(columnTitleStyle);
+
       summarySheet
         .cell(8, 3)
         .string('Total Required Sampling Time (team hrs)')
@@ -286,6 +295,7 @@ function CalculateResults() {
       summarySheet
         .cell(8, 4)
         .number(calculateResults.data['Total Required Sampling Time']);
+
       summarySheet
         .cell(9, 3)
         .string('Time to Complete Sampling (days)')
@@ -293,6 +303,7 @@ function CalculateResults() {
       summarySheet
         .cell(9, 4)
         .number(calculateResults.data['Time to Complete Sampling']);
+
       summarySheet
         .cell(10, 3)
         .string('Total Sampling Labor Cost')
@@ -301,6 +312,7 @@ function CalculateResults() {
         .cell(10, 4)
         .number(calculateResults.data['Total Sampling Labor Cost'])
         .style(currencyStyle);
+
       summarySheet
         .cell(11, 3)
         .string('Total Sampling Material Cost')
@@ -310,16 +322,18 @@ function CalculateResults() {
         .number(calculateResults.data['Material Cost'])
         .style(currencyStyle);
 
-      // col 4 & 5
+      // col 5 & 6
       summarySheet
-        .cell(7, 5)
+        .cell(7, 5, 7, 6, true)
         .string('Analysis Operation')
-        .style(underlinedLabelStyle);
+        .style(columnTitleStyle);
+
       summarySheet
         .cell(8, 5)
         .string('Total Required Analysis Time (lab hrs)')
         .style(labelStyle);
       summarySheet.cell(8, 6).number(calculateResults.data['Time to Analyze']);
+
       summarySheet
         .cell(9, 5)
         .string('Time to Complete Analyses (days)')
@@ -327,6 +341,7 @@ function CalculateResults() {
       summarySheet
         .cell(9, 6)
         .number(calculateResults.data['Time to Complete Analyses']);
+
       summarySheet
         .cell(10, 5)
         .string('Total Analysis Labor Cost')
@@ -335,6 +350,7 @@ function CalculateResults() {
         .cell(10, 6)
         .number(calculateResults.data['Analysis Labor Cost'])
         .style(currencyStyle);
+
       summarySheet
         .cell(11, 5)
         .string('Total Analysis Material Cost')
