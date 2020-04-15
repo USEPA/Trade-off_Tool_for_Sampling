@@ -653,7 +653,6 @@ function FilePanel() {
             UPDATEDDATE,
             USERNAME,
             ORGANIZATION,
-            SURFACEAREAUNIT,
             ELEVATIONSERIES,
           } = graphic.attributes;
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
@@ -663,7 +662,6 @@ function FilePanel() {
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
           if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
-          if (!SURFACEAREAUNIT) graphic.attributes['SURFACEAREAUNIT'] = null;
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
         }
 
