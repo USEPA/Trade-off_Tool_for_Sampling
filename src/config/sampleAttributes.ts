@@ -45,7 +45,6 @@ type SampleProperties =
   | 'Notes'
   | 'AA'
   | 'AC'
-  | 'ITER'
   | 'CONTAMTYPE'
   | 'CONTAMVAL'
   | 'CONTAMUNIT'
@@ -84,7 +83,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -116,7 +114,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -148,7 +145,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -180,7 +176,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -212,7 +207,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -244,7 +238,6 @@ const sampleAttributes: Attributes = {
     Notes: '',
     AA: '0',
     AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
