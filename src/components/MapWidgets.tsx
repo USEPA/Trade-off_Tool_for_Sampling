@@ -56,6 +56,26 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
   }, 100);
 }
 
+// Gets the current date/time
+function getCurrentDateTime() {
+  const currentdate = new Date();
+  return (
+    currentdate.getFullYear() +
+    '/' +
+    String(currentdate.getMonth() + 1).padStart(2, '0') +
+    '/' +
+    String(currentdate.getDate()).padStart(2, '0') +
+    ' ' +
+    String(currentdate.getHours()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getMinutes()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getSeconds()).padStart(2, '0') +
+    '.' +
+    currentdate.getMilliseconds()
+  );
+}
+
 // --- styles (FeatureTool) ---
 const containerStyles = css`
   width: 160px;
@@ -399,6 +419,7 @@ function MapWidgets({ mapView }: Props) {
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
+              CREATEDDATE: getCurrentDateTime(),
             };
           }
 
@@ -452,7 +473,12 @@ function MapWidgets({ mapView }: Props) {
         // the updates have completed add them to the edits variable
         if (event.state === 'complete' || event.state === 'cancel') {
           // fire the update event if event.state is complete.
-          if (event.state === 'complete') setUpdateSketchEvent(event);
+          if (event.state === 'complete') {
+            event.graphics.forEach((graphic) => {
+              graphic.attributes.UPDATEDDATE = getCurrentDateTime();
+            });
+            setUpdateSketchEvent(event);
+          }
 
           // re-enable layer popups
           if (map) {
