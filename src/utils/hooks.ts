@@ -80,6 +80,7 @@ function useEditsLayerStorage() {
         id: editsLayer.layerId,
       });
 
+      const popupTemplate = getPopupTemplate(editsLayer.layerType);
       const features: __esri.Graphic[] = [];
       const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
       // add graphics to the map
@@ -94,7 +95,7 @@ function useEditsLayerStorage() {
               },
               rings: graphic.geometry.rings,
             }),
-            popupTemplate: getPopupTemplate(editsLayer.layerType),
+            popupTemplate,
           }),
         );
       });
@@ -893,18 +894,16 @@ export function useCalculatePlan() {
 
       // calulate the area
       const areaSI = geometryEngine.geodesicArea(polygon, 109454);
-      calcGraphic.attributes.AA = areaSI;
 
       // convert area to square inches
       const areaSF = areaSI * 0.00694444;
       totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
-      // calculate AC
-      const { SA, AA } = calcGraphic.attributes;
-      if (AA < SA) {
-        calcGraphic.attributes.AC = 1;
-      } else {
-        calcGraphic.attributes.AC = Math.round(AA / SA);
+      // calculate areaCount
+      const { SA } = calcGraphic.attributes;
+      let areaCount = 1;
+      if (areaSI >= SA) {
+        areaCount = Math.round(areaSI / SA);
       }
 
       // multiply all of the attributes by the area
@@ -921,30 +920,29 @@ export function useCalculatePlan() {
         WWPS,
         ALC,
         AMC,
-        AC,
       } = calcGraphic.attributes;
-      calcGraphic.attributes.TTPK = TTPK * AC;
-      calcGraphic.attributes.TTC = TTC * AC;
-      calcGraphic.attributes.TTA = TTA * AC;
-      calcGraphic.attributes.TTPS = TTPS * AC;
-      calcGraphic.attributes.MCPS = MCPS * AC;
-      calcGraphic.attributes.TCPS = TCPS * AC;
-      calcGraphic.attributes.WVPS = WVPS * AC;
-      calcGraphic.attributes.WWPS = WWPS * AC;
-      calcGraphic.attributes.ALC = ALC * AC;
-      calcGraphic.attributes.AMC = AMC * AC;
+      calcGraphic.attributes.TTPK = TTPK * areaCount;
+      calcGraphic.attributes.TTC = TTC * areaCount;
+      calcGraphic.attributes.TTA = TTA * areaCount;
+      calcGraphic.attributes.TTPS = TTPS * areaCount;
+      calcGraphic.attributes.MCPS = MCPS * areaCount;
+      calcGraphic.attributes.TCPS = TCPS * areaCount;
+      calcGraphic.attributes.WVPS = WVPS * areaCount;
+      calcGraphic.attributes.WWPS = WWPS * areaCount;
+      calcGraphic.attributes.ALC = ALC * areaCount;
+      calcGraphic.attributes.AMC = AMC * areaCount;
 
       if (TTPK) {
-        ttpk = ttpk + Number(TTPK * AC);
+        ttpk = ttpk + Number(TTPK * areaCount);
       }
       if (TTC) {
-        ttc = ttc + Number(TTC * AC);
+        ttc = ttc + Number(TTC * areaCount);
       }
       if (TTA) {
-        tta = tta + Number(TTA * AC);
+        tta = tta + Number(TTA * areaCount);
       }
       if (TTPS) {
-        ttps = ttps + Number(TTPS * AC);
+        ttps = ttps + Number(TTPS * areaCount);
       }
       if (LOD_P) {
         lod_p = lod_p + Number(LOD_P);
@@ -953,28 +951,28 @@ export function useCalculatePlan() {
         lod_non = lod_non + Number(LOD_NON);
       }
       if (MCPS) {
-        mcps = mcps + Number(MCPS * AC);
+        mcps = mcps + Number(MCPS * areaCount);
       }
       if (TCPS) {
-        tcps = tcps + Number(TCPS * AC);
+        tcps = tcps + Number(TCPS * areaCount);
       }
       if (WVPS) {
-        wvps = wvps + Number(WVPS * AC);
+        wvps = wvps + Number(WVPS * areaCount);
       }
       if (WWPS) {
-        wwps = wwps + Number(WWPS * AC);
+        wwps = wwps + Number(WWPS * areaCount);
       }
       if (SA) {
         sa = sa + Number(SA);
       }
       if (ALC) {
-        alc = alc + Number(ALC * AC);
+        alc = alc + Number(ALC * areaCount);
       }
       if (AMC) {
-        amc = amc + Number(AMC * AC);
+        amc = amc + Number(AMC * areaCount);
       }
-      if (AC) {
-        ac = ac + Number(AC);
+      if (areaCount) {
+        ac = ac + Number(areaCount);
       }
 
       calcGraphics.push(calcGraphic);

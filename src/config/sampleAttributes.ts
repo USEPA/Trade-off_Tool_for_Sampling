@@ -43,9 +43,6 @@ type SampleProperties =
   | 'ALC'
   | 'AMC'
   | 'Notes'
-  | 'AA'
-  | 'AC'
-  | 'ITER'
   | 'CONTAMTYPE'
   | 'CONTAMVAL'
   | 'CONTAMUNIT'
@@ -53,7 +50,6 @@ type SampleProperties =
   | 'UPDATEDDATE'
   | 'USERNAME'
   | 'ORGANIZATION'
-  | 'SURFACEAREAUNIT'
   | 'ELEVATIONSERIES';
 
 type Attributes = {
@@ -82,9 +78,6 @@ const sampleAttributes: Attributes = {
     ALC: '118',
     AMC: '239',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -92,7 +85,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
   'Micro Vac': {
@@ -114,9 +106,6 @@ const sampleAttributes: Attributes = {
     ALC: '151',
     AMC: '288',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -124,7 +113,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
   'Wet Vac': {
@@ -146,9 +134,6 @@ const sampleAttributes: Attributes = {
     ALC: '151',
     AMC: '200',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -156,7 +141,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
   Robot: {
@@ -178,9 +162,6 @@ const sampleAttributes: Attributes = {
     ALC: '200',
     AMC: '288',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -188,7 +169,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
   'Aggressive Air': {
@@ -210,9 +190,6 @@ const sampleAttributes: Attributes = {
     ALC: '118',
     AMC: '239',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -220,7 +197,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
   Swab: {
@@ -242,9 +218,6 @@ const sampleAttributes: Attributes = {
     ALC: '118',
     AMC: '239',
     Notes: '',
-    AA: '0',
-    AC: '0',
-    ITER: '0',
     CONTAMTYPE: null,
     CONTAMVAL: null,
     CONTAMUNIT: null,
@@ -252,7 +225,6 @@ const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    SURFACEAREAUNIT: null,
     ELEVATIONSERIES: null,
   },
 };

@@ -270,6 +270,7 @@ function Toolbar() {
 
         // add a delete button for each layer, but don't add it to sublayers
         if (!item.parent) {
+          item.actionsOpen = true;
           item.actionsSections = [
             [
               {

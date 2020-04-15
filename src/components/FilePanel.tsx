@@ -16,6 +16,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import {
   generateUUID,
+  getCurrentDateTime,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -248,16 +249,6 @@ function FilePanel() {
       return;
     }
 
-    // reset state management values
-    setUploadStatus('fetching');
-    setLastFileName('');
-    setAnalyzeResponse(null);
-    setGenerateResponse(null);
-    setAnalyzeCalled(false);
-    setGenerateCalled(false);
-    setFeaturesAdded(false);
-    setMissingAttributes('');
-
     // get the filetype
     const file = acceptedFiles[0];
     let fileType = '';
@@ -271,6 +262,16 @@ function FilePanel() {
     // set the file state
     file['esriFileType'] = fileType;
     setFile(file);
+
+    // reset state management values
+    setUploadStatus('fetching');
+    setLastFileName('');
+    setAnalyzeResponse(null);
+    setGenerateResponse(null);
+    setAnalyzeCalled(false);
+    setGenerateCalled(false);
+    setFeaturesAdded(false);
+    setMissingAttributes('');
 
     if (!fileType) {
       setUploadStatus('invalid-file-type');
@@ -602,6 +603,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
+    const popupTemplate = getPopupTemplate(layerType.value);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -644,6 +646,7 @@ function FilePanel() {
         }
 
         // add sample layer specific attributes
+        const timestamp = getCurrentDateTime();
         if (layerType.value === 'Samples') {
           const {
             CONTAMTYPE,
@@ -653,18 +656,20 @@ function FilePanel() {
             UPDATEDDATE,
             USERNAME,
             ORGANIZATION,
-            SURFACEAREAUNIT,
             ELEVATIONSERIES,
           } = graphic.attributes;
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
           if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
           if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
           if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
-          if (!SURFACEAREAUNIT) graphic.attributes['SURFACEAREAUNIT'] = null;
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+        }
+        if (layerType.value === 'VSP') {
+          const { CREATEDDATE } = graphic.attributes;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
         // verify the graphic has all required attributes
@@ -684,9 +689,7 @@ function FilePanel() {
         }
 
         // add the popup template
-        graphic.popupTemplate = new PopupTemplate(
-          getPopupTemplate(layerType.value),
-        );
+        graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
       });

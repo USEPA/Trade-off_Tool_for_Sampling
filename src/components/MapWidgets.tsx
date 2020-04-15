@@ -18,6 +18,7 @@ import { polygonSymbol } from 'config/symbols';
 // utils
 import {
   generateUUID,
+  getCurrentDateTime,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -399,6 +400,7 @@ function MapWidgets({ mapView }: Props) {
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
+              CREATEDDATE: getCurrentDateTime(),
             };
           }
 
@@ -452,7 +454,12 @@ function MapWidgets({ mapView }: Props) {
         // the updates have completed add them to the edits variable
         if (event.state === 'complete' || event.state === 'cancel') {
           // fire the update event if event.state is complete.
-          if (event.state === 'complete') setUpdateSketchEvent(event);
+          if (event.state === 'complete') {
+            event.graphics.forEach((graphic) => {
+              graphic.attributes.UPDATEDDATE = getCurrentDateTime();
+            });
+            setUpdateSketchEvent(event);
+          }
 
           // re-enable layer popups
           if (map) {

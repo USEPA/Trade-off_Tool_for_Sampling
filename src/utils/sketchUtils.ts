@@ -278,15 +278,6 @@ export function getPopupTemplate(type: LayerTypeName) {
             { fieldName: 'Notes', label: 'Notes' },
             { fieldName: 'ALC', label: 'Analysis Labor Cost' },
             { fieldName: 'AMC', label: 'Analysis Material Cost' },
-            { fieldName: 'CONTAMTYPE', label: 'Contamination Type' },
-            { fieldName: 'CONTAMVAL', label: 'Activity' },
-            { fieldName: 'CONTAMUNIT', label: 'Unit of Measure' },
-            { fieldName: 'CREATEDDATE', label: 'Create Date' },
-            { fieldName: 'UPDATEDDATE', label: 'Update Date' },
-            { fieldName: 'USERNAME', label: 'Created By' },
-            { fieldName: 'ORGANIZATION', label: 'Organization' },
-            { fieldName: 'SURFACEAREAUNIT', label: 'Surface Area Units' },
-            { fieldName: 'ELEVATIONSERIES', label: 'Elevation Series' },
           ],
         },
       ],
@@ -322,4 +313,29 @@ export function getGraphicsArray(layers: (LayerType | null)[]) {
   });
 
   return zoomGraphics;
+}
+        
+/**
+ * Gets a timestamp for the current date time formatted as
+ * YYYY/MM/DD hh:mm:ss.s
+ *
+ * @returns a formatted timestamp of the current date/time
+ */
+export function getCurrentDateTime() {
+  const currentdate = new Date();
+  return (
+    currentdate.getFullYear() +
+    '/' +
+    String(currentdate.getMonth() + 1).padStart(2, '0') +
+    '/' +
+    String(currentdate.getDate()).padStart(2, '0') +
+    ' ' +
+    String(currentdate.getHours()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getMinutes()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getSeconds()).padStart(2, '0') +
+    '.' +
+    currentdate.getMilliseconds()
+  );
 }
