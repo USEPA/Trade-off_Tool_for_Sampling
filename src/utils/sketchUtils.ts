@@ -314,7 +314,7 @@ export function getGraphicsArray(layers: (LayerType | null)[]) {
 
   return zoomGraphics;
 }
-        
+
 /**
  * Gets a timestamp for the current date time formatted as
  * YYYY/MM/DD hh:mm:ss.s
