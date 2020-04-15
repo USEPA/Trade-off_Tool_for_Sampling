@@ -80,6 +80,7 @@ function useEditsLayerStorage() {
         id: editsLayer.layerId,
       });
 
+      const popupTemplate = getPopupTemplate(editsLayer.layerType);
       const features: __esri.Graphic[] = [];
       const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
       // add graphics to the map
@@ -94,7 +95,7 @@ function useEditsLayerStorage() {
               },
               rings: graphic.geometry.rings,
             }),
-            popupTemplate: getPopupTemplate(editsLayer.layerType),
+            popupTemplate,
           }),
         );
       });

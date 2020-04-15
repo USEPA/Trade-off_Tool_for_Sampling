@@ -295,3 +295,28 @@ export function getPopupTemplate(type: LayerTypeName) {
 export function generateUUID() {
   return '{' + uuidv4().toUpperCase() + '}';
 }
+
+/**
+ * Gets a timestamp for the current date time formatted as
+ * YYYY/MM/DD hh:mm:ss.s
+ *
+ * @returns a formatted timestamp of the current date/time
+ */
+export function getCurrentDateTime() {
+  const currentdate = new Date();
+  return (
+    currentdate.getFullYear() +
+    '/' +
+    String(currentdate.getMonth() + 1).padStart(2, '0') +
+    '/' +
+    String(currentdate.getDate()).padStart(2, '0') +
+    ' ' +
+    String(currentdate.getHours()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getMinutes()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getSeconds()).padStart(2, '0') +
+    '.' +
+    currentdate.getMilliseconds()
+  );
+}

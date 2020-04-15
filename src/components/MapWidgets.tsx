@@ -18,6 +18,7 @@ import { polygonSymbol } from 'config/symbols';
 // utils
 import {
   generateUUID,
+  getCurrentDateTime,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -54,26 +55,6 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
       el.className = el.className.replace(prevClassName, nextClassName);
     }
   }, 100);
-}
-
-// Gets the current date/time
-function getCurrentDateTime() {
-  const currentdate = new Date();
-  return (
-    currentdate.getFullYear() +
-    '/' +
-    String(currentdate.getMonth() + 1).padStart(2, '0') +
-    '/' +
-    String(currentdate.getDate()).padStart(2, '0') +
-    ' ' +
-    String(currentdate.getHours()).padStart(2, '0') +
-    ':' +
-    String(currentdate.getMinutes()).padStart(2, '0') +
-    ':' +
-    String(currentdate.getSeconds()).padStart(2, '0') +
-    '.' +
-    currentdate.getMilliseconds()
-  );
 }
 
 // --- styles (FeatureTool) ---

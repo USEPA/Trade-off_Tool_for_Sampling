@@ -16,6 +16,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import {
   generateUUID,
+  getCurrentDateTime,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -602,6 +603,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
+    const popupTemplate = getPopupTemplate(layerType.value);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -655,10 +657,11 @@ function FilePanel() {
             ORGANIZATION,
             ELEVATIONSERIES,
           } = graphic.attributes;
+          const timestamp = getCurrentDateTime();
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
           if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
           if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
           if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
@@ -682,9 +685,7 @@ function FilePanel() {
         }
 
         // add the popup template
-        graphic.popupTemplate = new PopupTemplate(
-          getPopupTemplate(layerType.value),
-        );
+        graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
       });
