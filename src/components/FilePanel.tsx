@@ -646,6 +646,7 @@ function FilePanel() {
         }
 
         // add sample layer specific attributes
+        const timestamp = getCurrentDateTime();
         if (layerType.value === 'Samples') {
           const {
             CONTAMTYPE,
@@ -657,7 +658,6 @@ function FilePanel() {
             ORGANIZATION,
             ELEVATIONSERIES,
           } = graphic.attributes;
-          const timestamp = getCurrentDateTime();
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
           if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
           if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
@@ -666,6 +666,10 @@ function FilePanel() {
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
           if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+        }
+        if (layerType.value === 'VSP') {
+          const { CREATEDDATE } = graphic.attributes;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
         // verify the graphic has all required attributes
