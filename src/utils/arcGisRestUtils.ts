@@ -178,15 +178,10 @@ export function createFeatureService(
           f: 'json',
           token: tempPortal.credential.token,
 
-          // below are some examples on how we can add metadata for determining
-          // whether a feature service has a sample layer vs just being a reference layer.
-          // tags: "epa-tots-test-tag1,epa-tots-test-tag2",
-          // categories: "epa-tots-test-category1,epa-tots-test-category2",
-          // appCategories: "epa-tots-test-appcategory1,epa-tots-test-appcategory2",
+          // add metadata for determining whether a feature service has a sample layer vs
+          // just being a reference layer.
           properties: {
-            EPA_TOTS: {
-              sampleLayers: ['test1', 'test2'],
-            },
+            EPA_TOTS_Sample_Layer: serviceMetaData.name,
           },
         };
         fetchPost(
@@ -287,6 +282,16 @@ export function createFeatureLayers(
         name: layer.scenarioName,
         description: layer.scenarioDescription,
         extent: graphicsExtent,
+
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types: [
+          {
+            id: 'epa-tots-sample-layer',
+            name: 'epa-tots-sample-layer',
+          },
+        ],
       });
     });
 
