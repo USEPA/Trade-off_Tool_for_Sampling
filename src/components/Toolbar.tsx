@@ -54,12 +54,12 @@ const toolBarStyles = css`
   padding: 0;
   padding-right: 0;
   background-color: ${colors.darkblue()};
+`;
 
-  div:last-child {
-    margin-left: auto;
-    display: flex;
-    justify-content: flex-end;
-  }
+const toolBarButtonsStyles = css`
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
 `;
 
 const toolBarButtonStyles = css`
@@ -424,7 +424,7 @@ function Toolbar() {
   return (
     <div css={toolBarStyles}>
       <h4 css={toolBarTitle}>Trade-off Tool for Sampling (TOTS)</h4>
-      <div>
+      <div css={toolBarButtonsStyles}>
         <div>
           <button
             css={toolBarButtonStyles}
