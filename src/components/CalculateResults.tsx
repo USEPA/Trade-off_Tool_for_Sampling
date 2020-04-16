@@ -244,7 +244,7 @@ function CalculateResults() {
       const summarySheet = workbook.addWorksheet('Summary');
 
       // setup column widths
-      summarySheet.column(1).setWidth(22.25);
+      summarySheet.column(1).setWidth(34.5);
       summarySheet.column(2).setWidth(valueColumnWidth);
       summarySheet.column(3).setWidth(35.88);
       summarySheet.column(4).setWidth(valueColumnWidth);
@@ -276,24 +276,32 @@ function CalculateResults() {
 
       summarySheet
         .cell(8, 1)
-        .string('Total Number of Samples')
+        .string('Total Number of User-Defined Samples')
         .style(labelStyle);
       summarySheet
         .cell(8, 2)
-        .number(calculateResults.data['Total Number of Samples']);
+        .number(calculateResults.data['Total Number of User-Defined Samples']);
 
-      summarySheet.cell(9, 1).string('Total Cost').style(labelStyle);
+      summarySheet
+        .cell(9, 1)
+        .string('Total Number of Samples')
+        .style(labelStyle);
       summarySheet
         .cell(9, 2)
+        .number(calculateResults.data['Total Number of Samples']);
+
+      summarySheet.cell(10, 1).string('Total Cost').style(labelStyle);
+      summarySheet
+        .cell(10, 2)
         .number(calculateResults.data['Total Cost'])
         .style(currencyStyle);
 
-      summarySheet.cell(10, 1).string('Total Time (days)').style(labelStyle);
-      summarySheet.cell(10, 2).number(calculateResults.data['Total Time']);
+      summarySheet.cell(11, 1).string('Total Time (days)').style(labelStyle);
+      summarySheet.cell(11, 2).number(calculateResults.data['Total Time']);
 
-      summarySheet.cell(11, 1).string('Limiting Time Factor').style(labelStyle);
+      summarySheet.cell(12, 1).string('Limiting Time Factor').style(labelStyle);
       summarySheet
-        .cell(11, 2)
+        .cell(12, 2)
         .string(calculateResults.data['Limiting Time Factor']);
 
       // col 3 & 4
@@ -385,7 +393,7 @@ function CalculateResults() {
           from: {
             col: 2,
             colOff: 0,
-            row: 14,
+            row: 15,
             rowOff: 0,
           },
         },
