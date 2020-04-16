@@ -792,7 +792,6 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
-    const layersAdded: LayerType[] = [];
     const featureLayers: __esri.FeatureLayer[] = [];
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -873,25 +872,8 @@ function FilePanel() {
         ...referenceLayers,
         { ...layerProps, layerId: layerToAdd.id },
       ]);
-
-      // add the layers, from the uploaded file, to the map
-      layersAdded.push({
-        id: -1,
-        layerId: layerToAdd.id,
-        value: layerName,
-        name: file.name,
-        label: layerName,
-        layerType: layerType.value,
-        scenarioName: '',
-        scenarioDescription: '',
-        defaultVisibility: true,
-        geometryType: layer.layerDefinition.geometryType,
-        addedFrom: 'file',
-        sketchLayer: layerToAdd,
-      });
     });
 
-    setLayers([...layers, ...layersAdded]);
     map.addMany(featureLayers);
     if (graphicsAdded.length > 0) mapView.goTo(graphicsAdded);
 
