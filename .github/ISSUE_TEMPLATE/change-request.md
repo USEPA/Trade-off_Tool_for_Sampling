@@ -4,7 +4,7 @@ about: TOTS Default GitHub Issue Template
 title: ''
 labels: ''
 assignees: 'cschwinderg'
-project: 'Eastern-Research-Group/EPA-HSRP-TOTS'
+project: 'EPA-HSRP-TOTS'
 ---
 
 **Describe the change**
