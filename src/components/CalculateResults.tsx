@@ -98,7 +98,13 @@ function CalculateResults() {
 
             <h4>Sampling Plan</h4>
             <LabelValue
-              label="Total number of samples"
+              label="Total Number of User-Defined Samples"
+              value={
+                calculateResults.data['Total Number of User-Defined Samples']
+              }
+            />
+            <LabelValue
+              label="Total Number of Samples"
               value={calculateResults.data['Total Number of Samples']}
             />
             <LabelValue
@@ -183,7 +189,7 @@ function CalculateResults() {
               value={calculateResults.data['Sampling Hours per Day']}
             />
             <LabelValue
-              label="Sampling Personnel hours per Day"
+              label="Sampling Personnel Hours per Day"
               value={calculateResults.data['Sampling Personnel hours per Day']}
             />
             <LabelValue
@@ -236,7 +242,7 @@ function CalculateResults() {
               value={calculateResults.data['Analysis Material Cost']}
             />
             <LabelValue
-              label="Waste volume (L)"
+              label="Waste Volume (L)"
               value={calculateResults.data['Waste Volume']}
             />
             <LabelValue
