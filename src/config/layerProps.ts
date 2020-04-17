@@ -38,10 +38,10 @@ export const defaultLayerProps = {
       alias: 'PERMANENT_IDENTIFIER',
       sqlType: 'sqlTypeOther',
       length: 38,
-      nullable: false,
+      nullable: true,
       editable: true,
       domain: null,
-      defaultValue: 'NEWID() WITH VALUES',
+      defaultValue: '',
     },
     {
       name: 'GlobalID',
