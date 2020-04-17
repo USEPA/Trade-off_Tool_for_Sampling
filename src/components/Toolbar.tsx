@@ -4,8 +4,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { jsx, css } from '@emotion/core';
 // contexts
-import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { AuthenticationContext } from 'contexts/Authentication';
+import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { polygonSymbol } from 'config/symbols';
@@ -54,12 +55,12 @@ const toolBarStyles = css`
   padding: 0;
   padding-right: 0;
   background-color: ${colors.darkblue()};
+`;
 
-  div:last-child {
-    margin-left: auto;
-    display: flex;
-    justify-content: flex-end;
-  }
+const toolBarButtonsStyles = css`
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
 `;
 
 const toolBarButtonStyles = css`
@@ -124,18 +125,23 @@ function Toolbar() {
     Portal,
     PortalBasemapsSource,
   } = useEsriModulesContext();
+  const { setContaminationMap } = React.useContext(CalculateContext);
   const {
     setBasemapWidget,
     edits,
     setEdits,
     map,
     mapView,
+    layers,
+    setLayers,
     portalLayers,
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
     urlLayers,
     setUrlLayers,
+    setSketchLayer,
+    setAoiSketchLayer,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -344,6 +350,44 @@ function Toolbar() {
           (layer) => layer.layerId !== layerToRemove.id,
         ),
       });
+
+      // find the layer
+      const totsLayerToRemove = layers.find(
+        (layer) => layer.layerId === layerToRemove.id,
+      );
+
+      // depending on the layer type, auto select the next available for the select
+      // menus and sketch utility
+      const layerType = totsLayerToRemove?.layerType;
+      if (layerType === 'Samples' || layerType === 'VSP') {
+        const newSampleLayer = layers.find(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            (layer.layerType === 'Samples' || layer.layerType === 'VSP'),
+        );
+        setSketchLayer(newSampleLayer ? newSampleLayer : null);
+      }
+      if (layerType === 'Area of Interest') {
+        const newAoiLayer = layers.find(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.layerType === 'Area of Interest',
+        );
+        setAoiSketchLayer(newAoiLayer ? newAoiLayer : null);
+      }
+      if (layerType === 'Contamination Map') {
+        const newContamLayer = layers.find(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.layerType === 'Contamination Map',
+        );
+        setContaminationMap(newContamLayer ? newContamLayer : null);
+      }
+
+      // remove from layers
+      setLayers((layers) =>
+        layers.filter((layer) => layer.layerId !== layerToRemove.id),
+      );
     } else if (
       tempLayerToRemove.portalItem &&
       tempLayerToRemove.portalItem.id
@@ -376,12 +420,17 @@ function Toolbar() {
     layerToRemove,
     edits,
     setEdits,
+    layers,
+    setLayers,
     portalLayers,
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
     urlLayers,
     setUrlLayers,
+    setSketchLayer,
+    setAoiSketchLayer,
+    setContaminationMap,
   ]);
 
   // Create the basemap toolbar widget
@@ -424,7 +473,7 @@ function Toolbar() {
   return (
     <div css={toolBarStyles}>
       <h4 css={toolBarTitle}>Trade-off Tool for Sampling (TOTS)</h4>
-      <div>
+      <div css={toolBarButtonsStyles}>
         <div>
           <button
             css={toolBarButtonStyles}
