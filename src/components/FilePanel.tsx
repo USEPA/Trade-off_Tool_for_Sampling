@@ -718,6 +718,7 @@ function FilePanel() {
     const layerToAdd: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: layerName,
       name: file.name,
       label: layerName,
@@ -870,7 +871,7 @@ function FilePanel() {
 
       setReferenceLayers([
         ...referenceLayers,
-        { ...layerProps, layerId: layerToAdd.id },
+        { ...layerProps, layerId: layerToAdd.id, portalId: '' },
       ]);
     });
 

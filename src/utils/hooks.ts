@@ -12,7 +12,7 @@ import {
   CalculateResultsDataType,
 } from 'types/CalculateResults';
 import { EditsType } from 'types/Edits';
-import { LayerType, UrlLayerType } from 'types/Layer';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
@@ -105,6 +105,7 @@ function useEditsLayerStorage() {
       newLayers.push({
         id: editsLayer.id,
         layerId: editsLayer.layerId,
+        portalId: editsLayer.portalId,
         value: editsLayer.label,
         name: editsLayer.name,
         label: editsLayer.label,
@@ -321,13 +322,19 @@ function usePortalLayerStorage() {
     const portalLayersStr = readFromStorage(key);
     if (!portalLayersStr) return;
 
-    const portalLayers = JSON.parse(portalLayersStr);
+    const portalLayers: PortalLayerType[] = JSON.parse(portalLayersStr);
 
     // add the portal layers to the map
-    portalLayers.forEach((layerId: string) => {
+    portalLayers.forEach((portalLayer) => {
+      // Skip tots layers, since they are stored in edits.
+      // The only reason tots layers are also in portal layers is
+      // so the search panel will show the layer as having been
+      // added.
+      if (portalLayer.type === 'tots') return;
+
       const layer = Layer.fromPortalItem({
         portalItem: new PortalItem({
-          id: layerId,
+          id: portalLayer.id,
         }),
       });
       map.add(layer);

@@ -8,6 +8,7 @@ export type EditsType = {
 export type LayerEditsType = {
   id: number; // layer id
   layerId: string; // id from esri layer
+  portalId: string; // id from portal layer
   name: string; // layer name
   label: string; // layer label
   layerType: LayerTypeName; // type of tots layer (sample, contamination, etc.)

@@ -180,9 +180,7 @@ export function createFeatureService(
 
           // add metadata for determining whether a feature service has a sample layer vs
           // just being a reference layer.
-          properties: {
-            EPA_TOTS_Sample_Layer: serviceMetaData.name,
-          },
+          categories: 'contains-epa-tots-sample-layer',
         };
         fetchPost(
           `${portal.user.userContentUrl}/items/${res.itemId}/update`,
@@ -218,20 +216,18 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
 }
 
 /**
- * Attempts to get the feature service and creates it if it
- * doesn't already exist
+ * Attempts to get the the layer, with the provided id, from the feature service.
  *
  * @param serviceUrl Object representing the hosted feature service
  * @param token Security token
  * @param id ID of the layer to retreive
- * @returns A promise that resolves to the requested layers
+ * @returns A promise that resolves to the requested layer
  */
 export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
-    getFeatureLayers(serviceUrl, token)
-      .then((layers: any) => {
-        const matchedLayer = layers.find((layer: any) => layer.id === id);
-        resolve(matchedLayer);
+    fetchCheck(`${serviceUrl}/${id}?f=json&token=${token}`)
+      .then((layer: any) => {
+        resolve(layer);
       })
       .catch((err) => reject(err));
   });
@@ -286,12 +282,22 @@ export function createFeatureLayers(
         // add a custom type for determining which layers in a feature service
         // are the sample layers. All feature services made through TOTS should only
         // have one layer, but it is possible for user
-        types: [
-          {
-            id: 'epa-tots-sample-layer',
-            name: 'epa-tots-sample-layer',
-          },
-        ],
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-layer',
+                  name: 'epa-tots-sample-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-layer',
+                  name: 'epa-tots-vsp-layer',
+                },
+              ]
+            : null,
       });
     });
 

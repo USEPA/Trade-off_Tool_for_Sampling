@@ -269,6 +269,7 @@ function LocateSamples() {
     const tempSketchLayer: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: 'sketchLayer',
       name: 'Default Sample Layer',
       label: 'Default Sample Layer',
@@ -313,6 +314,7 @@ function LocateSamples() {
     const newAoiSketchLayer: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: 'sketchAoi',
       name: 'Sketched Area of Interest',
       label: 'Sketched Area of Interest',

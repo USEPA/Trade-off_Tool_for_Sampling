@@ -10,11 +10,12 @@ export type LayerSelectType = {
   label: LayerTypeName;
 };
 
-export type AddedFrom = 'file' | 'sketch';
+export type AddedFrom = 'file' | 'sketch' | 'tots';
 
 export type LayerType = {
   id: number;
   layerId: string;
+  portalId: string;
   value: string;
   name: string;
   label: string;
@@ -25,6 +26,11 @@ export type LayerType = {
   geometryType: string;
   addedFrom: AddedFrom;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+};
+
+export type PortalLayerType = {
+  id: string;
+  type: 'arcgis' | 'tots';
 };
 
 export type UrlLayerType = {
