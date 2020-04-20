@@ -1,11 +1,10 @@
 // types
-import { LayerEditsType, FeatureEditsType } from 'types/Edits';
+import { LayerEditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
-import { convertToSimpleGraphic } from 'utils/sketchUtils';
 import { escapeForLucene } from 'utils/utils';
 
 type ServiceMetaDataType = {
@@ -422,34 +421,17 @@ export function applyEdits({
     const changes: any[] = [];
     // loop through the layers and build the payload
     edits.forEach((layerEdits) => {
-      const adds: FeatureEditsType[] = [];
-      if (layerEdits.adds.length > 0) {
-        // get the graphics layer
-        const layerToSearch = layers.find(
-          (layer) => layer.id === layerEdits.id,
-        );
-
-        // loop through and find any graphics without objectids
-        if (
-          layerToSearch?.sketchLayer &&
-          layerToSearch.sketchLayer.type === 'graphics'
-        ) {
-          layerToSearch.sketchLayer.graphics.forEach((graphic) => {
-            if (!graphic?.attributes?.OBJECTID) {
-              return;
-            }
-
-            const formattedGraphic = convertToSimpleGraphic(graphic);
-            adds.push(formattedGraphic);
-          });
-        }
-      }
+      // build the deletes list, which is just an array of global ids.
+      const deletes: string[] = [];
+      layerEdits.deletes.forEach((item) => {
+        deletes.push(item.GLOBALID);
+      });
 
       changes.push({
         id: layerEdits.id,
-        adds,
+        adds: layerEdits.adds,
         updates: layerEdits.updates,
-        deletes: layerEdits.deletes,
+        deletes,
       });
     });
 
@@ -462,6 +444,7 @@ export function applyEdits({
       token: tempPortal.credential.token,
       edits: changes,
       honorSequenceOfEdits: true,
+      useGlobalIds: true,
     };
     fetchPost(`${serviceUrl}/applyEdits`, data)
       .then((res) => resolve(res))

@@ -55,6 +55,7 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     adds: [],
     updates: [],
     deletes: [],
+    published: [],
   };
 }
 
@@ -95,7 +96,7 @@ export function updateLayerEdits({
 }: {
   edits: EditsType;
   layer: LayerType;
-  type: 'add' | 'update' | 'delete' | 'properties';
+  type: 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
   changes?: __esri.Collection<__esri.Graphic>;
 }) {
   // make a copy of the edits context variable
@@ -125,6 +126,14 @@ export function updateLayerEdits({
       changes.forEach((change) => {
         const formattedChange = convertToSimpleGraphic(change);
         layerToEdit.adds.push(formattedChange);
+      });
+    }
+
+    // Add published graphics from arcgis
+    if (type === 'arcgis') {
+      changes.forEach((change) => {
+        const formattedChange = convertToSimpleGraphic(change);
+        layerToEdit.published.push(formattedChange);
       });
     }
 
@@ -167,8 +176,8 @@ export function updateLayerEdits({
 
     // Append any deletes of items that have already been published
     if (type === 'delete') {
-      // TODO: Fix issue of deleting new graphics, showing up in both
-      //  deletes and adds or updates.
+      // if this graphic is in the adds array, just delete it from the
+      // adds array, since it hasn't been published yet
       changes.forEach((change) => {
         // attempt to find this id in adds
         const addChangeIndex = layerToEdit.adds.findIndex(
@@ -196,7 +205,10 @@ export function updateLayerEdits({
         );
 
         // add the objectids to delete to the deletes array
-        layerToEdit.deletes.push(change.attributes.PERMANENT_IDENTIFIER);
+        layerToEdit.deletes.push({
+          PERMANENT_IDENTIFIER: change.attributes.PERMANENT_IDENTIFIER,
+          GLOBALID: change.attributes.GLOBALID,
+        });
       });
     }
   }

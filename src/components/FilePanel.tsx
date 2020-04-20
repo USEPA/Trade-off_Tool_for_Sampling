@@ -641,9 +641,6 @@ function FilePanel() {
         if (!graphic.attributes.GLOBALID) {
           graphic.attributes['GLOBALID'] = uuid;
         }
-        if (!graphic.attributes.OBJECTID) {
-          graphic.attributes['OBJECTID'] = index.toString();
-        }
 
         // add sample layer specific attributes
         const timestamp = getCurrentDateTime();

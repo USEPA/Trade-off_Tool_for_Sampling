@@ -18,10 +18,16 @@ export type LayerEditsType = {
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
-  deletes: FeatureEditsType[]; // features to delete
+  deletes: DeleteFeatureType[]; // features to delete
+  published: FeatureEditsType[]; // features as they are on AGOL
 };
 
 export type FeatureEditsType = {
   attributes: any;
   geometry: __esri.PolygonProperties;
+};
+
+export type DeleteFeatureType = {
+  PERMANENT_IDENTIFIER: string;
+  GLOBALID: string;
 };

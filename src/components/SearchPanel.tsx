@@ -795,7 +795,7 @@ function ResultCard({ result }: ResultCardProps) {
                 editsCopy = updateLayerEdits({
                   edits: editsCopy,
                   layer: layerToAdd,
-                  type: 'update',
+                  type: 'arcgis',
                   changes: graphicsLayer.graphics,
                 });
 

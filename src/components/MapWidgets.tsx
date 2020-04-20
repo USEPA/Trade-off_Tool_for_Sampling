@@ -360,8 +360,6 @@ function MapWidgets({ mapView }: Props) {
       sketchViewModel: __esri.SketchViewModel,
       setter: React.Dispatch<React.SetStateAction<boolean>>,
     ) => {
-      let nextId = 1;
-
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
 
@@ -387,7 +385,6 @@ function MapWidgets({ mapView }: Props) {
           if (id === 'aoi') {
             layerType = 'Area of Interest';
             graphic.attributes = {
-              OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -396,7 +393,6 @@ function MapWidgets({ mapView }: Props) {
           } else {
             graphic.attributes = {
               ...sampleAttributes[key],
-              OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -408,7 +404,6 @@ function MapWidgets({ mapView }: Props) {
           graphic.popupTemplate = new PopupTemplate(
             getPopupTemplate(layerType),
           );
-          nextId = nextId + 1;
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.

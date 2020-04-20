@@ -11,7 +11,7 @@ import {
   CalculateResultsType,
   CalculateResultsDataType,
 } from 'types/CalculateResults';
-import { EditsType } from 'types/Edits';
+import { EditsType, FeatureEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
@@ -82,7 +82,34 @@ function useEditsLayerStorage() {
 
       const popupTemplate = getPopupTemplate(editsLayer.layerType);
       const features: __esri.Graphic[] = [];
-      const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
+      const idsUsed: string[] = [];
+      const displayedFeatures: FeatureEditsType[] = [];
+
+      // push the items from the adds array
+      editsLayer.adds.forEach((item) => {
+        displayedFeatures.push(item);
+        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+      });
+
+      // push the items from the updates array
+      editsLayer.updates.forEach((item) => {
+        displayedFeatures.push(item);
+        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+      });
+
+      // only push the ids of the deletes array to prevent drawing deleted items
+      editsLayer.deletes.forEach((item) => {
+        idsUsed.push(item.PERMANENT_IDENTIFIER);
+      });
+
+      // add graphics from AGOL that haven't been changed
+      editsLayer.published.forEach((item) => {
+        // don't re-add graphics that have already been added above
+        if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
+
+        displayedFeatures.push(item);
+      });
+
       // add graphics to the map
       displayedFeatures.forEach((graphic) => {
         features.push(

@@ -18,7 +18,7 @@ export const defaultLayerProps = {
   hasM: false,
   hasZ: false,
   objectIdField: 'OBJECTID',
-  globalIdField: 'GlobalID',
+  globalIdField: 'GLOBALID',
   fields: [
     {
       name: 'OBJECTID',
@@ -44,7 +44,7 @@ export const defaultLayerProps = {
       defaultValue: 'NEWID() WITH VALUES',
     },
     {
-      name: 'GlobalID',
+      name: 'GLOBALID',
       type: 'esriFieldTypeGlobalID',
       alias: 'GlobalID',
       sqlType: 'sqlTypeOther',

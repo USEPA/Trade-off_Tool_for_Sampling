@@ -15,7 +15,7 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
 // types
-import { FeatureEditsType } from 'types/Edits';
+import { DeleteFeatureType, FeatureEditsType } from 'types/Edits';
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -197,7 +197,8 @@ function Publish() {
         };
         const newAdds: FeatureEditsType[] = [];
         const newUpdates: FeatureEditsType[] = [];
-        const newDeletes: FeatureEditsType[] = [];
+        const newDeletes: DeleteFeatureType[] = [];
+        let newPublished = layerEdits.published;
 
         const layerRes: any = res[0];
         // need to loop through each array and check the success flag
@@ -210,7 +211,22 @@ function Publish() {
             if (item.success) {
               origItem.attributes.OBJECTID = item.objectId;
               origItem.attributes.GLOBALID = item.globalId;
-              newUpdates.push(origItem);
+
+              newPublished.push(origItem);
+
+              // update the graphic on the map
+              if (sketchLayer.sketchLayer.type === 'graphics') {
+                const graphic = sketchLayer.sketchLayer.graphics.find(
+                  (graphic) =>
+                    graphic.attributes.PERMANENT_IDENTIFIER ===
+                    origItem.attributes.PERMANENT_IDENTIFIER,
+                );
+
+                if (graphic) {
+                  graphic.attributes.OBJECTID = item.objectId;
+                  graphic.attributes.GLOBALID = item.globalId;
+                }
+              }
             } else {
               newAdds.push(origItem);
             }
@@ -225,7 +241,36 @@ function Publish() {
             if (item.success) {
               origItem.attributes.OBJECTID = item.objectId;
               origItem.attributes.GLOBALID = item.globalId;
-              newUpdates.push(origItem);
+
+              // find the item in published
+              const index = newPublished.findIndex(
+                (pubItem) =>
+                  pubItem.attributes.PERMANENT_IDENTIFIER ===
+                  origItem.attributes.PERMANENT_IDENTIFIER,
+              );
+
+              // update the item in newPublished
+              if (index > -1) {
+                newPublished = [
+                  ...newPublished.slice(0, index),
+                  origItem,
+                  ...newPublished.slice(index + 1),
+                ];
+              }
+
+              // update the graphic on the map
+              if (sketchLayer.sketchLayer.type === 'graphics') {
+                const graphic = sketchLayer.sketchLayer.graphics.find(
+                  (graphic) =>
+                    graphic.attributes.PERMANENT_IDENTIFIER ===
+                    origItem.attributes.PERMANENT_IDENTIFIER,
+                );
+
+                if (graphic) {
+                  graphic.attributes.OBJECTID = item.objectId;
+                  graphic.attributes.GLOBALID = item.globalId;
+                }
+              }
             } else {
               newUpdates.push(origItem);
             }
@@ -236,8 +281,24 @@ function Publish() {
             item.success ? (totals.deleted += 1) : (totals.failed += 1);
 
             // update the edits delete array
-            if (!item.success) {
-              newDeletes.push(layerEdits.deletes[index]);
+            const origItem = layerEdits.deletes[index];
+            if (item.success) {
+              // find the item in published
+              const pubIndex = newPublished.findIndex(
+                (pubItem) =>
+                  pubItem.attributes.PERMANENT_IDENTIFIER ===
+                  origItem.PERMANENT_IDENTIFIER,
+              );
+
+              // update the item in newPublished
+              if (pubIndex > -1) {
+                newPublished = [
+                  ...newPublished.slice(0, pubIndex),
+                  ...newPublished.slice(pubIndex + 1),
+                ];
+              }
+            } else {
+              newDeletes.push(origItem);
             }
           });
         }
@@ -286,6 +347,7 @@ function Publish() {
           editedLayer.adds = newAdds;
           editedLayer.updates = newUpdates;
           editedLayer.deletes = newDeletes;
+          editedLayer.published = newPublished;
 
           return {
             count: edits.count + 1,
