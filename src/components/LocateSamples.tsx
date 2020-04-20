@@ -20,7 +20,11 @@ import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 // utils
-import { updateLayerEdits } from 'utils/sketchUtils';
+import {
+  getCurrentDateTime,
+  getPopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 import { fetchPost } from 'utils/fetchUtils';
 
 // gets an array of layers that can be used with the sketch widget.
@@ -509,16 +513,22 @@ function LocateSamples() {
         const results = res.results[0].value;
 
         // build an array of graphics to draw on the map
+        const timestamp = getCurrentDateTime();
+        const popupTemplate = getPopupTemplate('Samples');
         const graphicsToAdd: __esri.Graphic[] = [];
         results.features.forEach((feature: any) => {
           graphicsToAdd.push(
             new Graphic({
-              attributes: feature.attributes,
+              attributes: {
+                ...feature.attributes,
+                CREATEDDATE: timestamp,
+              },
               symbol: polygonSymbol,
               geometry: new Polygon({
                 rings: feature.geometry.rings,
                 spatialReference: results.spatialReference,
               }),
+              popupTemplate,
             }),
           );
         });

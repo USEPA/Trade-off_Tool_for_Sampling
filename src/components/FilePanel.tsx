@@ -16,6 +16,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
 import {
   generateUUID,
+  getCurrentDateTime,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -602,6 +603,7 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
+    const popupTemplate = getPopupTemplate(layerType.value);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -644,6 +646,7 @@ function FilePanel() {
         }
 
         // add sample layer specific attributes
+        const timestamp = getCurrentDateTime();
         if (layerType.value === 'Samples') {
           const {
             CONTAMTYPE,
@@ -653,18 +656,20 @@ function FilePanel() {
             UPDATEDDATE,
             USERNAME,
             ORGANIZATION,
-            SURFACEAREAUNIT,
             ELEVATIONSERIES,
           } = graphic.attributes;
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
           if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
           if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = null;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
           if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
           if (!USERNAME) graphic.attributes['USERNAME'] = null;
           if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
-          if (!SURFACEAREAUNIT) graphic.attributes['SURFACEAREAUNIT'] = null;
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+        }
+        if (layerType.value === 'VSP') {
+          const { CREATEDDATE } = graphic.attributes;
+          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
         // verify the graphic has all required attributes
@@ -684,9 +689,7 @@ function FilePanel() {
         }
 
         // add the popup template
-        graphic.popupTemplate = new PopupTemplate(
-          getPopupTemplate(layerType.value),
-        );
+        graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
       });
@@ -789,7 +792,6 @@ function FilePanel() {
     console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
-    const layersAdded: LayerType[] = [];
     const featureLayers: __esri.FeatureLayer[] = [];
     const graphicsAdded: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -870,25 +872,8 @@ function FilePanel() {
         ...referenceLayers,
         { ...layerProps, layerId: layerToAdd.id },
       ]);
-
-      // add the layers, from the uploaded file, to the map
-      layersAdded.push({
-        id: -1,
-        layerId: layerToAdd.id,
-        value: layerName,
-        name: file.name,
-        label: layerName,
-        layerType: layerType.value,
-        scenarioName: '',
-        scenarioDescription: '',
-        defaultVisibility: true,
-        geometryType: layer.layerDefinition.geometryType,
-        addedFrom: 'file',
-        sketchLayer: layerToAdd,
-      });
     });
 
-    setLayers([...layers, ...layersAdded]);
     map.addMany(featureLayers);
     if (graphicsAdded.length > 0) mapView.goTo(graphicsAdded);
 

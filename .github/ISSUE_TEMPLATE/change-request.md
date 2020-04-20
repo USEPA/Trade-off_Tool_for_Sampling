@@ -3,7 +3,8 @@ name: Change Request
 about: TOTS Default GitHub Issue Template
 title: ''
 labels: ''
-assignees: ''
+assignees: 'cschwinderg'
+projects: 'EPA-HSRP-TOTS'
 ---
 
 **Describe the change**
