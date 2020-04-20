@@ -19,7 +19,6 @@ export type LayerEditsType = {
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
   deletes: FeatureEditsType[]; // features to delete
-  splits: FeatureEditsType[]; // features to split
 };
 
 export type FeatureEditsType = {

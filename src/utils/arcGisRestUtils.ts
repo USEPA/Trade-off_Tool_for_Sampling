@@ -450,7 +450,6 @@ export function applyEdits({
         adds,
         updates: layerEdits.updates,
         deletes: layerEdits.deletes,
-        // splits: layerEdits.splits, // not sure if we need this one
       });
     });
 

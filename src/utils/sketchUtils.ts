@@ -55,7 +55,6 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     adds: [],
     updates: [],
     deletes: [],
-    splits: [],
   };
 }
 
@@ -200,9 +199,6 @@ export function updateLayerEdits({
         layerToEdit.deletes.push(change.attributes.PERMANENT_IDENTIFIER);
       });
     }
-
-    // TODO: determine if we need splits and implement if necessary
-    // if (type === 'splits') { }
   }
 
   editsCopy.count = editsCopy.count + 1;
