@@ -55,8 +55,7 @@
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
       "prettier --write",
-      "npm run lint:css",
-      "git add"
+      "npm run lint:css"
     ]
   },
   "eslintConfig": {
