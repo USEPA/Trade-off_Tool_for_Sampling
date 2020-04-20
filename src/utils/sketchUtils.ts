@@ -84,7 +84,7 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
  *
  * @param edits The edits object to save the changes to.
  * @param layer The layer the changes pertain to
- * @param type The type of update being performed (add, update, delete or split)
+ * @param type The type of update being performed (add, update, or delete)
  * @param changes An object representing the changes being saved
  */
 export function updateLayerEdits({
@@ -95,7 +95,7 @@ export function updateLayerEdits({
 }: {
   edits: EditsType;
   layer: LayerType;
-  type: 'add' | 'update' | 'delete' | 'split' | 'properties';
+  type: 'add' | 'update' | 'delete' | 'properties';
   changes?: __esri.Collection<__esri.Graphic>;
 }) {
   // make a copy of the edits context variable
