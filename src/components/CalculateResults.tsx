@@ -554,17 +554,20 @@ function CalculateResults() {
           { bold: true, vertAlign: 'baseline' },
           ')',
         ]);
-      resultsSheet
-        .cell(5, 2)
-        .number(calculateResults.data['User Specified Total AOI']);
+      const userAoi = calculateResults.data['User Specified Total AOI'];
+      if (userAoi) {
+        resultsSheet.cell(5, 2).number(userAoi);
+      }
 
       resultsSheet
         .cell(6, 1)
         .string('Percent of Area Sampled')
         .style(labelStyle);
-      resultsSheet
-        .cell(6, 2)
-        .number(calculateResults.data['Percent of Area Sampled']);
+      const percentAreaSampled =
+        calculateResults.data['Percent of Area Sampled'];
+      if (percentAreaSampled) {
+        resultsSheet.cell(6, 2).number(percentAreaSampled);
+      }
 
       // col 3 & 4
       resultsSheet
