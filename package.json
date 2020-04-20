@@ -17,9 +17,12 @@
     "@emotion/styled": "10.0.27",
     "@reach/dialog": "0.9.1",
     "@reach/window-size": "0.9.0",
+    "@types/file-saver": "2.0.1",
     "@types/react-select": "3.0.11",
     "@types/uuid": "7.0.2",
     "esri-loader": "2.13.0",
+    "excel4node": "1.7.2",
+    "file-saver": "2.0.2",
     "react": "16.13.1",
     "react-app-polyfill": "1.0.6",
     "react-dom": "16.13.1",
@@ -37,7 +40,7 @@
     "@types/react": "16.9.27",
     "@types/react-dom": "16.9.5",
     "cypress": "4.3.0",
-    "eslint-plugin-cypress": "^2.10.3",
+    "eslint-plugin-cypress": "2.10.3",
     "husky": "4.2.3",
     "lint-staged": "10.1.0",
     "prettier": "2.0.2",
@@ -52,8 +55,7 @@
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
       "prettier --write",
-      "npm run lint:css",
-      "git add"
+      "npm run lint:css"
     ]
   },
   "eslintConfig": {

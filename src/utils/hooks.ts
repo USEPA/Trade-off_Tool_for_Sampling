@@ -1078,6 +1078,7 @@ export function useCalculatePlan() {
       'User Specified Sampling Team Labor Cost': samplingLaborCost,
       'User Specified Number of Available Labs for Analysis': numLabs,
       'User Specified Analysis Lab Hours per Day': numLabHours,
+      'User Specified Surface Area': surfaceArea,
       'Total Number of User-Defined Samples': calcGraphics.length,
 
       // assign counts

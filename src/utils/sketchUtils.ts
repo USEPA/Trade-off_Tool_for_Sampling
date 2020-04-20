@@ -297,6 +297,25 @@ export function generateUUID() {
 }
 
 /**
+ * Takes the graphics from the provided array of layers and
+ * combines them in to a single array of graphics. Helpful
+ * for zooming to multiple graphics layers.
+ *
+ * @param Layers - The layers to get a combined graphics array from.
+ * @returns extent - The extent of the graphics layers
+ */
+export function getGraphicsArray(layers: (LayerType | null)[]) {
+  let zoomGraphics: __esri.Graphic[] = [];
+  layers.forEach((layer) => {
+    if (layer?.sketchLayer?.type === 'graphics') {
+      zoomGraphics = zoomGraphics.concat(layer.sketchLayer.graphics.toArray());
+    }
+  });
+
+  return zoomGraphics;
+}
+
+/**
  * Gets a timestamp for the current date time formatted as
  * YYYY/MM/DD hh:mm:ss.s
  *
