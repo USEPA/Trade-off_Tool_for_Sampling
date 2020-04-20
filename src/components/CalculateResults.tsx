@@ -2,7 +2,6 @@
 
 import React, { ReactNode } from 'react';
 import { jsx, css } from '@emotion/core';
-// @ts-ignore
 import xl from 'excel4node';
 import { saveAs } from 'file-saver';
 // components
