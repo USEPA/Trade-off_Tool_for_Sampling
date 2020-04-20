@@ -252,12 +252,15 @@ export function createFeatureLayers(
     if (layers.length === 0) {
       resolve({
         success: true,
-        layersParams: [],
+        layers: [],
       });
       return;
     }
 
     layers.forEach((layer) => {
+      // don't duplicate existing layers
+      if (layer.id > -1) return;
+
       // get the current extent, so we can go back
       let graphicsExtent: __esri.Extent | null = null;
 
@@ -310,6 +313,14 @@ export function createFeatureLayers(
         layers: layersParams,
       },
     };
+
+    if (layersParams.length === 0) {
+      resolve({
+        success: true,
+        layers: [],
+      });
+      return;
+    }
 
     // inject /admin into rest/services to be able to call
     const adminServiceUrl = serviceUrl.replace(

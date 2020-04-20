@@ -254,10 +254,10 @@ function MapWidgets({ mapView }: Props) {
     sketchLayer,
     aoiSketchLayer,
     layers,
+    setLayers,
     map,
   } = React.useContext(SketchContext);
   const {
-    Graphic,
     Home,
     Locate,
     Polygon,
@@ -597,10 +597,12 @@ function MapWidgets({ mapView }: Props) {
 
     // look up the layer for this event
     let updateLayer: LayerType | null = null;
+    let updateLayerIndex = -1;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
       if (layer.layerId === changes[0].layer.id) {
         updateLayer = layer;
+        updateLayerIndex = i;
         break;
       }
     }
@@ -617,8 +619,15 @@ function MapWidgets({ mapView }: Props) {
 
       // update the edits state
       setEdits(editsCopy);
+
+      // updated the edited layer
+      setLayers([
+        ...layers.slice(0, updateLayerIndex),
+        updateLayer,
+        ...layers.slice(updateLayerIndex + 1),
+      ]);
     }
-  }, [edits, setEdits, updateSketchEvent, layers]);
+  }, [edits, setEdits, updateSketchEvent, layers, setLayers]);
 
   // Adds a container for the feature tool to the map
   const [

@@ -113,6 +113,7 @@ function useEditsLayerStorage() {
         scenarioName: editsLayer.scenarioName,
         scenarioDescription: editsLayer.scenarioDescription,
         addedFrom: editsLayer.addedFrom,
+        status: editsLayer.status,
         defaultVisibility: true,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,

@@ -786,6 +786,7 @@ function ResultCard({ result }: ResultCardProps) {
                   defaultVisibility: true,
                   geometryType: layerDetails.geometryType,
                   addedFrom: 'tots',
+                  status: 'published',
                   sketchLayer: graphicsLayer,
                 };
                 layersToAdd.push(layerToAdd);

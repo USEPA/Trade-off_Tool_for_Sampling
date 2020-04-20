@@ -12,6 +12,8 @@ export type LayerSelectType = {
 
 export type AddedFrom = 'file' | 'sketch' | 'tots';
 
+export type PublishStatus = 'added' | 'edited' | 'published';
+
 export type LayerType = {
   id: number;
   layerId: string;
@@ -25,6 +27,7 @@ export type LayerType = {
   defaultVisibility: boolean;
   geometryType: string;
   addedFrom: AddedFrom;
+  status: PublishStatus;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
 };
 

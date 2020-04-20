@@ -728,6 +728,7 @@ function FilePanel() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 

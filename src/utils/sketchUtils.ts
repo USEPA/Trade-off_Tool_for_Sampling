@@ -51,6 +51,7 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     scenarioName: layerToEdit.scenarioName,
     scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
+    status: layerToEdit.status,
     adds: [],
     updates: [],
     deletes: [],
@@ -113,6 +114,10 @@ export function updateLayerEdits({
     // handle property changes
     layerToEdit.scenarioName = layer.scenarioName;
     layerToEdit.scenarioDescription = layer.scenarioDescription;
+
+    // if the status is published, set the status to edited to allow re-publishing
+    if (layer.status === 'published') layer.status = 'edited';
+    if (layerToEdit.status === 'published') layerToEdit.status = 'edited';
   }
 
   if (changes) {

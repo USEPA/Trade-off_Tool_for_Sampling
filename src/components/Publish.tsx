@@ -14,6 +14,8 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
+// types
+import { FeatureEditsType } from 'types/Edits';
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -63,6 +65,8 @@ function Publish() {
   const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
+    setEdits,
+    setLayers,
     sketchLayer, //
   } = React.useContext(SketchContext);
 
@@ -123,6 +127,11 @@ function Publish() {
       rawData: null,
     });
 
+    if (sketchLayer.status === 'edited') {
+      setHasNameBeenChecked(true);
+      return;
+    }
+
     // check if the service (scenario) name is availble before continuing
     isServiceNameAvailable(portal, sketchLayer.scenarioName)
       .then((res: any) => {
@@ -166,14 +175,17 @@ function Publish() {
       rawData: null,
     });
 
-    const layerEdits = edits.edits.filter(
+    const layerEditsIndex = edits.edits.findIndex(
       (editLayer) => editLayer.layerId === sketchLayer.layerId,
     );
+    if (layerEditsIndex === -1) return;
+
+    const layerEdits = edits.edits[layerEditsIndex];
 
     publish({
       portal,
       layers: [sketchLayer],
-      edits: layerEdits,
+      edits: [layerEdits],
     })
       .then((res: any) => {
         // get totals
@@ -183,24 +195,52 @@ function Publish() {
           deleted: 0,
           failed: 0,
         };
-        res.forEach((layerRes: any) => {
-          // need to loop through each array and check the success flag
-          if (layerRes.addResults) {
-            layerRes.addResults.forEach((item: any) => {
-              item.success ? (totals.added += 1) : (totals.failed += 1);
-            });
-          }
-          if (layerRes.updateResults) {
-            layerRes.updateResults.forEach((item: any) => {
-              item.success ? (totals.updated += 1) : (totals.failed += 1);
-            });
-          }
-          if (layerRes.deleteResults) {
-            layerRes.deleteResults.forEach((item: any) => {
-              item.success ? (totals.deleted += 1) : (totals.failed += 1);
-            });
-          }
-        });
+        const newAdds: FeatureEditsType[] = [];
+        const newUpdates: FeatureEditsType[] = [];
+        const newDeletes: FeatureEditsType[] = [];
+
+        const layerRes: any = res[0];
+        // need to loop through each array and check the success flag
+        if (layerRes.addResults) {
+          layerRes.addResults.forEach((item: any, index: number) => {
+            item.success ? (totals.added += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = layerEdits.adds[index];
+            if (item.success) {
+              origItem.attributes.OBJECTID = item.objectId;
+              origItem.attributes.GLOBALID = item.globalId;
+              newUpdates.push(origItem);
+            } else {
+              newAdds.push(origItem);
+            }
+          });
+        }
+        if (layerRes.updateResults) {
+          layerRes.updateResults.forEach((item: any, index: number) => {
+            item.success ? (totals.updated += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = layerEdits.updates[index];
+            if (item.success) {
+              origItem.attributes.OBJECTID = item.objectId;
+              origItem.attributes.GLOBALID = item.globalId;
+              newUpdates.push(origItem);
+            } else {
+              newUpdates.push(origItem);
+            }
+          });
+        }
+        if (layerRes.deleteResults) {
+          layerRes.deleteResults.forEach((item: any, index: number) => {
+            item.success ? (totals.deleted += 1) : (totals.failed += 1);
+
+            // update the edits delete array
+            if (!item.success) {
+              newDeletes.push(layerEdits.deletes[index]);
+            }
+          });
+        }
 
         // create the message string for each type of change (add, update and delete)
         const successParts = [];
@@ -237,6 +277,40 @@ function Publish() {
           summary: { success, failed },
           rawData: res,
         });
+
+        // make a copy of the edits context variable
+        // update the edits state
+        setEdits((edits) => {
+          const editedLayer = edits.edits[layerEditsIndex];
+          editedLayer.status = 'published';
+          editedLayer.adds = newAdds;
+          editedLayer.updates = newUpdates;
+          editedLayer.deletes = newDeletes;
+
+          return {
+            count: edits.count + 1,
+            edits: [
+              ...edits.edits.slice(0, layerEditsIndex),
+              editedLayer,
+              ...edits.edits.slice(layerEditsIndex + 1),
+            ],
+          };
+        });
+
+        // updated the edited layer
+        setLayers((layers) => {
+          const editedLayerIndex = layers.findIndex(
+            (layer) => layer.layerId === sketchLayer.layerId,
+          );
+          const editedLayer = layers[editedLayerIndex];
+          editedLayer.status = 'published';
+
+          return [
+            ...layers.slice(0, editedLayerIndex),
+            editedLayer,
+            ...layers.slice(editedLayerIndex + 1),
+          ];
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -249,6 +323,8 @@ function Publish() {
   }, [
     IdentityManager,
     edits,
+    setEdits,
+    setLayers,
     portal,
     oAuthInfo,
     setGoToOptions,
@@ -313,7 +389,7 @@ function Publish() {
           />
         )}
       {(publishResponse.summary.success ||
-        (sketchLayer && sketchLayer.id > -1)) && (
+        sketchLayer?.status === 'published') && (
         <MessageBox
           severity="info"
           title="Publish Succeeded"
@@ -333,7 +409,7 @@ function Publish() {
       )}
       {publishResponse.status !== 'name-not-available' &&
         sketchLayer &&
-        sketchLayer.id === -1 && (
+        sketchLayer.status !== 'published' && (
           <div css={publishButtonContainerStyles}>
             <button
               css={publishButtonStyles}

@@ -279,6 +279,7 @@ function LocateSamples() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 
@@ -324,6 +325,7 @@ function LocateSamples() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 
