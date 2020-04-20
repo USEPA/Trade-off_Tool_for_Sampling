@@ -19,6 +19,8 @@ type SketchType = {
   setFeatureServiceUrl: React.Dispatch<React.SetStateAction<string>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
+  layersInitialized: boolean;
+  setLayersInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layers: LayerType[];
   setLayers: React.Dispatch<React.SetStateAction<LayerType[]>>;
   portalLayers: string[];
@@ -60,6 +62,8 @@ export const SketchContext = React.createContext<SketchType>({
   setFeatureServiceUrl: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
+  layersInitialized: false,
+  setLayersInitialized: () => {},
   layers: [],
   setLayers: () => {},
   portalLayers: [],
@@ -96,6 +100,7 @@ export function SketchProvider({ children }: Props) {
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [featureService, setFeatureService] = React.useState<any>(null);
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
+  const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
   const [portalLayers, setPortalLayers] = React.useState<string[]>([]);
   const [referenceLayers, setReferenceLayers] = React.useState<any[]>([]);
@@ -134,6 +139,8 @@ export function SketchProvider({ children }: Props) {
         setFeatureServiceUrl,
         homeWidget,
         setHomeWidget,
+        layersInitialized,
+        setLayersInitialized,
         layers,
         setLayers,
         portalLayers,

@@ -944,9 +944,10 @@ function FilePanel() {
 
   return (
     <div css={searchContainerStyles}>
-      <label htmlFor="layer-type-select">Layer Type</label>
+      <label htmlFor="layer-type-select-input">Layer Type</label>
       <Select
-        inputId="layer-type-select"
+        id="layer-type-select"
+        inputId="layer-type-select-input"
         css={selectStyles}
         value={layerType}
         onChange={(ev) => {
@@ -959,9 +960,10 @@ function FilePanel() {
         <React.Fragment>
           {layerType.value === 'VSP' && (
             <React.Fragment>
-              <label htmlFor="sample-type-select">Sample Type</label>
+              <label htmlFor="sample-type-select-input">Sample Type</label>
               <Select
-                inputId="sample-type-select"
+                id="sample-type-select"
+                inputId="sample-type-select-input"
                 css={selectStyles}
                 value={sampleType}
                 onChange={(ev) => {

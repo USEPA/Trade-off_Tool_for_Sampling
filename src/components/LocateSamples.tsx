@@ -232,6 +232,7 @@ function LocateSamples() {
   const {
     edits,
     setEdits,
+    layersInitialized,
     layers,
     setLayers,
     map,
@@ -253,18 +254,29 @@ function LocateSamples() {
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
   // created.
+  const [
+    sketchLayerInitialized,
+    setSketchLayerInitialized, //
+  ] = React.useState(false);
   React.useEffect(() => {
-    if (!map || sketchLayer) return;
+    if (!map || !layersInitialized || sketchLayerInitialized) return;
 
     // get the first layer that can be used for sketching and return
     const sketchableLayers = getSketchableLayers(layers);
-    if (sketchableLayers.length > 0) {
+    if (!sketchLayer && sketchableLayers.length > 0) {
       setSketchLayer(sketchableLayers[0]);
-      return;
     }
 
+    setSketchLayerInitialized(true);
+
+    // check if the default sketch layer has been added already or not
+    const defaultIndex = sketchableLayers.findIndex(
+      (layer) => layer.name === 'Default Sample Layer',
+    );
+    if (defaultIndex > -1) return;
+
     // no sketchable layers were available, create one
-    const graphicsLayer = new GraphicsLayer({ title: 'Sketch Layer' });
+    const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
 
     const tempSketchLayer: LayerType = {
       id: -1,
@@ -285,27 +297,40 @@ function LocateSamples() {
     setLayers((layers) => {
       return [...layers, tempSketchLayer];
     });
-    map.add(graphicsLayer);
-    setSketchLayer(tempSketchLayer);
-  }, [GraphicsLayer, map, layers, setLayers, sketchLayer, setSketchLayer]);
+
+    // if the sketch layer wasn't set above, set it now
+    if (!sketchLayer && sketchableLayers.length === 0) {
+      setSketchLayer(tempSketchLayer);
+    }
+  }, [
+    GraphicsLayer,
+    map,
+    layersInitialized,
+    layers,
+    setLayers,
+    sketchLayer,
+    setSketchLayer,
+    sketchLayerInitialized,
+  ]);
 
   // Initializes the aoi layer for performance reasons
   const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
   React.useEffect(() => {
-    if (!map || aoiLayerInitialized) return;
-
-    if (aoiSketchLayer) {
-      setAoiLayerInitialized(true);
-      return;
-    }
+    if (!map || !layersInitialized || aoiLayerInitialized) return;
 
     // get the first layer that can be used for aoi sketching and return
     const sketchableLayers = getSketchableAoiLayers(layers);
-    if (sketchableLayers.length > 0) {
+    if (!aoiSketchLayer && sketchableLayers.length > 0) {
       setAoiSketchLayer(sketchableLayers[0]);
-      setAoiLayerInitialized(true);
-      return;
     }
+
+    setAoiLayerInitialized(true);
+
+    // check if the default sketch layer has been added already or not
+    const defaultIndex = sketchableLayers.findIndex(
+      (layer) => layer.name === 'Sketched Area of Interest',
+    );
+    if (defaultIndex > -1) return;
 
     const graphicsLayer = new GraphicsLayer({
       title: 'Sketched Area of Interest',
@@ -329,13 +354,15 @@ function LocateSamples() {
     setLayers((layers) => {
       return [...layers, newAoiSketchLayer];
     });
-    setAoiSketchLayer(newAoiSketchLayer);
-    map.add(graphicsLayer);
 
-    setAoiLayerInitialized(true);
+    // set the active sketch layer
+    if (!aoiSketchLayer && sketchableLayers.length === 0) {
+      setAoiSketchLayer(newAoiSketchLayer);
+    }
   }, [
     GraphicsLayer,
     map,
+    layersInitialized,
     layers,
     setLayers,
     aoiLayerInitialized,
@@ -351,7 +378,13 @@ function LocateSamples() {
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
-    if (!sketchVM) return;
+    if (!sketchVM || !map || !sketchLayer) return;
+
+    // put the sketch layer on the map, if it isn't there already
+    const layerIndex = map.layers.findIndex(
+      (layer) => layer.id === sketchLayer.layerId,
+    );
+    if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
 
     // save changes from other sketchVM
     if (aoiSketchVM) aoiSketchVM.complete();
@@ -392,7 +425,13 @@ function LocateSamples() {
   // dropdown this will create an AOI layer. This also sets the sketchVM to use the
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
   function sketchAoiButtonClick() {
-    if (!map || !aoiSketchVM) return;
+    if (!map || !aoiSketchVM || !aoiSketchLayer) return;
+
+    // put the sketch layer on the map, if it isn't there already
+    const layerIndex = map.layers.findIndex(
+      (layer) => layer.id === aoiSketchLayer.layerId,
+    );
+    if (layerIndex === -1) map.add(aoiSketchLayer.sketchLayer);
 
     // save changes from other sketchVM
     if (sketchVM) sketchVM.complete();
@@ -552,9 +591,12 @@ function LocateSamples() {
         </div>
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
-          <label htmlFor="sampling-layer-select">Specify Sampling Layer</label>
+          <label htmlFor="sampling-layer-select-input">
+            Specify Sampling Layer
+          </label>
           <Select
-            inputId="sampling-layer-select"
+            id="sampling-layer-select"
+            inputId="sampling-layer-select-input"
             css={layerSelectStyles}
             value={sketchLayer}
             onChange={(ev) => setSketchLayer(ev as LayerType)}
@@ -621,9 +663,10 @@ function LocateSamples() {
                     value={numberRandomSamples}
                     onChange={(ev) => setNumberRandomSamples(ev.target.value)}
                   />
-                  <label htmlFor="sample-type-select">Sample Type</label>
+                  <label htmlFor="sample-type-select-input">Sample Type</label>
                   <Select
-                    inputId="sample-type-select"
+                    id="sample-type-select"
+                    inputId="sample-type-select-input"
                     value={sampleType}
                     onChange={(ev) => setSampleType(ev as SampleSelectionType)}
                     options={[
@@ -635,10 +678,13 @@ function LocateSamples() {
                       { value: 'Swab', label: 'Swab' },
                     ]}
                   />
-                  <label htmlFor="aoi-mask-select">Area of Interest Mask</label>
+                  <label htmlFor="aoi-mask-select-input">
+                    Area of Interest Mask
+                  </label>
                   <div css={inlineMenuStyles}>
                     <Select
-                      inputId="aoi-mask-select"
+                      id="aoi-mask-select"
+                      inputId="aoi-mask-select-input"
                       css={fullWidthSelectStyles}
                       isClearable={true}
                       value={aoiSketchLayer}
@@ -710,12 +756,13 @@ function LocateSamples() {
           </AccordionItem>
           <AccordionItem title={'Include Contamination Map (Optional)'}>
             <div css={sectionContainer}>
-              <label htmlFor="contamination-map-select">
+              <label htmlFor="contamination-map-select-input">
                 Contamination map
               </label>
               <div css={inlineMenuStyles}>
                 <Select
-                  inputId="contamination-map-select"
+                  id="contamination-map-select"
+                  inputId="contamination-map-select-input"
                   css={fullWidthSelectStyles}
                   isClearable={true}
                   value={contaminationMap}

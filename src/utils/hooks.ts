@@ -53,21 +53,25 @@ function getLayerById(layers: LayerType[], id: string) {
 function useEditsLayerStorage() {
   const key = 'tots_edits';
   const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
-  const { edits, setEdits, layers, setLayers, map } = React.useContext(
-    SketchContext,
-  );
+  const {
+    edits,
+    setEdits,
+    layersInitialized,
+    setLayersInitialized,
+    layers,
+    setLayers,
+    map,
+  } = React.useContext(SketchContext);
 
   // Retreives edit data from browser storage when the app loads
-  const [
-    localStorageInitialized,
-    setLocalStorageInitialized, //
-  ] = React.useState(false);
   React.useEffect(() => {
-    if (!map || !setEdits || !setLayers || localStorageInitialized) return;
+    if (!map || !setEdits || !setLayers || layersInitialized) return;
 
-    setLocalStorageInitialized(true);
     const editsStr = readFromStorage(key);
-    if (!editsStr) return;
+    if (!editsStr) {
+      setLayersInitialized(true);
+      return;
+    }
 
     const edits: EditsType = JSON.parse(editsStr);
     setEdits(edits);
@@ -122,6 +126,8 @@ function useEditsLayerStorage() {
       setLayers([...layers, ...newLayers]);
       map.addMany(graphicsLayers);
     }
+
+    setLayersInitialized(true);
   }, [
     Graphic,
     GraphicsLayer,
@@ -129,15 +135,16 @@ function useEditsLayerStorage() {
     setEdits,
     setLayers,
     layers,
-    localStorageInitialized,
+    layersInitialized,
+    setLayersInitialized,
     map,
   ]);
 
   // Saves the edits to browser storage everytime they change
   React.useEffect(() => {
-    if (!localStorageInitialized) return;
+    if (!layersInitialized) return;
     writeToStorage(key, edits);
-  }, [edits, localStorageInitialized]);
+  }, [edits, layersInitialized]);
 }
 
 // Uses browser storage for holding the reference layers that have been added.
