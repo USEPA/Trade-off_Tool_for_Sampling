@@ -57,6 +57,33 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
   }, 100);
 }
 
+// Finds the layer being updated and its index within the layers variable.
+// Also returns the eventType (add, update, etc.) and event changes.
+function getUpdateEventInfo(layers: LayerType[], event: any) {
+  // get type and changes
+  const type = event.type === 'create' ? 'add' : event.type;
+  const changes = type === 'add' ? [event.graphic] : event.graphics;
+
+  // look up the layer for this event
+  let updateLayer: LayerType | null = null;
+  let updateLayerIndex = -1;
+  for (let i = 0; i < layers.length; i++) {
+    const layer = layers[i];
+    if (layer.layerId === changes[0].layer.id) {
+      updateLayer = layer;
+      updateLayerIndex = i;
+      break;
+    }
+  }
+
+  return {
+    eventType: type,
+    eventChanges: changes,
+    layer: updateLayer,
+    layerIndex: updateLayerIndex,
+  };
+}
+
 // --- styles (FeatureTool) ---
 const containerStyles = css`
   width: 160px;
@@ -350,7 +377,6 @@ function MapWidgets({ mapView }: Props) {
   }, [aoiSketchVM, aoiSketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
-  const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   const [
     selectedGraphicsIds,
     setSelectedGraphicsIds, //
@@ -359,6 +385,7 @@ function MapWidgets({ mapView }: Props) {
     (
       sketchViewModel: __esri.SketchViewModel,
       setter: React.Dispatch<React.SetStateAction<boolean>>,
+      sketchEventSetter: React.Dispatch<any>,
     ) => {
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
@@ -432,7 +459,7 @@ function MapWidgets({ mapView }: Props) {
 
           // save the graphic
           sketchViewModel.update(graphic);
-          setUpdateSketchEvent(event);
+          sketchEventSetter(event);
 
           // re-enable layer popups
           if (map) {
@@ -453,7 +480,7 @@ function MapWidgets({ mapView }: Props) {
             event.graphics.forEach((graphic) => {
               graphic.attributes.UPDATEDDATE = getCurrentDateTime();
             });
-            setUpdateSketchEvent(event);
+            sketchEventSetter(event);
           }
 
           // re-enable layer popups
@@ -502,7 +529,7 @@ function MapWidgets({ mapView }: Props) {
       // is now an option.
       const tempSketchVM = sketchViewModel as any;
       tempSketchVM.on('delete', (event: any) => {
-        setUpdateSketchEvent(event);
+        sketchEventSetter(event);
       });
     },
     [Polygon, PopupTemplate, map],
@@ -514,9 +541,10 @@ function MapWidgets({ mapView }: Props) {
     sketchEventsInitialized,
     setSketchEventsInitialized, //
   ] = React.useState(false);
+  const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   React.useEffect(() => {
     if (!sketchVM || sketchEventsInitialized) return;
-    setupEvents(sketchVM, setSketchVMActive);
+    setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
 
     setSketchEventsInitialized(true);
   }, [
@@ -532,9 +560,13 @@ function MapWidgets({ mapView }: Props) {
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized, //
   ] = React.useState(false);
+  const [
+    aoiUpdateSketchEvent,
+    setAoiUpdateSketchEvent, //
+  ] = React.useState<any>(null);
   React.useEffect(() => {
     if (!aoiSketchVM || aoiSketchEventsInitialized) return;
-    setupEvents(aoiSketchVM, setAoiSketchVMActive);
+    setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
   }, [
@@ -580,49 +612,92 @@ function MapWidgets({ mapView }: Props) {
     if (newBothEqualSet !== bothEqualSet) setBothEqualSet(newBothEqualSet);
   }, [sketchVMActive, aoiSketchVMActive, targetSketchVM, bothEqualSet]);
 
-  // save the updated graphic to the edits data structure for later publishing
+  type UpdateLayerEventType = {
+    eventType: any;
+    eventChanges: any;
+    layer: LayerType | null;
+    layerIndex: number;
+  };
+  const [updateLayer, setUpdateLayer] = React.useState<UpdateLayerEventType>({
+    eventType: null,
+    eventChanges: null,
+    layer: null,
+    layerIndex: -1,
+  });
+
+  // set the updateLayer for the updateSketchEvent
   React.useEffect(() => {
     if (layers.length === 0 || !updateSketchEvent) return;
     setUpdateSketchEvent(null);
 
-    const type =
-      updateSketchEvent.type === 'create' ? 'add' : updateSketchEvent.type;
-    const changes =
-      type === 'add' ? [updateSketchEvent.graphic] : updateSketchEvent.graphics;
+    setUpdateLayer(getUpdateEventInfo(layers, updateSketchEvent));
+  }, [updateSketchEvent, layers]);
 
-    // look up the layer for this event
-    let updateLayer: LayerType | null = null;
-    let updateLayerIndex = -1;
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
-      if (layer.layerId === changes[0].layer.id) {
-        updateLayer = layer;
-        updateLayerIndex = i;
-        break;
-      }
-    }
+  // set the updateLayer for the aoiUpdateSketchEvent
+  React.useEffect(() => {
+    if (layers.length === 0 || !aoiUpdateSketchEvent) return;
+    setAoiUpdateSketchEvent(null);
+
+    setUpdateLayer(getUpdateEventInfo(layers, aoiUpdateSketchEvent));
+  }, [aoiUpdateSketchEvent, layers]);
+
+  // save the updated graphic to the edits data structure for later publishing
+  React.useEffect(() => {
+    if (!updateLayer.layer) return;
+    setUpdateLayer({
+      eventType: null,
+      eventChanges: null,
+      layer: null,
+      layerIndex: -1,
+    });
 
     // save the layer changes
-    if (updateLayer) {
-      // make a copy of the edits context variable
-      const editsCopy = updateLayerEdits({
-        edits,
-        layer: updateLayer,
-        type,
-        changes,
-      });
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer: updateLayer.layer,
+      type: updateLayer.eventType,
+      changes: updateLayer.eventChanges,
+    });
 
-      // update the edits state
-      setEdits(editsCopy);
+    // update the edits state
+    setEdits(editsCopy);
 
-      // updated the edited layer
-      setLayers([
-        ...layers.slice(0, updateLayerIndex),
-        updateLayer,
-        ...layers.slice(updateLayerIndex + 1),
-      ]);
+    // updated the edited layer
+    setLayers([
+      ...layers.slice(0, updateLayer.layerIndex),
+      updateLayer.layer,
+      ...layers.slice(updateLayer.layerIndex + 1),
+    ]);
+  }, [edits, setEdits, updateLayer, layers, setLayers]);
+
+  // Reactivate aoiSketchVM after the updateSketchEvent is null
+  React.useEffect(() => {
+    if (
+      updateSketchEvent ||
+      !aoiSketchVM ||
+      aoiSketchVM.layer ||
+      aoiSketchLayer?.sketchLayer?.type !== 'graphics'
+    ) {
+      return;
     }
-  }, [edits, setEdits, updateSketchEvent, layers, setLayers]);
+
+    aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+  }, [updateSketchEvent, aoiSketchVM, aoiSketchLayer]);
+
+  // Reactivate sketchVM after the aoiUpdateSketchEvent is null
+  React.useEffect(() => {
+    if (
+      aoiUpdateSketchEvent ||
+      !sketchVM ||
+      sketchVM.layer ||
+      sketchLayer?.sketchLayer?.type !== 'graphics'
+    ) {
+      return;
+    }
+
+    sketchVM.layer = sketchLayer.sketchLayer;
+  }, [aoiUpdateSketchEvent, sketchVM, sketchLayer]);
 
   // Adds a container for the feature tool to the map
   const [
