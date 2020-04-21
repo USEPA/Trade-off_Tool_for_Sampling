@@ -388,13 +388,25 @@ function Toolbar() {
       setLayers((layers) =>
         layers.filter((layer) => layer.layerId !== layerToRemove.id),
       );
+
+      // also remove the layer from portalLayers if this layer was added
+      // from arcgis online
+      if (totsLayerToRemove?.addedFrom === 'tots') {
+        setPortalLayers(
+          portalLayers.filter(
+            (portalLayer) => portalLayer.id !== totsLayerToRemove.portalId,
+          ),
+        );
+      }
     } else if (
       tempLayerToRemove.portalItem &&
       tempLayerToRemove.portalItem.id
     ) {
       // this one was added via search panel, remove it from portalLayers
       setPortalLayers(
-        portalLayers.filter((id) => id !== tempLayerToRemove.portalItem.id),
+        portalLayers.filter(
+          (portalLayer) => portalLayer.id !== tempLayerToRemove.portalItem.id,
+        ),
       );
     } else {
       // first attempt to remove from url layers

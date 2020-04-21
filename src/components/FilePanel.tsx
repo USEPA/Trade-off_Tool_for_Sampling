@@ -641,9 +641,6 @@ function FilePanel() {
         if (!graphic.attributes.GLOBALID) {
           graphic.attributes['GLOBALID'] = uuid;
         }
-        if (!graphic.attributes.OBJECTID) {
-          graphic.attributes['OBJECTID'] = index.toString();
-        }
 
         // add sample layer specific attributes
         const timestamp = getCurrentDateTime();
@@ -718,6 +715,7 @@ function FilePanel() {
     const layerToAdd: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: layerName,
       name: file.name,
       label: layerName,
@@ -727,6 +725,7 @@ function FilePanel() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 
@@ -870,7 +869,7 @@ function FilePanel() {
 
       setReferenceLayers([
         ...referenceLayers,
-        { ...layerProps, layerId: layerToAdd.id },
+        { ...layerProps, layerId: layerToAdd.id, portalId: '' },
       ]);
     });
 

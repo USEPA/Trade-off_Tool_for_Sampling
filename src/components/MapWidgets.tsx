@@ -254,10 +254,10 @@ function MapWidgets({ mapView }: Props) {
     sketchLayer,
     aoiSketchLayer,
     layers,
+    setLayers,
     map,
   } = React.useContext(SketchContext);
   const {
-    Graphic,
     Home,
     Locate,
     Polygon,
@@ -360,8 +360,6 @@ function MapWidgets({ mapView }: Props) {
       sketchViewModel: __esri.SketchViewModel,
       setter: React.Dispatch<React.SetStateAction<boolean>>,
     ) => {
-      let nextId = 1;
-
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
 
@@ -387,7 +385,6 @@ function MapWidgets({ mapView }: Props) {
           if (id === 'aoi') {
             layerType = 'Area of Interest';
             graphic.attributes = {
-              OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -396,7 +393,6 @@ function MapWidgets({ mapView }: Props) {
           } else {
             graphic.attributes = {
               ...sampleAttributes[key],
-              OBJECTID: nextId.toString(),
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -408,7 +404,6 @@ function MapWidgets({ mapView }: Props) {
           graphic.popupTemplate = new PopupTemplate(
             getPopupTemplate(layerType),
           );
-          nextId = nextId + 1;
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
@@ -597,10 +592,12 @@ function MapWidgets({ mapView }: Props) {
 
     // look up the layer for this event
     let updateLayer: LayerType | null = null;
+    let updateLayerIndex = -1;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
       if (layer.layerId === changes[0].layer.id) {
         updateLayer = layer;
+        updateLayerIndex = i;
         break;
       }
     }
@@ -617,8 +614,15 @@ function MapWidgets({ mapView }: Props) {
 
       // update the edits state
       setEdits(editsCopy);
+
+      // updated the edited layer
+      setLayers([
+        ...layers.slice(0, updateLayerIndex),
+        updateLayer,
+        ...layers.slice(updateLayerIndex + 1),
+      ]);
     }
-  }, [edits, setEdits, updateSketchEvent, layers]);
+  }, [edits, setEdits, updateSketchEvent, layers, setLayers]);
 
   // Adds a container for the feature tool to the map
   const [

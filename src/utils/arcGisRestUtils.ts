@@ -1,11 +1,10 @@
 // types
-import { LayerEditsType, FeatureEditsType } from 'types/Edits';
+import { LayerEditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
-import { convertToSimpleGraphic } from 'utils/sketchUtils';
 import { escapeForLucene } from 'utils/utils';
 
 type ServiceMetaDataType = {
@@ -178,16 +177,9 @@ export function createFeatureService(
           f: 'json',
           token: tempPortal.credential.token,
 
-          // below are some examples on how we can add metadata for determining
-          // whether a feature service has a sample layer vs just being a reference layer.
-          // tags: "epa-tots-test-tag1,epa-tots-test-tag2",
-          // categories: "epa-tots-test-category1,epa-tots-test-category2",
-          // appCategories: "epa-tots-test-appcategory1,epa-tots-test-appcategory2",
-          properties: {
-            EPA_TOTS: {
-              sampleLayers: ['test1', 'test2'],
-            },
-          },
+          // add metadata for determining whether a feature service has a sample layer vs
+          // just being a reference layer.
+          categories: 'contains-epa-tots-sample-layer',
         };
         fetchPost(
           `${portal.user.userContentUrl}/items/${res.itemId}/update`,
@@ -223,20 +215,18 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
 }
 
 /**
- * Attempts to get the feature service and creates it if it
- * doesn't already exist
+ * Attempts to get the the layer, with the provided id, from the feature service.
  *
  * @param serviceUrl Object representing the hosted feature service
  * @param token Security token
  * @param id ID of the layer to retreive
- * @returns A promise that resolves to the requested layers
+ * @returns A promise that resolves to the requested layer
  */
 export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
-    getFeatureLayers(serviceUrl, token)
-      .then((layers: any) => {
-        const matchedLayer = layers.find((layer: any) => layer.id === id);
-        resolve(matchedLayer);
+    fetchCheck(`${serviceUrl}/${id}?f=json&token=${token}`)
+      .then((layer: any) => {
+        resolve(layer);
       })
       .catch((err) => reject(err));
   });
@@ -261,12 +251,15 @@ export function createFeatureLayers(
     if (layers.length === 0) {
       resolve({
         success: true,
-        layersParams: [],
+        layers: [],
       });
       return;
     }
 
     layers.forEach((layer) => {
+      // don't duplicate existing layers
+      if (layer.id > -1) return;
+
       // get the current extent, so we can go back
       let graphicsExtent: __esri.Extent | null = null;
 
@@ -287,6 +280,26 @@ export function createFeatureLayers(
         name: layer.scenarioName,
         description: layer.scenarioDescription,
         extent: graphicsExtent,
+
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-layer',
+                  name: 'epa-tots-sample-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-layer',
+                  name: 'epa-tots-vsp-layer',
+                },
+              ]
+            : null,
       });
     });
 
@@ -299,6 +312,14 @@ export function createFeatureLayers(
         layers: layersParams,
       },
     };
+
+    if (layersParams.length === 0) {
+      resolve({
+        success: true,
+        layers: [],
+      });
+      return;
+    }
 
     // inject /admin into rest/services to be able to call
     const adminServiceUrl = serviceUrl.replace(
@@ -400,35 +421,17 @@ export function applyEdits({
     const changes: any[] = [];
     // loop through the layers and build the payload
     edits.forEach((layerEdits) => {
-      const adds: FeatureEditsType[] = [];
-      if (layerEdits.adds.length > 0) {
-        // get the graphics layer
-        const layerToSearch = layers.find(
-          (layer) => layer.id === layerEdits.id,
-        );
-
-        // loop through and find any graphics without objectids
-        if (
-          layerToSearch?.sketchLayer &&
-          layerToSearch.sketchLayer.type === 'graphics'
-        ) {
-          layerToSearch.sketchLayer.graphics.forEach((graphic) => {
-            if (!graphic?.attributes?.OBJECTID) {
-              return;
-            }
-
-            const formattedGraphic = convertToSimpleGraphic(graphic);
-            adds.push(formattedGraphic);
-          });
-        }
-      }
+      // build the deletes list, which is just an array of global ids.
+      const deletes: string[] = [];
+      layerEdits.deletes.forEach((item) => {
+        deletes.push(item.GLOBALID);
+      });
 
       changes.push({
         id: layerEdits.id,
-        adds,
+        adds: layerEdits.adds,
         updates: layerEdits.updates,
-        deletes: layerEdits.deletes,
-        // splits: layerEdits.splits, // not sure if we need this one
+        deletes,
       });
     });
 
@@ -441,6 +444,7 @@ export function applyEdits({
       token: tempPortal.credential.token,
       edits: changes,
       honorSequenceOfEdits: true,
+      useGlobalIds: true,
     };
     fetchPost(`${serviceUrl}/applyEdits`, data)
       .then((res) => resolve(res))
