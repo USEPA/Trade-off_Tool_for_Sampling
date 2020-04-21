@@ -1055,10 +1055,9 @@ function ResultCard({ result }: ResultCardProps) {
                 onClick={() => {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
-                  result?.categories?.includes(
-                    'contains-epa-tots-sample-layer',
-                  ) ||
-                  result?.categories?.includes('contains-epa-tots-vsp-layer')
+                  const categories = result?.categories;
+                  categories?.includes('contains-epa-tots-sample-layer') ||
+                  categories?.includes('contains-epa-tots-vsp-layer')
                     ? addTotsLayer()
                     : addRefLayer();
                 }}
@@ -1072,10 +1071,9 @@ function ResultCard({ result }: ResultCardProps) {
                 onClick={() => {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
-                  result?.categories?.includes(
-                    'contains-epa-tots-sample-layer',
-                  ) ||
-                  result?.categories?.includes('contains-epa-tots-vsp-layer')
+                  const categories = result?.categories;
+                  categories?.includes('contains-epa-tots-sample-layer') ||
+                  categories?.includes('contains-epa-tots-vsp-layer')
                     ? removeTotsLayer()
                     : removeRefLayer();
                 }}

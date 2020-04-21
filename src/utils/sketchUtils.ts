@@ -85,7 +85,7 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
  *
  * @param edits The edits object to save the changes to.
  * @param layer The layer the changes pertain to
- * @param type The type of update being performed (add, update, or delete)
+ * @param type The type of update being performed (add, update, delete, arcgis, or properties)
  * @param changes An object representing the changes being saved
  */
 export function updateLayerEdits({
