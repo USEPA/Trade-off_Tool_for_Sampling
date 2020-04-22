@@ -44,16 +44,18 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
   return {
     id: layerToEdit.id,
     layerId: layerToEdit.sketchLayer.id,
+    portalId: layerToEdit.portalId,
     name: layerToEdit.name,
     label: layerToEdit.label,
     layerType: layerToEdit.layerType,
     scenarioName: layerToEdit.scenarioName,
     scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
+    status: layerToEdit.status,
     adds: [],
     updates: [],
     deletes: [],
-    splits: [],
+    published: [],
   };
 }
 
@@ -83,7 +85,7 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
  *
  * @param edits The edits object to save the changes to.
  * @param layer The layer the changes pertain to
- * @param type The type of update being performed (add, update, delete or split)
+ * @param type The type of update being performed (add, update, delete, arcgis, or properties)
  * @param changes An object representing the changes being saved
  */
 export function updateLayerEdits({
@@ -94,7 +96,7 @@ export function updateLayerEdits({
 }: {
   edits: EditsType;
   layer: LayerType;
-  type: 'add' | 'update' | 'delete' | 'split' | 'properties';
+  type: 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
   changes?: __esri.Collection<__esri.Graphic>;
 }) {
   // make a copy of the edits context variable
@@ -112,6 +114,10 @@ export function updateLayerEdits({
     // handle property changes
     layerToEdit.scenarioName = layer.scenarioName;
     layerToEdit.scenarioDescription = layer.scenarioDescription;
+
+    // if the status is published, set the status to edited to allow re-publishing
+    if (layer.status === 'published') layer.status = 'edited';
+    if (layerToEdit.status === 'published') layerToEdit.status = 'edited';
   }
 
   if (changes) {
@@ -120,6 +126,14 @@ export function updateLayerEdits({
       changes.forEach((change) => {
         const formattedChange = convertToSimpleGraphic(change);
         layerToEdit.adds.push(formattedChange);
+      });
+    }
+
+    // Add published graphics from arcgis
+    if (type === 'arcgis') {
+      changes.forEach((change) => {
+        const formattedChange = convertToSimpleGraphic(change);
+        layerToEdit.published.push(formattedChange);
       });
     }
 
@@ -162,8 +176,8 @@ export function updateLayerEdits({
 
     // Append any deletes of items that have already been published
     if (type === 'delete') {
-      // TODO: Fix issue of deleting new graphics, showing up in both
-      //  deletes and adds or updates.
+      // if this graphic is in the adds array, just delete it from the
+      // adds array, since it hasn't been published yet
       changes.forEach((change) => {
         // attempt to find this id in adds
         const addChangeIndex = layerToEdit.adds.findIndex(
@@ -191,17 +205,38 @@ export function updateLayerEdits({
         );
 
         // add the objectids to delete to the deletes array
-        layerToEdit.deletes.push(change.attributes.PERMANENT_IDENTIFIER);
+        layerToEdit.deletes.push({
+          PERMANENT_IDENTIFIER: change.attributes.PERMANENT_IDENTIFIER,
+          GLOBALID: change.attributes.GLOBALID,
+        });
       });
     }
-
-    // TODO: determine if we need splits and implement if necessary
-    // if (type === 'splits') { }
   }
 
   editsCopy.count = editsCopy.count + 1;
 
   return editsCopy;
+}
+
+/**
+ * Creates a simple popup that contains all of the attributes on the
+ * graphic.
+ *
+ * @param attributes Attributes to be placed in the popup content
+ * @returns the json object to pass to the Esri PopupTemplate constructor.
+ */
+export function getSimplePopupTemplate(attributes: any) {
+  return {
+    title: '',
+    content: [
+      {
+        type: 'fields',
+        fieldInfos: Object.keys(attributes).map((key) => {
+          return { fieldName: key, label: key };
+        }),
+      },
+    ],
+  };
 }
 
 /**

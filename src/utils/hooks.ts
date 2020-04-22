@@ -11,8 +11,8 @@ import {
   CalculateResultsType,
   CalculateResultsDataType,
 } from 'types/CalculateResults';
-import { EditsType } from 'types/Edits';
-import { LayerType, UrlLayerType } from 'types/Layer';
+import { EditsType, FeatureEditsType } from 'types/Edits';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
@@ -86,7 +86,34 @@ function useEditsLayerStorage() {
 
       const popupTemplate = getPopupTemplate(editsLayer.layerType);
       const features: __esri.Graphic[] = [];
-      const displayedFeatures = [...editsLayer.adds, ...editsLayer.updates];
+      const idsUsed: string[] = [];
+      const displayedFeatures: FeatureEditsType[] = [];
+
+      // push the items from the adds array
+      editsLayer.adds.forEach((item) => {
+        displayedFeatures.push(item);
+        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+      });
+
+      // push the items from the updates array
+      editsLayer.updates.forEach((item) => {
+        displayedFeatures.push(item);
+        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+      });
+
+      // only push the ids of the deletes array to prevent drawing deleted items
+      editsLayer.deletes.forEach((item) => {
+        idsUsed.push(item.PERMANENT_IDENTIFIER);
+      });
+
+      // add graphics from AGOL that haven't been changed
+      editsLayer.published.forEach((item) => {
+        // don't re-add graphics that have already been added above
+        if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
+
+        displayedFeatures.push(item);
+      });
+
       // add graphics to the map
       displayedFeatures.forEach((graphic) => {
         features.push(
@@ -109,6 +136,7 @@ function useEditsLayerStorage() {
       newLayers.push({
         id: editsLayer.id,
         layerId: editsLayer.layerId,
+        portalId: editsLayer.portalId,
         value: editsLayer.label,
         name: editsLayer.name,
         label: editsLayer.label,
@@ -116,6 +144,7 @@ function useEditsLayerStorage() {
         scenarioName: editsLayer.scenarioName,
         scenarioDescription: editsLayer.scenarioDescription,
         addedFrom: editsLayer.addedFrom,
+        status: editsLayer.status,
         defaultVisibility: true,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
@@ -328,13 +357,19 @@ function usePortalLayerStorage() {
     const portalLayersStr = readFromStorage(key);
     if (!portalLayersStr) return;
 
-    const portalLayers = JSON.parse(portalLayersStr);
+    const portalLayers: PortalLayerType[] = JSON.parse(portalLayersStr);
 
     // add the portal layers to the map
-    portalLayers.forEach((layerId: string) => {
+    portalLayers.forEach((portalLayer) => {
+      // Skip tots layers, since they are stored in edits.
+      // The only reason tots layers are also in portal layers is
+      // so the search panel will show the layer as having been
+      // added.
+      if (portalLayer.type === 'tots') return;
+
       const layer = Layer.fromPortalItem({
         portalItem: new PortalItem({
-          id: layerId,
+          id: portalLayer.id,
         }),
       });
       map.add(layer);

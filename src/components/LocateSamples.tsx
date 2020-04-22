@@ -281,6 +281,7 @@ function LocateSamples() {
     const tempSketchLayer: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: 'sketchLayer',
       name: 'Default Sample Layer',
       label: 'Default Sample Layer',
@@ -290,6 +291,7 @@ function LocateSamples() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 
@@ -338,6 +340,7 @@ function LocateSamples() {
     const newAoiSketchLayer: LayerType = {
       id: -1,
       layerId: graphicsLayer.id,
+      portalId: '',
       value: 'sketchAoi',
       name: 'Sketched Area of Interest',
       label: 'Sketched Area of Interest',
@@ -347,6 +350,7 @@ function LocateSamples() {
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'sketch',
+      status: 'added',
       sketchLayer: graphicsLayer,
     };
 
@@ -386,8 +390,12 @@ function LocateSamples() {
     );
     if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
 
-    // save changes from other sketchVM
-    if (aoiSketchVM) aoiSketchVM.complete();
+    // save changes from other sketchVM and disable to prevent
+    // interference
+    if (aoiSketchVM) {
+      aoiSketchVM.complete();
+      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
 
     // determine whether the sketch button draws points or polygons
     let shapeType;
@@ -433,8 +441,12 @@ function LocateSamples() {
     );
     if (layerIndex === -1) map.add(aoiSketchLayer.sketchLayer);
 
-    // save changes from other sketchVM
-    if (sketchVM) sketchVM.complete();
+    // save changes from other sketchVM and disable to prevent
+    // interference
+    if (sketchVM) {
+      sketchVM.complete();
+      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+    }
 
     // activate the sketch tool
     aoiSketchVM.create('polygon');

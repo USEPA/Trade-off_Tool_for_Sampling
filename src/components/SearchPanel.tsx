@@ -11,7 +11,22 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 // utils
+import {
+  getAllFeatures,
+  getFeatureLayer,
+  getFeatureLayers,
+} from 'utils/arcGisRestUtils';
+import {
+  getPopupTemplate,
+  getSimplePopupTemplate,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 import { escapeForLucene } from 'utils/utils';
+// types
+import { LayerType } from 'types/Layer';
+import { EditsType } from 'types/Edits';
+// config
+import { polygonSymbol } from 'config/symbols';
 
 // --- styles (SearchPanel) ---
 const searchContainerStyles = css`
@@ -635,19 +650,36 @@ type ResultCardProps = {
 };
 
 function ResultCard({ result }: ResultCardProps) {
+  const { portal } = React.useContext(AuthenticationContext);
   const {
+    FeatureLayer,
+    Field,
+    Graphic,
+    GraphicsLayer,
+    Layer,
+    PopupTemplate,
+    PortalItem,
+    rendererJsonUtils,
+    watchUtils,
+  } = useEsriModulesContext();
+  const {
+    edits,
+    setEdits,
+    setLayers,
     map,
     mapView,
     portalLayers,
-    setPortalLayers, //
+    setPortalLayers,
+    setReferenceLayers,
+    setSketchLayer,
   } = React.useContext(SketchContext);
-  const { Layer, PortalItem, watchUtils } = useEsriModulesContext();
 
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = React.useState(false);
   React.useEffect(() => {
     const added =
-      portalLayers.findIndex((portalId) => portalId === result.id) !== -1;
+      portalLayers.findIndex((portalLayer) => portalLayer.id === result.id) !==
+      -1;
     setAdded(added);
   }, [portalLayers, result]);
 
@@ -659,6 +691,343 @@ function ResultCard({ result }: ResultCardProps) {
       if (watcher) watcher.remove();
     };
   }, [watcher]);
+
+  /**
+   * Adds layers, published through TOTS, such that the sample layer is
+   * editable in TOTS. Any non-sample layers will just be added
+   * as reference layers, though this could change in the future.
+   */
+  function addTotsLayer() {
+    if (!map || !portal) return;
+
+    setStatus('loading');
+
+    const tempPortal = portal as any;
+    const token = tempPortal.credential.token;
+
+    // get the list of feature layers in this feature server
+    getFeatureLayers(result.url, token)
+      .then((res: any) => {
+        // fire off requests to get the details and features for each layer
+        const layerPromises: Promise<any>[] = [];
+        res.forEach((layer: any) => {
+          const id = layer.id;
+
+          // get the layer details promise
+          const layerCall = getFeatureLayer(result.url, token, id);
+          layerPromises.push(layerCall);
+
+          // get the layer features promise
+          const featuresCall = getAllFeatures(portal, result.url + '/' + id);
+          layerPromises.push(featuresCall);
+        });
+
+        // wait for all of the promises to resolve
+        // promises are ordered as: [{layer1 details}, {layer1 features}, ..., {layerX details}, {layerx features}]
+        Promise.all(layerPromises)
+          .then((responses) => {
+            // get the popup template
+            const popupTemplate = new PopupTemplate(
+              getPopupTemplate('Samples'),
+            );
+
+            // define items used for updating states
+            let editsCopy: EditsType | null = edits;
+            const mapLayersToAdd: __esri.Layer[] = [];
+            const layersToAdd: LayerType[] = [];
+            const refLayersToAdd: any[] = [];
+
+            // create the layers to be added to the map
+            for (let i = 0; i < responses.length; ) {
+              const layerDetails = responses[i];
+              const layerFeatures = responses[i + 1];
+              const layerName = layerDetails.name;
+
+              // figure out if this layer is a sample layer or not
+              let isSampleLayer = false;
+              let isVspLayer = false;
+              if (layerDetails?.types) {
+                layerDetails.types.forEach((type: __esri.FeatureType) => {
+                  if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
+                  if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
+                });
+              }
+
+              // add sample layers as graphics layers
+              if (isSampleLayer || isVspLayer) {
+                // get the graphics from the layer
+                const graphics: __esri.Graphic[] = [];
+                layerFeatures.features.forEach((feature: any) => {
+                  const graphic: any = Graphic.fromJSON(feature);
+                  graphic.geometry.spatialReference = {
+                    wkid: 3857,
+                  };
+                  graphic.popupTemplate = popupTemplate;
+                  graphic.symbol = polygonSymbol;
+                  graphics.push(graphic);
+                });
+
+                // build the graphics layer
+                const graphicsLayer = new GraphicsLayer({
+                  graphics,
+                  title: layerName,
+                });
+
+                const layerToAdd: LayerType = {
+                  id: layerDetails.id,
+                  layerId: graphicsLayer.id,
+                  portalId: result.id,
+                  value: layerName,
+                  name: layerName,
+                  label: layerName,
+                  layerType: isVspLayer ? 'VSP' : 'Samples',
+                  scenarioName: layerName,
+                  scenarioDescription: layerDetails.description,
+                  defaultVisibility: true,
+                  geometryType: layerDetails.geometryType,
+                  addedFrom: 'tots',
+                  status: 'published',
+                  sketchLayer: graphicsLayer,
+                };
+                layersToAdd.push(layerToAdd);
+
+                // make a copy of the edits context variable
+                editsCopy = updateLayerEdits({
+                  edits: editsCopy,
+                  layer: layerToAdd,
+                  type: 'arcgis',
+                  changes: graphicsLayer.graphics,
+                });
+
+                mapLayersToAdd.push(graphicsLayer);
+              } else {
+                // add non-sample layers as feature layers
+                const fields: __esri.Field[] = [];
+                layerFeatures.fields.forEach((field: __esri.Field) => {
+                  fields.push(Field.fromJSON(field));
+                });
+
+                const source: __esri.Graphic[] = [];
+                layerFeatures.features.forEach((feature: any) => {
+                  const graphic = Graphic.fromJSON(feature);
+                  graphic.geometry.spatialReference =
+                    layerFeatures.spatialReference;
+                  source.push(graphic);
+                });
+
+                // use jsonUtils to convert the REST API renderer to an ArcGIS JS renderer
+                const renderer: __esri.Renderer = rendererJsonUtils.fromJSON(
+                  layerDetails.drawingInfo.renderer,
+                );
+
+                // create the popup template if popup information was provided
+                let popupTemplate;
+                if (layerDetails.popupInfo) {
+                  popupTemplate = {
+                    title: layerDetails.popupInfo.title,
+                    content: layerDetails.popupInfo.description,
+                  };
+                }
+                // if no popup template, then make the template all of the attributes
+                if (!layerDetails.popupInfo && source.length > -1) {
+                  popupTemplate = getSimplePopupTemplate(source[0].attributes);
+                }
+
+                // add the feature layer
+                const layerProps: __esri.FeatureLayerProperties = {
+                  fields,
+                  source,
+                  objectIdField: layerFeatures.objectIdFieldName,
+                  outFields: ['*'],
+                  title: layerDetails.name,
+                  renderer,
+                  popupTemplate,
+                };
+                const featureLayer = new FeatureLayer(layerProps);
+                mapLayersToAdd.push(featureLayer);
+
+                // add the layer to referenceLayers with the layer id
+                refLayersToAdd.push({
+                  ...layerProps,
+                  layerId: featureLayer.id,
+                  portalId: result.id,
+                });
+              }
+
+              i += 2;
+            }
+
+            // add all of the layers to the map
+            map.addMany(mapLayersToAdd);
+
+            // set the state for session storage
+            setEdits(editsCopy);
+            setLayers((layers) => [...layers, ...layersToAdd]);
+            setReferenceLayers((layers: any) => [...layers, ...refLayersToAdd]);
+
+            // set the sketchLayer to the first tots sample layer
+            if (layersToAdd.length > -1) setSketchLayer(layersToAdd[0]);
+
+            // add the portal id to portal layers. This needed so the card on
+            // the search panel shows up as the layer having been added.
+            setPortalLayers((portalLayers) => [
+              ...portalLayers,
+              { id: result.id, type: 'tots' },
+            ]);
+
+            // reset the status
+            setStatus('');
+          })
+          .catch((err) => {
+            console.error(err);
+            setStatus('error');
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        setStatus('error');
+      });
+  }
+
+  /**
+   * Adds non-tots layers as reference portal layers.
+   */
+  function addRefLayer() {
+    if (!map) return;
+
+    setStatus('loading');
+
+    Layer.fromPortalItem({
+      portalItem: new PortalItem({
+        id: result.id,
+      }),
+    }).then((layer) => {
+      // setup the watch event to see when the layer finishes loading
+      const watcher = watchUtils.watch(
+        layer,
+        'loadStatus',
+        (loadStatus: string) => {
+          // set the status based on the load status
+          if (loadStatus === 'loaded') {
+            setPortalLayers((portalLayers) => [
+              ...portalLayers,
+              { id: result.id, type: 'arcgis' },
+            ]);
+            setStatus('');
+
+            // set the min/max scale for tile layers
+            if (layer.type === 'tile') {
+              const tileLayer = layer as __esri.TileLayer;
+              tileLayer.minScale = 0;
+              tileLayer.maxScale = 0;
+            }
+
+            if (mapView) {
+              layer.visible = true;
+
+              // zoom to the layer if it has an extent
+              if (layer.fullExtent) {
+                mapView.goTo(layer.fullExtent);
+              }
+            }
+          } else if (loadStatus === 'failed') {
+            setStatus('error');
+          }
+        },
+      );
+
+      setWatcher(watcher);
+
+      // add the layer to the map
+      map.add(layer);
+    });
+  }
+
+  /**
+   * Removes layers that were published through TOTS. These are more complicated
+   * because the layer is a hybrid between a portal layer and an editable sketch layer.
+   */
+  function removeTotsLayer() {
+    if (!map) return;
+
+    setLayers((layers) => {
+      // remove the layers from the map and set the next sketchLayer
+      const mapLayersToRemove: __esri.Layer[] = [];
+      let newSketchLayer: LayerType | null = null;
+      layers.forEach((layer) => {
+        if (layer.portalId === result.id) {
+          mapLayersToRemove.push(layer.sketchLayer);
+        } else {
+          if (
+            !newSketchLayer &&
+            (layer.layerType === 'Samples' || layer.layerType === 'VSP')
+          ) {
+            newSketchLayer = layer;
+          }
+        }
+      });
+      setSketchLayer(newSketchLayer);
+      map.removeMany(mapLayersToRemove);
+
+      // set the state
+      return layers.filter((layer) => layer.portalId !== result.id);
+    });
+
+    setReferenceLayers((layers) => {
+      // find the feature layer ids to remove using the portal id
+      const idsToRemove: string[] = [];
+      layers.forEach((layer) => {
+        if (layer.portalId === result.id) idsToRemove.push(layer.layerId);
+      });
+
+      // remove the map layers to remove using the list of layer ids from the
+      // previous step
+      const mapLayersToRemove: __esri.Layer[] = [];
+      map.allLayers.forEach((layer) => {
+        if (idsToRemove.includes(layer.id)) mapLayersToRemove.push(layer);
+      });
+      map.removeMany(mapLayersToRemove);
+
+      // set the state
+      return layers.filter((layer) => layer.portalId !== result.id);
+    });
+
+    // remove the layer from edits
+    setEdits({
+      count: edits.count + 1,
+      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
+    });
+
+    // remove the layer from portal layers
+    setPortalLayers((portalLayers) =>
+      portalLayers.filter((portalLayer) => portalLayer.id !== result.id),
+    );
+  }
+
+  /**
+   * Removes the reference portal layers.
+   */
+  function removeRefLayer() {
+    if (!map) return;
+
+    // get the layers to be removed
+    const layersToRemove = map.allLayers.filter((layer: any) => {
+      // had to use any, since some layer types don't have portalItem
+      if (layer?.portalItem?.id === result.id) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+
+    // remove the layers from the map and session storage.
+    if (layersToRemove.length > 0) {
+      map.removeMany(layersToRemove.toArray());
+      setPortalLayers((portalLayers) =>
+        portalLayers.filter((portalLayer) => portalLayer.id !== result.id),
+      );
+    }
+  }
 
   return (
     <div>
@@ -684,58 +1053,13 @@ function ResultCard({ result }: ResultCardProps) {
                 css={cardButtonStyles}
                 disabled={status === 'loading'}
                 onClick={() => {
-                  setStatus('loading');
-
-                  // get the layer from the portal item
-                  Layer.fromPortalItem({
-                    portalItem: new PortalItem({
-                      id: result.id,
-                    }),
-                  })
-                    .then((layer) => {
-                      // setup the watch event to see when the layer finishes loading
-                      const watcher = watchUtils.watch(
-                        layer,
-                        'loadStatus',
-                        (loadStatus: string) => {
-                          // set the status based on the load status
-                          if (loadStatus === 'loaded') {
-                            setPortalLayers((portalLayers: string[]) => [
-                              ...portalLayers,
-                              result.id,
-                            ]);
-                            setStatus('');
-
-                            // set the min/max scale for tile layers
-                            if (layer.type === 'tile') {
-                              const tileLayer = layer as __esri.TileLayer;
-                              tileLayer.minScale = 0;
-                              tileLayer.maxScale = 0;
-                            }
-
-                            if (mapView) {
-                              layer.visible = true;
-
-                              // zoom to the layer if it has an extent
-                              if (layer.fullExtent) {
-                                mapView.goTo(layer.fullExtent);
-                              }
-                            }
-                          } else if (loadStatus === 'failed') {
-                            setStatus('error');
-                          }
-                        },
-                      );
-
-                      setWatcher(watcher);
-
-                      // add the layer to the map
-                      map.add(layer);
-                    })
-                    .catch((err) => {
-                      console.error(err);
-                      setStatus('error');
-                    });
+                  // determine whether the layer has a tots sample layer or not
+                  // and add the layer accordingly
+                  const categories = result?.categories;
+                  categories?.includes('contains-epa-tots-sample-layer') ||
+                  categories?.includes('contains-epa-tots-vsp-layer')
+                    ? addTotsLayer()
+                    : addRefLayer();
                 }}
               >
                 Add
@@ -745,27 +1069,13 @@ function ResultCard({ result }: ResultCardProps) {
               <button
                 css={cardButtonStyles}
                 onClick={() => {
-                  // get the layers to be removed
-                  const layersToRemove = map.allLayers.filter((layer: any) => {
-                    // had to use any, since some layer types don't have portalItem
-                    if (
-                      layer &&
-                      layer.portalItem &&
-                      layer.portalItem.id === result.id
-                    ) {
-                      return true;
-                    } else {
-                      return false;
-                    }
-                  });
-
-                  // remove the layers from the map and session storage.
-                  if (layersToRemove.length > 0) {
-                    map.removeMany(layersToRemove.toArray());
-                    setPortalLayers((portalLayers: string[]) =>
-                      portalLayers.filter((portalId) => portalId !== result.id),
-                    );
-                  }
+                  // determine whether the layer has a tots sample layer or not
+                  // and add the layer accordingly
+                  const categories = result?.categories;
+                  categories?.includes('contains-epa-tots-sample-layer') ||
+                  categories?.includes('contains-epa-tots-vsp-layer')
+                    ? removeTotsLayer()
+                    : removeRefLayer();
                 }}
               >
                 Remove

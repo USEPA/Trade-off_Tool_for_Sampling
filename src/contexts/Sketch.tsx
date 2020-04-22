@@ -4,7 +4,7 @@ import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
 // types
 import { EditsType } from 'types/Edits';
-import { LayerType, UrlLayerType } from 'types/Layer';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 
 type SketchType = {
   basemapWidget: __esri.BasemapGallery | null;
@@ -23,8 +23,8 @@ type SketchType = {
   setLayersInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layers: LayerType[];
   setLayers: React.Dispatch<React.SetStateAction<LayerType[]>>;
-  portalLayers: string[];
-  setPortalLayers: React.Dispatch<React.SetStateAction<string[]>>;
+  portalLayers: PortalLayerType[];
+  setPortalLayers: React.Dispatch<React.SetStateAction<PortalLayerType[]>>;
   referenceLayers: any[];
   setReferenceLayers: React.Dispatch<React.SetStateAction<any[]>>;
   urlLayers: UrlLayerType[];
@@ -102,7 +102,7 @@ export function SketchProvider({ children }: Props) {
   const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
-  const [portalLayers, setPortalLayers] = React.useState<string[]>([]);
+  const [portalLayers, setPortalLayers] = React.useState<PortalLayerType[]>([]);
   const [referenceLayers, setReferenceLayers] = React.useState<any[]>([]);
   const [urlLayers, setUrlLayers] = React.useState<UrlLayerType[]>([]);
   const [sketchLayer, setSketchLayer] = React.useState<LayerType | null>(null);

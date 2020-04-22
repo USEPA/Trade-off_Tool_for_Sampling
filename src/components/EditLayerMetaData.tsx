@@ -164,7 +164,7 @@ function EditLayerMetaData({
       <label htmlFor="scenario-name-input">Scenario Name</label>
       <input
         id="scenario-name-input"
-        disabled={!sketchLayer}
+        disabled={!sketchLayer || sketchLayer.status !== 'added'}
         css={inputStyles}
         maxLength={250}
         placeholder="Published layer name"
@@ -184,7 +184,7 @@ function EditLayerMetaData({
       <label htmlFor="scenario-description-input">Scenario Description</label>
       <input
         id="scenario-description-input"
-        disabled={!sketchLayer}
+        disabled={!sketchLayer || sketchLayer.status !== 'added'}
         css={inputStyles}
         maxLength={2048}
         placeholder="Layer description (2048 characters)"
@@ -216,35 +216,37 @@ function EditLayerMetaData({
           message={`The "${sketchLayer?.scenarioName}" name is already in use. Please rename the scenario and try again.`}
         />
       )}
-      <div css={saveButtonContainerStyles}>
-        <button
-          css={saveButtonStyles(saveStatus)}
-          type="submit"
-          disabled={
-            saveStatus === 'none' ||
-            saveStatus === 'fetching' ||
-            saveStatus === 'success'
-          }
-          onClick={handleSave}
-        >
-          {(saveStatus === 'none' ||
-            saveStatus === 'changes' ||
-            saveStatus === 'fetching') &&
-            buttonText}
-          {saveStatus === 'success' && (
-            <React.Fragment>
-              <i className="fas fa-check" /> Saved
-            </React.Fragment>
-          )}
-          {(saveStatus === 'failure' ||
-            saveStatus === 'fetch-failure' ||
-            saveStatus === 'name-not-available') && (
-            <React.Fragment>
-              <i className="fas fa-exclamation-triangle" /> Error
-            </React.Fragment>
-          )}
-        </button>
-      </div>
+      {sketchLayer.status === 'added' && (
+        <div css={saveButtonContainerStyles}>
+          <button
+            css={saveButtonStyles(saveStatus)}
+            type="submit"
+            disabled={
+              saveStatus === 'none' ||
+              saveStatus === 'fetching' ||
+              saveStatus === 'success'
+            }
+            onClick={handleSave}
+          >
+            {(saveStatus === 'none' ||
+              saveStatus === 'changes' ||
+              saveStatus === 'fetching') &&
+              buttonText}
+            {saveStatus === 'success' && (
+              <React.Fragment>
+                <i className="fas fa-check" /> Saved
+              </React.Fragment>
+            )}
+            {(saveStatus === 'failure' ||
+              saveStatus === 'fetch-failure' ||
+              saveStatus === 'name-not-available') && (
+              <React.Fragment>
+                <i className="fas fa-exclamation-triangle" /> Error
+              </React.Fragment>
+            )}
+          </button>
+        </div>
+      )}
     </form>
   );
 }
