@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import { jsx, css } from '@emotion/core';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType, LayerTypeName } from 'types/Layer';
@@ -268,6 +269,7 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
+  const { currentPanel } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -277,7 +279,6 @@ function MapWidgets({ mapView }: Props) {
     setSketchVM,
     aoiSketchVM,
     setAoiSketchVM,
-    setSketchVMLayerId,
     sketchLayer,
     aoiSketchLayer,
     layers,
@@ -360,22 +361,33 @@ function MapWidgets({ mapView }: Props) {
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
-    if (!sketchVM || !sketchLayer?.sketchLayer) return;
+    if (!sketchVM) return;
 
-    if (sketchLayer.sketchLayer.type === 'graphics') {
+    if (
+      currentPanel?.value === 'locateSamples' &&
+      sketchLayer?.sketchLayer?.type === 'graphics'
+    ) {
       sketchVM.layer = sketchLayer.sketchLayer;
-      setSketchVMLayerId(sketchLayer.sketchLayer.id);
+    } else {
+      // disable the sketch vm for any panel other than locateSamples
+      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-  }, [sketchVM, setSketchVMLayerId, sketchLayer]);
+  }, [currentPanel, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the aoiSketchViewModel
   React.useEffect(() => {
-    if (!aoiSketchVM || !aoiSketchLayer?.sketchLayer) return;
+    if (!aoiSketchVM) return;
 
-    if (aoiSketchLayer.sketchLayer.type === 'graphics') {
+    if (
+      currentPanel?.value === 'locateSamples' &&
+      aoiSketchLayer?.sketchLayer?.type === 'graphics'
+    ) {
       aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+    } else {
+      // disable the sketch vm for any panel other than locateSamples
+      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-  }, [aoiSketchVM, aoiSketchLayer]);
+  }, [currentPanel, aoiSketchVM, aoiSketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const [
@@ -685,13 +697,14 @@ function MapWidgets({ mapView }: Props) {
       updateSketchEvent ||
       !aoiSketchVM ||
       aoiSketchVM.layer ||
-      aoiSketchLayer?.sketchLayer?.type !== 'graphics'
+      aoiSketchLayer?.sketchLayer?.type !== 'graphics' ||
+      currentPanel?.value !== 'locateSamples'
     ) {
       return;
     }
 
     aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
-  }, [updateSketchEvent, aoiSketchVM, aoiSketchLayer]);
+  }, [currentPanel, updateSketchEvent, aoiSketchVM, aoiSketchLayer]);
 
   // Reactivate sketchVM after the aoiUpdateSketchEvent is null
   React.useEffect(() => {
@@ -699,13 +712,14 @@ function MapWidgets({ mapView }: Props) {
       aoiUpdateSketchEvent ||
       !sketchVM ||
       sketchVM.layer ||
-      sketchLayer?.sketchLayer?.type !== 'graphics'
+      sketchLayer?.sketchLayer?.type !== 'graphics' ||
+      currentPanel?.value !== 'locateSamples'
     ) {
       return;
     }
 
     sketchVM.layer = sketchLayer.sketchLayer;
-  }, [aoiUpdateSketchEvent, sketchVM, sketchLayer]);
+  }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer]);
 
   // Adds a container for the feature tool to the map
   const [

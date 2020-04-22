@@ -3,11 +3,13 @@
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
 // config
-import { PanelValueType } from 'config/navigation';
+import { PanelType, PanelValueType } from 'config/navigation';
 // types
 import { GoToOptions } from 'types/Navigation';
 
 type NavigateType = {
+  currentPanel: PanelType | null;
+  setCurrentPanel: React.Dispatch<React.SetStateAction<PanelType | null>>;
   goTo: PanelValueType | '';
   setGoTo: React.Dispatch<React.SetStateAction<PanelValueType | ''>>;
   goToOptions: GoToOptions;
@@ -15,6 +17,8 @@ type NavigateType = {
 };
 
 export const NavigationContext = React.createContext<NavigateType>({
+  currentPanel: null,
+  setCurrentPanel: () => {},
   goTo: '',
   setGoTo: () => {},
   goToOptions: null,
@@ -24,12 +28,17 @@ export const NavigationContext = React.createContext<NavigateType>({
 type Props = { children: ReactNode };
 
 export function NavigationProvider({ children }: Props) {
+  const [currentPanel, setCurrentPanel] = React.useState<PanelType | null>(
+    null,
+  );
   const [goTo, setGoTo] = React.useState<PanelValueType | ''>('');
   const [goToOptions, setGoToOptions] = React.useState<GoToOptions>(null);
 
   return (
     <NavigationContext.Provider
       value={{
+        currentPanel,
+        setCurrentPanel,
         goTo,
         setGoTo,
         goToOptions,

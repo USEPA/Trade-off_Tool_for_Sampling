@@ -47,8 +47,6 @@ type SketchType = {
   setAoiSketchVM: React.Dispatch<
     React.SetStateAction<__esri.SketchViewModel | null>
   >;
-  sketchVMLayerId: string;
-  setSketchVMLayerId: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -86,8 +84,6 @@ export const SketchContext = React.createContext<SketchType>({
   setSketchVM: () => {},
   aoiSketchVM: null,
   setAoiSketchVM: () => {},
-  sketchVMLayerId: '',
-  setSketchVMLayerId: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -116,7 +112,6 @@ export function SketchProvider({ children }: Props) {
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
-  const [sketchVMLayerId, setSketchVMLayerId] = React.useState<string>('');
   const [
     sketchVM,
     setSketchVM, //
@@ -163,8 +158,6 @@ export function SketchProvider({ children }: Props) {
         setSketchVM,
         aoiSketchVM,
         setAoiSketchVM,
-        sketchVMLayerId,
-        setSketchVMLayerId,
       }}
     >
       {children}
