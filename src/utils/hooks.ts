@@ -897,14 +897,14 @@ export function useCalculatePlan() {
       totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
       // calculate areaCount
-      const { SA } = calcGraphic.attributes;
+      const { SA, AA } = calcGraphic.attributes;
       let areaCount = 1;
       if (areaSI >= SA) {
         areaCount = Math.round(areaSI / SA);
       }
 
       console.log(
-        `SA: ${SA}, areaSI: ${areaSI}, areaCount: ${areaCount}, areaSF: ${areaSF}`,
+        `SA: ${SA}, areaSI: ${areaSI}, areaCount: ${areaCount}, areaSF: ${areaSF}, AA: ${AA}`,
       );
 
       // multiply all of the attributes by the area
