@@ -15,7 +15,6 @@ import SplashScreenContent from 'components/SplashScreenContent';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
-import { SketchContext } from 'contexts/Sketch';
 // config
 import { navPanelWidth } from 'config/appConfig';
 import { panels, PanelType } from 'config/navigation';
@@ -285,18 +284,13 @@ type Props = {
 
 function NavBar({ height }: Props) {
   const { calculateResults } = React.useContext(CalculateContext);
-  const { goTo, setGoTo } = React.useContext(NavigationContext);
   const {
-    sketchLayer,
-    sketchVM,
-    aoiSketchLayer,
-    aoiSketchVM,
-  } = React.useContext(SketchContext);
-
-  const [
     currentPanel,
-    setCurrentPanel, //
-  ] = React.useState<PanelType | null>(null);
+    setCurrentPanel,
+    goTo,
+    setGoTo, //
+  } = React.useContext(NavigationContext);
+
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [expanded, setExpanded] = React.useState(false);
   const toggleExpand = React.useCallback(
@@ -311,7 +305,7 @@ function NavBar({ height }: Props) {
 
       if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
     },
-    [currentPanel, latestStepIndex],
+    [currentPanel, setCurrentPanel, latestStepIndex],
   );
 
   React.useEffect(() => {
@@ -339,28 +333,6 @@ function NavBar({ height }: Props) {
       setResultsExpanded(true);
     }
   }, [calculateResults]);
-
-  // Enable the sketchVM for the Create Plan tab and disable for all others.
-  React.useEffect(() => {
-    if (!sketchVM || !currentPanel) return;
-
-    if (currentPanel.value === 'locateSamples' && sketchLayer?.sketchLayer) {
-      sketchVM.layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-    } else {
-      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
-    }
-  }, [currentPanel, sketchLayer, sketchVM]);
-
-  // Enable the aoi sketchVM for the Create Plan tab and disable for all others.
-  React.useEffect(() => {
-    if (!aoiSketchVM || !currentPanel) return;
-
-    if (currentPanel.value === 'locateSamples' && aoiSketchLayer?.sketchLayer) {
-      aoiSketchVM.layer = aoiSketchLayer.sketchLayer as __esri.GraphicsLayer;
-    } else {
-      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
-    }
-  }, [currentPanel, aoiSketchLayer, aoiSketchVM]);
 
   const [helpOpen, setHelpOpen] = React.useState(false);
 
