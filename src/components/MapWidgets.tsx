@@ -25,9 +25,9 @@ import {
 // styles
 import { colors } from 'styles';
 
-const sponge_SA = 0.254 / 2;
-const vac_SA = 0.3048 / 2;
-const swab_SA = 0.0508 / 2;
+const sponge_SA = 5.05;
+const vac_SA = 6.09;
+const swab_SA = 1;
 
 type SaveStatusType = 'none' | 'success' | 'failure';
 
@@ -257,6 +257,7 @@ function MapWidgets({ mapView }: Props) {
     map,
   } = React.useContext(SketchContext);
   const {
+    geometryEngine,
     Graphic,
     Home,
     Locate,
@@ -421,15 +422,22 @@ function MapWidgets({ mapView }: Props) {
             // create the graphic
             const prevGeo = graphic.geometry as __esri.Point;
 
+            const ptBuff = geometryEngine.geodesicBuffer(
+              graphic.geometry,
+              halfWidth,
+              109009,
+            ) as __esri.Polygon;
+
             graphic.geometry = new Polygon({
               spatialReference: prevGeo.spatialReference,
               centroid: prevGeo,
               rings: [
                 [
-                  [prevGeo.x - halfWidth, prevGeo.y - halfWidth],
-                  [prevGeo.x - halfWidth, prevGeo.y + halfWidth],
-                  [prevGeo.x + halfWidth, prevGeo.y + halfWidth],
-                  [prevGeo.x + halfWidth, prevGeo.y - halfWidth],
+                  [ptBuff.extent.xmin, ptBuff.extent.ymin],
+                  [ptBuff.extent.xmin, ptBuff.extent.ymax],
+                  [ptBuff.extent.xmax, ptBuff.extent.ymax],
+                  [ptBuff.extent.xmax, ptBuff.extent.ymin],
+                  [ptBuff.extent.xmin, ptBuff.extent.ymin],
                 ],
               ],
             });
@@ -510,7 +518,7 @@ function MapWidgets({ mapView }: Props) {
         setUpdateSketchEvent(event);
       });
     },
-    [Polygon, PopupTemplate, map],
+    [geometryEngine, Polygon, PopupTemplate, map],
   );
 
   // Setup the sketch view model events for the base sketchVM

@@ -795,7 +795,7 @@ export function useSessionStorage() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { geometryEngine, Polygon, webMercatorUtils } = useEsriModulesContext();
+  const { geometryEngine, Polygon } = useEsriModulesContext();
   const { edits, sketchLayer } = React.useContext(SketchContext);
   const {
     numLabs,
@@ -888,18 +888,8 @@ export function useCalculatePlan() {
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
       const calcGraphic = graphic.clone();
 
-      // convert the geometry to WGS84 for geometryEngine
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-      );
-
-      // get the polygon object
-      const geometry = geometryEngine.simplify(wgsGeometry) as __esri.Polygon;
-      if (!geometry) return;
-
-      const polygon = new Polygon({ rings: geometry.rings });
-
       // calulate the area
+      const polygon = graphic.geometry as __esri.Polygon;
       const areaSI = geometryEngine.geodesicArea(polygon, 109454);
 
       // convert area to square inches
@@ -912,6 +902,10 @@ export function useCalculatePlan() {
       if (areaSI >= SA) {
         areaCount = Math.round(areaSI / SA);
       }
+
+      console.log(
+        `SA: ${SA}, areaSI: ${areaSI}, areaCount: ${areaCount}, areaSF: ${areaSF}`,
+      );
 
       // multiply all of the attributes by the area
       const {
@@ -1007,7 +1001,6 @@ export function useCalculatePlan() {
     // esri modules
     geometryEngine,
     Polygon,
-    webMercatorUtils,
 
     // TOTS items
     edits,
