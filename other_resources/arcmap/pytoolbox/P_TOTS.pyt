@@ -194,7 +194,7 @@ class GenerateRandom(object):
          ,line_end_type            = "ROUND"
          ,dissolve_option          = "NONE"
          ,dissolve_field           = ""
-         ,method                   = "PLANAR"
+         ,method                   = "GEODESIC"
       );
       
       #########################################################################
