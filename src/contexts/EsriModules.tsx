@@ -15,7 +15,6 @@ type EsriConstructors = [
   typeof import('esri/geometry/Polygon'),
   typeof import('esri/geometry/SpatialReference'),
   typeof import('esri/geometry/support/jsonUtils'),
-  typeof import('esri/geometry/support/webMercatorUtils'),
   typeof import('esri/identity/IdentityManager'),
   typeof import('esri/identity/OAuthInfo'),
   typeof import('esri/layers/CSVLayer'),
@@ -58,33 +57,32 @@ type State = {
   Polygon: EsriConstructors[7];
   SpatialReference: EsriConstructors[8];
   geometryJsonUtils: EsriConstructors[9];
-  webMercatorUtils: EsriConstructors[10];
-  IdentityManager: EsriConstructors[11];
-  OAuthInfo: EsriConstructors[12];
-  CSVLayer: EsriConstructors[13];
-  FeatureLayer: EsriConstructors[14];
-  GeoRSSLayer: EsriConstructors[15];
-  GraphicsLayer: EsriConstructors[16];
-  KMLLayer: EsriConstructors[17];
-  Layer: EsriConstructors[18];
-  WMSLayer: EsriConstructors[19];
-  WMTSLayer: EsriConstructors[20];
-  Field: EsriConstructors[21];
-  PopupTemplate: EsriConstructors[22];
-  Portal: EsriConstructors[23];
-  PortalItem: EsriConstructors[24];
-  rendererJsonUtils: EsriConstructors[25];
-  Geoprocessor: EsriConstructors[26];
-  FeatureSet: EsriConstructors[27];
-  MapView: EsriConstructors[28];
-  BasemapGallery: EsriConstructors[29];
-  PortalBasemapsSource: EsriConstructors[30];
-  Home: EsriConstructors[31];
-  LayerList: EsriConstructors[32];
-  Legend: EsriConstructors[33];
-  Locate: EsriConstructors[34];
-  Search: EsriConstructors[35];
-  SketchViewModel: EsriConstructors[36];
+  IdentityManager: EsriConstructors[10];
+  OAuthInfo: EsriConstructors[11];
+  CSVLayer: EsriConstructors[12];
+  FeatureLayer: EsriConstructors[13];
+  GeoRSSLayer: EsriConstructors[14];
+  GraphicsLayer: EsriConstructors[15];
+  KMLLayer: EsriConstructors[16];
+  Layer: EsriConstructors[17];
+  WMSLayer: EsriConstructors[18];
+  WMTSLayer: EsriConstructors[19];
+  Field: EsriConstructors[20];
+  PopupTemplate: EsriConstructors[21];
+  Portal: EsriConstructors[22];
+  PortalItem: EsriConstructors[23];
+  rendererJsonUtils: EsriConstructors[24];
+  Geoprocessor: EsriConstructors[25];
+  FeatureSet: EsriConstructors[26];
+  MapView: EsriConstructors[27];
+  BasemapGallery: EsriConstructors[28];
+  PortalBasemapsSource: EsriConstructors[29];
+  Home: EsriConstructors[30];
+  LayerList: EsriConstructors[31];
+  Legend: EsriConstructors[32];
+  Locate: EsriConstructors[33];
+  Search: EsriConstructors[34];
+  SketchViewModel: EsriConstructors[35];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -103,7 +101,6 @@ function EsriModulesProvider({ children }: Props) {
         'esri/geometry/Polygon',
         'esri/geometry/SpatialReference',
         'esri/geometry/support/jsonUtils',
-        'esri/geometry/support/webMercatorUtils',
         'esri/identity/IdentityManager',
         'esri/identity/OAuthInfo',
         'esri/layers/CSVLayer',
@@ -147,7 +144,6 @@ function EsriModulesProvider({ children }: Props) {
         Polygon,
         SpatialReference,
         geometryJsonUtils,
-        webMercatorUtils,
         IdentityManager,
         OAuthInfo,
         CSVLayer,
@@ -187,7 +183,6 @@ function EsriModulesProvider({ children }: Props) {
           Polygon,
           SpatialReference,
           geometryJsonUtils,
-          webMercatorUtils,
           IdentityManager,
           OAuthInfo,
           CSVLayer,
