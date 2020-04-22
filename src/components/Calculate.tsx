@@ -14,7 +14,7 @@ import { SketchContext } from 'contexts/Sketch';
 // config
 import { totsGPServer } from 'config/webService';
 // utils
-import { fetchPost } from 'utils/fetchUtils';
+import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { updateLayerEdits } from 'utils/sketchUtils';
 
@@ -68,7 +68,7 @@ const layerInfo = css`
 
 // --- components (Calculate) ---
 function Calculate() {
-  const { FeatureSet } = useEsriModulesContext();
+  const { FeatureSet, Geoprocessor } = useEsriModulesContext();
   const { edits, setEdits, sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
@@ -223,8 +223,6 @@ function Calculate() {
       setContaminationResults({ status: 'no-map', data: null });
       return;
     }
-
-    const url = `${totsGPServer}/Contamination Results/execute`;
 
     let contamMapSet: __esri.FeatureSet | null = null;
     let graphics: __esri.GraphicProperties[] = [];
@@ -429,7 +427,12 @@ function Calculate() {
       Input_Sampling_Unit: featureSet,
       Contamination_Map: contamMapSet,
     };
-    fetchPost(url, params)
+    geoprocessorFetch({
+      Geoprocessor,
+      url: `${totsGPServer}/Contamination Results`,
+      inputParameters: params,
+      outputParameter: 'Output_TOTS_Results',
+    })
       .then((res: any) => {
         console.log('GPServer contamination res: ', res);
 
@@ -447,10 +450,10 @@ function Calculate() {
         }
 
         // save the data to state, use an empty array if there is no data
-        if (res?.results?.[0]?.value?.features) {
+        if (res?.value?.features) {
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
           // update the contam value attribute of the graphics
-          const resFeatures = res.results[0].value.features;
+          const resFeatures = res.value.features;
           layer.graphics.forEach((graphic) => {
             const resFeature = resFeatures.find(
               (feature: any) =>
@@ -485,7 +488,7 @@ function Calculate() {
 
           setContaminationResults({
             status: 'success',
-            data: res.results[0].value.features,
+            data: res.value.features,
           });
         } else {
           setContaminationResults({

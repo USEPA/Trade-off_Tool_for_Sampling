@@ -13,7 +13,7 @@ import { SketchContext } from 'contexts/Sketch';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 // utils
-import { fetchPost, fetchPostFile } from 'utils/fetchUtils';
+import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import {
   generateUUID,
   getCurrentDateTime,
@@ -516,28 +516,24 @@ function FilePanel() {
           Input_VSP: inputVspSet,
           Sample_Type: sampleType && sampleType.value,
         };
-
-        const goeprocessor = new Geoprocessor({
-          url: `${totsGPServer}/VSP%20Import/execute`,
-          outSpatialReference: { wkid: 3857 },
-        });
-
-        goeprocessor
-          .execute(params)
-          .then((res: any) => {
+        geoprocessorFetch({
+          Geoprocessor,
+          url: `${totsGPServer}/VSP%20Import`,
+          inputParameters: params,
+          outputParameter: 'Output_Sampling_Unit',
+        })
+          .then((res) => {
             console.log('res: ', res);
 
             const layers: any[] = [];
-            res.results.forEach((result: any) => {
-              layerDefinition.fields = result.value.fields;
-              layerDefinition.objectIdField = 'OBJECTID';
-              layers.push({
-                layerDefinition,
-                featureSet: {
-                  features: result.value.features,
-                  geometryType: result.value.geometryType,
-                },
-              });
+            layerDefinition.fields = res.value.fields;
+            layerDefinition.objectIdField = 'OBJECTID';
+            layers.push({
+              layerDefinition,
+              featureSet: {
+                features: res.value.features,
+                geometryType: res.value.geometryType,
+              },
             });
 
             setGenerateResponse({

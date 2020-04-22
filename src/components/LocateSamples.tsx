@@ -25,7 +25,7 @@ import {
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { fetchPost } from 'utils/fetchUtils';
+import { geoprocessorFetch } from 'utils/fetchUtils';
 
 // gets an array of layers that can be used with the sketch widget.
 function getSketchableLayers(layers: LayerType[]) {
@@ -246,6 +246,7 @@ function LocateSamples() {
   const {
     Collection,
     FeatureSet,
+    Geoprocessor,
     Graphic,
     GraphicsLayer,
     Polygon,
@@ -477,8 +478,6 @@ function LocateSamples() {
     if (!sketchLayer) return;
 
     setGenerateRandomResponse({ status: 'fetching', data: [] });
-    const url = `${totsGPServer}/Generate%20Random/execute`;
-
     let graphics: __esri.GraphicProperties[] = [];
     if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
       graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
@@ -513,16 +512,20 @@ function LocateSamples() {
       Area_of_Interest_Mask: featureSet.toJSON(),
     };
     console.log('props: ', JSON.stringify(props));
-
-    fetchPost(url, props)
+    geoprocessorFetch({
+      Geoprocessor,
+      url: `${totsGPServer}/Generate%20Random`,
+      inputParameters: props,
+      outputParameter: 'Output_Sampling_Unit',
+    })
       .then((res: any) => {
-        if (!res || res.results.length === 0 || !res.results[0].value) {
+        if (!res?.value) {
           setGenerateRandomResponse({ status: 'failure', data: [] });
           return;
         }
 
         // get the results from the response
-        const results = res.results[0].value;
+        const results = res.value;
 
         // build an array of graphics to draw on the map
         const timestamp = getCurrentDateTime();
