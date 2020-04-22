@@ -48,6 +48,7 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     name: layerToEdit.name,
     label: layerToEdit.label,
     layerType: layerToEdit.layerType,
+    hasContaminationRan: false,
     scenarioName: layerToEdit.scenarioName,
     scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
@@ -93,11 +94,13 @@ export function updateLayerEdits({
   layer,
   type,
   changes,
+  hasContaminationRan = false,
 }: {
   edits: EditsType;
   layer: LayerType;
   type: 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
   changes?: __esri.Collection<__esri.Graphic>;
+  hasContaminationRan?: boolean;
 }) {
   // make a copy of the edits context variable
   const editsCopy = deepCopyObject(edits) as EditsType;
@@ -119,6 +122,9 @@ export function updateLayerEdits({
     if (layer.status === 'published') layer.status = 'edited';
     if (layerToEdit.status === 'published') layerToEdit.status = 'edited';
   }
+
+  // set the hasContaminationRan value (default is false)
+  layerToEdit.hasContaminationRan = hasContaminationRan;
 
   if (changes) {
     // Add new graphics

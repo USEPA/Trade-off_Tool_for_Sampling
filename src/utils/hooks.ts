@@ -84,7 +84,10 @@ function useEditsLayerStorage() {
         id: editsLayer.layerId,
       });
 
-      const popupTemplate = getPopupTemplate(editsLayer.layerType);
+      const popupTemplate = getPopupTemplate(
+        editsLayer.layerType,
+        editsLayer.hasContaminationRan,
+      );
       const features: __esri.Graphic[] = [];
       const idsUsed: string[] = [];
       const displayedFeatures: FeatureEditsType[] = [];

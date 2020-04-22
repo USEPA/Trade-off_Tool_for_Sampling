@@ -486,6 +486,7 @@ function Calculate() {
             layer: sketchLayer,
             type: 'update',
             changes: layer.graphics,
+            hasContaminationRan: true,
           });
 
           setEdits(editsCopy);
