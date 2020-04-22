@@ -13,6 +13,7 @@ export type LayerEditsType = {
   label: string; // layer label
   layerType: LayerTypeName; // type of tots layer (sample, contamination, etc.)
   addedFrom: AddedFrom; // how the layer was added (file, url, etc.)
+  hasContaminationRan: boolean; // says whether or not contamination hits has been ran
   status: PublishStatus; // publish status
   scenarioName: string; // user defined scenario name
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add

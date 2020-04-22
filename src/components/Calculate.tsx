@@ -16,7 +16,7 @@ import { totsGPServer } from 'config/webService';
 // utils
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 
 type ContaminationResultsType = {
   status:
@@ -68,7 +68,7 @@ const layerInfo = css`
 
 // --- components (Calculate) ---
 function Calculate() {
-  const { FeatureSet, Geoprocessor } = useEsriModulesContext();
+  const { FeatureSet, Geoprocessor, PopupTemplate } = useEsriModulesContext();
   const { edits, setEdits, sketchLayer } = React.useContext(SketchContext);
   const {
     contaminationMap,
@@ -451,6 +451,9 @@ function Calculate() {
 
         // save the data to state, use an empty array if there is no data
         if (res?.value?.features) {
+          const popupTemplate = new PopupTemplate(
+            getPopupTemplate(sketchLayer.layerType, true),
+          );
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
           // update the contam value attribute of the graphics
           const resFeatures = res.value.features;
@@ -474,6 +477,7 @@ function Calculate() {
             graphic.attributes.CONTAMVAL = contamValue;
             graphic.attributes.CONTAMTYPE = contamType;
             graphic.attributes.CONTAMUNIT = contamUnit;
+            graphic.popupTemplate = popupTemplate;
           });
 
           // make a copy of the edits context variable
@@ -482,6 +486,7 @@ function Calculate() {
             layer: sketchLayer,
             type: 'update',
             changes: layer.graphics,
+            hasContaminationRan: true,
           });
 
           setEdits(editsCopy);
