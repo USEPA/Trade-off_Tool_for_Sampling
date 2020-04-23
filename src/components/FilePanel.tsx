@@ -520,19 +520,19 @@ function FilePanel() {
           Geoprocessor,
           url: `${totsGPServer}/VSP%20Import`,
           inputParameters: params,
-          outputParameter: 'Output_Sampling_Unit',
         })
           .then((res) => {
             console.log('res: ', res);
 
             const layers: any[] = [];
-            layerDefinition.fields = res.value.fields;
+            const result = res.results[0];
+            layerDefinition.fields = result.value.fields;
             layerDefinition.objectIdField = 'OBJECTID';
             layers.push({
               layerDefinition,
               featureSet: {
-                features: res.value.features,
-                geometryType: res.value.geometryType,
+                features: result.value.features,
+                geometryType: result.value.geometryType,
               },
             });
 

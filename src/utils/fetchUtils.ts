@@ -99,100 +99,23 @@ export function geoprocessorFetch({
   Geoprocessor,
   url,
   inputParameters,
-  outputParameter,
   outSpatialReference = { wkid: 3857 },
 }: {
   Geoprocessor: __esri.GeoprocessorConstructor;
   url: string;
   inputParameters: any;
-  outputParameter: string;
   outSpatialReference?: any;
-}): Promise<__esri.ParameterValue> {
-  return new Promise<__esri.ParameterValue>((resolve, reject) => {
+}): Promise<any> {
+  return new Promise<any>((resolve, reject) => {
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
     });
 
     geoprocessor
-      .submitJob(inputParameters)
-      .then((jobInfo) => {
-        const jobId = jobInfo.jobId;
-
-        geoprocessor
-          .waitForJobCompletion(jobId)
-          .then(() => {
-            geoprocessor
-              .getResultData(jobId, outputParameter)
-              .then((res) => resolve(res))
-              .catch((err) => reject(err));
-          })
-          .catch((err) => reject(err));
-      })
-      .catch((err) => reject(err));
-  });
-}
-
-/**
- * Makes a request to a GP Server using the esri Geoprocessor. Returns multiple
- * output parameters that corresponds to the provided outputParameters array.
- *
- * @param Geoprocessor The esri Geoprocessor constructor
- * @param url The url of GP Server Task
- * @param inputParameters The input parameters for the task
- * @param outputParameters An array of output parameters for the task to return
- * @param outSpatialReference The spatial reference for the output data (default: { wkid: 3857 })
- * @returns A promise the resolves to the geoprocessor response.
- */
-type MultiResponse = { [key: string]: __esri.ParameterValue };
-export function geoprocessorMultiOutputFetch({
-  Geoprocessor,
-  url,
-  inputParameters,
-  outputParameters,
-  outSpatialReference = { wkid: 3857 },
-}: {
-  Geoprocessor: __esri.GeoprocessorConstructor;
-  url: string;
-  inputParameters: any;
-  outputParameters: string[];
-  outSpatialReference?: any;
-}): Promise<MultiResponse> {
-  return new Promise<MultiResponse>((resolve, reject) => {
-    const geoprocessor = new Geoprocessor({
-      url,
-      outSpatialReference,
-    });
-
-    geoprocessor
-      .submitJob(inputParameters)
-      .then((jobInfo) => {
-        const jobId = jobInfo.jobId;
-
-        geoprocessor
-          .waitForJobCompletion(jobId)
-          .then(() => {
-            const promises: Promise<__esri.ParameterValue>[] = [];
-
-            outputParameters.forEach((name) => {
-              const promise = geoprocessor.getResultData(jobId, name);
-              promises.push(promise);
-            });
-
-            Promise.all(promises)
-              .then((responses) => {
-                const objectResponse: MultiResponse = {};
-
-                responses.forEach((res, index) => {
-                  const name = outputParameters[index];
-                  objectResponse[name] = res;
-                });
-
-                resolve(objectResponse);
-              })
-              .catch((err) => reject(err));
-          })
-          .catch((err) => reject(err));
+      .execute(inputParameters)
+      .then((res) => {
+        resolve(res);
       })
       .catch((err) => reject(err));
   });
