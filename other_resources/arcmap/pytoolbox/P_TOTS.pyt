@@ -65,9 +65,28 @@ class GenerateRandom(object):
       
       #########################################################################
       param3 = arcpy.Parameter(
+          displayName   = "CS SRID Override"
+         ,name          = "CSSRIDOverride"
+         ,datatype      = "GPLong"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param4 = arcpy.Parameter(
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param5 = arcpy.Parameter(
+          displayName   = "CS SRID"
+         ,name          = "CSSRID"
+         ,datatype      = "GPLong"
          ,parameterType = "Derived"
          ,direction     = "Output"
       );
@@ -77,6 +96,8 @@ class GenerateRandom(object):
          ,param1
          ,param2
          ,param3
+         ,param4
+         ,param5
       ];
 
       return params;
@@ -100,13 +121,20 @@ class GenerateRandom(object):
    def execute(self,parameters,messages):
 
       #########################################################################
+      # Step 10
+      # Ingest parameters
+      #########################################################################
       int_number_samples = parameters[0].value;
       str_sample_type    = parameters[1].valueAsText;
-      fc_aoi_mask        = parameters[2].value;
-
+      fc_aoi_mask        = parameters[2].value; 
+      int_srid_override  = parameters[3].value;     
+      
+      #########################################################################
+      # Step 20
+      # Create Scratch space
       #########################################################################
       scratch_full_p = arcpy.CreateScratchName(
-          prefix    = "Point"
+          prefix    = "scratch_TOTS_point"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
@@ -114,7 +142,7 @@ class GenerateRandom(object):
       scratch_path_p,scratch_name_p = os.path.split(scratch_full_p);
       
       scratch_full_b = arcpy.CreateScratchName(
-          prefix    = "Buffer"
+          prefix    = "scratch_TOTS_buffer"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
@@ -122,20 +150,52 @@ class GenerateRandom(object):
       scratch_path_b,scratch_name_b = os.path.split(scratch_full_b);
       
       scratch_full_r = arcpy.CreateScratchName(
-          prefix    = "GenerateRandom"
+          prefix    = "scratch_TOTS_generateRandom"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
       scratch_path_r,scratch_name_r = os.path.split(scratch_full_r);
       
+      scratch_full_f = arcpy.CreateScratchName(
+          prefix    = "GenerateRandom"
+         ,suffix    = ""
+         ,data_type = "FeatureClass"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_f,scratch_name_f = os.path.split(scratch_full_f);
+      
+      #########################################################################
+      # Step 30
+      # Determine desired coordinate system
+      #########################################################################
+      if int_srid_override is not None and int_srid_override != "":    
+         int_srid = int_srid_override;
+         
+      else:    
+         with arcpy.da.SearchCursor(
+             in_table    = fc_aoi_mask
+            ,field_names = ['SHAPE@']
+         ) as cursor:
+         
+            for row in cursor:
+               aoi = row[0];
+               break;
+
+         int_srid =  determine_srid(
+            arcpy.PointGeometry(aoi.centroid,aoi.spatialReference)
+         );
+      
+      #########################################################################
+      # Step 40
+      # Project the mask into desired coordinate system
       #########################################################################
       sr = arcpy.Describe(fc_aoi_mask).spatialReference.factoryCode;
       
-      if sr != 3857:
+      if sr != int_srid:
       
          scratch_full_mask = arcpy.CreateScratchName(
-             prefix    = "TOTS_MASK"
+             prefix    = "scratch_TOTS_mask"
             ,suffix    = ""
             ,data_type = "FeatureClass"
             ,workspace = arcpy.env.scratchGDB
@@ -144,16 +204,19 @@ class GenerateRandom(object):
          arcpy.Project_management(
              in_dataset      = fc_aoi_mask
             ,out_dataset     = scratch_full_mask
-            ,out_coor_system = arcpy.SpatialReference(3857)
-         )
+            ,out_coor_system = arcpy.SpatialReference(int_srid)
+         );
             
          fc_aoi_mask = scratch_full_mask;
       
       #########################################################################
-      # Licensing information
-      # Basic: Requires 3D Analyst or Spatial Analyst
-      # Standard: Requires 3D Analyst or Spatial Analyst
-      # Advanced: Yes
+      # Step 50
+      # Generate set of random points across the AOI
+      #    Licensing information
+      #    Basic: Requires 3D Analyst or Spatial Analyst
+      #    Standard: Requires 3D Analyst or Spatial Analyst
+      #    Advanced: Yes
+      #########################################################################
       arcpy.AddMessage("Generating Points...");
       arcpy.CreateRandomPoints_management(
           out_path                   = scratch_path_p
@@ -194,7 +257,7 @@ class GenerateRandom(object):
          ,line_end_type            = "ROUND"
          ,dissolve_option          = "NONE"
          ,dissolve_field           = ""
-         ,method                   = "GEODESIC"
+         ,method                   = "PLANAR"
       );
       
       #########################################################################
@@ -208,7 +271,11 @@ class GenerateRandom(object):
       );
       
       #########################################################################
-      (a,b,scratch_full_o) = sampling_scratch_fc(None);
+      (a,b,scratch_full_o) = sampling_scratch_fc(
+          p_preset   = None
+         ,p_srid     = int_srid
+         ,p_fcprefix = None
+      );
       
       arcpy.Append_management(
           inputs      = scratch_full_r
@@ -235,7 +302,10 @@ class GenerateRandom(object):
          ,"AMC"
       ];
 
-      with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
+      with arcpy.da.UpdateCursor(
+          in_table    = scratch_full_o
+         ,field_names = fields
+      ) as cursor:
 
          for row in cursor:
 
@@ -322,23 +392,30 @@ class GenerateRandom(object):
             elif str_sample_type == "Swab":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
                row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = "Swab";
-               row[2]  = 0.12;
-               row[3]  = 0.07;
-               row[4]  = 0.7;
-               row[5]  = 0.89;
-               row[6]  = 21;
-               row[7]  = 219;
-               row[8]  = 0.01;
-               row[9]  = 2;
-               row[10] = 4;
-               row[11] = 118;
-               row[12] = 239;
+               row[2]  = "Swab";
+               row[3]  = 0.12;
+               row[4]  = 0.07;
+               row[5]  = 0.7;
+               row[6]  = 0.89;
+               row[7]  = 21;
+               row[8]  = 219;
+               row[9]  = 0.01;
+               row[10]  = 2;
+               row[11] = 4;
+               row[12] = 118;
+               row[13] = 239;
             
             cursor.updateRow(row);
+            
+      arcpy.Project_management(
+          in_dataset      = scratch_full_o
+         ,out_dataset     = scratch_full_f
+         ,out_coor_system = arcpy.SpatialReference(3857)
+      );
 
       #########################################################################
-      arcpy.SetParameterAsText(3,scratch_full_o); 
+      arcpy.SetParameterAsText(4,scratch_full_f);
+      arcpy.SetParameter(5,int_srid);
 
       arcpy.AddMessage("Random Samples Complete!");
       
@@ -376,12 +453,31 @@ class VSPImport(object):
       );
       param1.filter.type = "ValueList";
       param1.filter.list = ["Micro Vac","Wet Vac","Sponge","Robot","Aggressive Air","Swab"];
-
+      
       #########################################################################
       param2 = arcpy.Parameter(
+          displayName   = "CS SRID Override"
+         ,name          = "CSSRIDOverride"
+         ,datatype      = "GPLong"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+
+      #########################################################################
+      param3 = arcpy.Parameter(
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param4 = arcpy.Parameter(
+          displayName   = "CS SRID"
+         ,name          = "CSSRID"
+         ,datatype      = "GPLong"
          ,parameterType = "Derived"
          ,direction     = "Output"
       );
@@ -390,6 +486,8 @@ class VSPImport(object):
           param0
          ,param1
          ,param2
+         ,param3
+         ,param4
       ];
 
       return params;
@@ -413,8 +511,12 @@ class VSPImport(object):
    def execute(self,parameters,messages):
 
       #########################################################################
-      fc_vsp            = parameters[0].value;
-      str_sample_type   = parameters[1].valueAsText;
+      # Step 10
+      # Ingest parameters
+      #########################################################################
+      fc_vsp             = parameters[0].value;
+      str_sample_type    = parameters[1].valueAsText;
+      int_srid_override  = parameters[2].value; 
       
       cnt = int(arcpy.GetCount_management(fc_vsp).getOutput(0));
       
@@ -424,13 +526,68 @@ class VSPImport(object):
          arcpy.AddMessage("Processing " + str(cnt) + " incoming records.");       
          
       #########################################################################
+      # Step 20
+      # Create scratch space
+      #########################################################################
       scratch_full_fp = arcpy.CreateScratchName(
-          prefix    = "VSPImport"
+          prefix    = "scratch_TOTS_VSPImport"
          ,suffix    = ""
          ,data_type = "FeatureClass"
          ,workspace = arcpy.env.scratchGDB
       );
       scratch_path_fp,scratch_name_fp = os.path.split(scratch_full_fp);
+      
+      scratch_full_out = arcpy.CreateScratchName(
+          prefix    = "VSPImport"
+         ,suffix    = ""
+         ,data_type = "FeatureClass"
+         ,workspace = arcpy.env.scratchGDB
+      );
+      scratch_path_out,scratch_name_out = os.path.split(scratch_full_out);
+      
+      #########################################################################
+      # Step 30
+      # Determine desired coordinate system
+      #########################################################################
+      if int_srid_override is not None and int_srid_override != "":    
+         int_srid = int_srid_override;
+         
+      else:    
+         with arcpy.da.SearchCursor(
+             in_table    = fc_vsp
+            ,field_names = ['SHAPE@']
+         ) as cursor:
+         
+            for row in cursor:
+               vsp = row[0];
+               break;
+
+         int_srid =  determine_srid(
+            arcpy.PointGeometry(vsp.centroid,vsp.spatialReference)
+         );
+         
+      #########################################################################
+      # Step 40
+      # Project the vsp into desired coordinate system
+      #########################################################################
+      sr = arcpy.Describe(fc_vsp).spatialReference.factoryCode;
+      
+      if sr != int_srid:
+      
+         scratch_full_in = arcpy.CreateScratchName(
+             prefix    = "scratch_TOTS_vsp"
+            ,suffix    = ""
+            ,data_type = "FeatureClass"
+            ,workspace = arcpy.env.scratchGDB
+         );
+         
+         arcpy.Project_management(
+             in_dataset      = fc_vsp
+            ,out_dataset     = scratch_full_in
+            ,out_coor_system = arcpy.SpatialReference(int_srid)
+         );
+            
+         fc_vsp = scratch_full_in;
       
       #########################################################################
       # Use the FeatureToPolygon function to form new areas
@@ -444,7 +601,11 @@ class VSPImport(object):
       arcpy.AddMessage("Built " + str(cnt) + " polygons from VSP input");
       
       #########################################################################
-      (a,b,scratch_full_o) = sampling_scratch_fc(None);
+      (a,b,scratch_full_o) = sampling_scratch_fc(
+          p_preset   = None
+         ,p_srid     = int_srid
+         ,p_fcprefix = None
+      );
       
       arcpy.Append_management(
           inputs      = scratch_full_fp
@@ -571,9 +732,16 @@ class VSPImport(object):
                row[13] = 239;
             
             cursor.updateRow(row);
+            
+      arcpy.Project_management(
+          in_dataset      = scratch_full_o
+         ,out_dataset     = scratch_full_out
+         ,out_coor_system = arcpy.SpatialReference(3857)
+      );
 
       #########################################################################
-      arcpy.SetParameterAsText(2,scratch_full_o);
+      arcpy.SetParameterAsText(3,scratch_full_out);
+      arcpy.SetParameter(4,int_srid);
 
       arcpy.AddMessage("Conversion Complete!");
 
@@ -609,12 +777,31 @@ class ContaminationResults(object):
          ,direction     = "Input"
          ,enabled       = True
       );
-
+      
       #########################################################################
       param2 = arcpy.Parameter(
+          displayName   = "CS SRID Override"
+         ,name          = "CSSRIDOverride"
+         ,datatype      = "GPLong"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+
+      #########################################################################
+      param3 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
          ,datatype      = "GPTableView"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      #########################################################################
+      param4 = arcpy.Parameter(
+          displayName   = "CS SRID"
+         ,name          = "CSSRID"
+         ,datatype      = "GPLong"
          ,parameterType = "Derived"
          ,direction     = "Output"
       );
@@ -623,6 +810,8 @@ class ContaminationResults(object):
           param0
          ,param1
          ,param2
+         ,param3
+         ,param4
       ];
 
       return params;
@@ -646,13 +835,38 @@ class ContaminationResults(object):
    def execute(self,parameters,messages):
 
       #########################################################################
+      # Step 10
+      # Ingest Parameters
+      #########################################################################
       fc_samples_in        = parameters[0].value;
       fc_contamination_map = parameters[1].value;
+      int_srid_override    = parameters[2].value; 
+      
+      #########################################################################
+      # Step 20
+      # Determine desired coordinate system
+      #########################################################################
+      if int_srid_override is not None and int_srid_override != "":    
+         int_srid = int_srid_override;
+         
+      else:    
+         with arcpy.da.SearchCursor(
+             in_table    = fc_samples_in
+            ,field_names = ['SHAPE@']
+         ) as cursor:
+         
+            for row in cursor:
+               samp = row[0];
+               break;
+
+         int_srid =  determine_srid(
+            arcpy.PointGeometry(samp.centroid,samp.spatialReference)
+         );
       
       #########################################################################
       sr = arcpy.Describe(fc_samples_in).spatialReference.factoryCode;
       
-      if sr != 3857:
+      if sr != int_srid:
       
          scratch_full_samp = arcpy.CreateScratchName(
              prefix    = "TOTS_SAMP"
@@ -672,7 +886,7 @@ class ContaminationResults(object):
       #########################################################################
       sr = arcpy.Describe(fc_contamination_map).spatialReference.factoryCode;
       
-      if sr != 3857:
+      if sr != int_srid:
       
          scratch_full_mask = arcpy.CreateScratchName(
              prefix    = "TOTS_MASK"
@@ -810,7 +1024,8 @@ class ContaminationResults(object):
             ));
                   
       #########################################################################
-      arcpy.SetParameterAsText(2,scratch_full_o);
+      arcpy.SetParameterAsText(3,scratch_full_o);
+      arcpy.SetParameter(4,int_srid);
       
 ###############################################################################
 class SampleData(object):
@@ -1003,8 +1218,13 @@ class Debug(object):
 
 
 ###############################################################################
-def sampling_scratch_fc(p_preset,p_fcprefix=None):
+def sampling_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
 
+   if p_srid is None:
+      sr = arcpy.SpatialReference(3857);
+   else:
+      sr = arcpy.SpatialReference(p_srid)
+   
    if p_fcprefix is None:
       str_fcprefix = "TOTS_Samples";
    else:
@@ -1022,7 +1242,7 @@ def sampling_scratch_fc(p_preset,p_fcprefix=None):
        out_path          = scratch_path_o
       ,out_name          = scratch_name_o
       ,geometry_type     = "POLYGON"
-      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,spatial_reference = sr
       ,config_keyword    = None
    );
    
@@ -1080,8 +1300,13 @@ def sampling_scratch_fc(p_preset,p_fcprefix=None):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def contamination_scratch_fc(p_preset,p_fcprefix=None):
+def contamination_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
 
+   if p_srid is None:
+      sr = arcpy.SpatialReference(3857);
+   else:
+      sr = arcpy.SpatialReference(p_srid)
+      
    if p_fcprefix is None:
       str_fcprefix = "TOTS_Contamination";
    else:
@@ -1099,7 +1324,7 @@ def contamination_scratch_fc(p_preset,p_fcprefix=None):
        out_path          = scratch_path_o
       ,out_name          = scratch_name_o
       ,geometry_type     = "POLYGON"
-      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,spatial_reference = sr
       ,config_keyword    = None
    );
    
@@ -1138,8 +1363,13 @@ def contamination_scratch_fc(p_preset,p_fcprefix=None):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def aoi_scratch_fc(p_preset,p_fcprefix=None):
+def aoi_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
 
+   if p_srid is None:
+      sr = arcpy.SpatialReference(3857);
+   else:
+      sr = arcpy.SpatialReference(p_srid)
+      
    if p_fcprefix is None:
       str_fcprefix = "TOTS_Contamination";
    else:
@@ -1157,7 +1387,7 @@ def aoi_scratch_fc(p_preset,p_fcprefix=None):
        out_path          = scratch_path_o
       ,out_name          = scratch_name_o
       ,geometry_type     = "POLYGON"
-      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,spatial_reference = sr
       ,config_keyword    = None
    );
    
@@ -1193,8 +1423,13 @@ def aoi_scratch_fc(p_preset,p_fcprefix=None):
    return (scratch_path_o,scratch_name_o,scratch_full_o);
    
 ###############################################################################
-def vsp_scratch_fc(p_preset,p_fcprefix=None):
+def vsp_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
 
+   if p_srid is None:
+      sr = arcpy.SpatialReference(3857);
+   else:
+      sr = arcpy.SpatialReference(p_srid)
+      
    if p_fcprefix is None:
       str_fcprefix = "TOTS_VSP";
    else:
@@ -1212,7 +1447,7 @@ def vsp_scratch_fc(p_preset,p_fcprefix=None):
        out_path          = scratch_path_o
       ,out_name          = scratch_name_o
       ,geometry_type     = "POLYLINE"
-      ,spatial_reference = arcpy.SpatialReference(3857)
+      ,spatial_reference = sr
       ,config_keyword    = None
    );
    
@@ -1299,11 +1534,94 @@ def dz_appendjson(in_json_file,out_features):
       ,target = out_features
    );
    
+###############################################################################
+def determine_srid(in_point):
+
+   if in_point.spatialReference.factoryCode == 4269:
+      cs_point = in_point;
+      
+   else:
+      cs_point = in_point.projectAs(arcpy.SpatialReference(4269));
+
+   ary_conus = build_polyarray(
+      [[[-128.0,20.2],[-64.0,20.2],[-64.0,52.0],[-128.0,52.0],[-128.0,20.2]]]
+   );
    
+   ary_alaska = build_polyarray(
+      [
+          [[-180.0,48.0],[-128.0,48.0],[-128.0,90.0],[-180.0,90.0],[-180.0,48.0]]
+         ,[[168.0,48.0] ,[180.0,48.0] ,[180.0,90.0] ,[168.0,90.0] ,[168.0,48.0] ]
+      ]
+   );
    
+   ary_hawaii = build_polyarray(
+      [
+         [[-180.0,10.0],[-146.0,10.0],[-146.0,35.0],[-180.0,35.0],[-180.0,10.0]]
+      ]
+   );
    
+   ary_prvi = build_polyarray(
+      [
+         [[-69.0,16.0],[-63.0,16.0],[-63.0,20.0],[-69.0,20.0],[-69.0,16.0]]
+      ]
+   );
    
+   ary_guammp = build_polyarray(
+      [
+         [[136.0,8.0],[154.0,8.0],[154.0,25.0],[136.0,25.0],[136.0,8.0]]
+      ]
+   );
+         
+   ary_asamoa = build_polyarray(
+      [
+         [[-178.0,-20.0],[-163.0,-20.0],[-163.0,-5.0],[-178.0,-5.0],[-178.0,-20.0]]
+      ]
+   );
    
+   if point_in_polyarray(cs_point,ary_conus):
+      return 5070;
+      
+   elif point_in_polyarray(cs_point,ary_hawaii):
+      return 26904;
+      
+   elif point_in_polyarray(cs_point,ary_prvi):
+      return 32161;
+      
+   elif point_in_polyarray(cs_point,ary_alaska):
+      return 3338;
+      
+   elif point_in_polyarray(cs_point,ary_guammp):
+      return 32655;
+    
+   elif point_in_polyarray(cs_point,ary_asamoa):
+      return 32702;
+      
+   else:
+      # Not sure what to do when nothing is decent
+      return 5070;
+         
+###############################################################################
+def build_polyarray(in_array):
+
+   results = [];
+   
+   for multi in in_array:
+      array = arcpy.Array([arcpy.Point(*coords) for coords in multi])
+      
+      results.append(arcpy.Polygon(array,arcpy.SpatialReference(4269)));
+      
+   return results;
+      
+   
+###############################################################################
+def point_in_polyarray(in_point,in_array):
+   
+   for multi in in_array:
+      if multi.contains(in_point):
+         return True;
+         
+   return False;     
+    
    
    
    
