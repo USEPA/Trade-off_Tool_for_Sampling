@@ -431,7 +431,6 @@ function Calculate() {
       Geoprocessor,
       url: `${totsGPServer}/Contamination Results`,
       inputParameters: params,
-      outputParameter: 'Output_TOTS_Results',
     })
       .then((res: any) => {
         console.log('GPServer contamination res: ', res);
@@ -450,13 +449,13 @@ function Calculate() {
         }
 
         // save the data to state, use an empty array if there is no data
-        if (res?.value?.features) {
+        if (res?.results?.[0]?.value?.features) {
           const popupTemplate = new PopupTemplate(
             getPopupTemplate(sketchLayer.layerType, true),
           );
           const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
           // update the contam value attribute of the graphics
-          const resFeatures = res.value.features;
+          const resFeatures = res.results[0].value.features;
           layer.graphics.forEach((graphic) => {
             const resFeature = resFeatures.find(
               (feature: any) =>
@@ -493,7 +492,7 @@ function Calculate() {
 
           setContaminationResults({
             status: 'success',
-            data: res.value.features,
+            data: res.results[0].value.features,
           });
         } else {
           setContaminationResults({

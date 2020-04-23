@@ -475,7 +475,7 @@ function LocateSamples() {
     data: [],
   });
   function randomSamples() {
-    if (!sketchLayer) return;
+    if (!map || !sketchLayer) return;
 
     setGenerateRandomResponse({ status: 'fetching', data: [] });
     let graphics: __esri.GraphicProperties[] = [];
@@ -516,16 +516,21 @@ function LocateSamples() {
       Geoprocessor,
       url: `${totsGPServer}/Generate%20Random`,
       inputParameters: props,
-      outputParameter: 'Output_Sampling_Unit',
     })
       .then((res: any) => {
-        if (!res?.value) {
+        if (!res?.results?.[0]?.value) {
           setGenerateRandomResponse({ status: 'failure', data: [] });
           return;
         }
 
+        // put the sketch layer on the map, if it isn't there already
+        const layerIndex = map.layers.findIndex(
+          (layer) => layer.id === sketchLayer.layerId,
+        );
+        if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
+
         // get the results from the response
-        const results = res.value;
+        const results = res.results[0].value;
 
         // build an array of graphics to draw on the map
         const timestamp = getCurrentDateTime();
