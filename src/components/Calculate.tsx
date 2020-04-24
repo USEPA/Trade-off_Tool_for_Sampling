@@ -431,6 +431,7 @@ function Calculate() {
       Geoprocessor,
       url: `${totsGPServer}/Contamination Results`,
       inputParameters: params,
+      useProxy: true,
     })
       .then((res: any) => {
         console.log('GPServer contamination res: ', res);

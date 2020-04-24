@@ -516,6 +516,7 @@ function LocateSamples() {
       Geoprocessor,
       url: `${totsGPServer}/Generate%20Random`,
       inputParameters: props,
+      useProxy: true,
     })
       .then((res: any) => {
         if (!res?.results?.[0]?.value) {

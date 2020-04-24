@@ -520,6 +520,7 @@ function FilePanel() {
           Geoprocessor,
           url: `${totsGPServer}/VSP%20Import`,
           inputParameters: params,
+          useProxy: true,
         })
           .then((res) => {
             console.log('res: ', res);

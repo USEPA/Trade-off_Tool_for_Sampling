@@ -1,10 +1,13 @@
+import { proxyUrl } from 'config/webService';
+
 /**
  * Performs a fetch and validates the http status.
  *
  * @param apiUrl The webservice url to fetch data from
  * @returns A promise that resolves to the fetch response.
  */
-export function fetchCheck(apiUrl: string) {
+export function fetchCheck(url: string, useProxy: boolean = false) {
+  const apiUrl = useProxy ? proxyUrl + url : url;
   return fetch(apiUrl).then(checkResponse);
 }
 
@@ -17,10 +20,13 @@ export function fetchCheck(apiUrl: string) {
  * @returns A promise that resolves to the fetch response.
  */
 export function fetchPost(
-  apiUrl: string,
+  url: string,
   data: object,
+  useProxy: boolean = false,
   headers: any = { 'content-type': 'application/x-www-form-urlencoded' },
 ) {
+  const apiUrl = useProxy ? proxyUrl + url : url;
+
   // build the url search params
   const body = new URLSearchParams();
   for (let [key, value] of Object.entries(data)) {
@@ -48,7 +54,14 @@ export function fetchPost(
  * @param file The file to send
  * @returns A promise that resolves to the fetch response.
  */
-export function fetchPostFile(apiUrl: string, data: object, file: any) {
+export function fetchPostFile(
+  url: string,
+  data: object,
+  file: any,
+  useProxy: boolean = false,
+) {
+  const apiUrl = useProxy ? proxyUrl + url : url;
+
   // build the url search params
   const body = new FormData();
   for (let [key, value] of Object.entries(data)) {
@@ -99,17 +112,22 @@ export function geoprocessorFetch({
   Geoprocessor,
   url,
   inputParameters,
+  useProxy = false,
   outSpatialReference = { wkid: 3857 },
 }: {
   Geoprocessor: __esri.GeoprocessorConstructor;
   url: string;
   inputParameters: any;
+  useProxy: boolean;
   outSpatialReference?: any;
 }): Promise<any> {
   return new Promise<any>((resolve, reject) => {
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
+      requestOptions: {
+        useProxy: useProxy,
+      },
     });
 
     geoprocessor
