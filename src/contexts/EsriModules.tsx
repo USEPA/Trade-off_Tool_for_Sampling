@@ -2,9 +2,12 @@ import React from 'react';
 import { loadModules } from 'esri-loader';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
+// config
+import { proxyUrl } from 'config/webService';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriConstructors = [
+  typeof import('esri/config'),
   typeof import('esri/Graphic'),
   typeof import('esri/Map'),
   typeof import('esri/Viewpoint'),
@@ -47,42 +50,42 @@ type Props = { children: React.ReactNode };
 
 type State = {
   modulesLoaded: boolean;
-  Graphic: EsriConstructors[0];
-  EsriMap: EsriConstructors[1];
-  Viewpoint: EsriConstructors[2];
-  Collection: EsriConstructors[3];
-  watchUtils: EsriConstructors[4];
-  Extent: EsriConstructors[5];
-  geometryEngine: EsriConstructors[6];
-  Polygon: EsriConstructors[7];
-  SpatialReference: EsriConstructors[8];
-  geometryJsonUtils: EsriConstructors[9];
-  IdentityManager: EsriConstructors[10];
-  OAuthInfo: EsriConstructors[11];
-  CSVLayer: EsriConstructors[12];
-  FeatureLayer: EsriConstructors[13];
-  GeoRSSLayer: EsriConstructors[14];
-  GraphicsLayer: EsriConstructors[15];
-  KMLLayer: EsriConstructors[16];
-  Layer: EsriConstructors[17];
-  WMSLayer: EsriConstructors[18];
-  WMTSLayer: EsriConstructors[19];
-  Field: EsriConstructors[20];
-  PopupTemplate: EsriConstructors[21];
-  Portal: EsriConstructors[22];
-  PortalItem: EsriConstructors[23];
-  rendererJsonUtils: EsriConstructors[24];
-  Geoprocessor: EsriConstructors[25];
-  FeatureSet: EsriConstructors[26];
-  MapView: EsriConstructors[27];
-  BasemapGallery: EsriConstructors[28];
-  PortalBasemapsSource: EsriConstructors[29];
-  Home: EsriConstructors[30];
-  LayerList: EsriConstructors[31];
-  Legend: EsriConstructors[32];
-  Locate: EsriConstructors[33];
-  Search: EsriConstructors[34];
-  SketchViewModel: EsriConstructors[35];
+  Graphic: EsriConstructors[1];
+  EsriMap: EsriConstructors[2];
+  Viewpoint: EsriConstructors[3];
+  Collection: EsriConstructors[4];
+  watchUtils: EsriConstructors[5];
+  Extent: EsriConstructors[6];
+  geometryEngine: EsriConstructors[7];
+  Polygon: EsriConstructors[8];
+  SpatialReference: EsriConstructors[9];
+  geometryJsonUtils: EsriConstructors[10];
+  IdentityManager: EsriConstructors[11];
+  OAuthInfo: EsriConstructors[12];
+  CSVLayer: EsriConstructors[13];
+  FeatureLayer: EsriConstructors[14];
+  GeoRSSLayer: EsriConstructors[15];
+  GraphicsLayer: EsriConstructors[16];
+  KMLLayer: EsriConstructors[17];
+  Layer: EsriConstructors[18];
+  WMSLayer: EsriConstructors[19];
+  WMTSLayer: EsriConstructors[20];
+  Field: EsriConstructors[21];
+  PopupTemplate: EsriConstructors[22];
+  Portal: EsriConstructors[23];
+  PortalItem: EsriConstructors[24];
+  rendererJsonUtils: EsriConstructors[25];
+  Geoprocessor: EsriConstructors[26];
+  FeatureSet: EsriConstructors[27];
+  MapView: EsriConstructors[28];
+  BasemapGallery: EsriConstructors[29];
+  PortalBasemapsSource: EsriConstructors[30];
+  Home: EsriConstructors[31];
+  LayerList: EsriConstructors[32];
+  Legend: EsriConstructors[33];
+  Locate: EsriConstructors[34];
+  Search: EsriConstructors[35];
+  SketchViewModel: EsriConstructors[36];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -91,6 +94,7 @@ function EsriModulesProvider({ children }: Props) {
   React.useEffect(() => {
     (loadModules(
       [
+        'esri/config',
         'esri/Graphic',
         'esri/Map',
         'esri/Viewpoint',
@@ -134,6 +138,7 @@ function EsriModulesProvider({ children }: Props) {
       },
     ) as Promise<EsriConstructors>).then(
       ([
+        config,
         Graphic,
         EsriMap,
         Viewpoint,
@@ -210,6 +215,8 @@ function EsriModulesProvider({ children }: Props) {
           Search,
           SketchViewModel,
         });
+
+        config.request.proxyUrl = proxyUrl;
       },
     );
   }, []);
