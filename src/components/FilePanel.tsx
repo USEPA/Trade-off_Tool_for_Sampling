@@ -212,8 +212,6 @@ function FilePanel() {
   const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
   const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
   const [generateResponse, setGenerateResponse] = React.useState<any>(null);
-  const [analyzeCalled, setAnalyzeCalled] = React.useState(false);
-  const [generateCalled, setGenerateCalled] = React.useState(false);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
   const [missingAttributes, setMissingAttributes] = React.useState('');
@@ -238,7 +236,6 @@ function FilePanel() {
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
-  const [lastFileName, setLastFileName] = React.useState('');
   const onDrop = React.useCallback((acceptedFiles) => {
     // Do something with the files
     if (
@@ -261,15 +258,16 @@ function FilePanel() {
 
     // set the file state
     file['esriFileType'] = fileType;
-    setFile(file);
+    setFile({
+      file,
+      lastFileName: '',
+      analyzeCalled: false,
+    });
 
     // reset state management values
     setUploadStatus('fetching');
-    setLastFileName('');
     setAnalyzeResponse(null);
     setGenerateResponse(null);
-    setAnalyzeCalled(false);
-    setGenerateCalled(false);
     setFeaturesAdded(false);
     setMissingAttributes('');
 
@@ -346,9 +344,20 @@ function FilePanel() {
 
   // analyze csv files
   React.useEffect(() => {
-    if (!file?.esriFileType || !sharingUrl || analyzeCalled) return;
-    if (file.name === lastFileName || file.esriFileType !== 'csv') return;
-    setAnalyzeCalled(true);
+    if (!file?.file?.esriFileType || !sharingUrl || file.analyzeCalled) return;
+    if (
+      file.file.name === file.lastFileName ||
+      file.file.esriFileType !== 'csv'
+    ) {
+      return;
+    }
+
+    setFile((file: any) => {
+      return {
+        ...file,
+        analyzeCalled: true,
+      };
+    });
 
     // build request
     const analyzeParams: any = { enableGlobalGeocoding: true };
@@ -362,12 +371,12 @@ function FilePanel() {
 
     const params: any = {
       f: 'json',
-      fileType: file.esriFileType,
+      fileType: file.file.esriFileType,
       analyzeParameters: analyzeParams,
     };
 
     const analyzeUrl = `${sharingUrl}/content/features/analyze`;
-    fetchPostFile(analyzeUrl, params, file)
+    fetchPostFile(analyzeUrl, params, file.file)
       .then((res: any) => {
         console.log('analyzeResponse: ', res);
         setAnalyzeResponse(res);
@@ -376,14 +385,7 @@ function FilePanel() {
         console.error(err);
         setUploadStatus('failure');
       });
-  }, [
-    file,
-    lastFileName,
-    firstGeocodeService,
-    portal,
-    analyzeCalled,
-    sharingUrl,
-  ]);
+  }, [file, firstGeocodeService, portal, sharingUrl]);
 
   // get features from file
   const [
@@ -394,29 +396,32 @@ function FilePanel() {
     if (
       !mapView ||
       !layerType ||
-      !file?.esriFileType ||
+      !file?.file?.esriFileType ||
       !sharingUrl ||
-      file.name === lastFileName ||
-      generateCalled
+      file.file.name === file.lastFileName
     ) {
       return;
     }
-    if (file.esriFileType === 'kml') return; // KML doesn't need to do this
-    if (file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
+    if (file.file.esriFileType === 'kml') return; // KML doesn't need to do this
+    if (file.file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
     if (layerType.value === 'VSP' && !sampleType) return; // VSP layers need a sample type
 
-    setGenerateCalled(true);
-    setLastFileName(file.name);
+    setFile((file: any) => {
+      return {
+        ...file,
+        lastFileName: file.file.name,
+      };
+    });
 
     const generateUrl = `${sharingUrl}/content/features/generate`;
 
     let resParameters = {};
     if (analyzeResponse) resParameters = analyzeResponse.publishParameters;
     const fileForm = new FormData();
-    fileForm.append('file', file);
+    fileForm.append('file', file.file);
     const publishParameters: any = {
       ...resParameters,
-      name: file.name,
+      name: file.file.name,
       targetSR: mapView.spatialReference,
       maxRecordCount: 4000, // 4000 is the absolute max for this service.
       enforceInputFileSizeLimit: true,
@@ -452,25 +457,22 @@ function FilePanel() {
       publishParameters['numberOfDigitsAfterDecimal'] = numDecimals;
     }
 
-    let fileTypeToSend = file.esriFileType;
+    let fileTypeToSend = file.file.esriFileType;
 
-    console.log('fileTypeToSend: ', fileTypeToSend);
     // generate the features
     const params = {
       f: 'json',
       filetype: fileTypeToSend,
       publishParameters,
     };
-    fetchPostFile(generateUrl, params, file)
+    fetchPostFile(generateUrl, params, file.file)
       .then((res: any) => {
         console.log('generate res: ', res);
-        console.log('file.esriFileType: ', file.esriFileType);
         if (res.error) {
           setUploadStatus('import-error');
           return;
         }
         if (layerType.value !== 'VSP') {
-          console.log('basic');
           setGenerateResponse(res);
           return;
         }
@@ -488,7 +490,6 @@ function FilePanel() {
             );
           });
         });
-        console.log('features: ', features);
 
         // get the list of fields
         let fields: __esri.Field[] = [];
@@ -522,7 +523,7 @@ function FilePanel() {
           inputParameters: params,
         })
           .then((res) => {
-            console.log('res: ', res);
+            console.log('VSP res: ', res);
 
             const layers: any[] = [];
             const result = res.results[0];
@@ -552,23 +553,22 @@ function FilePanel() {
         setUploadStatus('failure');
       });
   }, [
-    generalizeFeatures,
-    generateCalled,
-    analyzeResponse,
-    file,
-    lastFileName,
-    portal,
-    mapView,
-    sharingUrl,
-
-    // new
-    layerType,
-    Graphic,
+    // esri modules
+    FeatureSet,
     Field,
     geometryJsonUtils,
     Geoprocessor,
-    FeatureSet,
+    Graphic,
     SpatialReference,
+
+    // app
+    generalizeFeatures,
+    analyzeResponse,
+    file,
+    portal,
+    mapView,
+    sharingUrl,
+    layerType,
     map,
     sampleType,
   ]);
@@ -581,7 +581,7 @@ function FilePanel() {
       !map ||
       !mapView ||
       !layerType ||
-      !file?.esriFileType ||
+      !file?.file?.esriFileType ||
       featuresAdded
     ) {
       return;
@@ -596,7 +596,6 @@ function FilePanel() {
       return;
     }
 
-    console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
     const popupTemplate = getPopupTemplate(layerType.value);
@@ -614,7 +613,7 @@ function FilePanel() {
       layer.featureSet.features.forEach((feature: any, index: number) => {
         if (
           !feature?.geometry?.spatialReference &&
-          file.esriFileType === 'kml'
+          file.file.esriFileType === 'kml'
         ) {
           feature.geometry['spatialReference'] =
             generateResponse.lookAtExtent.spatialReference;
@@ -700,7 +699,7 @@ function FilePanel() {
       return;
     }
 
-    const layerName = getLayerName(layers, file.name);
+    const layerName = getLayerName(layers, file.file.name);
     setNewLayerName(layerName);
     const graphicsLayer = new GraphicsLayer({
       graphics,
@@ -713,7 +712,7 @@ function FilePanel() {
       layerId: graphicsLayer.id,
       portalId: '',
       value: layerName,
-      name: file.name,
+      name: file.file.name,
       label: layerName,
       layerType: layerType.value,
       scenarioName: '',
@@ -769,7 +768,7 @@ function FilePanel() {
       !map ||
       !mapView ||
       !layerType ||
-      !file?.esriFileType ||
+      !file?.file?.esriFileType ||
       featuresAdded
     ) {
       return;
@@ -784,7 +783,6 @@ function FilePanel() {
       return;
     }
 
-    console.log('generateResponse: ', generateResponse);
     setFeaturesAdded(true);
 
     const featureLayers: __esri.FeatureLayer[] = [];
@@ -812,7 +810,7 @@ function FilePanel() {
       layer.featureSet.features.forEach((feature: any) => {
         if (
           !feature?.geometry?.spatialReference &&
-          file.esriFileType === 'kml'
+          file.file.esriFileType === 'kml'
         ) {
           feature.geometry['spatialReference'] =
             generateResponse.lookAtExtent.spatialReference;
@@ -836,17 +834,7 @@ function FilePanel() {
         };
       }
 
-      console.log({
-        fields,
-        objectIdField: layer.layerDefinition.objectIdField,
-        outFields: ['*'],
-        source: features,
-        title: file.name,
-        renderer,
-        popupTemplate,
-      });
-
-      const layerName = getLayerName(layers, file.name);
+      const layerName = getLayerName(layers, file.file.name);
       setNewLayerName(layerName);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
@@ -859,7 +847,6 @@ function FilePanel() {
       };
 
       // create the feature layer
-      console.log('layerFromFile: ', layerProps);
       const layerToAdd = new FeatureLayer(layerProps);
       featureLayers.push(layerToAdd);
 
@@ -896,8 +883,14 @@ function FilePanel() {
 
   // handle loading of the KMLLayer
   React.useEffect(() => {
-    if (!file?.esriFileType || !mapView || file.esriFileType !== 'kml') return;
-    if (file.name === lastFileName) return;
+    if (
+      !file?.file?.esriFileType ||
+      !mapView ||
+      file.file.esriFileType !== 'kml'
+    ) {
+      return;
+    }
+    if (file.file.name === file.lastFileName) return;
 
     // read in the file
     const reader = new FileReader();
@@ -930,12 +923,12 @@ function FilePanel() {
     };
 
     try {
-      reader.readAsText(file);
+      reader.readAsText(file.file);
     } catch (ex) {
       console.error('File Read Error: ', ex);
       setUploadStatus('file-read-error');
     }
-  }, [KMLLayer, mapView, file, lastFileName]);
+  }, [KMLLayer, mapView, file]);
 
   return (
     <div css={searchContainerStyles}>
@@ -979,7 +972,7 @@ function FilePanel() {
                     <MessageBox
                       severity="error"
                       title="Invalid File Type"
-                      message={`${file.name} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
+                      message={`${file.file.name} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
                     />
                   )}
                   {uploadStatus === 'import-error' && (
@@ -993,21 +986,21 @@ function FilePanel() {
                     <MessageBox
                       severity="error"
                       title="File Read Error"
-                      message={`Failed to read the ${file.name} file. Check the console log for details.`}
+                      message={`Failed to read the ${file.file.name} file. Check the console log for details.`}
                     />
                   )}
                   {uploadStatus === 'no-data' && (
                     <MessageBox
                       severity="error"
                       title="No Data"
-                      message={`The ${file.name} file did not have any data to display on the map`}
+                      message={`The ${file.file.name} file did not have any data to display on the map`}
                     />
                   )}
                   {uploadStatus === 'missing-attributes' && (
                     <MessageBox
                       severity="error"
                       title="Missing Required Attributes"
-                      message={`Features in the ${file.name} are missing the following required attributes: ${missingAttributes}`}
+                      message={`Features in the ${file.file.name} are missing the following required attributes: ${missingAttributes}`}
                     />
                   )}
                   {uploadStatus === 'failure' && (
@@ -1019,18 +1012,18 @@ function FilePanel() {
                   )}
                   {uploadStatus === 'success' && (
                     <React.Fragment>
-                      {file.name === newLayerName && (
+                      {file.file.name === newLayerName && (
                         <MessageBox
                           severity="info"
                           title="Upload Succeeded"
-                          message={`"${file.name}" was successfully uploaded`}
+                          message={`"${file.file.name}" was successfully uploaded`}
                         />
                       )}
-                      {file.name !== newLayerName && (
+                      {file.file.name !== newLayerName && (
                         <MessageBox
                           severity="info"
                           title="Upload Succeeded"
-                          message={`"${file.name}" was successfully uploaded as "${newLayerName}"`}
+                          message={`"${file.file.name}" was successfully uploaded as "${newLayerName}"`}
                         />
                       )}
                     </React.Fragment>
