@@ -61,7 +61,11 @@ type Props = {
 
 function SplashScreenContent({ isOpen, children }: Props) {
   return (
-    <DialogOverlay css={overlayStyles} isOpen={isOpen}>
+    <DialogOverlay
+      css={overlayStyles}
+      isOpen={isOpen}
+      data-testid="tots-splash-screen"
+    >
       <DialogContent
         css={dialogStyles}
         aria-label="Welcome to EPA’s Trade-off Tool for Sampling (TOTS)"
@@ -99,8 +103,17 @@ function SplashScreenContent({ isOpen, children }: Props) {
         </p>
 
         <p>
-          Users are welcome to <a href="{CONTACT URL}">Contact Us</a> to ask a
-          question, provide feedback, or report a problem.
+          Users are welcome to{' '}
+          <a
+            href={
+              'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research'
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Contact Us
+          </a>{' '}
+          to ask a question, provide feedback, or report a problem.
         </p>
 
         {children && (

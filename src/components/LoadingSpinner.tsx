@@ -95,7 +95,7 @@ function LoadingSpinner({ ...props }: Props) {
   if (isIE()) {
     return (
       <svg
-        data-testid="hmw-loading-spinner"
+        data-testid="tots-loading-spinner"
         css={ieSvgStyles}
         width="50"
         height="50"
@@ -109,7 +109,7 @@ function LoadingSpinner({ ...props }: Props) {
 
   return (
     <svg
-      data-testid="hmw-loading-spinner"
+      data-testid="tots-loading-spinner"
       css={svgStyles}
       width="50"
       height="50"
