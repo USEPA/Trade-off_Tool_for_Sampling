@@ -6,6 +6,7 @@ import { Global, jsx, css } from '@emotion/core';
 import { useWindowSize } from '@reach/window-size';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
+import ErrorBoundary from 'components/ErrorBoundary';
 import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
 import SplashScreen from 'components/SplashScreen';
@@ -168,35 +169,37 @@ function App() {
       <Global styles={gloablStyles} />
 
       <div className="tots">
-        <SplashScreen />
-        <DialogOverlay css={overlayStyles} isOpen={smallScreenDialogOpen}>
-          <DialogContent css={dialogStyles} aria-label="Small Screen Warning">
-            This site contains data uploading and map editing features best used
-            in a desktop web browser.
-            <br />
-            <div css={buttonContainerStyles}>
-              <button
-                className="btn"
-                css={buttonStyles}
-                onClick={(ev) => setSmallScreenDialogOpen(false)}
-              >
-                OK
-              </button>
-            </div>
-          </DialogContent>
-        </DialogOverlay>
-        <TestingToolbar />
-        <div css={appStyles}>
-          <div css={containerStyles}>
-            <div ref={toolbarRef}>
-              <Toolbar />
-            </div>
-            <NavBar height={contentHeight - toolbarHeight} />
-            <div css={mapPanelStyles} ref={mapRef}>
-              {toolbarHeight && <Map height={toolbarHeight} />}
+        <ErrorBoundary>
+          <SplashScreen />
+          <DialogOverlay css={overlayStyles} isOpen={smallScreenDialogOpen}>
+            <DialogContent css={dialogStyles} aria-label="Small Screen Warning">
+              This site contains data uploading and map editing features best
+              used in a desktop web browser.
+              <br />
+              <div css={buttonContainerStyles}>
+                <button
+                  className="btn"
+                  css={buttonStyles}
+                  onClick={(ev) => setSmallScreenDialogOpen(false)}
+                >
+                  OK
+                </button>
+              </div>
+            </DialogContent>
+          </DialogOverlay>
+          <TestingToolbar />
+          <div css={appStyles}>
+            <div css={containerStyles}>
+              <div ref={toolbarRef}>
+                <Toolbar />
+              </div>
+              <NavBar height={contentHeight - toolbarHeight} />
+              <div css={mapPanelStyles} ref={mapRef}>
+                {toolbarHeight && <Map height={toolbarHeight} />}
+              </div>
             </div>
           </div>
-        </div>
+        </ErrorBoundary>
       </div>
     </React.Fragment>
   );
