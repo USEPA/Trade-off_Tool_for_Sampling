@@ -483,7 +483,7 @@ function Toolbar() {
   ]);
 
   return (
-    <div css={toolBarStyles}>
+    <div css={toolBarStyles} data-testid="tots-toolbar">
       <h4 css={toolBarTitle}>Trade-off Tool for Sampling (TOTS)</h4>
       <div css={toolBarButtonsStyles}>
         <div>

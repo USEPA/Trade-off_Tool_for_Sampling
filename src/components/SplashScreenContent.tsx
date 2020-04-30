@@ -61,7 +61,11 @@ type Props = {
 
 function SplashScreenContent({ isOpen, children }: Props) {
   return (
-    <DialogOverlay css={overlayStyles} isOpen={isOpen}>
+    <DialogOverlay
+      css={overlayStyles}
+      isOpen={isOpen}
+      data-testid="tots-splash-screen"
+    >
       <DialogContent
         css={dialogStyles}
         aria-label="Welcome to EPA’s Trade-off Tool for Sampling (TOTS)"
