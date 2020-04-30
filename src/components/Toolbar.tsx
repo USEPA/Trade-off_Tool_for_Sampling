@@ -530,7 +530,9 @@ function Toolbar() {
           </button>
         )}
         <a
-          href={'https://www.epa.gov/home/forms/contact-epa'}
+          href={
+            'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research'
+          }
           target="_blank"
           rel="noopener noreferrer"
           css={toolBarButtonStyles}
