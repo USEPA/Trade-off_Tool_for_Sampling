@@ -1042,7 +1042,7 @@ function FilePanel() {
                   </label>
                   <br />
                   <div {...getRootProps({ className: 'dropzone' })}>
-                    <input {...getInputProps()} />
+                    <input data-testid="tots-dropzone" {...getInputProps()} />
                     {isDragActive ? (
                       <p>Drop the files here ...</p>
                     ) : (
