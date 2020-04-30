@@ -4,13 +4,12 @@ describe('Create Plan Drop Down Contents', function () {
   const legendId = '#legend-container';
 
   beforeEach(function () {
+    // clear session storage and open the app
+    sessionStorage.clear();
     cy.visit('/');
 
     // close the splash screen
     cy.findByText('OK').click();
-
-    // clear session storage
-    sessionStorage.clear();
 
     // go to the create plan tab
     cy.findByText('Create Plan').click();
