@@ -939,7 +939,7 @@ function FilePanel() {
     }
   }, [KMLLayer, mapView, file]);
 
-  const filename = file?.file?.name;
+  const filename = file?.file?.name ? file.file.name : '';
 
   return (
     <div css={searchContainerStyles}>
