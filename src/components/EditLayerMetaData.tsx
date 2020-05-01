@@ -208,8 +208,9 @@ function EditLayerMetaData({
       {saveStatus === 'fetching' && <LoadingSpinner />}
       {saveStatus === 'failure' && webServiceErrorMessage}
       {saveStatus === 'name-not-available' &&
-        sketchLayer?.scenarioName &&
-        scenarioNameTakenMessage(sketchLayer?.scenarioName)}
+        scenarioNameTakenMessage(
+          sketchLayer.scenarioName ? sketchLayer.scenarioName : '',
+        )}
       {sketchLayer.status === 'added' && (
         <div css={saveButtonContainerStyles}>
           <button

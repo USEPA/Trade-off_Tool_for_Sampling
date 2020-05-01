@@ -678,7 +678,7 @@ function Calculate() {
           noContaminationGraphicsMessage}
         {contaminationResults.status === 'success' &&
           contaminationResults?.data?.length &&
-          contaminationHitsSuccessMessage(contaminationResults.data?.length)}
+          contaminationHitsSuccessMessage(contaminationResults.data.length)}
 
         <div css={submitButtonContainerStyles}>
           <button css={submitButtonStyles} onClick={runCalculation}>

@@ -108,17 +108,13 @@ export const uploadSuccessMessage = (
   filename: string,
   layerName: string = '',
 ) => {
-  if (!layerName) {
-    return (
-      <MessageBox
-        severity="info"
-        title="Upload Succeeded"
-        message={`"${filename}" was successfully uploaded`}
-      />
-    );
-  }
-
-  return (
+  return filename === layerName ? (
+    <MessageBox
+      severity="info"
+      title="Upload Succeeded"
+      message={`"${filename}" was successfully uploaded`}
+    />
+  ) : (
     <MessageBox
       severity="info"
       title="Upload Succeeded"
