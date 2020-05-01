@@ -4,7 +4,6 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
-import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -26,6 +25,15 @@ import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
+import {
+  fileReadErrorMessage,
+  importErrorMessage,
+  invalidFileTypeMessage,
+  missingAttributesMessage,
+  noDataMessage,
+  uploadSuccessMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 
 /**
  * Determines if the desired name has already been used. If it has
@@ -931,6 +939,8 @@ function FilePanel() {
     }
   }, [KMLLayer, mapView, file]);
 
+  const filename = file.file.name;
+
   return (
     <div css={searchContainerStyles}>
       <label htmlFor="layer-type-select-input">Layer Type</label>
@@ -969,66 +979,17 @@ function FilePanel() {
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
                 <React.Fragment>
-                  {uploadStatus === 'invalid-file-type' && (
-                    <MessageBox
-                      severity="error"
-                      title="Invalid File Type"
-                      message={`${file.file.name} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
-                    />
-                  )}
-                  {uploadStatus === 'import-error' && (
-                    <MessageBox
-                      severity="error"
-                      title="Invalid File Type"
-                      message={`Unable to import this dataset.`}
-                    />
-                  )}
-                  {uploadStatus === 'file-read-error' && (
-                    <MessageBox
-                      severity="error"
-                      title="File Read Error"
-                      message={`Failed to read the ${file.file.name} file. Check the console log for details.`}
-                    />
-                  )}
-                  {uploadStatus === 'no-data' && (
-                    <MessageBox
-                      severity="error"
-                      title="No Data"
-                      message={`The ${file.file.name} file did not have any data to display on the map`}
-                    />
-                  )}
-                  {uploadStatus === 'missing-attributes' && (
-                    <MessageBox
-                      severity="error"
-                      title="Missing Required Attributes"
-                      message={`Features in the ${file.file.name} are missing the following required attributes: ${missingAttributes}`}
-                    />
-                  )}
-                  {uploadStatus === 'failure' && (
-                    <MessageBox
-                      severity="error"
-                      title="Web Service Error"
-                      message="An error occurred in the web service"
-                    />
-                  )}
-                  {uploadStatus === 'success' && (
-                    <React.Fragment>
-                      {file.file.name === newLayerName && (
-                        <MessageBox
-                          severity="info"
-                          title="Upload Succeeded"
-                          message={`"${file.file.name}" was successfully uploaded`}
-                        />
-                      )}
-                      {file.file.name !== newLayerName && (
-                        <MessageBox
-                          severity="info"
-                          title="Upload Succeeded"
-                          message={`"${file.file.name}" was successfully uploaded as "${newLayerName}"`}
-                        />
-                      )}
-                    </React.Fragment>
-                  )}
+                  {uploadStatus === 'invalid-file-type' &&
+                    invalidFileTypeMessage(filename)}
+                  {uploadStatus === 'import-error' && importErrorMessage}
+                  {uploadStatus === 'file-read-error' &&
+                    fileReadErrorMessage(filename)}
+                  {uploadStatus === 'no-data' && noDataMessage(filename)}
+                  {uploadStatus === 'missing-attributes' &&
+                    missingAttributesMessage(filename, missingAttributes)}
+                  {uploadStatus === 'failure' && webServiceErrorMessage}
+                  {uploadStatus === 'success' &&
+                    uploadSuccessMessage(filename, newLayerName)}
                   <input
                     id="generalize-features-input"
                     type="checkbox"

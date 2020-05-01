@@ -4,7 +4,6 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
-import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 import NavigationButton from 'components/NavigationButton';
 // contexts
@@ -13,6 +12,14 @@ import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { totsGPServer } from 'config/webService';
+import {
+  contaminationHitsSuccessMessage,
+  noContaminationGraphicsMessage,
+  noContaminationMapMessage,
+  noSampleLayerMessage,
+  noSamplesMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 // utils
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
@@ -663,48 +670,15 @@ function Calculate() {
         </div>
 
         {contaminationResults.status === 'fetching' && <LoadingSpinner />}
-        {contaminationResults.status === 'failure' && (
-          <MessageBox
-            severity="error"
-            title="Web Service Error"
-            message="An error occurred in the web service"
-          />
-        )}
-        {contaminationResults.status === 'no-map' && (
-          <MessageBox
-            severity="error"
-            title="No Contamination Map Found"
-            message="Return to Create Plan and add and/or select a contamination map"
-          />
-        )}
-        {contaminationResults.status === 'no-layer' && (
-          <MessageBox
-            severity="error"
-            title="No Samples"
-            message="No sample layer has been selected. Please go to the Create Plan tab, select a layer and try again."
-          />
-        )}
-        {contaminationResults.status === 'no-graphics' && (
-          <MessageBox
-            severity="error"
-            title="No Samples"
-            message="There are no samples to run calculations on"
-          />
-        )}
-        {contaminationResults.status === 'no-contamination-graphics' && (
-          <MessageBox
-            severity="error"
-            title="No Features In Contamination Map"
-            message="There are no features in the contamination map to run calculations on"
-          />
-        )}
-        {contaminationResults.status === 'success' && (
-          <MessageBox
-            severity="info"
-            title="Contamination Hits"
-            message={`${contaminationResults.data?.length} sample(s) placed in contaminated areas`}
-          />
-        )}
+        {contaminationResults.status === 'failure' && webServiceErrorMessage}
+        {contaminationResults.status === 'no-map' && noContaminationMapMessage}
+        {contaminationResults.status === 'no-layer' && noSampleLayerMessage}
+        {contaminationResults.status === 'no-graphics' && noSamplesMessage}
+        {contaminationResults.status === 'no-contamination-graphics' &&
+          noContaminationGraphicsMessage}
+        {contaminationResults.status === 'success' &&
+          contaminationResults?.data?.length &&
+          contaminationHitsSuccessMessage(contaminationResults.data?.length)}
 
         <div css={submitButtonContainerStyles}>
           <button css={submitButtonStyles} onClick={runCalculation}>
