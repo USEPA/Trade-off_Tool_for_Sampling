@@ -16,6 +16,12 @@ import { SketchContext } from 'contexts/Sketch';
 import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
 // types
 import { DeleteFeatureType, FeatureEditsType } from 'types/Edits';
+// config
+import {
+  notLoggedInMessage,
+  pulblishSuccessMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -435,13 +441,7 @@ function Publish() {
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishResponse.status === 'fetch-failure' && (
-        <MessageBox
-          severity="error"
-          title="Web Service Error"
-          message="An error occurred in the web service"
-        />
-      )}
+      {publishResponse.status === 'fetch-failure' && webServiceErrorMessage}
       {publishResponse.status === 'success' &&
         publishResponse.summary.failed && (
           <MessageBox
@@ -451,24 +451,9 @@ function Publish() {
           />
         )}
       {(publishResponse.summary.success ||
-        sketchLayer?.status === 'published') && (
-        <MessageBox
-          severity="info"
-          title="Publish Succeeded"
-          message={
-            'To view or share your plan with others, go to the ' +
-            'My Content menu in the Content section of your ArcGIS ' +
-            'Online organization.'
-          }
-        />
-      )}
-      {!signedIn && (
-        <MessageBox
-          severity="warning"
-          title="Not Logged In"
-          message="Please login to use this feature"
-        />
-      )}
+        sketchLayer?.status === 'published') &&
+        pulblishSuccessMessage}
+      {!signedIn && notLoggedInMessage}
       {publishResponse.status !== 'name-not-available' &&
         sketchLayer &&
         sketchLayer.status !== 'published' && (

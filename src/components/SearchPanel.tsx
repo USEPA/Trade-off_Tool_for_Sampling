@@ -4,7 +4,6 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
-import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -27,6 +26,10 @@ import { LayerType } from 'types/Layer';
 import { EditsType } from 'types/Edits';
 // config
 import { polygonSymbol } from 'config/symbols';
+import {
+  notLoggedInMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 
 // --- styles (SearchPanel) ---
 const searchContainerStyles = css`
@@ -529,20 +532,8 @@ function SearchPanel() {
       <hr />
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
-        {searchResults.status === 'not-logged-in' && (
-          <MessageBox
-            severity="warning"
-            title="Not Logged In"
-            message="Please login to use this feature"
-          />
-        )}
-        {searchResults.status === 'failure' && (
-          <MessageBox
-            severity="error"
-            title="Web Service Error"
-            message="An error occurred in the web service"
-          />
-        )}
+        {searchResults.status === 'not-logged-in' && notLoggedInMessage}
+        {searchResults.status === 'failure' && webServiceErrorMessage}
         {searchResults.status === 'success' && (
           <React.Fragment>
             <div>

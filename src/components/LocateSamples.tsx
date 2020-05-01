@@ -19,6 +19,7 @@ import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
+  cantUseWithVspMessage,
   generateRandomSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';

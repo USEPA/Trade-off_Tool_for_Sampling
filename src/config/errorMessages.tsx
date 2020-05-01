@@ -19,6 +19,47 @@ export const errorBoundaryMessage = (
   />
 );
 
+export const notLoggedInMessage = (
+  <MessageBox
+    severity="warning"
+    title="Not Logged In"
+    message="Please login to use this feature"
+  />
+);
+
+// add data tab - url panel messages
+export const urlLayerSuccessMessage = (
+  <MessageBox
+    severity="info"
+    title="Success"
+    message="The layer was successfully added to the map"
+  />
+);
+
+export const urlLayerFailureMessage = (url: string) => (
+  <MessageBox
+    severity="error"
+    title="Failed to Add Layer"
+    message={`Failed to add the layer at the following url: ${url}`}
+  />
+);
+
+export const unsupportedLayerMessage = (layerType: string) => (
+  <MessageBox
+    severity="error"
+    title="Unsupported layer type"
+    message={`The "${layerType}" layer type is unsupported`}
+  />
+);
+
+export const urlAlreadyAddedMessage = (url: string) => (
+  <MessageBox
+    severity="warning"
+    title="URL Already Added"
+    message={`The "${url}" has already been added. If you want to change the type, please remove the layer first and re-add it.`}
+  />
+);
+
 // add data tab - file upload messages
 export const invalidFileTypeMessage = (filename: string) => (
   <MessageBox
@@ -177,6 +218,19 @@ export const downloadSuccessMessage = (
     severity="info"
     title="Success"
     message="The file was successfully downloaded."
+  />
+);
+
+// publish plan tab
+export const pulblishSuccessMessage = (
+  <MessageBox
+    severity="info"
+    title="Publish Succeeded"
+    message={
+      'To view or share your plan with others, go to the ' +
+      'My Content menu in the Content section of your ArcGIS ' +
+      'Online organization.'
+    }
   />
 );
 
