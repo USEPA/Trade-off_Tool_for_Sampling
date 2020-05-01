@@ -6,7 +6,6 @@ import { jsx, css } from '@emotion/core';
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import EditLayerMetaData from 'components/EditLayerMetaData';
 import Select from 'components/Select';
-import MessageBox from 'components/MessageBox';
 import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -19,6 +18,11 @@ import { LayerType } from 'types/Layer';
 import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
+import {
+  cantUseWithVspMessage,
+  generateRandomSuccessMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 // utils
 import {
   getCurrentDateTime,
@@ -666,13 +670,7 @@ function LocateSamples() {
           </AccordionItem>
           <AccordionItem title={'Add Multiple Random Samples'}>
             <div css={sectionContainer}>
-              {sketchLayer?.layerType === 'VSP' && (
-                <MessageBox
-                  severity="warning"
-                  title="Cannot Use With VSP"
-                  message="Multiple Random Samples cannot be used in combination with VSP-Created Sampling Plans"
-                />
-              )}
+              {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
               {sketchLayer?.layerType !== 'VSP' && (
                 <React.Fragment>
                   <label htmlFor="number-of-samples-input">
@@ -743,20 +741,14 @@ function LocateSamples() {
                       <span>Draw Area of Interest Mask</span>
                     </span>
                   </button>
-                  {generateRandomResponse.status === 'success' && (
-                    <MessageBox
-                      severity="info"
-                      title="Samples Added"
-                      message={`${generateRandomResponse.data.length} samples added to the "${sketchLayer?.label}" layer`}
-                    />
-                  )}
-                  {generateRandomResponse.status === 'failure' && (
-                    <MessageBox
-                      severity="error"
-                      title="Web Service Error"
-                      message="An error occurred in the web service"
-                    />
-                  )}
+                  {generateRandomResponse.status === 'success' &&
+                    sketchLayer &&
+                    generateRandomSuccessMessage(
+                      generateRandomResponse.data.length,
+                      sketchLayer.label,
+                    )}
+                  {generateRandomResponse.status === 'failure' &&
+                    webServiceErrorMessage}
                   {numberRandomSamples &&
                     aoiSketchLayer?.sketchLayer.type === 'graphics' &&
                     aoiSketchLayer.sketchLayer.graphics.length > 0 && (

@@ -4,11 +4,17 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
-import MessageBox from 'components/MessageBox';
 import Select from 'components/Select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
+// config
+import {
+  unsupportedLayerMessage,
+  urlAlreadyAddedMessage,
+  urlLayerFailureMessage,
+  urlLayerSuccessMessage,
+} from 'config/errorMessages';
 
 // --- styles (URLPanel) ---
 const addButtonStyles = css`
@@ -173,34 +179,10 @@ function URLPanel() {
       <br />
       <br />
       {status === 'fetching' && <LoadingSpinner />}
-      {status === 'success' && (
-        <MessageBox
-          severity="info"
-          title="Success"
-          message="The layer was successfully added to the map"
-        />
-      )}
-      {status === 'failure' && (
-        <MessageBox
-          severity="error"
-          title="Failed to Add Layer"
-          message={`Failed to add the layer at the following url: ${url}`}
-        />
-      )}
-      {status === 'unsupported' && (
-        <MessageBox
-          severity="error"
-          title="Unsupported layer type"
-          message={`The "${urlType.label}" layer type is unsupported`}
-        />
-      )}
-      {status === 'already-added' && (
-        <MessageBox
-          severity="warning"
-          title="URL Already Added"
-          message={`The "${url}" has already been added. If you want to change the type, please remove the layer first and re-add it.`}
-        />
-      )}
+      {status === 'success' && urlLayerSuccessMessage}
+      {status === 'failure' && urlLayerFailureMessage(url)}
+      {status === 'unsupported' && unsupportedLayerMessage(urlType.label)}
+      {status === 'already-added' && urlAlreadyAddedMessage(url)}
       <button type="button" onClick={() => setShowSampleUrls(!showSampleUrls)}>
         SAMPLE URL(S)
       </button>

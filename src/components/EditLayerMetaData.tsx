@@ -4,7 +4,6 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
-import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { SketchContext } from 'contexts/Sketch';
@@ -13,6 +12,11 @@ import { LayerType } from 'types/Layer';
 // utils
 import { isServiceNameAvailable } from 'utils/arcGisRestUtils';
 import { updateLayerEdits } from 'utils/sketchUtils';
+// config
+import {
+  scenarioNameTakenMessage,
+  webServiceErrorMessage,
+} from 'config/errorMessages';
 // styles
 import { colors } from 'styles';
 
@@ -202,20 +206,11 @@ function EditLayerMetaData({
       />
 
       {saveStatus === 'fetching' && <LoadingSpinner />}
-      {saveStatus === 'failure' && (
-        <MessageBox
-          severity="error"
-          title="Web Service Error"
-          message="An error occurred in the web service"
-        />
-      )}
-      {saveStatus === 'name-not-available' && (
-        <MessageBox
-          severity="warning"
-          title="Scenario Name Not Available"
-          message={`The "${sketchLayer?.scenarioName}" name is already in use. Please rename the scenario and try again.`}
-        />
-      )}
+      {saveStatus === 'failure' && webServiceErrorMessage}
+      {saveStatus === 'name-not-available' &&
+        scenarioNameTakenMessage(
+          sketchLayer.scenarioName ? sketchLayer.scenarioName : '',
+        )}
       {sketchLayer.status === 'added' && (
         <div css={saveButtonContainerStyles}>
           <button

@@ -3,8 +3,8 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
-// components
-import MessageBox from 'components/MessageBox';
+// config
+import { errorBoundaryMessage } from 'config/errorMessages';
 
 // --- components (MessageBox) ---
 const containerStyles = css`
@@ -35,15 +35,7 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div css={containerStyles}>
-          <MessageBox
-            severity="error"
-            title="Error"
-            message="Something went wrong. Please notify the site administrator."
-          />
-        </div>
-      );
+      return <div css={containerStyles}>{errorBoundaryMessage}</div>;
     }
 
     return this.props.children;

@@ -14,7 +14,13 @@ import { getGraphicsArray } from 'utils/sketchUtils';
 import LoadingSpinner from './LoadingSpinner';
 // styles
 import { colors } from 'styles';
-import MessageBox from './MessageBox';
+// config
+import {
+  base64FailureMessage,
+  downloadSuccessMessage,
+  excelFailureMessage,
+  screenshotFailureMessage,
+} from 'config/errorMessages';
 
 // --- styles (LabelValue) ---
 const labelValueStyles = css`
@@ -935,34 +941,11 @@ function CalculateResults() {
           </div>
           <div>
             {downloadStatus === 'fetching' && <LoadingSpinner />}
-            {downloadStatus === 'screenshot-failure' && (
-              <MessageBox
-                severity="error"
-                title="Download Error"
-                message="An error occurred while taking a screenshot of the map."
-              />
-            )}
-            {downloadStatus === 'base64-failure' && (
-              <MessageBox
-                severity="error"
-                title="Download Error"
-                message="An error occurred while converting the map screenshot."
-              />
-            )}
-            {downloadStatus === 'excel-failure' && (
-              <MessageBox
-                severity="error"
-                title="Download Error"
-                message="An error occurred while creating the excel document."
-              />
-            )}
-            {downloadStatus === 'success' && (
-              <MessageBox
-                severity="info"
-                title="Success"
-                message="The file was successfully downloaded."
-              />
-            )}
+            {downloadStatus === 'screenshot-failure' &&
+              screenshotFailureMessage}
+            {downloadStatus === 'base64-failure' && base64FailureMessage}
+            {downloadStatus === 'excel-failure' && excelFailureMessage}
+            {downloadStatus === 'success' && downloadSuccessMessage}
             <div css={downloadButtonContainerStyles}>
               <button
                 onClick={() => {
