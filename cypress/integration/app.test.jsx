@@ -1,5 +1,7 @@
 describe('Homepage', function () {
   beforeEach(function () {
+    // clear session storage and open the app
+    sessionStorage.clear();
     cy.visit('/');
   });
 

@@ -4,6 +4,8 @@ describe('Links', () => {
     'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research';
 
   beforeEach(function () {
+    // clear session storage and open the app
+    sessionStorage.clear();
     cy.visit('/');
   });
 
