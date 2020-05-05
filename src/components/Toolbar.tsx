@@ -88,9 +88,9 @@ const toolBarButtonStyles = css`
   }
 `;
 
-const legendStyles = (legendVisible: boolean) => {
+const floatContainerStyles = (containerVisible: boolean) => {
   return css`
-    display: ${legendVisible ? 'block' : 'none'} !important;
+    display: ${containerVisible ? 'block' : 'none'} !important;
     width: 310px;
     background: white;
     border: 1px solid #ccc;
@@ -104,9 +104,26 @@ const legendStyles = (legendVisible: boolean) => {
     /* Float the menu over the map */
     position: absolute;
     right: 60px;
+  `;
+};
 
+const legendStyles = (legendVisible: boolean) => {
+  return css`
+    ${floatContainerStyles(legendVisible)}
+
+    /* Hide/show the actions panel */
     .esri-layer-list__item-actions[hidden] {
       display: none !important;
+    }
+
+    /* Styles for the opacity slider */
+    .esri-slider {
+      margin-bottom: 12px;
+    }
+
+    .esri-slider__thumb:hover {
+      width: 18px;
+      height: 18px;
     }
   `;
 };
@@ -121,9 +138,11 @@ function Toolbar() {
     BasemapGallery,
     IdentityManager,
     LayerList,
+    Legend,
     OAuthInfo,
     Portal,
     PortalBasemapsSource,
+    Slider,
   } = useEsriModulesContext();
   const { setContaminationMap } = React.useContext(CalculateContext);
   const {
@@ -218,9 +237,40 @@ function Toolbar() {
       container: 'legend-container',
       listItemCreatedFunction: function (event) {
         const item = event.item;
+
+        // item is a sub layer, just add the legend
+        if (item.parent) {
+          item.panel = {
+            content: 'legend',
+            open: true,
+          };
+          return;
+        }
+
+        // create the slider
+        const sliderContainer = document.createElement('div');
+        const slider: any = new Slider({
+          container: sliderContainer,
+          min: 0,
+          max: 100,
+          values: [100],
+        });
+
+        // create the slider events, which change the layer's opacity
+        function sliderChange(
+          event: __esri.SliderThumbChangeEvent | __esri.SliderThumbDragEvent,
+        ) {
+          item.layer.opacity = event.value / 100;
+        }
+        slider.on('thumb-change', sliderChange);
+        slider.on('thumb-drag', sliderChange);
+
+        const container = document.createElement('div');
+        container.append(slider.domNode);
+
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
-          const container = document.createElement('div');
+          const legendContainer = document.createElement('div');
           const content = (
             <div className="esri-legend esri-widget--panel esri-widget">
               <div className="esri-legend__layer">
@@ -260,38 +310,58 @@ function Toolbar() {
               </div>
             </div>
           );
-          ReactDOM.render(content, container);
+          ReactDOM.render(content, legendContainer);
+          container.append(legendContainer);
+
           item.panel = {
             content: container,
             className: 'esri-icon-layer-list',
             open: true,
           };
-        } else if (item.layer.type !== 'group') {
+        } else if (item.layer.type === 'group') {
+          item.panel = {
+            content: container,
+            className: 'esri-icon-layer-list',
+            open: true,
+          };
+        } else {
+          const legendContainer = document.createElement('div');
+          const legend: any = new Legend({
+            container: legendContainer,
+            view: mapView,
+            layerInfos: [
+              {
+                layer: item.layer,
+                title: item.layer.title,
+              },
+            ],
+          });
+          container.append(legend.domNode);
+
           // don't show legend twice
           item.panel = {
-            content: 'legend',
+            content: container,
+            className: 'esri-icon-layer-list',
             open: true,
           };
         }
 
         // add a delete button for each layer, but don't add it to sublayers
-        if (!item.parent) {
-          item.actionsOpen = true;
-          item.actionsSections = [
-            [
-              {
-                title: 'Zoom to Layer',
-                className: 'esri-icon-zoom-in-magnifying-glass',
-                id: 'zoom-layer',
-              },
-              {
-                title: 'Delete Layer',
-                className: 'esri-icon-trash',
-                id: 'delete-layer',
-              },
-            ],
-          ];
-        }
+        item.actionsOpen = true;
+        item.actionsSections = [
+          [
+            {
+              title: 'Zoom to Layer',
+              className: 'esri-icon-zoom-in-magnifying-glass',
+              id: 'zoom-layer',
+            },
+            {
+              title: 'Delete Layer',
+              className: 'esri-icon-trash',
+              id: 'delete-layer',
+            },
+          ],
+        ];
       },
     });
 
@@ -327,7 +397,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [LayerList, mapView, legendInitialized]);
+  }, [LayerList, Legend, Slider, mapView, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -498,7 +568,10 @@ function Toolbar() {
           >
             Basemap{' '}
           </button>
-          <div css={legendStyles(basemapVisible)} id="basemap-container" />
+          <div
+            css={floatContainerStyles(basemapVisible)}
+            id="basemap-container"
+          />
         </div>
         <div>
           <button
