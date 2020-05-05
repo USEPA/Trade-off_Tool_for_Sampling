@@ -43,6 +43,7 @@ type EsriConstructors = [
   typeof import('esri/widgets/Legend'),
   typeof import('esri/widgets/Locate'),
   typeof import('esri/widgets/Search'),
+  typeof import('esri/widgets/Slider'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
 ];
 
@@ -85,7 +86,8 @@ type State = {
   Legend: EsriConstructors[33];
   Locate: EsriConstructors[34];
   Search: EsriConstructors[35];
-  SketchViewModel: EsriConstructors[36];
+  Slider: EsriConstructors[36];
+  SketchViewModel: EsriConstructors[37];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -130,6 +132,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/Legend',
         'esri/widgets/Locate',
         'esri/widgets/Search',
+        'esri/widgets/Slider',
         'esri/widgets/Sketch/SketchViewModel',
       ],
       {
@@ -174,6 +177,7 @@ function EsriModulesProvider({ children }: Props) {
         Legend,
         Locate,
         Search,
+        Slider,
         SketchViewModel,
       ]) => {
         setModules({
@@ -213,6 +217,7 @@ function EsriModulesProvider({ children }: Props) {
           Legend,
           Locate,
           Search,
+          Slider,
           SketchViewModel,
         });
 
