@@ -4,6 +4,7 @@ import React from 'react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
+import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -21,7 +22,11 @@ import { getPopupTemplate } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 
 // Saves data to session storage
-export function writeToStorage(key: string, data: string | object) {
+export async function writeToStorage(
+  key: string,
+  data: string | object,
+  setOptions: React.Dispatch<React.SetStateAction<AlertDialogOptions | null>>,
+) {
   const itemSize = Math.round(JSON.stringify(data).length / 1024);
 
   try {
@@ -31,10 +36,17 @@ export function writeToStorage(key: string, data: string | object) {
     const storageSize = Math.round(
       JSON.stringify(sessionStorage).length / 1024,
     );
-    const message = `LIMIT REACHED: New storage size would be ${itemSize}K up from ${storageSize}K already in storage`;
-    alert(message);
+    const message = `New storage size would be ${
+      storageSize + itemSize
+    }K up from ${storageSize}K already in storage`;
     console.log(message);
     console.error(e);
+
+    setOptions({
+      title: 'Session Storage Limit Reached',
+      ariaLabel: 'Session Storage Limit Reached',
+      description: message,
+    });
   }
 }
 
@@ -52,6 +64,7 @@ function getLayerById(layers: LayerType[], id: string) {
 // Uses browser storage for holding any editable layers.
 function useEditsLayerStorage() {
   const key = 'tots_edits';
+  const { setOptions } = React.useContext(DialogContext);
   const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
   const {
     edits,
@@ -175,13 +188,14 @@ function useEditsLayerStorage() {
   // Saves the edits to browser storage everytime they change
   React.useEffect(() => {
     if (!layersInitialized) return;
-    writeToStorage(key, edits);
-  }, [edits, layersInitialized]);
+    writeToStorage(key, edits, setOptions);
+  }, [edits, layersInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the reference layers that have been added.
 function useReferenceLayerStorage() {
   const key = 'tots_reference_layers';
+  const { setOptions } = React.useContext(DialogContext);
   const {
     FeatureLayer,
     Field,
@@ -253,13 +267,14 @@ function useReferenceLayerStorage() {
   // Saves the reference layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localReferenceLayerInitialized) return;
-    writeToStorage(key, referenceLayers);
-  }, [referenceLayers, localReferenceLayerInitialized]);
+    writeToStorage(key, referenceLayers, setOptions);
+  }, [referenceLayers, localReferenceLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the url layers that have been added.
 function useUrlLayerStorage() {
   const key = 'tots_url_layers';
+  const { setOptions } = React.useContext(DialogContext);
   const {
     CSVLayer,
     GeoRSSLayer,
@@ -336,13 +351,14 @@ function useUrlLayerStorage() {
   // Saves the url layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localUrlLayerInitialized) return;
-    writeToStorage(key, urlLayers);
-  }, [urlLayers, localUrlLayerInitialized]);
+    writeToStorage(key, urlLayers, setOptions);
+  }, [urlLayers, localUrlLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the portal layers that have been added.
 function usePortalLayerStorage() {
   const key = 'tots_portal_layers';
+  const { setOptions } = React.useContext(DialogContext);
   const { Layer, PortalItem } = useEsriModulesContext();
   const { map, portalLayers, setPortalLayers } = React.useContext(
     SketchContext,
@@ -391,14 +407,15 @@ function usePortalLayerStorage() {
   // Saves the portal layers to browser storage everytime they change
   React.useEffect(() => {
     if (!localPortalLayerInitialized) return;
-    writeToStorage(key, portalLayers);
-  }, [portalLayers, localPortalLayerInitialized]);
+    writeToStorage(key, portalLayers, setOptions);
+  }, [portalLayers, localPortalLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the map's view port extent.
 function useMapPositionStorage() {
   const key = 'tots_map_extent';
 
+  const { setOptions } = React.useContext(DialogContext);
   const { Extent, watchUtils } = useEsriModulesContext();
   const { mapView } = React.useContext(SketchContext);
 
@@ -430,7 +447,7 @@ function useMapPositionStorage() {
     if (!mapView || watchExtentInitialized) return;
 
     watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
-      writeToStorage(key, newVal.toJSON());
+      writeToStorage(key, newVal.toJSON(), setOptions);
     });
 
     setWatchExtentInitialized(true);
@@ -439,6 +456,7 @@ function useMapPositionStorage() {
     mapView,
     watchExtentInitialized,
     localMapPositionInitialized,
+    setOptions,
   ]);
 }
 
@@ -446,6 +464,7 @@ function useMapPositionStorage() {
 function useHomeWidgetStorage() {
   const key = 'tots_home_viewpoint';
 
+  const { setOptions } = React.useContext(DialogContext);
   const { Viewpoint, watchUtils } = useEsriModulesContext();
   const { homeWidget } = React.useContext(SketchContext);
 
@@ -479,18 +498,19 @@ function useHomeWidgetStorage() {
       homeWidget,
       'viewpoint',
       (newVal, oldVal, propName, target) => {
-        writeToStorage(key, homeWidget.viewpoint.toJSON());
+        writeToStorage(key, homeWidget.viewpoint.toJSON(), setOptions);
       },
     );
 
     setWatchHomeWidgetInitialized(true);
-  }, [watchUtils, homeWidget, watchHomeWidgetInitialized]);
+  }, [watchUtils, homeWidget, watchHomeWidgetInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected sample layer.
 function useSamplesLayerStorage() {
   const key = 'tots_selected_sample_layer';
 
+  const { setOptions } = React.useContext(DialogContext);
   const { layers, sketchLayer, setSketchLayer } = React.useContext(
     SketchContext,
   );
@@ -517,13 +537,14 @@ function useSamplesLayerStorage() {
     if (!localSampleLayerInitialized) return;
 
     const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
-    writeToStorage(key, data);
-  }, [sketchLayer, localSampleLayerInitialized]);
+    writeToStorage(key, data, setOptions);
+  }, [sketchLayer, localSampleLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected contamination map layer.
 function useContaminationMapStorage() {
   const key = 'tots_selected_contamination_layer';
+  const { setOptions } = React.useContext(DialogContext);
   const { layers } = React.useContext(SketchContext);
   const {
     contaminationMap,
@@ -552,13 +573,14 @@ function useContaminationMapStorage() {
     if (!localContaminationLayerInitialized) return;
 
     const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
-    writeToStorage(key, data);
-  }, [contaminationMap, localContaminationLayerInitialized]);
+    writeToStorage(key, data, setOptions);
+  }, [contaminationMap, localContaminationLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected area of interest layer.
 function useAreaOfInterestStorage() {
   const key = 'tots_selected_area_of_interest_layer';
+  const { setOptions } = React.useContext(DialogContext);
   const { layers } = React.useContext(SketchContext);
   const {
     aoiSketchLayer,
@@ -587,13 +609,14 @@ function useAreaOfInterestStorage() {
     if (!localAoiLayerInitialized) return;
 
     const data = aoiSketchLayer?.layerId ? aoiSketchLayer.layerId : '';
-    writeToStorage(key, data);
-  }, [aoiSketchLayer, localAoiLayerInitialized]);
+    writeToStorage(key, data, setOptions);
+  }, [aoiSketchLayer, localAoiLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the current calculate settings.
 function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
+  const { setOptions } = React.useContext(DialogContext);
   const {
     numLabs,
     setNumLabs,
@@ -668,7 +691,7 @@ function useCalculateSettingsStorage() {
       surfaceArea,
     };
 
-    writeToStorage(key, settings);
+    writeToStorage(key, settings, setOptions);
   }, [
     numLabs,
     numLabHours,
@@ -678,6 +701,7 @@ function useCalculateSettingsStorage() {
     numSamplingTeams,
     samplingLaborCost,
     surfaceArea,
+    setOptions,
   ]);
 }
 
@@ -690,6 +714,7 @@ function useCurrentTabSettings() {
     goToOptions: GoToOptions;
   };
 
+  const { setOptions } = React.useContext(DialogContext);
   const {
     goTo,
     setGoTo,
@@ -735,14 +760,15 @@ function useCurrentTabSettings() {
     if (goToOptions) data['goToOptions'] = goToOptions;
 
     // save to storage
-    writeToStorage(key, data);
-  }, [goTo, goToOptions, localTabDataInitialized]);
+    writeToStorage(key, data, setOptions);
+  }, [goTo, goToOptions, localTabDataInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected basemap.
 function useBasemapStorage() {
   const key = 'tots_selected_basemap_layer';
 
+  const { setOptions } = React.useContext(DialogContext);
   const { basemapWidget } = React.useContext(SketchContext);
 
   // Retreives the selected basemap from browser storage when the app loads
@@ -806,11 +832,16 @@ function useBasemapStorage() {
     }
 
     basemapWidget.watch('activeBasemap.portalItem.id', (newValue) => {
-      writeToStorage(key, newValue);
+      writeToStorage(key, newValue, setOptions);
     });
 
     setWatchBasemapInitialized(true);
-  }, [basemapWidget, localBasemapInitialized, watchBasemapInitialized]);
+  }, [
+    basemapWidget,
+    localBasemapInitialized,
+    watchBasemapInitialized,
+    setOptions,
+  ]);
 }
 
 // Saves/Retrieves data to browser storage
