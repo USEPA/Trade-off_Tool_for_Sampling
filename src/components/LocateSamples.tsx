@@ -15,7 +15,7 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
 // config
-import { freeFormTypes, predefinedBoxTypes } from 'config/sampleAttributes';
+import { predefinedBoxTypes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
@@ -403,18 +403,9 @@ function LocateSamples() {
     }
 
     // determine whether the sketch button draws points or polygons
-    let shapeType;
+    let shapeType = 'polygon';
     if (predefinedBoxTypes.includes(label)) {
       shapeType = 'point';
-    }
-    if (freeFormTypes.includes(label)) {
-      shapeType = 'polygon';
-    }
-
-    // catch all for shape types
-    if (!shapeType) {
-      alert(`The ${label} type is not recognized.`);
-      return;
     }
 
     // disable popups for the active sketch layer, so the user doesn't

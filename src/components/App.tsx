@@ -4,8 +4,8 @@
 import React from 'react';
 import { Global, jsx, css } from '@emotion/core';
 import { useWindowSize } from '@reach/window-size';
-import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
+import AlertDialog from 'components/AlertDialog';
 import ErrorBoundary from 'components/ErrorBoundary';
 import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
@@ -15,6 +15,7 @@ import Map from 'components/Map';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider } from 'contexts/Calculate';
+import { DialogProvider, DialogContext } from 'contexts/Dialog';
 import { NavigationProvider } from 'contexts/Navigation';
 import { SketchProvider } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
@@ -24,7 +25,6 @@ import { useSessionStorage } from 'utils/hooks';
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
-import { colors } from 'styles';
 
 const gloablStyles = css`
   html {
@@ -69,60 +69,6 @@ const mapPanelStyles = css`
   width: calc(100% - ${navPanelWidth});
 `;
 
-const overlayStyles = css`
-  &[data-reach-dialog-overlay] {
-    z-index: 1000;
-    background-color: ${colors.black(0.75)};
-  }
-`;
-
-const dialogStyles = css`
-  color: ${colors.white()};
-  background-color: ${colors.epaBlue};
-
-  &[data-reach-dialog-content] {
-    position: relative;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: 0;
-    padding: 1.5rem;
-    width: auto;
-    max-width: 35rem;
-  }
-
-  p {
-    margin-top: 1rem;
-    margin-bottom: 0;
-    padding-bottom: 0;
-    font-size: 0.875rem;
-    line-height: 1.375;
-
-    &:first-of-type {
-      margin-top: 0;
-    }
-  }
-`;
-
-const buttonContainerStyles = css`
-  display: flex;
-  justify-content: flex-end;
-`;
-
-const buttonStyles = css`
-  margin: 0;
-  padding: 0.625rem 1.25rem;
-  border: 0;
-  border-radius: 3px;
-  font-family: inherit;
-  font-weight: bold;
-  font-size: 0.875rem;
-  line-height: 1;
-  color: ${colors.black()};
-  background-color: ${colors.white(0.875)};
-  cursor: pointer;
-`;
-
 function App() {
   useSessionStorage();
 
@@ -152,17 +98,21 @@ function App() {
     sizeCheckInitialized,
     setSizeCheckInitialized, //
   ] = React.useState(false);
-  const [
-    smallScreenDialogOpen,
-    setSmallScreenDialogOpen, //
-  ] = React.useState(false);
+  const { setOptions } = React.useContext(DialogContext);
   React.useEffect(() => {
     if (sizeCheckInitialized) return;
 
-    if (width < 1024 || height < 600) setSmallScreenDialogOpen(true);
+    if (width < 1024 || height < 600) {
+      setOptions({
+        title: '',
+        ariaLabel: 'Small Screen Warning',
+        description:
+          'This site contains data uploading and map editing features best used in a desktop web browser.',
+      });
+    }
 
     setSizeCheckInitialized(true);
-  }, [width, height, sizeCheckInitialized]);
+  }, [width, height, sizeCheckInitialized, setOptions]);
 
   return (
     <React.Fragment>
@@ -171,22 +121,7 @@ function App() {
       <div className="tots">
         <ErrorBoundary>
           <SplashScreen />
-          <DialogOverlay css={overlayStyles} isOpen={smallScreenDialogOpen}>
-            <DialogContent css={dialogStyles} aria-label="Small Screen Warning">
-              This site contains data uploading and map editing features best
-              used in a desktop web browser.
-              <br />
-              <div css={buttonContainerStyles}>
-                <button
-                  className="btn"
-                  css={buttonStyles}
-                  onClick={(ev) => setSmallScreenDialogOpen(false)}
-                >
-                  OK
-                </button>
-              </div>
-            </DialogContent>
-          </DialogOverlay>
+          <AlertDialog />
           <TestingToolbar />
           <div css={appStyles}>
             <div css={containerStyles}>
@@ -208,15 +143,17 @@ function App() {
 export default function AppContainer() {
   return (
     <EsriModulesProvider>
-      <AuthenticationProvider>
-        <CalculateProvider>
-          <NavigationProvider>
-            <SketchProvider>
-              <App />
-            </SketchProvider>
-          </NavigationProvider>
-        </CalculateProvider>
-      </AuthenticationProvider>
+      <DialogProvider>
+        <AuthenticationProvider>
+          <CalculateProvider>
+            <NavigationProvider>
+              <SketchProvider>
+                <App />
+              </SketchProvider>
+            </NavigationProvider>
+          </CalculateProvider>
+        </AuthenticationProvider>
+      </DialogProvider>
     </EsriModulesProvider>
   );
 }
