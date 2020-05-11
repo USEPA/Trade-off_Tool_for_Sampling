@@ -65,12 +65,17 @@ function getUpdateEventInfo(layers: LayerType[], event: any) {
   const type = event.type === 'create' ? 'add' : event.type;
   const changes = type === 'add' ? [event.graphic] : event.graphics;
 
+  // Get the layer from the event. It's better to get the layer from the graphics
+  // since that will persist when changing tabs. For delete events we have to get
+  // the layer from the target, since delete events never have the layer on the graphic.
+  const eventLayer = type === 'delete' ? event.target.layer : changes[0].layer;
+
   // look up the layer for this event
   let updateLayer: LayerType | null = null;
   let updateLayerIndex = -1;
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (layer.layerId === changes[0].layer.id) {
+    if (layer.layerId === eventLayer.id) {
       updateLayer = layer;
       updateLayerIndex = i;
       break;
@@ -494,7 +499,7 @@ function MapWidgets({ mapView }: Props) {
       sketchViewModel.on('update', (event) => {
         let isActive = true;
         // the updates have completed add them to the edits variable
-        if (event.state === 'complete' || event.state === 'cancel') {
+        if (event.state === 'complete') {
           // fire the update event if event.state is complete.
           if (event.state === 'complete') {
             event.graphics.forEach((graphic) => {
@@ -533,7 +538,7 @@ function MapWidgets({ mapView }: Props) {
 
         // get the number of selected graphics
         let selectedGraphicsIds: Array<string> = [];
-        if (event.state !== 'cancel' && event.graphics) {
+        if (event.graphics) {
           event.graphics.forEach((graphic) => {
             selectedGraphicsIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
           });

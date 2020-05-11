@@ -333,6 +333,7 @@ function Toolbar() {
               {
                 layer: item.layer,
                 title: item.layer.title,
+                hideLayers: [],
               },
             ],
           });
