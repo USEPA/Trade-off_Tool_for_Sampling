@@ -20,6 +20,7 @@ import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
   cantUseWithVspMessage,
+  generateRandomExceededTransferLimitMessage,
   generateRandomSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
@@ -218,7 +219,7 @@ const lineSeparatorStyles = css`
 
 // --- components (LocateSamples) ---
 type GenerateRandomType = {
-  status: 'none' | 'fetching' | 'success' | 'failure';
+  status: 'none' | 'fetching' | 'success' | 'failure' | 'exceededTransferLimit';
   data: __esri.Graphic[];
 };
 
@@ -519,6 +520,14 @@ function LocateSamples() {
           return;
         }
 
+        if (res.results[0].value.exceededTransferLimit) {
+          setGenerateRandomResponse({
+            status: 'exceededTransferLimit',
+            data: [],
+          });
+          return;
+        }
+
         // put the sketch layer on the map, if it isn't there already
         const layerIndex = map.layers.findIndex(
           (layer) => layer.id === sketchLayer.layerId,
@@ -740,6 +749,8 @@ function LocateSamples() {
                     )}
                   {generateRandomResponse.status === 'failure' &&
                     webServiceErrorMessage}
+                  {generateRandomResponse.status === 'exceededTransferLimit' &&
+                    generateRandomExceededTransferLimitMessage}
                   {numberRandomSamples &&
                     aoiSketchLayer?.sketchLayer.type === 'graphics' &&
                     aoiSketchLayer.sketchLayer.graphics.length > 0 && (

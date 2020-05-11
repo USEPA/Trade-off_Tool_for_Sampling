@@ -132,6 +132,14 @@ export const cantUseWithVspMessage = (
   />
 );
 
+export const generateRandomExceededTransferLimitMessage = (
+  <MessageBox
+    severity="error"
+    title="Exceeded Transfer Limit"
+    message="The request exceeded the transfer limit of the GP Server. Please reduce the number of samples and try again."
+  />
+);
+
 export const generateRandomSuccessMessage = (
   numSamples: number,
   layerName: string,
