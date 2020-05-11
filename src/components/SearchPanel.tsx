@@ -70,10 +70,12 @@ const searchButtonStyles = css`
 
 const filterContainerStyles = css`
   /* This is disabled and only ever enabled for testing.
-   * In development, it is sometimes helpful to re-enable
+   * In development, it is sometimes helpful enable
    * this to test out specific layer types.
-   * Use flex for testing otherwise use none */
-  display: none;
+   * Add "?devMode=true" to the end of the url to enable. */
+  display: ${window.location.search.includes('devMode=true')
+    ? 'block'
+    : 'none'};
 
   > div {
     margin-right: 15px;
@@ -87,6 +89,7 @@ const typeSelectStyles = css`
   border: 1px solid #ccc;
   border-radius: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  z-index: 1;
 
   ul {
     padding: 0.5em;
