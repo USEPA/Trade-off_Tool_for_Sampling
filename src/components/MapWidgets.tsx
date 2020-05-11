@@ -499,7 +499,7 @@ function MapWidgets({ mapView }: Props) {
       sketchViewModel.on('update', (event) => {
         let isActive = true;
         // the updates have completed add them to the edits variable
-        if (event.state === 'complete') {
+        if (event.state === 'complete' && !event.aborted) {
           // fire the update event if event.state is complete.
           if (event.state === 'complete') {
             event.graphics.forEach((graphic) => {
