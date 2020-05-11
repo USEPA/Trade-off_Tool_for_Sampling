@@ -3,7 +3,6 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // contexts
-import { AuthenticationContext } from 'contexts/Authentication';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { epaMarginOffset } from 'config/appConfig';
@@ -25,17 +24,10 @@ const buttonStyles = css`
 `;
 
 function TestingToolbar() {
-  const { portal } = React.useContext(AuthenticationContext);
   const { layers, map, mapView } = React.useContext(SketchContext);
 
   return (
     <div css={toolbarStyles}>
-      <button
-        css={buttonStyles}
-        onClick={() => console.log('portal: ', portal)}
-      >
-        Log Portal
-      </button>
       <button css={buttonStyles} onClick={() => console.log('map: ', map)}>
         Log Map
       </button>

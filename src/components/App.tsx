@@ -120,20 +120,24 @@ function App() {
 
       <div className="tots">
         <ErrorBoundary>
-          <SplashScreen />
-          <AlertDialog />
-          <TestingToolbar />
-          <div css={appStyles}>
-            <div css={containerStyles}>
-              <div ref={toolbarRef}>
-                <Toolbar />
-              </div>
-              <NavBar height={contentHeight - toolbarHeight} />
-              <div css={mapPanelStyles} ref={mapRef}>
-                {toolbarHeight && <Map height={toolbarHeight} />}
+          <React.Fragment>
+            <SplashScreen />
+            <AlertDialog />
+            {window.location.search.includes('devMode=true') && (
+              <TestingToolbar />
+            )}
+            <div css={appStyles}>
+              <div css={containerStyles}>
+                <div ref={toolbarRef}>
+                  <Toolbar />
+                </div>
+                <NavBar height={contentHeight - toolbarHeight} />
+                <div css={mapPanelStyles} ref={mapRef}>
+                  {toolbarHeight && <Map height={toolbarHeight} />}
+                </div>
               </div>
             </div>
-          </div>
+          </React.Fragment>
         </ErrorBoundary>
       </div>
     </React.Fragment>
