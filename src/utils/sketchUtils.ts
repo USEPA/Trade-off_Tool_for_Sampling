@@ -315,6 +315,7 @@ export function getPopupTemplate(
       { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
       { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
       { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
+      { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
       { fieldName: 'Notes', label: 'Notes' },
       { fieldName: 'ALC', label: 'Analysis Labor Cost' },
       { fieldName: 'AMC', label: 'Analysis Material Cost' },

@@ -650,6 +650,7 @@ function FilePanel() {
         const timestamp = getCurrentDateTime();
         if (layerType.value === 'Samples') {
           const {
+            AA,
             CONTAMTYPE,
             CONTAMVAL,
             CONTAMUNIT,
@@ -659,6 +660,11 @@ function FilePanel() {
             ORGANIZATION,
             ELEVATIONSERIES,
           } = graphic.attributes;
+          // TODO: Remove this item. It is only for debugging area calculations.
+          graphic.attributes['OAA'] = AA;
+
+          graphic.attributes['AA'] = null;
+          graphic.attributes['AC'] = null;
           if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
           if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
           if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
@@ -669,7 +675,12 @@ function FilePanel() {
           if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
         }
         if (layerType.value === 'VSP') {
-          const { CREATEDDATE } = graphic.attributes;
+          const { AA, CREATEDDATE } = graphic.attributes;
+          // TODO: Remove this item. It is only for debugging area calculations.
+          graphic.attributes['OAA'] = AA;
+
+          graphic.attributes['AA'] = null;
+          graphic.attributes['AC'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 

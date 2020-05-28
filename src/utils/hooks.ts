@@ -965,15 +965,21 @@ export function useCalculatePlan() {
       const areaSF = areaSI * 0.00694444;
       totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
-      // calculate areaCount
-      const { SA, AA } = calcGraphic.attributes;
+      // Get the number of reference surface areas that are in the actual area.
+      // This is to prevent users from cheating the system by drawing larger shapes
+      // then the reference surface area and it only getting counted as "1" sample.
+      const { SA } = calcGraphic.attributes;
       let areaCount = 1;
       if (areaSI >= SA) {
         areaCount = Math.round(areaSI / SA);
       }
 
+      // set the AA on the original graphic, so it is visible in the popup
+      graphic.setAttribute('AA', Math.round(areaSI));
+
+      // TODO: Remove this console log. It is only for debugging area calculations.
       console.log(
-        `SA: ${SA}, areaSI: ${areaSI}, areaCount: ${areaCount}, areaSF: ${areaSF}, AA: ${AA}`,
+        `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
       );
 
       // multiply all of the attributes by the area
