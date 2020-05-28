@@ -864,7 +864,13 @@ export function useSessionStorage() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { geometryEngine, Polygon } = useEsriModulesContext();
+  const {
+    geometryEngine,
+    Polygon,
+    projection,
+    SpatialReference,
+    webMercatorUtils,
+  } = useEsriModulesContext();
   const { edits, sketchLayer } = React.useContext(SketchContext);
   const {
     numLabs,
@@ -877,6 +883,18 @@ export function useCalculatePlan() {
     surfaceArea,
     setCalculateResults,
   } = React.useContext(CalculateContext);
+
+  // Load the esri projection module. This needs
+  // to happen before the projection module will work.
+  const [
+    loadedProjection,
+    setLoadedProjection, //
+  ] = React.useState<__esri.projection | null>(null);
+  React.useEffect(() => {
+    projection.load().then(() => {
+      setLoadedProjection(projection);
+    });
+  });
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
@@ -933,6 +951,7 @@ export function useCalculatePlan() {
   // perform geospatial calculatations
   React.useEffect(() => {
     // exit early checks
+    if (!loadedProjection) return;
     if (!sketchLayer?.sketchLayer || edits.count === 0) return;
     if (sketchLayer.sketchLayer.type !== 'graphics') return;
 
@@ -957,9 +976,27 @@ export function useCalculatePlan() {
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
       const calcGraphic = graphic.clone();
 
+      // convert the geometry to WGS84 for geometryEngine
+      // Cast the geometry as a Polygon to avoid typescript errors on
+      // accessing the centroid.
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      ) as __esri.Polygon;
+
+      // get the spatial reference from the centroid
+      const { latitude, longitude } = wgsGeometry.centroid;
+      const base_wkid = latitude > 0 ? 32600 : 32700;
+      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+      const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+      // project the geometry
+      const projectedGeometry = loadedProjection.project(
+        wgsGeometry,
+        spatialReference,
+      ) as __esri.Polygon;
+
       // calulate the area
-      const polygon = graphic.geometry as __esri.Polygon;
-      const areaSI = geometryEngine.geodesicArea(polygon, 109454);
+      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
 
       // convert area to square inches
       const areaSF = areaSI * 0.00694444;
@@ -997,28 +1034,18 @@ export function useCalculatePlan() {
         ALC,
         AMC,
       } = calcGraphic.attributes;
-      calcGraphic.attributes.TTPK = TTPK * areaCount;
-      calcGraphic.attributes.TTC = TTC * areaCount;
-      calcGraphic.attributes.TTA = TTA * areaCount;
-      calcGraphic.attributes.TTPS = TTPS * areaCount;
-      calcGraphic.attributes.MCPS = MCPS * areaCount;
-      calcGraphic.attributes.TCPS = TCPS * areaCount;
-      calcGraphic.attributes.WVPS = WVPS * areaCount;
-      calcGraphic.attributes.WWPS = WWPS * areaCount;
-      calcGraphic.attributes.ALC = ALC * areaCount;
-      calcGraphic.attributes.AMC = AMC * areaCount;
 
       if (TTPK) {
-        ttpk = ttpk + Number(TTPK * areaCount);
+        ttpk = ttpk + Number(TTPK) * areaCount;
       }
       if (TTC) {
-        ttc = ttc + Number(TTC * areaCount);
+        ttc = ttc + Number(TTC) * areaCount;
       }
       if (TTA) {
-        tta = tta + Number(TTA * areaCount);
+        tta = tta + Number(TTA) * areaCount;
       }
       if (TTPS) {
-        ttps = ttps + Number(TTPS * areaCount);
+        ttps = ttps + Number(TTPS) * areaCount;
       }
       if (LOD_P) {
         lod_p = lod_p + Number(LOD_P);
@@ -1027,25 +1054,25 @@ export function useCalculatePlan() {
         lod_non = lod_non + Number(LOD_NON);
       }
       if (MCPS) {
-        mcps = mcps + Number(MCPS * areaCount);
+        mcps = mcps + Number(MCPS) * areaCount;
       }
       if (TCPS) {
-        tcps = tcps + Number(TCPS * areaCount);
+        tcps = tcps + Number(TCPS) * areaCount;
       }
       if (WVPS) {
-        wvps = wvps + Number(WVPS * areaCount);
+        wvps = wvps + Number(WVPS) * areaCount;
       }
       if (WWPS) {
-        wwps = wwps + Number(WWPS * areaCount);
+        wwps = wwps + Number(WWPS) * areaCount;
       }
       if (SA) {
         sa = sa + Number(SA);
       }
       if (ALC) {
-        alc = alc + Number(ALC * areaCount);
+        alc = alc + Number(ALC) * areaCount;
       }
       if (AMC) {
-        amc = amc + Number(AMC * areaCount);
+        amc = amc + Number(AMC) * areaCount;
       }
       if (areaCount) {
         ac = ac + Number(areaCount);
@@ -1075,7 +1102,10 @@ export function useCalculatePlan() {
   }, [
     // esri modules
     geometryEngine,
+    loadedProjection,
     Polygon,
+    SpatialReference,
+    webMercatorUtils,
 
     // TOTS items
     edits,
