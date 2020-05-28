@@ -30,6 +30,8 @@ type SampleProperties =
   | 'GLOBALID'
   | 'TYPE'
   | 'SA'
+  | 'AA'
+  | 'OAA' // TODO: Delete this before release - original AA for debug
   | 'TTPK'
   | 'TTC'
   | 'TTA'
@@ -65,6 +67,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Sponge',
     SA: '100',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.12',
     TTC: '0.09',
     TTA: '0.7',
@@ -93,6 +97,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Micro Vac',
     SA: '144',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.18',
     TTC: '0.15',
     TTA: '0.8',
@@ -121,6 +127,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Wet Vac',
     SA: '28800',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.33',
     TTC: '0.13',
     TTA: '0.5',
@@ -149,6 +157,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Robot',
     SA: '144000',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.17',
     TTC: '0.6',
     TTA: '0.5',
@@ -177,6 +187,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Aggressive Air',
     SA: '12000',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.17',
     TTC: '0.6',
     TTA: '0.5',
@@ -205,6 +217,8 @@ const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Swab',
     SA: '4',
+    AA: '',
+    OAA: '', // TODO: Delete this before release - original AA for debug
     TTPK: '0.12',
     TTC: '0.07',
     TTA: '0.7',
