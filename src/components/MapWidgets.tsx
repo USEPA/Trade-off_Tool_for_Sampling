@@ -26,8 +26,8 @@ import {
 // styles
 import { colors } from 'styles';
 
-const sponge_SA = 5.05;
-const vac_SA = 6.09;
+const sponge_SA = 5;
+const vac_SA = 6.1397;
 const swab_SA = 1;
 
 type SaveStatusType = 'none' | 'success' | 'failure';
