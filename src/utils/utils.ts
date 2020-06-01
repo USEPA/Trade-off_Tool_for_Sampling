@@ -28,3 +28,14 @@ export function escapeForLucene(value: string) {
   var r = new RegExp('(\\' + a.join('|\\') + ')', 'g');
   return value.replace(r, '\\$1');
 }
+
+/**
+ * Checks if the user is using Internet Explorer.
+ *
+ * @returns True if Internet Explorer and false for all other browsers
+ */
+export function isIE() {
+  const ua = navigator.userAgent;
+  /* MSIE used to detect old browsers and Trident used to newer ones*/
+  return ua.indexOf('MSIE ') > -1 || ua.indexOf('Trident/') > -1;
+}
