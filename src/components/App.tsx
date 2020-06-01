@@ -21,8 +21,10 @@ import { SketchProvider } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
 import { useSessionStorage } from 'utils/hooks';
+import { isIE } from 'utils/utils';
 // config
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
+import { unsupportedBrowserMessage } from 'config/errorMessages';
 // styles
 import '@reach/dialog/styles.css';
 
@@ -48,6 +50,10 @@ const gloablStyles = css`
     /* revert back to 16px font-size on our application code itself */
     font-size: 1rem;
   }
+`;
+
+const errorContainerStyles = css`
+  margin: 10px;
 `;
 
 const appStyles = css`
@@ -120,24 +126,28 @@ function App() {
 
       <div className="tots">
         <ErrorBoundary>
-          <React.Fragment>
-            <SplashScreen />
-            <AlertDialog />
-            {window.location.search.includes('devMode=true') && (
-              <TestingToolbar />
-            )}
-            <div css={appStyles}>
-              <div css={containerStyles}>
-                <div ref={toolbarRef}>
-                  <Toolbar />
-                </div>
-                <NavBar height={contentHeight - toolbarHeight} />
-                <div css={mapPanelStyles} ref={mapRef}>
-                  {toolbarHeight && <Map height={toolbarHeight} />}
+          {isIE() ? (
+            <div css={errorContainerStyles}>{unsupportedBrowserMessage}</div>
+          ) : (
+            <React.Fragment>
+              <SplashScreen />
+              <AlertDialog />
+              {window.location.search.includes('devMode=true') && (
+                <TestingToolbar />
+              )}
+              <div css={appStyles}>
+                <div css={containerStyles}>
+                  <div ref={toolbarRef}>
+                    <Toolbar />
+                  </div>
+                  <NavBar height={contentHeight - toolbarHeight} />
+                  <div css={mapPanelStyles} ref={mapRef}>
+                    {toolbarHeight && <Map height={toolbarHeight} />}
+                  </div>
                 </div>
               </div>
-            </div>
-          </React.Fragment>
+            </React.Fragment>
+          )}
         </ErrorBoundary>
       </div>
     </React.Fragment>
