@@ -1,6 +1,5 @@
-import arcpy
-import sys,os
-import uuid
+import arcpy,sys,os;
+import uuid,math;
 
 ###############################################################################
 class Toolbox(object):
@@ -50,8 +49,6 @@ class GenerateRandom(object):
          ,direction     = "Input"
          ,enabled       = True
       );
-      param1.filter.type = "ValueList";
-      param1.filter.list = ["Micro Vac","Wet Vac","Sponge","Robot","Aggressive Air","Swab"];
 
       #########################################################################
       param2 = arcpy.Parameter(
@@ -65,6 +62,16 @@ class GenerateRandom(object):
       
       #########################################################################
       param3 = arcpy.Parameter(
+          displayName   = "Sample Type Parameters"
+         ,name          = "Sample_Type_Parameters"
+         ,datatype      = "DETable"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param4 = arcpy.Parameter(
           displayName   = "CS SRID Override"
          ,name          = "CSSRIDOverride"
          ,datatype      = "GPLong"
@@ -74,7 +81,7 @@ class GenerateRandom(object):
       );
       
       #########################################################################
-      param4 = arcpy.Parameter(
+      param5 = arcpy.Parameter(
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
@@ -83,7 +90,7 @@ class GenerateRandom(object):
       );
       
       #########################################################################
-      param5 = arcpy.Parameter(
+      param6 = arcpy.Parameter(
           displayName   = "CS SRID"
          ,name          = "CSSRID"
          ,datatype      = "GPLong"
@@ -98,6 +105,7 @@ class GenerateRandom(object):
          ,param3
          ,param4
          ,param5
+         ,param6
       ];
 
       return params;
@@ -126,8 +134,9 @@ class GenerateRandom(object):
       #########################################################################
       int_number_samples = parameters[0].value;
       str_sample_type    = parameters[1].valueAsText;
-      fc_aoi_mask        = parameters[2].value; 
-      int_srid_override  = parameters[3].value;     
+      fc_aoi_mask        = parameters[2].value;
+      sample_type_parms  = parameters[3].value;
+      int_srid_override  = parameters[4].value;     
       
       #########################################################################
       # Step 20
@@ -182,7 +191,7 @@ class GenerateRandom(object):
                aoi = row[0];
                break;
 
-         int_srid =  determine_srid(
+         int_srid = determine_srid(
             arcpy.PointGeometry(aoi.centroid,aoi.spatialReference)
          );
       
@@ -414,8 +423,8 @@ class GenerateRandom(object):
       );
 
       #########################################################################
-      arcpy.SetParameterAsText(4,scratch_full_f);
-      arcpy.SetParameter(5,int_srid);
+      arcpy.SetParameterAsText(5,scratch_full_f);
+      arcpy.SetParameter(6,int_srid);
 
       arcpy.AddMessage("Random Samples Complete!");
       
@@ -451,11 +460,19 @@ class VSPImport(object):
          ,direction     = "Input"
          ,enabled       = True
       );
-      param1.filter.type = "ValueList";
-      param1.filter.list = ["Micro Vac","Wet Vac","Sponge","Robot","Aggressive Air","Swab"];
       
       #########################################################################
       param2 = arcpy.Parameter(
+          displayName   = "Sample Type Parameters"
+         ,name          = "Sample_Type_Parameters"
+         ,datatype      = "DETable"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param3 = arcpy.Parameter(
           displayName   = "CS SRID Override"
          ,name          = "CSSRIDOverride"
          ,datatype      = "GPLong"
@@ -465,7 +482,7 @@ class VSPImport(object):
       );
 
       #########################################################################
-      param3 = arcpy.Parameter(
+      param4 = arcpy.Parameter(
           displayName   = "Output Sampling Unit"
          ,name          = "Output_Sampling_Unit"
          ,datatype      = "DEFeatureClass"
@@ -474,7 +491,7 @@ class VSPImport(object):
       );
       
       #########################################################################
-      param4 = arcpy.Parameter(
+      param5 = arcpy.Parameter(
           displayName   = "CS SRID"
          ,name          = "CSSRID"
          ,datatype      = "GPLong"
@@ -488,6 +505,7 @@ class VSPImport(object):
          ,param2
          ,param3
          ,param4
+         ,param5
       ];
 
       return params;
@@ -516,7 +534,8 @@ class VSPImport(object):
       #########################################################################
       fc_vsp             = parameters[0].value;
       str_sample_type    = parameters[1].valueAsText;
-      int_srid_override  = parameters[2].value; 
+      sample_type_parms  = parameters[2].value;
+      int_srid_override  = parameters[3].value; 
       
       cnt = int(arcpy.GetCount_management(fc_vsp).getOutput(0));
       
@@ -565,12 +584,14 @@ class VSPImport(object):
          int_srid =  determine_srid(
             arcpy.PointGeometry(vsp.centroid,vsp.spatialReference)
          );
+         arcpy.AddMessage("  determining UTM local srid to be " + str(int_srid));
          
       #########################################################################
       # Step 40
       # Project the vsp into desired coordinate system
       #########################################################################
       sr = arcpy.Describe(fc_vsp).spatialReference.factoryCode;
+      arcpy.AddMessage("  incoming VSP using srid " + str(sr));
       
       if sr != int_srid:
       
@@ -740,8 +761,8 @@ class VSPImport(object):
       );
 
       #########################################################################
-      arcpy.SetParameterAsText(3,scratch_full_out);
-      arcpy.SetParameter(4,int_srid);
+      arcpy.SetParameterAsText(4,scratch_full_out);
+      arcpy.SetParameter(5,int_srid);
 
       arcpy.AddMessage("Conversion Complete!");
 
@@ -780,6 +801,16 @@ class ContaminationResults(object):
       
       #########################################################################
       param2 = arcpy.Parameter(
+          displayName   = "Sample Type Parameters"
+         ,name          = "Sample_Type_Parameters"
+         ,datatype      = "DETable"
+         ,parameterType = "Optional"
+         ,direction     = "Input"
+         ,enabled       = True
+      );
+      
+      #########################################################################
+      param3 = arcpy.Parameter(
           displayName   = "CS SRID Override"
          ,name          = "CSSRIDOverride"
          ,datatype      = "GPLong"
@@ -789,7 +820,7 @@ class ContaminationResults(object):
       );
 
       #########################################################################
-      param3 = arcpy.Parameter(
+      param4 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
          ,datatype      = "GPTableView"
@@ -798,7 +829,7 @@ class ContaminationResults(object):
       );
       
       #########################################################################
-      param4 = arcpy.Parameter(
+      param5 = arcpy.Parameter(
           displayName   = "CS SRID"
          ,name          = "CSSRID"
          ,datatype      = "GPLong"
@@ -812,6 +843,7 @@ class ContaminationResults(object):
          ,param2
          ,param3
          ,param4
+         ,param5
       ];
 
       return params;
@@ -840,7 +872,8 @@ class ContaminationResults(object):
       #########################################################################
       fc_samples_in        = parameters[0].value;
       fc_contamination_map = parameters[1].value;
-      int_srid_override    = parameters[2].value; 
+      sample_type_parms    = parameters[2].value;
+      int_srid_override    = parameters[3].value; 
       
       #########################################################################
       # Step 20
@@ -1024,8 +1057,8 @@ class ContaminationResults(object):
             ));
                   
       #########################################################################
-      arcpy.SetParameterAsText(3,scratch_full_o);
-      arcpy.SetParameter(4,int_srid);
+      arcpy.SetParameterAsText(4,scratch_full_o);
+      arcpy.SetParameter(5,int_srid);
       
 ###############################################################################
 class SampleData(object):
@@ -1535,7 +1568,7 @@ def dz_appendjson(in_json_file,out_features):
    );
    
 ###############################################################################
-def determine_srid(in_point):
+def determine_srid_usgs(in_point):
 
    if in_point.spatialReference.factoryCode == 4269:
       cs_point = in_point;
@@ -1599,6 +1632,27 @@ def determine_srid(in_point):
    else:
       # Not sure what to do when nothing is decent
       return 5070;
+      
+###############################################################################
+def determine_srid(in_point):
+
+   if in_point.spatialReference.factoryCode == 4326:
+      cs_point = in_point;
+      
+   else:
+      cs_point = in_point.projectAs(arcpy.SpatialReference(4326));
+    
+   num_x = cs_point.firstPoint.X;
+   num_y = cs_point.firstPoint.Y;
+   
+   if num_y > 0:
+      pref = 32600;
+   else:
+      pref = 32700;
+      
+   zone = math.floor((num_x + 180) / 6) + 1;
+   
+   return int(zone + pref);
          
 ###############################################################################
 def build_polyarray(in_array):
