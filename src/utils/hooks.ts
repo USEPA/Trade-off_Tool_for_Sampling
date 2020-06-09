@@ -1013,6 +1013,7 @@ export function useCalculatePlan() {
 
       // set the AA on the original graphic, so it is visible in the popup
       graphic.setAttribute('AA', Math.round(areaSI));
+      graphic.setAttribute('AC', areaCount);
 
       // TODO: Remove this console log. It is only for debugging area calculations.
       console.log(
