@@ -136,6 +136,10 @@ const fileIconText = css`
   width: 100%;
 `;
 
+const checkBoxStyles = css`
+  margin-right: 5px;
+`;
+
 // --- components (FileIcon) ---
 type FileIconProps = {
   label: string;
@@ -1004,6 +1008,7 @@ function FilePanel() {
                   <input
                     id="generalize-features-input"
                     type="checkbox"
+                    css={checkBoxStyles}
                     checked={generalizeFeatures}
                     onChange={(ev) =>
                       setGeneralizeFeatures(!generalizeFeatures)
