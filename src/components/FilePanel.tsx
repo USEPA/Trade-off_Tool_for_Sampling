@@ -37,6 +37,7 @@ import {
   invalidFileTypeMessage,
   missingAttributesMessage,
   noDataMessage,
+  unknownSampleTypeMessage,
   uploadSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
@@ -198,6 +199,7 @@ type UploadStatusType =
   | 'invalid-file-type'
   | 'import-error'
   | 'missing-attributes'
+  | 'unknown-sample-type'
   | 'file-read-error';
 
 function FilePanel() {
@@ -434,7 +436,9 @@ function FilePanel() {
     const generateUrl = `${sharingUrl}/content/features/generate`;
 
     let resParameters = {};
-    if (analyzeResponse) resParameters = analyzeResponse.publishParameters;
+    if (file.file.esriFileType === 'csv' && analyzeResponse) {
+      resParameters = analyzeResponse.publishParameters;
+    }
     const fileForm = new FormData();
     fileForm.append('file', file.file);
     const publishParameters: any = {
@@ -620,6 +624,7 @@ function FilePanel() {
     const popupTemplate = getPopupTemplate(layerType.value);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
+    let unknownSampleTypes: boolean = false;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
         !layer?.featureSet?.features ||
@@ -647,16 +652,20 @@ function FilePanel() {
         let uuid = generateUUID();
         if (layerType.value === 'Samples') {
           const { AA, TYPE } = graphic.attributes;
-          graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
+          if (!sampleAttributes.hasOwnProperty(TYPE)) {
+            unknownSampleTypes = true;
+          } else {
+            graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
 
-          // TODO: Remove this item. It is only for debugging area calculations.
-          graphic.attributes['OAA'] = AA;
+            // TODO: Remove this item. It is only for debugging area calculations.
+            graphic.attributes['OAA'] = AA;
 
-          graphic.attributes['AA'] = null;
-          graphic.attributes['AC'] = null;
-          graphic.attributes['CREATEDDATE'] = timestamp;
-          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
-          graphic.attributes['GLOBALID'] = uuid;
+            graphic.attributes['AA'] = null;
+            graphic.attributes['AC'] = null;
+            graphic.attributes['CREATEDDATE'] = timestamp;
+            graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+            graphic.attributes['GLOBALID'] = uuid;
+          }
         }
         if (layerType.value === 'VSP') {
           const { AA, CREATEDDATE } = graphic.attributes;
@@ -703,6 +712,11 @@ function FilePanel() {
         graphics.push(graphic);
       });
     });
+
+    if (unknownSampleTypes) {
+      setUploadStatus('unknown-sample-type');
+      return;
+    }
 
     if (missingAttributes.length > 0) {
       setUploadStatus('missing-attributes');
@@ -999,6 +1013,8 @@ function FilePanel() {
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
                   {uploadStatus === 'missing-attributes' &&
                     missingAttributesMessage(filename, missingAttributes)}
+                  {uploadStatus === 'unknown-sample-type' &&
+                    unknownSampleTypeMessage}
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}

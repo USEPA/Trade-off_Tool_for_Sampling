@@ -128,6 +128,14 @@ export const missingAttributesMessage = (
   />
 );
 
+export const unknownSampleTypeMessage = (
+  <MessageBox
+    severity="error"
+    title="Unknown Sample Type"
+    message="An unknown sample type was found. Please use one of the sample types recognized by TOTS (Swab, Sponge, Micro Vac, Wet Vac, or Aggressive Air)."
+  />
+);
+
 export const uploadSuccessMessage = (
   filename: string,
   layerName: string = '',
