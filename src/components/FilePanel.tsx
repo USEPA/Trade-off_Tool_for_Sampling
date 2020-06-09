@@ -23,7 +23,12 @@ import {
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
-import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
+import {
+  sampleAttributes,
+  SampleSelectOptions,
+  SampleSelectType,
+  SampleType,
+} from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import {
   attributeOverwriteWarning,
@@ -637,47 +642,21 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
-        // add a layer type to the graphic
-        if (!graphic?.attributes?.TYPE) {
-          graphic.attributes['TYPE'] = layerType.value;
-        }
-
-        // add ids to the graphic, if the graphic doesn't already have them
-        const uuid = generateUUID();
-        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
-          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
-        }
-        if (!graphic.attributes.GLOBALID) {
-          graphic.attributes['GLOBALID'] = uuid;
-        }
-
         // add sample layer specific attributes
         const timestamp = getCurrentDateTime();
+        let uuid = generateUUID();
         if (layerType.value === 'Samples') {
-          const {
-            AA,
-            CONTAMTYPE,
-            CONTAMVAL,
-            CONTAMUNIT,
-            CREATEDDATE,
-            UPDATEDDATE,
-            USERNAME,
-            ORGANIZATION,
-            ELEVATIONSERIES,
-          } = graphic.attributes;
+          const { AA, TYPE } = graphic.attributes;
+          graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
+
           // TODO: Remove this item. It is only for debugging area calculations.
           graphic.attributes['OAA'] = AA;
 
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
-          if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
-          if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
-          if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
-          if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
-          if (!USERNAME) graphic.attributes['USERNAME'] = null;
-          if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
-          if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+          graphic.attributes['CREATEDDATE'] = timestamp;
+          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+          graphic.attributes['GLOBALID'] = uuid;
         }
         if (layerType.value === 'VSP') {
           const { AA, CREATEDDATE } = graphic.attributes;
@@ -687,6 +666,19 @@ function FilePanel() {
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
+        }
+
+        // add a layer type to the graphic
+        if (!graphic?.attributes?.TYPE) {
+          graphic.attributes['TYPE'] = layerType.value;
+        }
+
+        // add ids to the graphic, if the graphic doesn't already have them
+        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
+          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+        }
+        if (!graphic.attributes.GLOBALID) {
+          graphic.attributes['GLOBALID'] = uuid;
         }
 
         // verify the graphic has all required attributes
