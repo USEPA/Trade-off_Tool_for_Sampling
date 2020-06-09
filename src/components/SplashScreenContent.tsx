@@ -42,6 +42,11 @@ const dialogStyles = css`
       margin-top: 0;
     }
   }
+
+  a {
+    color: #9f9;
+    outline: none;
+  }
 `;
 
 const logoStyles = css`
