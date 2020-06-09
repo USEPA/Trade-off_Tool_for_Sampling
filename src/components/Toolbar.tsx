@@ -71,7 +71,7 @@ const toolBarButtonStyles = css`
   background-color: ${colors.darkblue()};
   border-radius: 0;
   line-height: 16px;
-  text-decoration-line: none;
+  text-decoration: none;
   font-weight: bold;
 
   &:hover {
