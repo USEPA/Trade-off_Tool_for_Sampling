@@ -26,6 +26,7 @@ import { totsGPServer } from 'config/webService';
 import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import {
+  attributeOverwriteWarning,
   fileReadErrorMessage,
   importErrorMessage,
   invalidFileTypeMessage,
@@ -994,6 +995,10 @@ function FilePanel() {
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
                 <React.Fragment>
+                  {layerType.value === 'Samples' &&
+                    attributeOverwriteWarning(null)}
+                  {layerType.value === 'VSP' &&
+                    attributeOverwriteWarning(sampleType)}
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
                   {uploadStatus === 'import-error' && importErrorMessage}

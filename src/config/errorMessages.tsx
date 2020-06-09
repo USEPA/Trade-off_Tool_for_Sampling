@@ -2,6 +2,7 @@
 import { jsx } from '@emotion/core';
 // components
 import MessageBox from 'components/MessageBox';
+import { SampleSelectType } from './sampleAttributes';
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -69,6 +70,21 @@ export const urlAlreadyAddedMessage = (url: string) => (
 );
 
 // add data tab - file upload messages
+export const attributeOverwriteWarning = (
+  sampleType: SampleSelectType | null,
+) => {
+  const sampleTypeStr = sampleType
+    ? sampleType.label
+    : 'the corresponding sample type';
+  return (
+    <MessageBox
+      severity="warning"
+      title="Some attributes will be replaced"
+      message={`The sample type and geometry are the only attributes retained, all other attributes will be replaced with the standard attributes for ${sampleTypeStr}.`}
+    />
+  );
+};
+
 export const invalidFileTypeMessage = (filename: string) => (
   <MessageBox
     severity="error"
