@@ -2,6 +2,7 @@
 import { jsx } from '@emotion/core';
 // components
 import MessageBox from 'components/MessageBox';
+import { SampleSelectType } from './sampleAttributes';
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -69,6 +70,21 @@ export const urlAlreadyAddedMessage = (url: string) => (
 );
 
 // add data tab - file upload messages
+export const attributeOverwriteWarning = (
+  sampleType: SampleSelectType | null,
+) => {
+  const sampleTypeStr = sampleType
+    ? sampleType.label
+    : 'the corresponding sample type';
+  return (
+    <MessageBox
+      severity="warning"
+      title="Some attributes will be replaced"
+      message={`The sample type and geometry are the only attributes retained, all other attributes will be replaced with the standard attributes for ${sampleTypeStr}.`}
+    />
+  );
+};
+
 export const invalidFileTypeMessage = (filename: string) => (
   <MessageBox
     severity="error"
@@ -109,6 +125,14 @@ export const missingAttributesMessage = (
     severity="error"
     title="Missing Required Attributes"
     message={`Features in the ${filename} are missing the following required attributes: ${missingAttributes}`}
+  />
+);
+
+export const unknownSampleTypeMessage = (
+  <MessageBox
+    severity="error"
+    title="Unknown Sample Type"
+    message="An unknown sample type was found. Please use one of the sample types recognized by TOTS (Swab, Sponge, Micro Vac, Wet Vac, or Aggressive Air)."
   />
 );
 

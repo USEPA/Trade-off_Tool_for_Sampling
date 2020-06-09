@@ -23,14 +23,21 @@ import {
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
-import { SampleSelectOptions, SampleSelectType } from 'config/sampleAttributes';
+import {
+  sampleAttributes,
+  SampleSelectOptions,
+  SampleSelectType,
+  SampleType,
+} from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import {
+  attributeOverwriteWarning,
   fileReadErrorMessage,
   importErrorMessage,
   invalidFileTypeMessage,
   missingAttributesMessage,
   noDataMessage,
+  unknownSampleTypeMessage,
   uploadSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
@@ -136,6 +143,10 @@ const fileIconText = css`
   width: 100%;
 `;
 
+const checkBoxStyles = css`
+  margin-right: 5px;
+`;
+
 // --- components (FileIcon) ---
 type FileIconProps = {
   label: string;
@@ -188,6 +199,7 @@ type UploadStatusType =
   | 'invalid-file-type'
   | 'import-error'
   | 'missing-attributes'
+  | 'unknown-sample-type'
   | 'file-read-error';
 
 function FilePanel() {
@@ -424,7 +436,9 @@ function FilePanel() {
     const generateUrl = `${sharingUrl}/content/features/generate`;
 
     let resParameters = {};
-    if (analyzeResponse) resParameters = analyzeResponse.publishParameters;
+    if (file.file.esriFileType === 'csv' && analyzeResponse) {
+      resParameters = analyzeResponse.publishParameters;
+    }
     const fileForm = new FormData();
     fileForm.append('file', file.file);
     const publishParameters: any = {
@@ -610,6 +624,7 @@ function FilePanel() {
     const popupTemplate = getPopupTemplate(layerType.value);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
+    let unknownSampleTypes: boolean = false;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       if (
         !layer?.featureSet?.features ||
@@ -632,47 +647,25 @@ function FilePanel() {
         let graphic: any = feature;
         if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
 
-        // add a layer type to the graphic
-        if (!graphic?.attributes?.TYPE) {
-          graphic.attributes['TYPE'] = layerType.value;
-        }
-
-        // add ids to the graphic, if the graphic doesn't already have them
-        const uuid = generateUUID();
-        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
-          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
-        }
-        if (!graphic.attributes.GLOBALID) {
-          graphic.attributes['GLOBALID'] = uuid;
-        }
-
         // add sample layer specific attributes
         const timestamp = getCurrentDateTime();
+        let uuid = generateUUID();
         if (layerType.value === 'Samples') {
-          const {
-            AA,
-            CONTAMTYPE,
-            CONTAMVAL,
-            CONTAMUNIT,
-            CREATEDDATE,
-            UPDATEDDATE,
-            USERNAME,
-            ORGANIZATION,
-            ELEVATIONSERIES,
-          } = graphic.attributes;
-          // TODO: Remove this item. It is only for debugging area calculations.
-          graphic.attributes['OAA'] = AA;
+          const { AA, TYPE } = graphic.attributes;
+          if (!sampleAttributes.hasOwnProperty(TYPE)) {
+            unknownSampleTypes = true;
+          } else {
+            graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
 
-          graphic.attributes['AA'] = null;
-          graphic.attributes['AC'] = null;
-          if (!CONTAMTYPE) graphic.attributes['CONTAMTYPE'] = null;
-          if (!CONTAMVAL) graphic.attributes['CONTAMVAL'] = null;
-          if (!CONTAMUNIT) graphic.attributes['CONTAMUNIT'] = null;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
-          if (!UPDATEDDATE) graphic.attributes['UPDATEDDATE'] = null;
-          if (!USERNAME) graphic.attributes['USERNAME'] = null;
-          if (!ORGANIZATION) graphic.attributes['ORGANIZATION'] = null;
-          if (!ELEVATIONSERIES) graphic.attributes['ELEVATIONSERIES'] = null;
+            // TODO: Remove this item. It is only for debugging area calculations.
+            graphic.attributes['OAA'] = AA;
+
+            graphic.attributes['AA'] = null;
+            graphic.attributes['AC'] = null;
+            graphic.attributes['CREATEDDATE'] = timestamp;
+            graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+            graphic.attributes['GLOBALID'] = uuid;
+          }
         }
         if (layerType.value === 'VSP') {
           const { AA, CREATEDDATE } = graphic.attributes;
@@ -682,6 +675,19 @@ function FilePanel() {
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
+        }
+
+        // add a layer type to the graphic
+        if (!graphic?.attributes?.TYPE) {
+          graphic.attributes['TYPE'] = layerType.value;
+        }
+
+        // add ids to the graphic, if the graphic doesn't already have them
+        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
+          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+        }
+        if (!graphic.attributes.GLOBALID) {
+          graphic.attributes['GLOBALID'] = uuid;
         }
 
         // verify the graphic has all required attributes
@@ -706,6 +712,11 @@ function FilePanel() {
         graphics.push(graphic);
       });
     });
+
+    if (unknownSampleTypes) {
+      setUploadStatus('unknown-sample-type');
+      return;
+    }
 
     if (missingAttributes.length > 0) {
       setUploadStatus('missing-attributes');
@@ -990,6 +1001,10 @@ function FilePanel() {
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
                 <React.Fragment>
+                  {layerType.value === 'Samples' &&
+                    attributeOverwriteWarning(null)}
+                  {layerType.value === 'VSP' &&
+                    attributeOverwriteWarning(sampleType)}
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
                   {uploadStatus === 'import-error' && importErrorMessage}
@@ -998,12 +1013,15 @@ function FilePanel() {
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
                   {uploadStatus === 'missing-attributes' &&
                     missingAttributesMessage(filename, missingAttributes)}
+                  {uploadStatus === 'unknown-sample-type' &&
+                    unknownSampleTypeMessage}
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
                   <input
                     id="generalize-features-input"
                     type="checkbox"
+                    css={checkBoxStyles}
                     checked={generalizeFeatures}
                     onChange={(ev) =>
                       setGeneralizeFeatures(!generalizeFeatures)

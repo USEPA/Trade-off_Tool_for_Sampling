@@ -316,6 +316,7 @@ export function getPopupTemplate(
       { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
       { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
       { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
+      { fieldName: 'AC', label: 'Number of Equivalent TOTS Samples' },
       { fieldName: 'Notes', label: 'Notes' },
       { fieldName: 'ALC', label: 'Analysis Labor Cost' },
       { fieldName: 'AMC', label: 'Analysis Material Cost' },
