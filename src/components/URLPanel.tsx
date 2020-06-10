@@ -74,20 +74,24 @@ function URLPanel() {
   React.useEffect(() => {
     if (!map || !layer) return;
 
+    // keep the original set of url layers in case the layer errors out
+    const originalUrlLayers = urlLayers;
+
+    // add this layer to the url layers
+    const urlLayer = { url, type: urlType.value, layerId: layer.id };
+    setUrlLayers([...urlLayers, urlLayer]);
+
     // add the layer to the map
     map.add(layer);
 
-    layer.on('layerview-create', (event) => {
-      const urlLayer = { url, type: urlType.value, layerId: layer.id };
-      setUrlLayers([...urlLayers, urlLayer]);
-
-      setStatus('success');
-    });
+    layer.on('layerview-create', (event) => setStatus('success'));
 
     layer.on('layerview-create-error', (event) => {
       console.error('create error event: ', event);
 
       map.remove(layer);
+
+      setUrlLayers(originalUrlLayers);
 
       setStatus('failure');
     });
