@@ -2,6 +2,10 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
+// utils
+import { fetchCheck } from 'utils/fetchUtils';
+// config
+import { totsGPServer } from 'config/webService';
 // types
 import { EditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
@@ -47,6 +51,7 @@ type SketchType = {
   setAoiSketchVM: React.Dispatch<
     React.SetStateAction<__esri.SketchViewModel | null>
   >;
+  getGpMaxRecordCount: (() => Promise<number>) | null;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -84,6 +89,7 @@ export const SketchContext = React.createContext<SketchType>({
   setSketchVM: () => {},
   aoiSketchVM: null,
   setAoiSketchVM: () => {},
+  getGpMaxRecordCount: null,
 });
 
 type Props = { children: ReactNode };
@@ -120,6 +126,30 @@ export function SketchProvider({ children }: Props) {
     aoiSketchVM,
     setAoiSketchVM, //
   ] = React.useState<__esri.SketchViewModel | null>(null);
+
+  // define the context funtion for getting the max record count
+  // of the gp server
+  const [gpMaxRecordCount, setGpMaxRecordCount] = React.useState<number | null>(
+    null,
+  );
+  function getGpMaxRecordCount(): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      // return the max record count, if we already have it
+      if (gpMaxRecordCount) {
+        resolve(gpMaxRecordCount);
+        return;
+      }
+
+      // get the max record count from the gp server
+      fetchCheck(`${totsGPServer}?f=json`)
+        .then((res: any) => {
+          const maxRecordCount = res.maximumRecords;
+          setGpMaxRecordCount(maxRecordCount);
+          resolve(maxRecordCount);
+        })
+        .catch((err) => reject(err));
+    });
+  }
 
   return (
     <SketchContext.Provider
@@ -158,6 +188,7 @@ export function SketchProvider({ children }: Props) {
         setSketchVM,
         aoiSketchVM,
         setAoiSketchVM,
+        getGpMaxRecordCount,
       }}
     >
       {children}

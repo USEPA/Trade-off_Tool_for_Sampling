@@ -247,6 +247,7 @@ function LocateSamples() {
     setAoiSketchLayer,
     sketchVM,
     aoiSketchVM,
+    getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -473,114 +474,147 @@ function LocateSamples() {
     data: [],
   });
   function randomSamples() {
-    if (!map || !sketchLayer) return;
+    if (!map || !sketchLayer || !getGpMaxRecordCount) return;
 
-    setGenerateRandomResponse({ status: 'fetching', data: [] });
-    let graphics: __esri.GraphicProperties[] = [];
-    if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
-      graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
-    }
-
-    // create a feature set for communicating with the GPServer
-    const featureSet = new FeatureSet({
-      displayFieldName: '',
-      geometryType: 'polygon',
-      spatialReference: {
-        wkid: 3857,
-      },
-      fields: [
-        {
-          name: 'OBJECTID',
-          type: 'oid',
-          alias: 'OBJECTID',
-        },
-        {
-          name: 'PERMANENT_IDENTIFIER',
-          type: 'guid',
-          alias: 'PERMANENT_IDENTIFIER',
-        },
-      ],
-      features: graphics,
-    });
-
-    const props = {
-      f: 'json',
-      Number_of_Samples: numberRandomSamples,
-      Sample_Type: sampleType.value,
-      Area_of_Interest_Mask: featureSet.toJSON(),
-    };
-    console.log('props: ', JSON.stringify(props));
-    geoprocessorFetch({
-      Geoprocessor,
-      url: `${totsGPServer}/Generate%20Random`,
-      inputParameters: props,
-      useProxy: true,
-    })
-      .then((res: any) => {
-        if (!res?.results?.[0]?.value) {
-          setGenerateRandomResponse({ status: 'failure', data: [] });
-          return;
+    getGpMaxRecordCount()
+      .then((maxRecordCount) => {
+        setGenerateRandomResponse({ status: 'fetching', data: [] });
+        let graphics: __esri.GraphicProperties[] = [];
+        if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
+          graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
         }
 
-        if (res.results[0].value.exceededTransferLimit) {
-          setGenerateRandomResponse({
-            status: 'exceededTransferLimit',
-            data: [],
-          });
-          return;
-        }
-
-        // put the sketch layer on the map, if it isn't there already
-        const layerIndex = map.layers.findIndex(
-          (layer) => layer.id === sketchLayer.layerId,
-        );
-        if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
-
-        // get the results from the response
-        const results = res.results[0].value;
-
-        // build an array of graphics to draw on the map
-        const timestamp = getCurrentDateTime();
-        const popupTemplate = getPopupTemplate('Samples');
-        const graphicsToAdd: __esri.Graphic[] = [];
-        results.features.forEach((feature: any) => {
-          graphicsToAdd.push(
-            new Graphic({
-              attributes: {
-                ...feature.attributes,
-                CREATEDDATE: timestamp,
-              },
-              symbol: polygonSymbol,
-              geometry: new Polygon({
-                rings: feature.geometry.rings,
-                spatialReference: results.spatialReference,
-              }),
-              popupTemplate,
-            }),
-          );
+        // create a feature set for communicating with the GPServer
+        const featureSet = new FeatureSet({
+          displayFieldName: '',
+          geometryType: 'polygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: [
+            {
+              name: 'OBJECTID',
+              type: 'oid',
+              alias: 'OBJECTID',
+            },
+            {
+              name: 'PERMANENT_IDENTIFIER',
+              type: 'guid',
+              alias: 'PERMANENT_IDENTIFIER',
+            },
+          ],
+          features: graphics,
         });
 
-        // put the graphics on the map
-        if (sketchLayer?.sketchLayer?.type === 'graphics') {
-          // add the graphics to a collection so it can added to browser storage
-          const collection = new Collection<__esri.Graphic>();
-          collection.addMany(graphicsToAdd);
-          sketchLayer.sketchLayer.graphics.addMany(collection);
+        // determine the number of service calls needed to satisfy the request
+        const intNumberRandomSamples = parseInt(numberRandomSamples);
+        const iterations = Math.ceil(intNumberRandomSamples / maxRecordCount);
 
-          const editsCopy = updateLayerEdits({
-            edits,
-            layer: sketchLayer,
-            type: 'add',
-            changes: collection,
+        // fire off the generateRandom requests
+        const requests = [];
+        let numSamples = 0;
+        let numSamplesLeft = intNumberRandomSamples;
+        for (let i = 0; i < iterations; i++) {
+          // determine the number of samples for this request
+          numSamples =
+            numSamplesLeft > maxRecordCount ? maxRecordCount : numSamplesLeft;
+
+          const props = {
+            f: 'json',
+            Number_of_Samples: numSamples,
+            Sample_Type: sampleType.value,
+            Area_of_Interest_Mask: featureSet.toJSON(),
+          };
+          const request = geoprocessorFetch({
+            Geoprocessor,
+            url: `${totsGPServer}/Generate%20Random`,
+            inputParameters: props,
+            useProxy: true,
           });
+          requests.push(request);
 
-          // update the edits state
-          setEdits(editsCopy);
+          // keep track of the number of remaining samples
+          numSamplesLeft = numSamplesLeft - numSamples;
         }
+        Promise.all(requests)
+          .then((responses: any) => {
+            console.log('generateRandom responses: ', responses);
+            let res;
+            const timestamp = getCurrentDateTime();
+            const popupTemplate = getPopupTemplate('Samples');
+            const graphicsToAdd: __esri.Graphic[] = [];
+            for (let i = 0; i < responses.length; i++) {
+              res = responses[i];
+              if (!res?.results?.[0]?.value) {
+                setGenerateRandomResponse({ status: 'failure', data: [] });
+                return;
+              }
 
-        setGenerateRandomResponse({ status: 'success', data: graphicsToAdd });
+              if (res.results[0].value.exceededTransferLimit) {
+                setGenerateRandomResponse({
+                  status: 'exceededTransferLimit',
+                  data: [],
+                });
+                return;
+              }
+
+              // put the sketch layer on the map, if it isn't there already
+              const layerIndex = map.layers.findIndex(
+                (layer) => layer.id === sketchLayer.layerId,
+              );
+              if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
+
+              // get the results from the response
+              const results = res.results[0].value;
+
+              // build an array of graphics to draw on the map
+              results.features.forEach((feature: any) => {
+                graphicsToAdd.push(
+                  new Graphic({
+                    attributes: {
+                      ...feature.attributes,
+                      CREATEDDATE: timestamp,
+                    },
+                    symbol: polygonSymbol,
+                    geometry: new Polygon({
+                      rings: feature.geometry.rings,
+                      spatialReference: results.spatialReference,
+                    }),
+                    popupTemplate,
+                  }),
+                );
+              });
+            }
+
+            // put the graphics on the map
+            if (sketchLayer?.sketchLayer?.type === 'graphics') {
+              // add the graphics to a collection so it can added to browser storage
+              const collection = new Collection<__esri.Graphic>();
+              collection.addMany(graphicsToAdd);
+              sketchLayer.sketchLayer.graphics.addMany(collection);
+
+              const editsCopy = updateLayerEdits({
+                edits,
+                layer: sketchLayer,
+                type: 'add',
+                changes: collection,
+              });
+
+              // update the edits state
+              setEdits(editsCopy);
+            }
+
+            setGenerateRandomResponse({
+              status: 'success',
+              data: graphicsToAdd,
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+            setGenerateRandomResponse({ status: 'failure', data: [] });
+          });
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error(err);
         setGenerateRandomResponse({ status: 'failure', data: [] });
       });
