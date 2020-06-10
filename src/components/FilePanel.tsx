@@ -19,6 +19,7 @@ import {
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
+import { chunkArray } from 'utils/utils';
 // types
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
@@ -214,6 +215,7 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
+    getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -418,7 +420,8 @@ function FilePanel() {
       !layerType ||
       !file?.file?.esriFileType ||
       !sharingUrl ||
-      file.file.name === file.lastFileName
+      file.file.name === file.lastFileName ||
+      !getGpMaxRecordCount
     ) {
       return;
     }
@@ -520,51 +523,78 @@ function FilePanel() {
           fields.push(Field.fromJSON(field));
         });
 
-        // create a feature set for communicating with the GPServer
-        const inputVspSet = new FeatureSet({
-          displayFieldName: '',
-          geometryType: layerDefinition.geometryType
-            .toLowerCase()
-            .replace('esrigeometry', ''),
-          spatialReference: {
-            wkid: 3857,
-          },
-          fields,
-          features,
-        });
-        console.log('inputVspSet: ', inputVspSet);
+        getGpMaxRecordCount()
+          .then((maxRecordCount) => {
+            const chunkedFeatures: __esri.Graphic[][] = chunkArray(
+              features,
+              maxRecordCount,
+            );
 
-        const params = {
-          f: 'json',
-          Input_VSP: inputVspSet,
-          Sample_Type: sampleType && sampleType.value,
-        };
-        geoprocessorFetch({
-          Geoprocessor,
-          url: `${totsGPServer}/VSP%20Import`,
-          inputParameters: params,
-          useProxy: true,
-        })
-          .then((res) => {
-            console.log('VSP res: ', res);
+            // fire off the vsp import requests
+            const requests: Promise<any>[] = [];
+            chunkedFeatures.forEach((features) => {
+              // create a feature set for communicating with the GPServer
+              const inputVspSet = new FeatureSet({
+                displayFieldName: '',
+                geometryType: layerDefinition.geometryType
+                  .toLowerCase()
+                  .replace('esrigeometry', ''),
+                spatialReference: {
+                  wkid: 3857,
+                },
+                fields,
+                features,
+              });
 
-            const layers: any[] = [];
-            const result = res.results[0];
-            layerDefinition.fields = result.value.fields;
-            layerDefinition.objectIdField = 'OBJECTID';
-            layers.push({
-              layerDefinition,
-              featureSet: {
-                features: result.value.features,
-                geometryType: result.value.geometryType,
-              },
+              // fire off this request
+              const params = {
+                f: 'json',
+                Input_VSP: inputVspSet,
+                Sample_Type: sampleType && sampleType.value,
+              };
+              const request = geoprocessorFetch({
+                Geoprocessor,
+                url: `${totsGPServer}/VSP%20Import`,
+                inputParameters: params,
+                useProxy: true,
+              });
+              requests.push(request);
             });
 
-            setGenerateResponse({
-              featureCollection: {
-                layers,
-              },
-            });
+            Promise.all(requests)
+              .then((responses) => {
+                console.log('VSP responses: ', responses);
+
+                // get the first result for filling in metadata
+                let firstResult = responses[0].results[0].value;
+                const features: any[] = [];
+
+                // build an array with all of the features
+                responses.forEach((res) => {
+                  features.push(...res.results[0].value.features);
+                });
+
+                const layers: any[] = [];
+                layerDefinition.fields = firstResult.fields;
+                layerDefinition.objectIdField = 'OBJECTID';
+                layers.push({
+                  layerDefinition,
+                  featureSet: {
+                    features: features,
+                    geometryType: firstResult.geometryType,
+                  },
+                });
+
+                setGenerateResponse({
+                  featureCollection: {
+                    layers,
+                  },
+                });
+              })
+              .catch((err) => {
+                console.error(err);
+                setUploadStatus('failure');
+              });
           })
           .catch((err) => {
             console.error(err);
@@ -594,6 +624,7 @@ function FilePanel() {
     layerType,
     map,
     sampleType,
+    getGpMaxRecordCount,
   ]);
 
   // add features to the map as graphics layers. This is for every layer type
