@@ -60,7 +60,11 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
 
 // Finds the layer being updated and its index within the layers variable.
 // Also returns the eventType (add, update, etc.) and event changes.
-function getUpdateEventInfo(layers: LayerType[], event: any) {
+function getUpdateEventInfo(
+  layers: LayerType[],
+  event: any,
+  setter: React.Dispatch<React.SetStateAction<LayerType | null>> | null,
+) {
   // get type and changes
   const type = event.type === 'create' ? 'add' : event.type;
   const changes = type === 'add' ? [event.graphic] : event.graphics;
@@ -87,6 +91,7 @@ function getUpdateEventInfo(layers: LayerType[], event: any) {
     eventChanges: changes,
     layer: updateLayer,
     layerIndex: updateLayerIndex,
+    setter,
   };
 }
 
@@ -178,7 +183,8 @@ function FeatureTool({
 
     // Get the note from the graphics attributes
     if (tempSketchVM?.activeComponent?.graphics?.[0]?.attributes) {
-      const newNote = tempSketchVM.activeComponent.graphics[0].attributes.Notes;
+      let newNote = tempSketchVM.activeComponent.graphics[0].attributes.Notes;
+      newNote = newNote ? newNote : '';
       if (graphicNote !== newNote) {
         setGraphicNote(newNote);
         setNote(newNote);
@@ -285,7 +291,9 @@ function MapWidgets({ mapView }: Props) {
     aoiSketchVM,
     setAoiSketchVM,
     sketchLayer,
+    setSketchLayer,
     aoiSketchLayer,
+    setAoiSketchLayer,
     layers,
     setLayers,
     map,
@@ -642,12 +650,14 @@ function MapWidgets({ mapView }: Props) {
     eventChanges: any;
     layer: LayerType | null;
     layerIndex: number;
+    setter: React.Dispatch<React.SetStateAction<LayerType | null>> | null;
   };
   const [updateLayer, setUpdateLayer] = React.useState<UpdateLayerEventType>({
     eventType: null,
     eventChanges: null,
     layer: null,
     layerIndex: -1,
+    setter: null,
   });
 
   // set the updateLayer for the updateSketchEvent
@@ -655,16 +665,20 @@ function MapWidgets({ mapView }: Props) {
     if (layers.length === 0 || !updateSketchEvent) return;
     setUpdateSketchEvent(null);
 
-    setUpdateLayer(getUpdateEventInfo(layers, updateSketchEvent));
-  }, [updateSketchEvent, layers]);
+    setUpdateLayer(
+      getUpdateEventInfo(layers, updateSketchEvent, setSketchLayer),
+    );
+  }, [updateSketchEvent, layers, setSketchLayer]);
 
   // set the updateLayer for the aoiUpdateSketchEvent
   React.useEffect(() => {
     if (layers.length === 0 || !aoiUpdateSketchEvent) return;
     setAoiUpdateSketchEvent(null);
 
-    setUpdateLayer(getUpdateEventInfo(layers, aoiUpdateSketchEvent));
-  }, [aoiUpdateSketchEvent, layers]);
+    setUpdateLayer(
+      getUpdateEventInfo(layers, aoiUpdateSketchEvent, setAoiSketchLayer),
+    );
+  }, [aoiUpdateSketchEvent, layers, setAoiSketchLayer]);
 
   // save the updated graphic to the edits data structure for later publishing
   React.useEffect(() => {
@@ -674,6 +688,7 @@ function MapWidgets({ mapView }: Props) {
       eventChanges: null,
       layer: null,
       layerIndex: -1,
+      setter: null,
     });
 
     // save the layer changes
@@ -694,6 +709,13 @@ function MapWidgets({ mapView }: Props) {
       updateLayer.layer,
       ...layers.slice(updateLayer.layerIndex + 1),
     ]);
+
+    // update sketchVM event
+    if (updateLayer.setter) {
+      updateLayer.setter((layer) => {
+        return layer ? { ...layer, editType: updateLayer.eventType } : null;
+      });
+    }
   }, [edits, setEdits, updateLayer, layers, setLayers]);
 
   // Reactivate aoiSketchVM after the updateSketchEvent is null

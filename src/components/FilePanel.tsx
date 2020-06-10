@@ -748,6 +748,7 @@ function FilePanel() {
       layerType: layerType.value,
       scenarioName: '',
       scenarioDescription: '',
+      editType: 'add',
       defaultVisibility: true,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',

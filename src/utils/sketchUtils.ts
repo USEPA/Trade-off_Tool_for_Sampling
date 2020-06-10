@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 // types
-import { EditsType, LayerEditsType } from 'types/Edits';
+import { EditsType, EditType, LayerEditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
 
 /**
@@ -40,7 +40,10 @@ export function findLayerInEdits(
  * @param layerToEdit The layer object
  * @returns object representing the layer edit template
  */
-export function createLayerEditTemplate(layerToEdit: LayerType) {
+export function createLayerEditTemplate(
+  layerToEdit: LayerType,
+  editType: EditType,
+) {
   return {
     id: layerToEdit.id,
     layerId: layerToEdit.sketchLayer.id,
@@ -53,6 +56,7 @@ export function createLayerEditTemplate(layerToEdit: LayerType) {
     scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
     status: layerToEdit.status,
+    editType,
     adds: [],
     updates: [],
     deletes: [],
@@ -98,7 +102,7 @@ export function updateLayerEdits({
 }: {
   edits: EditsType;
   layer: LayerType;
-  type: 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
+  type: EditType;
   changes?: __esri.Collection<__esri.Graphic>;
   hasContaminationRan?: boolean;
 }) {
@@ -111,7 +115,7 @@ export function updateLayerEdits({
   // if it was not found create the edit template for this layer and
   // add it to the copy of edits
   if (!layerToEdit) {
-    layerToEdit = createLayerEditTemplate(layer);
+    layerToEdit = createLayerEditTemplate(layer, type);
     editsCopy.edits.push(layerToEdit);
   } else {
     // handle property changes
@@ -122,6 +126,8 @@ export function updateLayerEdits({
     if (layer.status === 'published') layer.status = 'edited';
     if (layerToEdit.status === 'published') layerToEdit.status = 'edited';
   }
+
+  layerToEdit.editType = type;
 
   // set the hasContaminationRan value (default is false)
   layerToEdit.hasContaminationRan = hasContaminationRan;

@@ -1,3 +1,5 @@
+import { EditType } from 'types/Edits';
+
 export type LayerTypeName =
   | 'Contamination Map'
   | 'Samples'
@@ -24,6 +26,7 @@ export type LayerType = {
   layerType: LayerTypeName;
   scenarioName: string;
   scenarioDescription: string;
+  editType: EditType;
   defaultVisibility: boolean;
   geometryType: string;
   addedFrom: AddedFrom;

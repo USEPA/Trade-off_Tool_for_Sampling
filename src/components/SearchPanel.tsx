@@ -777,6 +777,7 @@ function ResultCard({ result }: ResultCardProps) {
                   layerType: isVspLayer ? 'VSP' : 'Samples',
                   scenarioName: layerName,
                   scenarioDescription: layerDetails.description,
+                  editType: 'add',
                   defaultVisibility: true,
                   geometryType: layerDetails.geometryType,
                   addedFrom: 'tots',

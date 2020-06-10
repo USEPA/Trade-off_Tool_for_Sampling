@@ -179,7 +179,11 @@ function EditLayerMetaData({
           if (sketchLayer) {
             setSketchLayer((sketchLayer: LayerType | null) => {
               if (!sketchLayer) return sketchLayer;
-              return { ...sketchLayer, scenarioName: newValue };
+              return {
+                ...sketchLayer,
+                editType: 'properties',
+                scenarioName: newValue,
+              };
             });
           }
         }}
@@ -199,7 +203,11 @@ function EditLayerMetaData({
           if (sketchLayer) {
             setSketchLayer((sketchLayer: LayerType | null) => {
               if (!sketchLayer) return sketchLayer;
-              return { ...sketchLayer, scenarioDescription: newValue };
+              return {
+                ...sketchLayer,
+                editType: 'properties',
+                scenarioDescription: newValue,
+              };
             });
           }
         }}

@@ -5,6 +5,8 @@ export type EditsType = {
   edits: LayerEditsType[];
 };
 
+export type EditType = 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
+
 export type LayerEditsType = {
   id: number; // layer id
   layerId: string; // id from esri layer
@@ -15,6 +17,7 @@ export type LayerEditsType = {
   addedFrom: AddedFrom; // how the layer was added (file, url, etc.)
   hasContaminationRan: boolean; // says whether or not contamination hits has been ran
   status: PublishStatus; // publish status
+  editType: EditType; // edit type
   scenarioName: string; // user defined scenario name
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
   adds: FeatureEditsType[]; // features to add
