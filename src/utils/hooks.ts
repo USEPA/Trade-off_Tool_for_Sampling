@@ -18,7 +18,7 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import { getPopupTemplate } from 'utils/sketchUtils';
+import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 
 // Saves data to session storage
@@ -86,7 +86,11 @@ function useEditsLayerStorage() {
       return;
     }
 
+    // change the edit type to add and set the edit context state
     const edits: EditsType = JSON.parse(editsStr);
+    edits.edits.forEach((edit) => {
+      edit.editType = 'add';
+    });
     setEdits(edits);
 
     const newLayers: LayerType[] = [];
@@ -159,6 +163,7 @@ function useEditsLayerStorage() {
         layerType: editsLayer.layerType,
         scenarioName: editsLayer.scenarioName,
         scenarioDescription: editsLayer.scenarioDescription,
+        editType: 'add',
         addedFrom: editsLayer.addedFrom,
         status: editsLayer.status,
         defaultVisibility: true,
@@ -907,6 +912,12 @@ export function useCalculatePlan() {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       return;
     }
+    if (sketchLayer.editType === 'properties') return;
+
+    // to improve performance, do not perform calculations if
+    // only the scenario name/description changed
+    const layer = findLayerInEdits(edits.edits, sketchLayer);
+    if (layer.editType === 'properties') return;
 
     setCalculateResults((calculateResults: CalculateResultsType) => {
       return {
@@ -954,6 +965,12 @@ export function useCalculatePlan() {
     if (!loadedProjection) return;
     if (!sketchLayer?.sketchLayer || edits.count === 0) return;
     if (sketchLayer.sketchLayer.type !== 'graphics') return;
+
+    // to improve performance, do not perform calculations if
+    // only the scenario name/description changed
+    if (sketchLayer.editType === 'properties') return;
+    const layer = findLayerInEdits(edits.edits, sketchLayer);
+    if (layer?.editType === 'properties') return;
 
     let ttpk = 0;
     let ttc = 0;
