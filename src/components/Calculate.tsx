@@ -24,6 +24,7 @@ import {
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import { chunkArray } from 'utils/utils';
 
 type ContaminationResultsType = {
   status:
@@ -76,7 +77,12 @@ const layerInfo = css`
 // --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet, Geoprocessor, PopupTemplate } = useEsriModulesContext();
-  const { edits, setEdits, sketchLayer } = React.useContext(SketchContext);
+  const {
+    edits,
+    setEdits,
+    sketchLayer,
+    getGpMaxRecordCount,
+  } = React.useContext(SketchContext);
   const {
     contaminationMap,
     calculateResults,
@@ -216,6 +222,7 @@ function Calculate() {
   // Call the GP Server to run calculations against the contamination
   // map.
   function runContaminationCalculation() {
+    if (!getGpMaxRecordCount) return;
     // set the no layer status
     if (
       !sketchLayer?.sketchLayer ||
@@ -310,204 +317,238 @@ function Calculate() {
       data: null,
     });
 
-    // create a feature set for communicating with the GPServer
-    // this one is for the samples input
-    const featureSet = new FeatureSet({
-      displayFieldName: '',
-      geometryType: 'polygon',
-      features: sketchedGraphics,
-      spatialReference: {
-        wkid: 3857,
-      },
-      fields: [
-        {
-          name: 'OBJECTID',
-          type: 'oid',
-          alias: 'OBJECTID',
-        },
-        {
-          name: 'GLOBALID',
-          type: 'guid',
-          alias: 'GlobalID',
-        },
-        {
-          name: 'PERMANENT_IDENTIFIER',
-          type: 'guid',
-          alias: 'Permanent Identifier',
-        },
-        {
-          name: 'TYPE',
-          type: 'string',
-          alias: 'Sampling Method Type',
-        },
-        {
-          name: 'TTPK',
-          type: 'double',
-          alias: 'Time to Prepare Kits',
-        },
-        {
-          name: 'TTC',
-          type: 'double',
-          alias: 'Time to Collect',
-        },
-        {
-          name: 'TTA',
-          type: 'double',
-          alias: 'Time to Analyze',
-        },
-        {
-          name: 'TTPS',
-          type: 'double',
-          alias: 'Total Time per Sample',
-        },
-        {
-          name: 'LOD_P',
-          type: 'double',
-          alias: 'Limit of Detection Porous',
-        },
-        {
-          name: 'LOD_NON',
-          type: 'double',
-          alias: 'Limit of Detection Nonporous',
-        },
-        {
-          name: 'MCPS',
-          type: 'double',
-          alias: 'Material Cost per Sample',
-        },
-        {
-          name: 'TCPS',
-          type: 'double',
-          alias: 'Total Cost Per Sample',
-        },
-        {
-          name: 'WVPS',
-          type: 'double',
-          alias: 'Waste Volume per Sample',
-        },
-        {
-          name: 'WWPS',
-          type: 'double',
-          alias: 'Waste Weight per Sample',
-        },
-        {
-          name: 'SA',
-          type: 'double',
-          alias: 'Sampling Surface Area',
-        },
-        {
-          name: 'Notes',
-          type: 'string',
-          alias: 'Notes',
-        },
-        {
-          name: 'ALC',
-          type: 'double',
-          alias: 'Analysis Labor Cost',
-        },
-        {
-          name: 'AMC',
-          type: 'double',
-          alias: 'Analysis Material Cost',
-        },
-        {
-          name: 'CONTAMTYPE',
-          type: 'string',
-          alias: 'Contamination Type',
-        },
-        {
-          name: 'CONTAMVAL',
-          type: 'double',
-          alias: 'Contamination Value',
-        },
-        {
-          name: 'CONTAMUNIT',
-          type: 'string',
-          alias: 'Contamination Unit',
-        },
-      ],
-    });
+    getGpMaxRecordCount()
+      .then((maxRecordCount) => {
+        const chunkedFeatures: __esri.Graphic[][] = chunkArray(
+          sketchedGraphics,
+          maxRecordCount,
+        );
 
-    // call the GP Server
-    const params = {
-      f: 'json',
-      Input_Sampling_Unit: featureSet,
-      Contamination_Map: contamMapSet,
-    };
-    geoprocessorFetch({
-      Geoprocessor,
-      url: `${totsGPServer}/Contamination Results`,
-      inputParameters: params,
-      useProxy: true,
-    })
-      .then((res: any) => {
-        console.log('GPServer contamination res: ', res);
-
-        // perform calculations to update talley in nav bar
-        updateContextValues();
-
-        // catch an error in the response of the successful fetch
-        if (res.error) {
-          console.error(res.error);
-          setContaminationResults({
-            status: 'failure',
-            data: null,
+        // fire off the contamination results requests
+        const requests: Promise<any>[] = [];
+        chunkedFeatures.forEach((features) => {
+          // create a feature set for communicating with the GPServer
+          // this one is for the samples input
+          const featureSet = new FeatureSet({
+            displayFieldName: '',
+            geometryType: 'polygon',
+            features,
+            spatialReference: {
+              wkid: 3857,
+            },
+            fields: [
+              {
+                name: 'OBJECTID',
+                type: 'oid',
+                alias: 'OBJECTID',
+              },
+              {
+                name: 'GLOBALID',
+                type: 'guid',
+                alias: 'GlobalID',
+              },
+              {
+                name: 'PERMANENT_IDENTIFIER',
+                type: 'guid',
+                alias: 'Permanent Identifier',
+              },
+              {
+                name: 'TYPE',
+                type: 'string',
+                alias: 'Sampling Method Type',
+              },
+              {
+                name: 'TTPK',
+                type: 'double',
+                alias: 'Time to Prepare Kits',
+              },
+              {
+                name: 'TTC',
+                type: 'double',
+                alias: 'Time to Collect',
+              },
+              {
+                name: 'TTA',
+                type: 'double',
+                alias: 'Time to Analyze',
+              },
+              {
+                name: 'TTPS',
+                type: 'double',
+                alias: 'Total Time per Sample',
+              },
+              {
+                name: 'LOD_P',
+                type: 'double',
+                alias: 'Limit of Detection Porous',
+              },
+              {
+                name: 'LOD_NON',
+                type: 'double',
+                alias: 'Limit of Detection Nonporous',
+              },
+              {
+                name: 'MCPS',
+                type: 'double',
+                alias: 'Material Cost per Sample',
+              },
+              {
+                name: 'TCPS',
+                type: 'double',
+                alias: 'Total Cost Per Sample',
+              },
+              {
+                name: 'WVPS',
+                type: 'double',
+                alias: 'Waste Volume per Sample',
+              },
+              {
+                name: 'WWPS',
+                type: 'double',
+                alias: 'Waste Weight per Sample',
+              },
+              {
+                name: 'SA',
+                type: 'double',
+                alias: 'Sampling Surface Area',
+              },
+              {
+                name: 'Notes',
+                type: 'string',
+                alias: 'Notes',
+              },
+              {
+                name: 'ALC',
+                type: 'double',
+                alias: 'Analysis Labor Cost',
+              },
+              {
+                name: 'AMC',
+                type: 'double',
+                alias: 'Analysis Material Cost',
+              },
+              {
+                name: 'CONTAMTYPE',
+                type: 'string',
+                alias: 'Contamination Type',
+              },
+              {
+                name: 'CONTAMVAL',
+                type: 'double',
+                alias: 'Contamination Value',
+              },
+              {
+                name: 'CONTAMUNIT',
+                type: 'string',
+                alias: 'Contamination Unit',
+              },
+            ],
           });
-          return;
-        }
 
-        // save the data to state, use an empty array if there is no data
-        if (res?.results?.[0]?.value?.features) {
-          const popupTemplate = new PopupTemplate(
-            getPopupTemplate(sketchLayer.layerType, true),
-          );
-          const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-          // update the contam value attribute of the graphics
-          const resFeatures = res.results[0].value.features;
-          layer.graphics.forEach((graphic) => {
-            const resFeature = resFeatures.find(
-              (feature: any) =>
-                graphic.attributes.PERMANENT_IDENTIFIER ===
-                feature.attributes.PERMANENT_IDENTIFIER,
-            );
+          // call the GP Server
+          const params = {
+            f: 'json',
+            Input_Sampling_Unit: featureSet,
+            Contamination_Map: contamMapSet,
+          };
+          const request = geoprocessorFetch({
+            Geoprocessor,
+            url: `${totsGPServer}/Contamination Results`,
+            inputParameters: params,
+            useProxy: true,
+          });
+          requests.push(request);
+        });
 
-            // if the graphic was not found in the response, set contam value to null,
-            // otherwise use the contam value value found in the response.
-            let contamValue = null;
-            let contamType = graphic.attributes.CONTAMTYPE;
-            let contamUnit = graphic.attributes.CONTAMUNIT;
-            if (resFeature) {
-              contamValue = resFeature.attributes.CONTAMVAL;
-              contamType = resFeature.attributes.CONTAMTYPE;
-              contamUnit = resFeature.attributes.CONTAMUNIT;
+        Promise.all(requests)
+          .then((responses: any) => {
+            console.log('GPServer contamination responses: ', responses);
+
+            // perform calculations to update talley in nav bar
+            updateContextValues();
+
+            const resFeatures: any[] = [];
+            for (let i = 0; i < responses.length; i++) {
+              const res = responses[i];
+
+              // catch an error in the response of the successful fetch
+              if (res.error) {
+                console.error(res.error);
+                setContaminationResults({
+                  status: 'failure',
+                  data: null,
+                });
+                return;
+              }
+
+              if (res?.results?.[0]?.value?.features) {
+                resFeatures.push(...res.results[0].value.features);
+              }
             }
-            graphic.attributes.CONTAMVAL = contamValue;
-            graphic.attributes.CONTAMTYPE = contamType;
-            graphic.attributes.CONTAMUNIT = contamUnit;
-            graphic.popupTemplate = popupTemplate;
-          });
 
-          // make a copy of the edits context variable
-          const editsCopy = updateLayerEdits({
-            edits,
-            layer: sketchLayer,
-            type: 'update',
-            changes: layer.graphics,
-            hasContaminationRan: true,
-          });
+            // save the data to state, use an empty array if there is no data
+            if (resFeatures.length > 0) {
+              const popupTemplate = new PopupTemplate(
+                getPopupTemplate(sketchLayer.layerType, true),
+              );
+              const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
+              // update the contam value attribute of the graphics
+              layer.graphics.forEach((graphic) => {
+                const resFeature = resFeatures.find(
+                  (feature: any) =>
+                    graphic.attributes.PERMANENT_IDENTIFIER ===
+                    feature.attributes.PERMANENT_IDENTIFIER,
+                );
 
-          setEdits(editsCopy);
+                // if the graphic was not found in the response, set contam value to null,
+                // otherwise use the contam value value found in the response.
+                let contamValue = null;
+                let contamType = graphic.attributes.CONTAMTYPE;
+                let contamUnit = graphic.attributes.CONTAMUNIT;
+                if (resFeature) {
+                  contamValue = resFeature.attributes.CONTAMVAL;
+                  contamType = resFeature.attributes.CONTAMTYPE;
+                  contamUnit = resFeature.attributes.CONTAMUNIT;
+                }
+                graphic.attributes.CONTAMVAL = contamValue;
+                graphic.attributes.CONTAMTYPE = contamType;
+                graphic.attributes.CONTAMUNIT = contamUnit;
+                graphic.popupTemplate = popupTemplate;
+              });
 
-          setContaminationResults({
-            status: 'success',
-            data: res.results[0].value.features,
+              // make a copy of the edits context variable
+              const editsCopy = updateLayerEdits({
+                edits,
+                layer: sketchLayer,
+                type: 'update',
+                changes: layer.graphics,
+                hasContaminationRan: true,
+              });
+
+              setEdits(editsCopy);
+
+              setContaminationResults({
+                status: 'success',
+                data: resFeatures,
+              });
+            } else {
+              setContaminationResults({
+                status: 'success',
+                data: [],
+              });
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+
+            // perform calculations to update talley in nav bar
+            updateContextValues();
+
+            setContaminationResults({
+              status: 'failure',
+              data: null,
+            });
           });
-        } else {
-          setContaminationResults({
-            status: 'success',
-            data: [],
-          });
-        }
       })
       .catch((err) => {
         console.error(err);
