@@ -25,6 +25,10 @@ const urlInputStyles = css`
   width: 100%;
 `;
 
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
 // --- components (URLPanel) ---
 type UrlType =
   | { value: 'ArcGIS'; label: 'An ArcGIS Server Web Service' }
@@ -154,19 +158,19 @@ function URLPanel() {
       }}
     >
       <p>You can add the following types of layers through a URL:</p>
-      <p>
+      <p css={layerInfo}>
         <strong>ArcGIS Server web service</strong> - map, image, or feature
         resource that is located on an ArcGIS Server site
       </p>
-      <p>
+      <p css={layerInfo}>
         <strong>WMS OGC web service</strong> - feature service that follows the
         OGC Web Feature Service specification
       </p>
-      <p>
+      <p css={layerInfo}>
         <strong>KML file</strong> - File containing a set of geographic
         features.
       </p>
-      <p>
+      <p css={layerInfo}>
         <strong>GeoRSS file</strong> - web feed that includes geographic
         features and locations.
       </p>
