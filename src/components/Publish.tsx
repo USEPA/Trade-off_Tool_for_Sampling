@@ -407,6 +407,37 @@ function Publish() {
       <h2>Publish</h2>
 
       <div css={sectionContainer}>
+        <p>
+          Publish the created plan to ArcGIS Online. A hosted feature layer is
+          created in your ArcGIS Online organization account. By default, only
+          you and the administrator can access the feature layer created. To
+          allow others to access it, via Collector or Survey123 for example,{' '}
+          <a
+            href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            share
+          </a>{' '}
+          the layer and file with everyone (the public), your organization, or
+          members of specific groups. You can edit{' '}
+          <a
+            href="https://doc.arcgis.com/en/arcgis-online/manage-data/item-details.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            item details
+          </a>{' '}
+          and change{' '}
+          <a
+            href="https://doc.arcgis.com/en/arcgis-online/manage-data/manage-hosted-feature-layers.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            feature layer settings
+          </a>
+          .
+        </p>
         <p css={layerInfo}>
           <strong>Layer Name: </strong>
           {sketchLayer?.label}

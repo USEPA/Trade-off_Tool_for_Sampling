@@ -567,8 +567,14 @@ function Calculate() {
     <div css={panelContainer}>
       <div>
         <h2>Calculate</h2>
-
         <div css={sectionContainer}>
+          <p>
+            Change parameters from the defaults based on your sampling event to
+            calculate sampling and analysis time and cost. You can view a
+            detailed summary of the calculation. If you have a contamination
+            layer, you can also see if your sampling plan had contamination
+            hits.
+          </p>
           <p css={layerInfo}>
             <strong>Layer Name: </strong>
             {sketchLayer?.label}

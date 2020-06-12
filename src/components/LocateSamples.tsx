@@ -652,6 +652,12 @@ function LocateSamples() {
         </div>
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
+          <p>
+            Choose a sampling layer, enter a scenario name, and enter a scenario
+            description for the plan. The name will become the feature layer
+            name if published to your ArcGIS Online account in the{' '}
+            <strong>Publish Plan</strong> step.
+          </p>
           <label htmlFor="sampling-layer-select-input">
             Specify Sampling Layer
           </label>
@@ -665,6 +671,9 @@ function LocateSamples() {
           />
 
           <EditLayerMetaData />
+        </div>
+        <div css={sectionContainer}>
+          <p>Add Targeted and/ or random samples to the plan.</p>
         </div>
         <AccordionList>
           <AccordionItem

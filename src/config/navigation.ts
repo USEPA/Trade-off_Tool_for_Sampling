@@ -14,7 +14,7 @@ export type PanelType = {
 export const panels: PanelType[] = [
   {
     value: 'search',
-    label: 'Search',
+    label: 'Locate',
     iconClass: 'fas fa-search',
   },
   {
