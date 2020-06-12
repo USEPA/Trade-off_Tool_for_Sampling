@@ -148,6 +148,20 @@ const checkBoxStyles = css`
   margin-right: 5px;
 `;
 
+const warningIcon = css`
+  margin-right: 10px;
+  font-size: 25px;
+`;
+
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
+const sectionParagraph = css`
+  padding-top: 1.5em;
+  padding-bottom: 1em;
+`;
+
 // --- components (FileIcon) ---
 type FileIconProps = {
   label: string;
@@ -1033,6 +1047,96 @@ function FilePanel() {
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
                 <React.Fragment>
+                  {layerType.value === 'Contamination Map' && (
+                    <React.Fragment>
+                      <p css={sectionParagraph}>
+                        <i
+                          className="fas fa-exclamation-triangle"
+                          css={warningIcon}
+                        />{' '}
+                        The Contamination layer must include the following
+                        attributes to be uploaded:
+                      </p>
+                      <p css={layerInfo}>
+                        <strong>CONTAM_TYPE</strong> (domain values: chemical,
+                        radiological, biological)
+                      </p>
+                      <p css={layerInfo}>
+                        <strong>CONTAM_VALUE</strong> (integer value)
+                      </p>
+                      <p css={layerInfo}>
+                        <strong>CONTAM_UNIT</strong> (domain values: cfu, others
+                        TBD)
+                      </p>
+                    </React.Fragment>
+                  )}
+                  {layerType.value === 'Samples' && (
+                    <React.Fragment>
+                      <p css={sectionParagraph}>
+                        Layer containing pre-existing samples that can be used
+                        to create a sampling plan in the next step,{' '}
+                        <strong>Create Plan</strong>. The Sample layer must
+                        include the following attributes to be uploaded:
+                        <br />
+                        <strong>TYPE</strong> (Sponge, Micro Vac, Wet Vac,
+                        Robot, Aggressive Air, or Swab)
+                      </p>
+                    </React.Fragment>
+                  )}
+                  {layerType.value === 'Reference Layer' && (
+                    <React.Fragment>
+                      <p css={sectionParagraph}>
+                        Layer that provides context for the data you are already
+                        displaying. (Ex. Building footprints, landmarks, etc.).
+                        This layer will be added to the map and can be accessed
+                        from the Legend panel.
+                      </p>
+                    </React.Fragment>
+                  )}
+                  {layerType.value === 'Area of Interest' && (
+                    <React.Fragment>
+                      <p css={sectionParagraph}>
+                        A polygon file that bounds the extent of your project
+                        area. This layer is used to create random samples in the
+                        next step, <strong>Create Plan</strong>.
+                      </p>
+                    </React.Fragment>
+                  )}
+                  {layerType.value === 'VSP' && (
+                    <React.Fragment>
+                      <p css={sectionParagraph}>
+                        A Visual Sample Plan (VSP) layer helps determine where
+                        sampling should be conducted and how many samples are
+                        needed based on a variety of situation-specific
+                        parameters. Once added, you can select this layer in the
+                        next step, <strong>Create Plan</strong>, and use it to
+                        create the Sampling Plan.
+                      </p>
+                    </React.Fragment>
+                  )}
+                  <p css={sectionParagraph}>
+                    <i
+                      className="fas fa-exclamation-triangle"
+                      css={warningIcon}
+                    />{' '}
+                    Requirements for uploading files:
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>Shapefile</strong> - ZIP archive containing all
+                    required shapefile files
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>CSV or TXT</strong> - files with optional address,
+                    place or coordinate locations (comma, semi-colon or tab
+                    delimited)
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>GPX</strong> - GPS Exchange Format
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>GeoJSON</strong> - open standard format for simple
+                    geographical
+                  </p>
                   {layerType.value === 'Samples' &&
                     attributeOverwriteWarning(null)}
                   {layerType.value === 'VSP' &&

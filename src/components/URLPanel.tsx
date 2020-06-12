@@ -153,6 +153,27 @@ function URLPanel() {
         ev.preventDefault();
       }}
     >
+      <p>You can add the following types of layers through a URL:</p>
+      <p>
+        <strong>ArcGIS Server web service</strong> - map, image, or feature
+        resource that is located on an ArcGIS Server site
+      </p>
+      <p>
+        <strong>WMS OGC web service</strong> - feature service that follows the
+        OGC Web Feature Service specification
+      </p>
+      <p>
+        <strong>KML file</strong> - File containing a set of geographic
+        features.
+      </p>
+      <p>
+        <strong>GeoRSS file</strong> - web feed that includes geographic
+        features and locations.
+      </p>
+      <p>
+        <strong>CSV file</strong> - web-based, comma-separated values text file
+        that includes location information
+      </p>
       <label>Type</label>
       <Select
         value={urlType}

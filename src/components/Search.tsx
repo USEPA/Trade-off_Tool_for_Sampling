@@ -71,9 +71,15 @@ function Search() {
   return (
     <div css={panelContainer}>
       <div>
-        <h2>Search</h2>
+        <h2>Locate</h2>
+        <p>
+          Start here to zoom to a location on the map to begin creating a
+          sampling design in an outdoor area. If you are working with an indoor
+          sampling area, or have brought existing sampling designs that you
+          would like to add to the tool, you may choose to go to the next step
+          and start by adding in your data.
+        </p>
         <div id="search-container" css={searchBoxStyles} />
-        <p>Placeholder...</p>
       </div>
       <NavigationButton goToPanel="addData" />
     </div>
