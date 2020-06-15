@@ -20,12 +20,12 @@ jobs:
       - run: npm run build
       - add_ssh_keys:
           fingerprints:
-            - "20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7"
+            - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
       - run: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
       - run:
           name: Deploy to server
           command: |
-            scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/tots
+            scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
 
 workflows:
   version: 2
