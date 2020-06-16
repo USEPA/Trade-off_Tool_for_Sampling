@@ -1079,6 +1079,16 @@ function FilePanel() {
                   {layerType.value === 'Contamination Map' && (
                     <React.Fragment>
                       <p css={sectionParagraph}>
+                        Polygon layer containing the area of contamination as
+                        well as the concentration of the contamination. This
+                        layer can be compared against the sampling plan to see
+                        how well the sample locations are placed to predict the
+                        contamination. Once added, you can select this layer in
+                        the next step, <strong>Create Plan</strong> and then
+                        view the comparison against your sampling plan in the{' '}
+                        <strong>Calculate Resources</strong> step.
+                      </p>
+                      <p css={sectionParagraph}>
                         <i
                           className="fas fa-exclamation-triangle"
                           css={warningIcon}
