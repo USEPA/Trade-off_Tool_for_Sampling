@@ -1,37 +1,73 @@
 version: 2
 
-jobs:
-  deploy:
+references:
+  set-container: &set-container
     docker:
       - image: circleci/node:erbium-buster # node 12 on debian 10
+
+  restore-cache: &restore-cache
+    restore_cache:
+      keys:
+        - deps-{{ checksum "package.json" }}
+        - deps-
+
+  save-cache: &save-cache
+    save_cache:
+      paths:
+        - node_modules
+      key: deps-{{ checksum "package.json" }}
+
+  add-ssh-keys: &add-ssh-keys
+    add_ssh_keys:
+      fingerprints:
+        - "20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7"
+
+  trust-server: &trust-server
+    name: Fix host authenticity for server
+    command: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+
+jobs:
+  deploy-develop:
+    <<: *set-container
     working_directory: ~/repo
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "package.json" }}
-            - deps-
+      - <<: *restore-cache
       - run: npm install
-      - save_cache:
-          paths:
-            - node_modules
-          key: deps-{{ checksum "package.json" }}
+      - <<: *save-cache
       - run: npm test
       - run: npm run build
-      - add_ssh_keys:
-          fingerprints:
-            - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
-      - run: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+      - <<: *add-ssh-keys
+      - run: *trust-server
       - run:
-          name: Deploy to server
-          command: |
-            scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+          name: Deploy to totsdev server
+          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+
+  deploy-staging:
+    <<: *set-container
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - <<: *restore-cache
+      - run: npm install
+      - <<: *save-cache
+      - run: npm test
+      - run: npm run build
+      - <<: *add-ssh-keys
+      - run: *trust-server
+      - run:
+          name: Deploy to totsbeta server
+          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsbeta
 
 workflows:
   version: 2
   deploy-to-server:
     jobs:
-      - deploy:
+      - deploy-develop:
           filters:
             branches:
               only: develop
+      - deploy-staging:
+          filters:
+            branches:
+              only: staging
