@@ -1,7 +1,7 @@
 version: 2
 
 jobs:
-  deploy:
+  develop-branch:
     docker:
       - image: circleci/node:erbium-buster # node 12 on debian 10
     working_directory: ~/repo
@@ -27,11 +27,41 @@ jobs:
           command: |
             scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
 
+  stage-branch:
+    docker:
+      - image: circleci/node:erbium-buster # node 12 on debian 10
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - deps-{{ checksum "package.json" }}
+            - deps-
+      - run: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: deps-{{ checksum "package.json" }}
+      - run: npm test
+      - run: npm run build
+      - add_ssh_keys:
+          fingerprints:
+            - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
+      - run: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+      - run:
+          name: Deploy to server
+          command: |
+            scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsbeta
+
 workflows:
   version: 2
   deploy-to-server:
     jobs:
-      - deploy:
+      - develop-branch:
           filters:
             branches:
               only: develop
+      - stage-branch:
+          filters:
+            branches:
+              only: staging
