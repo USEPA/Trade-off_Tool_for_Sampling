@@ -1025,6 +1025,7 @@ function FilePanel() {
       />
       {!layerType ? (
         <React.Fragment>
+          <p css={sectionParagraph}>Locate the file you want to import.</p>
           <p css={sectionParagraph}>
             <i className="fas fa-exclamation-triangle" css={warningIcon} />{' '}
             Requirements for uploading files:
