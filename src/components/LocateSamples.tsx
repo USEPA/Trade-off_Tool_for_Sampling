@@ -602,6 +602,15 @@ function LocateSamples() {
 
               // update the edits state
               setEdits(editsCopy);
+
+              // update the editType of the sketchLayer
+              setSketchLayer((sketchLayer: LayerType | null) => {
+                if (!sketchLayer) return sketchLayer;
+                return {
+                  ...sketchLayer,
+                  editType: 'add',
+                };
+              });
             }
 
             setGenerateRandomResponse({
