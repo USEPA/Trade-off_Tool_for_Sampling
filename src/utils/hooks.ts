@@ -1258,7 +1258,7 @@ export function useCalculatePlan() {
 
       //totals
       'Total Cost': totalCost,
-      'Total Time': totalTime,
+      'Total Time': Math.round(totalTime * 10) / 10,
       'Limiting Time Factor': limitingFactor,
     };
 

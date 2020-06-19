@@ -73,11 +73,12 @@ function Search() {
       <div>
         <h2>Locate</h2>
         <p>
-          Start here to zoom to a location on the map to begin creating a
-          sampling design in an outdoor area. If you are working with an indoor
-          sampling area, or have brought existing sampling designs that you
-          would like to add to the tool, you may choose to go to the next step
-          and start by adding in your data.
+          Start here to zoom to a location on the map to create a sampling
+          design for an outdoor area. Otherwise, proceed to the{' '}
+          <strong>Add Data</strong> step if you have existing sampling designs
+          that you would like to add to the tool or have indoor environment
+          representations to add to support designing a plan for an indoor
+          environment.
         </p>
         <div id="search-container" css={searchBoxStyles} />
       </div>
