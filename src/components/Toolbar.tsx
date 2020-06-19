@@ -7,6 +7,7 @@ import { jsx, css } from '@emotion/core';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import { polygonSymbol } from 'config/symbols';
@@ -145,6 +146,7 @@ function Toolbar() {
     Slider,
   } = useEsriModulesContext();
   const { setContaminationMap } = React.useContext(CalculateContext);
+  const { trainingMode } = React.useContext(NavigationContext);
   const {
     setBasemapWidget,
     edits,
@@ -555,7 +557,9 @@ function Toolbar() {
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
-      <h4 css={toolBarTitle}>Trade-off Tool for Sampling (TOTS)</h4>
+      <h4 css={toolBarTitle}>
+        Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
+      </h4>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
