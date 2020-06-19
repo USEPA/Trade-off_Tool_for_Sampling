@@ -68,6 +68,7 @@ const panelContainer = css`
   flex-direction: column;
   justify-content: space-between;
   min-height: 100%;
+  padding: 20px 0;
 `;
 
 const sectionContainer = css`
@@ -603,7 +604,7 @@ function Calculate() {
             of the results.{' '}
             {trainingMode && (
               <React.Fragment>
-                If you have a contamination layer, click{' '}
+                If you have a contamination map layer, click{' '}
                 <strong>View Contamination Hits</strong> to see if any of your
                 samples would have resulted in contamination hits.{' '}
               </React.Fragment>
