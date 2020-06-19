@@ -3,6 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // styles
 import { colors } from 'styles';
 // images
@@ -58,6 +60,11 @@ const headingStyles = css`
   text-align: center;
 `;
 
+const trainingStyles = css`
+  margin-top: 16px;
+  font-size: 0.875rem;
+`;
+
 // --- components (SplashScreenContent) ---
 type Props = {
   isOpen: boolean;
@@ -65,6 +72,8 @@ type Props = {
 };
 
 function SplashScreenContent({ isOpen, children }: Props) {
+  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
+
   return (
     <DialogOverlay
       css={overlayStyles}
@@ -121,12 +130,17 @@ function SplashScreenContent({ isOpen, children }: Props) {
           to ask a question, provide feedback, or report a problem.
         </p>
 
-        {children && (
-          <React.Fragment>
-            <br />
-            {children}
-          </React.Fragment>
-        )}
+        <div css={trainingStyles}>
+          <input
+            id="training-mode-toggle"
+            type="checkbox"
+            checked={trainingMode}
+            onChange={(ev) => setTrainingMode(!trainingMode)}
+          />
+          <label htmlFor="training-mode-toggle">Training Mode</label>
+        </div>
+
+        {children && <React.Fragment>{children}</React.Fragment>}
       </DialogContent>
     </DialogOverlay>
   );

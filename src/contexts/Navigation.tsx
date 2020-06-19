@@ -7,6 +7,8 @@ import { PanelType, PanelValueType } from 'config/navigation';
 // types
 import { GoToOptions } from 'types/Navigation';
 
+var globalTrainingMode = false;
+
 type NavigateType = {
   currentPanel: PanelType | null;
   setCurrentPanel: React.Dispatch<React.SetStateAction<PanelType | null>>;
@@ -14,6 +16,9 @@ type NavigateType = {
   setGoTo: React.Dispatch<React.SetStateAction<PanelValueType | ''>>;
   goToOptions: GoToOptions;
   setGoToOptions: React.Dispatch<React.SetStateAction<GoToOptions>>;
+  trainingMode: boolean;
+  setTrainingMode: React.Dispatch<React.SetStateAction<boolean>>;
+  getTrainingMode: Function;
 };
 
 export const NavigationContext = React.createContext<NavigateType>({
@@ -23,6 +28,9 @@ export const NavigationContext = React.createContext<NavigateType>({
   setGoTo: () => {},
   goToOptions: null,
   setGoToOptions: () => {},
+  trainingMode: false,
+  setTrainingMode: () => {},
+  getTrainingMode: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -33,6 +41,13 @@ export function NavigationProvider({ children }: Props) {
   );
   const [goTo, setGoTo] = React.useState<PanelValueType | ''>('');
   const [goToOptions, setGoToOptions] = React.useState<GoToOptions>(null);
+  const [trainingMode, setTrainingMode] = React.useState(false);
+
+  // Syncs up the widgetsTrainingMode with the trainingMode context variable.
+  // This is so the context variable can be used within esri events
+  React.useEffect(() => {
+    globalTrainingMode = trainingMode;
+  }, [trainingMode]);
 
   return (
     <NavigationContext.Provider
@@ -43,6 +58,11 @@ export function NavigationProvider({ children }: Props) {
         setGoTo,
         goToOptions,
         setGoToOptions,
+        trainingMode,
+        setTrainingMode,
+        getTrainingMode: () => {
+          return globalTrainingMode;
+        },
       }}
     >
       {children}
