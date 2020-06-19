@@ -219,7 +219,9 @@ type UploadStatusType =
 
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
-  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
+  const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
+    NavigationContext,
+  );
   const {
     edits,
     setEdits,
@@ -666,7 +668,7 @@ function FilePanel() {
 
     setFeaturesAdded(true);
 
-    const popupTemplate = getPopupTemplate(layerType.value);
+    const popupTemplate = getPopupTemplate(layerType.value, trainingMode);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
@@ -836,6 +838,7 @@ function FilePanel() {
     mapView,
     layers,
     setLayers,
+    trainingMode,
   ]);
 
   // add features to the map as feature layers. This is only for reference layer
@@ -1021,7 +1024,13 @@ function FilePanel() {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
         }}
-        options={layerOptions}
+        options={
+          trainingMode
+            ? layerOptions
+            : layerOptions.filter(
+                (option) => option.value !== 'Contamination Map',
+              )
+        }
       />
       {!layerType ? (
         <React.Fragment>
