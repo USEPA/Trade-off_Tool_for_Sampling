@@ -171,7 +171,7 @@ function EditLayerMetaData({
         disabled={!sketchLayer || sketchLayer.status !== 'added'}
         css={inputStyles}
         maxLength={250}
-        placeholder="Published layer name"
+        placeholder="Published Layer Name"
         value={sketchLayer.scenarioName}
         onChange={(ev) => {
           const newValue = ev.target.value;
