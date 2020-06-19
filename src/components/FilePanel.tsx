@@ -1153,6 +1153,12 @@ function FilePanel() {
                   )}
                   {layerType.value === 'Samples' &&
                     attributeOverwriteWarning(null)}
+                  {layerType.value === 'VSP' && (
+                    <span>
+                      <strong>WARNING</strong>: VSP Imports can take up to two
+                      minutes to complete.
+                    </span>
+                  )}
                   {layerType.value === 'VSP' &&
                     attributeOverwriteWarning(sampleType)}
                   {uploadStatus === 'invalid-file-type' &&
