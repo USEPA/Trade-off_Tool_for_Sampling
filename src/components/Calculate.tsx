@@ -595,11 +595,15 @@ function Calculate() {
         <div css={sectionContainer}>
           <h2>Calculate</h2>
           <p>
-            Change parameters from the defaults based on your sampling event to
-            calculate sampling and analysis time and cost. You can view a
-            detailed summary of the calculation. If you have a contamination
-            layer, you can also see if your sampling plan had contamination
-            hits.
+            Default resource constraints are provided to estimate the cost and
+            time required to implement the designed plan. You can change the
+            default parameters to reflect scenario-specific constraints and to
+            support conducting "what-if" scenarios. Click{' '}
+            <strong>View Detailed Results</strong> to display a detailed summary
+            of the results. If you have a contamination layer, click{' '}
+            <strong>View Contamination Hits</strong> to see if any of your
+            samples would have resulted in contamination hits. Click{' '}
+            <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
             <strong>Layer Name: </strong>

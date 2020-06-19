@@ -411,7 +411,8 @@ function Publish() {
           Publish the created plan to ArcGIS Online. A hosted feature layer is
           created in your ArcGIS Online organization account. By default, only
           you and the administrator can access the feature layer created. To
-          allow others to access it, via Collector or Survey123 for example,{' '}
+          allow others access to the plan, via Collector or Survey123 for
+          example,{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"
             target="_blank"
