@@ -8,6 +8,7 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -645,6 +646,7 @@ type ResultCardProps = {
 
 function ResultCard({ result }: ResultCardProps) {
   const { portal } = React.useContext(AuthenticationContext);
+  const { trainingMode } = React.useContext(NavigationContext);
   const {
     FeatureLayer,
     Field,
@@ -722,7 +724,7 @@ function ResultCard({ result }: ResultCardProps) {
           .then((responses) => {
             // get the popup template
             const popupTemplate = new PopupTemplate(
-              getPopupTemplate('Samples'),
+              getPopupTemplate('Samples', trainingMode),
             );
 
             // define items used for updating states
