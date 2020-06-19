@@ -102,8 +102,9 @@ function SplashScreenContent({ isOpen, children }: Props) {
         </p>
 
         <p>
-          TOTS is a GIS-based tool available to support developing sampling
-          designs and estimating the associated resource demand. TOTS provides
+          TOTS currently addresses biological contamination sampling and will
+          cover other agents in the future. TOTS allows user to create sampling
+          designs and estimate the associated resource demand through
           interactive, point-and-click tools to visually develop sampling plans.
           Users can plot sample locations in conjunction with externally
           developed indoor or outdoor imagery that can be imported into the
@@ -117,7 +118,8 @@ function SplashScreenContent({ isOpen, children }: Props) {
         </p>
 
         <p>
-          Users are welcome to{' '}
+          Review <strong>Getting Started</strong> for a quick overview of the
+          tools' primary features. Users are welcome to{' '}
           <a
             href={
               'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research'
