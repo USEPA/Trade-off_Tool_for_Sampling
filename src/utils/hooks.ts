@@ -24,7 +24,7 @@ import { GoToOptions } from 'types/Navigation';
 // Saves data to session storage
 export async function writeToStorage(
   key: string,
-  data: string | object,
+  data: string | boolean | object,
   setOptions: React.Dispatch<React.SetStateAction<AlertDialogOptions | null>>,
 ) {
   const itemSize = Math.round(JSON.stringify(data).length / 1024);
@@ -59,6 +59,37 @@ export function readFromStorage(key: string) {
 function getLayerById(layers: LayerType[], id: string) {
   const index = layers.findIndex((layer) => layer.layerId === id);
   return layers[index];
+}
+
+function useTrainingModeStorage() {
+  const key = 'tots_training_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
+
+  // Retreives training mode data from browser storage when the app loads
+  const [
+    localTrainingModeInitialized,
+    setLocalTrainingModeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localTrainingModeInitialized) return;
+
+    setLocalTrainingModeInitialized(true);
+
+    const trainingModeStr = readFromStorage(key);
+    if (!trainingModeStr) return;
+
+    const trainingMode = JSON.parse(trainingModeStr);
+    console.log('trainingMode: ', trainingMode);
+    setTrainingMode(trainingMode);
+  }, [localTrainingModeInitialized, setTrainingMode]);
+
+  React.useEffect(() => {
+    if (!localTrainingModeInitialized) return;
+
+    writeToStorage(key, trainingMode, setOptions);
+  }, [trainingMode, localTrainingModeInitialized, setOptions]);
 }
 
 // Uses browser storage for holding any editable layers.
@@ -851,6 +882,7 @@ function useBasemapStorage() {
 
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
+  useTrainingModeStorage();
   useEditsLayerStorage();
   useReferenceLayerStorage();
   useUrlLayerStorage();
@@ -1226,7 +1258,7 @@ export function useCalculatePlan() {
 
       //totals
       'Total Cost': totalCost,
-      'Total Time': totalTime,
+      'Total Time': Math.round(totalTime * 10) / 10,
       'Limiting Time Factor': limitingFactor,
     };
 

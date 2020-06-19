@@ -9,7 +9,6 @@ import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -229,11 +228,9 @@ type SampleSelectionType = {
 };
 
 function LocateSamples() {
-  const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
-  const {
-    contaminationMap,
-    setContaminationMap, //
-  } = React.useContext(CalculateContext);
+  const { setGoTo, setGoToOptions, trainingMode } = React.useContext(
+    NavigationContext,
+  );
   const {
     edits,
     setEdits,
@@ -541,7 +538,7 @@ function LocateSamples() {
             console.log('generateRandom responses: ', responses);
             let res;
             const timestamp = getCurrentDateTime();
-            const popupTemplate = getPopupTemplate('Samples');
+            const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
@@ -602,6 +599,15 @@ function LocateSamples() {
 
               // update the edits state
               setEdits(editsCopy);
+
+              // update the editType of the sketchLayer
+              setSketchLayer((sketchLayer: LayerType | null) => {
+                if (!sketchLayer) return sketchLayer;
+                return {
+                  ...sketchLayer,
+                  editType: 'add',
+                };
+              });
             }
 
             setGenerateRandomResponse({
@@ -653,9 +659,9 @@ function LocateSamples() {
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
           <p>
-            Choose a sampling layer, enter a scenario name, and enter a scenario
-            description for the plan. The name will become the feature layer
-            name if published to your ArcGIS Online account in the{' '}
+            Specify a sampling layer for your project and enter a scenario name
+            and description for the plan. The scenario name will become the
+            feature layer name if published to your ArcGIS Online account in the{' '}
             <strong>Publish Plan</strong> step.
           </p>
           <label htmlFor="sampling-layer-select-input">
@@ -673,7 +679,10 @@ function LocateSamples() {
           <EditLayerMetaData />
         </div>
         <div css={sectionContainer}>
-          <p>Add Targeted and/ or random samples to the plan.</p>
+          <p>
+            In the panels below, add targeted and/ or multiple samples to the
+            plan.
+          </p>
         </div>
         <AccordionList>
           <AccordionItem
@@ -812,38 +821,6 @@ function LocateSamples() {
                     )}
                 </React.Fragment>
               )}
-            </div>
-          </AccordionItem>
-          <AccordionItem title={'Include Contamination Map (Optional)'}>
-            <div css={sectionContainer}>
-              <label htmlFor="contamination-map-select-input">
-                Contamination map
-              </label>
-              <div css={inlineMenuStyles}>
-                <Select
-                  id="contamination-map-select"
-                  inputId="contamination-map-select-input"
-                  css={fullWidthSelectStyles}
-                  isClearable={true}
-                  value={contaminationMap}
-                  onChange={(ev) => setContaminationMap(ev as LayerType)}
-                  options={layers.filter(
-                    (layer: any) => layer.layerType === 'Contamination Map',
-                  )}
-                />
-                <button
-                  css={addButtonStyles}
-                  onClick={(ev) => {
-                    setGoTo('addData');
-                    setGoToOptions({
-                      from: 'file',
-                      layerType: 'Contamination Map',
-                    });
-                  }}
-                >
-                  Add
-                </button>
-              </div>
             </div>
           </AccordionItem>
         </AccordionList>

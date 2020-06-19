@@ -280,7 +280,9 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
-  const { currentPanel } = React.useContext(NavigationContext);
+  const { currentPanel, trainingMode, getTrainingMode } = React.useContext(
+    NavigationContext,
+  );
   const {
     edits,
     setEdits,
@@ -455,7 +457,7 @@ function MapWidgets({ mapView }: Props) {
 
           // add a popup template to the graphic
           graphic.popupTemplate = new PopupTemplate(
-            getPopupTemplate(layerType),
+            getPopupTemplate(layerType, getTrainingMode()),
           );
 
           // predefined boxes (sponge, micro vac and swab) need to be
@@ -565,7 +567,7 @@ function MapWidgets({ mapView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [geometryEngine, Polygon, PopupTemplate, map],
+    [geometryEngine, Polygon, PopupTemplate, map, getTrainingMode],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -748,6 +750,26 @@ function MapWidgets({ mapView }: Props) {
     sketchVM.layer = sketchLayer.sketchLayer;
   }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer]);
 
+  // Updates the popupTemplates when trainingMode is toggled on/off
+  React.useEffect(() => {
+    // get the popupTemplate
+    const popupTemplate = new PopupTemplate(
+      getPopupTemplate('Samples', trainingMode),
+    );
+
+    // update the popupTemplate for all Sample/VSP layers
+    layers.forEach((layer) => {
+      if (
+        layer.sketchLayer.type === 'graphics' &&
+        (layer.layerType === 'Samples' || layer.layerType === 'VSP')
+      ) {
+        layer.sketchLayer.graphics.forEach((graphic) => {
+          graphic.popupTemplate = popupTemplate;
+        });
+      }
+    });
+  }, [PopupTemplate, trainingMode, layers]);
+
   // Adds a container for the feature tool to the map
   const [
     featureTool,
@@ -857,14 +879,15 @@ function MapWidgets({ mapView }: Props) {
   ]);
 
   // Gets the graphics to be highlighted and highlights them
-  const [
-    nextHighlight,
-    setNextHighlight,
-  ] = React.useState<__esri.Handle | null>(null);
-  const [
-    highlightGraphics,
-    setHighlightGraphics, //
-  ] = React.useState<__esri.Graphic[]>([]);
+  type HighlightType = {
+    graphics: __esri.Graphic[];
+    handle: __esri.Handle | null;
+  };
+
+  const [nextHighlight, setNextHighlight] = React.useState<HighlightType>({
+    graphics: [],
+    handle: null,
+  });
   React.useEffect(() => {
     if (
       !sketchLayer?.sketchLayer ||
@@ -875,46 +898,46 @@ function MapWidgets({ mapView }: Props) {
 
     // Get any graphics that have a contam value
     const highlightGraphics: __esri.Graphic[] = [];
-    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.attributes.CONTAMVAL) {
-        highlightGraphics.push(graphic);
-      }
-    });
-    setHighlightGraphics(highlightGraphics);
+    if (trainingMode) {
+      sketchLayer.sketchLayer.graphics.forEach((graphic) => {
+        if (graphic.attributes.CONTAMVAL) {
+          highlightGraphics.push(graphic);
+        }
+      });
+    }
 
     // Highlight the graphics with a contam value
     if (highlightGraphics.length > 0) {
       mapView.whenLayerView(sketchLayer.sketchLayer).then((layerView) => {
-        setNextHighlight(layerView.highlight(highlightGraphics));
+        const handle = layerView.highlight(highlightGraphics);
+        setNextHighlight({ graphics: highlightGraphics, handle });
       });
     } else {
-      setNextHighlight(null);
+      setNextHighlight({ graphics: [], handle: null });
     }
-  }, [edits, sketchLayer, mapView]);
+  }, [edits, sketchLayer, mapView, trainingMode]);
 
   // Remove any old highlights if the highlighted graphics list changed
-  const [highlight, setHighlight] = React.useState<__esri.Handle | null>(null);
-  const [
-    lastHighlightGraphics,
-    setLastHighlightGraphics, //
-  ] = React.useState<__esri.Graphic[]>([]);
+  const [highlight, setHighlight] = React.useState<HighlightType>({
+    graphics: [],
+    handle: null,
+  });
   React.useEffect(() => {
     // exit if the highlightGraphics list is the same
     if (
-      JSON.stringify(highlightGraphics) ===
-      JSON.stringify(lastHighlightGraphics)
+      JSON.stringify(nextHighlight.graphics) ===
+      JSON.stringify(highlight.graphics)
     ) {
       return;
     }
 
     // remove old highlights
-    if (highlight) {
-      highlight.remove();
+    if (highlight.handle) {
+      highlight.handle.remove();
     }
 
-    setLastHighlightGraphics(highlightGraphics);
     setHighlight(nextHighlight);
-  }, [highlightGraphics, lastHighlightGraphics, highlight, nextHighlight]);
+  }, [highlight, nextHighlight]);
 
   return null;
 }

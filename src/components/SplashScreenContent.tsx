@@ -3,6 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // styles
 import { colors } from 'styles';
 // images
@@ -58,6 +60,11 @@ const headingStyles = css`
   text-align: center;
 `;
 
+const trainingStyles = css`
+  margin-top: 16px;
+  font-size: 0.875rem;
+`;
+
 // --- components (SplashScreenContent) ---
 type Props = {
   isOpen: boolean;
@@ -65,6 +72,8 @@ type Props = {
 };
 
 function SplashScreenContent({ isOpen, children }: Props) {
+  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
+
   return (
     <DialogOverlay
       css={overlayStyles}
@@ -93,8 +102,9 @@ function SplashScreenContent({ isOpen, children }: Props) {
         </p>
 
         <p>
-          TOTS is a GIS-based tool available to support developing sampling
-          designs and estimating the associated resource demand. TOTS provides
+          TOTS currently addresses biological contamination sampling and will
+          cover other agents in the future. TOTS allows user to create sampling
+          designs and estimate the associated resource demand through
           interactive, point-and-click tools to visually develop sampling plans.
           Users can plot sample locations in conjunction with externally
           developed indoor or outdoor imagery that can be imported into the
@@ -108,7 +118,8 @@ function SplashScreenContent({ isOpen, children }: Props) {
         </p>
 
         <p>
-          Users are welcome to{' '}
+          Review <strong>Getting Started</strong> for a quick overview of the
+          tools' primary features. Users are welcome to{' '}
           <a
             href={
               'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research'
@@ -121,12 +132,17 @@ function SplashScreenContent({ isOpen, children }: Props) {
           to ask a question, provide feedback, or report a problem.
         </p>
 
-        {children && (
-          <React.Fragment>
-            <br />
-            {children}
-          </React.Fragment>
-        )}
+        <div css={trainingStyles}>
+          <input
+            id="training-mode-toggle"
+            type="checkbox"
+            checked={trainingMode}
+            onChange={(ev) => setTrainingMode(!trainingMode)}
+          />
+          <label htmlFor="training-mode-toggle">Training Mode</label>
+        </div>
+
+        {children && <React.Fragment>{children}</React.Fragment>}
       </DialogContent>
     </DialogOverlay>
   );

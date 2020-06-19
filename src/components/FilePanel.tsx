@@ -219,7 +219,9 @@ type UploadStatusType =
 
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
-  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
+  const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
+    NavigationContext,
+  );
   const {
     edits,
     setEdits,
@@ -666,7 +668,7 @@ function FilePanel() {
 
     setFeaturesAdded(true);
 
-    const popupTemplate = getPopupTemplate(layerType.value);
+    const popupTemplate = getPopupTemplate(layerType.value, trainingMode);
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
@@ -836,6 +838,7 @@ function FilePanel() {
     mapView,
     layers,
     setLayers,
+    trainingMode,
   ]);
 
   // add features to the map as feature layers. This is only for reference layer
@@ -1021,7 +1024,13 @@ function FilePanel() {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
         }}
-        options={layerOptions}
+        options={
+          trainingMode
+            ? layerOptions
+            : layerOptions.filter(
+                (option) => option.value !== 'Contamination Map',
+              )
+        }
       />
       {!layerType ? (
         <React.Fragment>
@@ -1063,11 +1072,11 @@ function FilePanel() {
                 options={SampleSelectOptions}
               />
               <p css={sectionParagraph}>
-                A Visual Sample Plan (VSP) layer helps determine where sampling
-                should be conducted and how many samples are needed based on a
-                variety of situation-specific parameters. Once added, you can
-                select this layer in the next step, <strong>Create Plan</strong>
-                , and use it to create the Sampling Plan.
+                Add an externally-generated Visual Sample Plan (VSP) layer to
+                analyze and/or use in conjunction with targeted sampling. Once
+                added, you can select this layer in the next step,{' '}
+                <strong>Create Plan</strong>, and use it to create the Sampling
+                Plan.
               </p>
             </React.Fragment>
           )}
@@ -1085,16 +1094,15 @@ function FilePanel() {
                         layer can be compared against the sampling plan to see
                         how well the sample locations are placed to predict the
                         contamination. Once added, you can select this layer in
-                        the next step, <strong>Create Plan</strong> and then
-                        view the comparison against your sampling plan in the{' '}
-                        <strong>Calculate Resources</strong> step.
+                        the <strong>Calculate Resources</strong> step and then
+                        view the comparison against your sampling plan.
                       </p>
                       <p css={sectionParagraph}>
                         <i
                           className="fas fa-exclamation-triangle"
                           css={warningIcon}
                         />{' '}
-                        The Contamination layer must include the following
+                        The Contamination Map layer must include the following
                         attributes to be uploaded:
                       </p>
                       <p css={layerInfo}>
@@ -1113,23 +1121,22 @@ function FilePanel() {
                   {layerType.value === 'Samples' && (
                     <React.Fragment>
                       <p css={sectionParagraph}>
-                        Layer containing pre-existing samples that can be used
-                        to create a sampling plan in the next step,{' '}
+                        Layer containing pre-existing samples to use as a
+                        starting point in the next step,{' '}
                         <strong>Create Plan</strong>. The Sample layer must
-                        include the following attributes to be uploaded:
-                        <br />
-                        <strong>TYPE</strong> (Sponge, Micro Vac, Wet Vac,
-                        Robot, Aggressive Air, or Swab)
+                        include the <strong>TYPE</strong> (Sponge, Micro Vac,
+                        Wet Vac, Robot, Aggressive Air, or Swab) attribute to be
+                        uploaded.
                       </p>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Reference Layer' && (
                     <React.Fragment>
                       <p css={sectionParagraph}>
-                        Layer that provides context for the data you are already
-                        displaying. (Ex. Building footprints, landmarks, etc.).
-                        This layer will be added to the map and can be accessed
-                        from the Legend panel.
+                        Additional contextual reference layers to include in
+                        your analysis (e.g., building footprints, landmarks,
+                        etc.). This layer will be added to the map and can be
+                        accessed from the Legend panel.
                       </p>
                     </React.Fragment>
                   )}
@@ -1137,13 +1144,21 @@ function FilePanel() {
                     <React.Fragment>
                       <p css={sectionParagraph}>
                         A polygon file that bounds the extent of your project
-                        area. This layer is used to create random samples in the
-                        next step, <strong>Create Plan</strong>.
+                        area. This layer is used to bound where samples are
+                        plotted when using the{' '}
+                        <strong>Add Multiple Random Samples</strong> feature in
+                        the next step, <strong>Create Plan</strong>.
                       </p>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Samples' &&
                     attributeOverwriteWarning(null)}
+                  {layerType.value === 'VSP' && (
+                    <span>
+                      <strong>WARNING</strong>: VSP Imports can take up to two
+                      minutes to complete.
+                    </span>
+                  )}
                   {layerType.value === 'VSP' &&
                     attributeOverwriteWarning(sampleType)}
                   {uploadStatus === 'invalid-file-type' &&

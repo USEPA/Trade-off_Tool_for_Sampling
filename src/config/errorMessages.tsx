@@ -80,7 +80,7 @@ export const attributeOverwriteWarning = (
     <MessageBox
       severity="warning"
       title="Some attributes will be replaced"
-      message={`The sample type and geometry are the only attributes retained, all other attributes will be replaced with the standard attributes for ${sampleTypeStr}.`}
+      message={`The sample type and geometry are the only attributes retained. All other attributes will be replaced with the standard attributes for ${sampleTypeStr}.`}
     />
   );
 };

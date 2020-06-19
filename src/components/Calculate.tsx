@@ -3,13 +3,18 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import { AccordionList, AccordionItem } from 'components/Accordion';
 import LoadingSpinner from 'components/LoadingSpinner';
+import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
+// types
+import { LayerType } from 'types/Layer';
 // config
 import { totsGPServer } from 'config/webService';
 import {
@@ -63,28 +68,50 @@ const panelContainer = css`
   flex-direction: column;
   justify-content: space-between;
   min-height: 100%;
-  padding: 20px;
+  padding: 20px 0;
 `;
 
 const sectionContainer = css`
   margin-bottom: 10px;
+  padding: 0 20px;
 `;
 
 const layerInfo = css`
   padding-bottom: 0.5em;
 `;
 
+const inlineMenuStyles = css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const addButtonStyles = css`
+  margin: 0;
+  height: 38px; /* same height as ReactSelect */
+`;
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
 // --- components (Calculate) ---
 function Calculate() {
   const { FeatureSet, Geoprocessor, PopupTemplate } = useEsriModulesContext();
+  const { setGoTo, setGoToOptions, trainingMode } = React.useContext(
+    NavigationContext,
+  );
   const {
     edits,
     setEdits,
+    layers,
     sketchLayer,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
     contaminationMap,
+    setContaminationMap,
     calculateResults,
     setCalculateResults,
     numLabs,
@@ -566,14 +593,23 @@ function Calculate() {
   return (
     <div css={panelContainer}>
       <div>
-        <h2>Calculate</h2>
         <div css={sectionContainer}>
+          <h2>Calculate</h2>
           <p>
-            Change parameters from the defaults based on your sampling event to
-            calculate sampling and analysis time and cost. You can view a
-            detailed summary of the calculation. If you have a contamination
-            layer, you can also see if your sampling plan had contamination
-            hits.
+            Default resource constraints are provided to estimate the cost and
+            time required to implement the designed plan. You can change the
+            default parameters to reflect scenario-specific constraints and to
+            support conducting "what-if" scenarios. Click{' '}
+            <strong>View Detailed Results</strong> to display a detailed summary
+            of the results.{' '}
+            {trainingMode && (
+              <React.Fragment>
+                If you have a contamination map layer, click{' '}
+                <strong>View Contamination Hits</strong> to see if any of your
+                samples would have resulted in contamination hits.{' '}
+              </React.Fragment>
+            )}
+            Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
             <strong>Layer Name: </strong>
@@ -716,30 +752,90 @@ function Calculate() {
           />
         </div>
 
-        {contaminationResults.status === 'fetching' && <LoadingSpinner />}
-        {contaminationResults.status === 'failure' && webServiceErrorMessage}
-        {contaminationResults.status === 'no-map' && noContaminationMapMessage}
-        {contaminationResults.status === 'no-layer' && noSampleLayerMessage}
-        {contaminationResults.status === 'no-graphics' && noSamplesMessage}
-        {contaminationResults.status === 'no-contamination-graphics' &&
-          noContaminationGraphicsMessage}
-        {contaminationResults.status === 'success' &&
-          contaminationResults?.data?.length &&
-          contaminationHitsSuccessMessage(contaminationResults.data.length)}
-
-        <div css={submitButtonContainerStyles}>
-          <button css={submitButtonStyles} onClick={runCalculation}>
-            View Detailed Results
-          </button>
-          <button
-            css={submitButtonStyles}
-            onClick={runContaminationCalculation}
-          >
-            View Contamination Hits
-          </button>
+        <div css={sectionContainer}>
+          <div css={submitButtonContainerStyles}>
+            <button css={submitButtonStyles} onClick={runCalculation}>
+              View Detailed Results
+            </button>
+          </div>
         </div>
+
+        {trainingMode && (
+          <React.Fragment>
+            <div css={sectionContainer}>
+              <p>
+                <strong>TRAINING MODE</strong>: If you have a contamination
+                layer, you can add here and check if your sampling plan captured
+                the contamination zone.
+              </p>
+            </div>
+            <AccordionList>
+              <AccordionItem title={'Include Contamination Map (Optional)'}>
+                <div css={sectionContainer}>
+                  <label htmlFor="contamination-map-select-input">
+                    Contamination map
+                  </label>
+                  <div css={inlineMenuStyles}>
+                    <Select
+                      id="contamination-map-select"
+                      inputId="contamination-map-select-input"
+                      css={fullWidthSelectStyles}
+                      isClearable={true}
+                      value={contaminationMap}
+                      onChange={(ev) => setContaminationMap(ev as LayerType)}
+                      options={layers.filter(
+                        (layer: any) => layer.layerType === 'Contamination Map',
+                      )}
+                    />
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        setGoTo('addData');
+                        setGoToOptions({
+                          from: 'file',
+                          layerType: 'Contamination Map',
+                        });
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {contaminationResults.status === 'fetching' && (
+                    <LoadingSpinner />
+                  )}
+                  {contaminationResults.status === 'failure' &&
+                    webServiceErrorMessage}
+                  {contaminationResults.status === 'no-map' &&
+                    noContaminationMapMessage}
+                  {contaminationResults.status === 'no-layer' &&
+                    noSampleLayerMessage}
+                  {contaminationResults.status === 'no-graphics' &&
+                    noSamplesMessage}
+                  {contaminationResults.status ===
+                    'no-contamination-graphics' &&
+                    noContaminationGraphicsMessage}
+                  {contaminationResults.status === 'success' &&
+                    contaminationResults?.data?.length &&
+                    contaminationHitsSuccessMessage(
+                      contaminationResults.data.length,
+                    )}
+
+                  <button
+                    css={submitButtonStyles}
+                    onClick={runContaminationCalculation}
+                  >
+                    View Contamination Hits
+                  </button>
+                </div>
+              </AccordionItem>
+            </AccordionList>
+          </React.Fragment>
+        )}
       </div>
-      <NavigationButton goToPanel="publish" />
+      <div css={sectionContainer}>
+        <NavigationButton goToPanel="publish" />
+      </div>
     </div>
   );
 }
