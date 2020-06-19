@@ -743,18 +743,6 @@ function Calculate() {
         </div>
 
         <div css={sectionContainer}>
-          {contaminationResults.status === 'fetching' && <LoadingSpinner />}
-          {contaminationResults.status === 'failure' && webServiceErrorMessage}
-          {contaminationResults.status === 'no-map' &&
-            noContaminationMapMessage}
-          {contaminationResults.status === 'no-layer' && noSampleLayerMessage}
-          {contaminationResults.status === 'no-graphics' && noSamplesMessage}
-          {contaminationResults.status === 'no-contamination-graphics' &&
-            noContaminationGraphicsMessage}
-          {contaminationResults.status === 'success' &&
-            contaminationResults?.data?.length &&
-            contaminationHitsSuccessMessage(contaminationResults.data.length)}
-
           <div css={submitButtonContainerStyles}>
             <button css={submitButtonStyles} onClick={runCalculation}>
               View Detailed Results
@@ -802,6 +790,26 @@ function Calculate() {
                       Add
                     </button>
                   </div>
+
+                  {contaminationResults.status === 'fetching' && (
+                    <LoadingSpinner />
+                  )}
+                  {contaminationResults.status === 'failure' &&
+                    webServiceErrorMessage}
+                  {contaminationResults.status === 'no-map' &&
+                    noContaminationMapMessage}
+                  {contaminationResults.status === 'no-layer' &&
+                    noSampleLayerMessage}
+                  {contaminationResults.status === 'no-graphics' &&
+                    noSamplesMessage}
+                  {contaminationResults.status ===
+                    'no-contamination-graphics' &&
+                    noContaminationGraphicsMessage}
+                  {contaminationResults.status === 'success' &&
+                    contaminationResults?.data?.length &&
+                    contaminationHitsSuccessMessage(
+                      contaminationResults.data.length,
+                    )}
 
                   <button
                     css={submitButtonStyles}
