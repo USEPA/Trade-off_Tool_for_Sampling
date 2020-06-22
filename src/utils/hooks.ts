@@ -71,6 +71,7 @@ function getLayerById(layers: LayerType[], id: string) {
 export function useStartOver() {
   const { GraphicsLayer, Point } = useEsriModulesContext();
   const { resetCalculateContext } = React.useContext(CalculateContext);
+  const { setOptions } = React.useContext(DialogContext);
   const {
     map,
     mapView,
@@ -83,7 +84,7 @@ export function useStartOver() {
     setAoiSketchLayer,
   } = React.useContext(SketchContext);
 
-  return function startOver() {
+  function startOver() {
     setSketchLayer(null);
     setAoiSketchLayer(null);
 
@@ -110,6 +111,15 @@ export function useStartOver() {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
     }
+  }
+
+  return function () {
+    setOptions({
+      title: 'Would you like to continue?',
+      ariaLabel: 'Would you like to continue?',
+      description: 'This operation will clear all of your progress so far.',
+      onContinue: startOver,
+    });
   };
 }
 
@@ -527,7 +537,6 @@ function useTrainingModeStorage() {
     if (!trainingModeStr) return;
 
     const trainingMode = JSON.parse(trainingModeStr);
-    console.log('trainingMode: ', trainingMode);
     setTrainingMode(trainingMode);
   }, [localTrainingModeInitialized, setTrainingMode]);
 

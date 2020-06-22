@@ -51,6 +51,7 @@ const buttonContainerStyles = css`
 
 const buttonStyles = css`
   margin: 0;
+  margin-left: 15px;
   padding: 0.625rem 1.25rem;
   border: 0;
   border-radius: 3px;
@@ -81,8 +82,20 @@ function AlertDialog() {
         {options?.description}
         <br />
         <div css={buttonContainerStyles}>
+          {options?.onContinue && (
+            <button
+              className="btn"
+              css={buttonStyles}
+              onClick={() => {
+                if (options?.onContinue) options.onContinue();
+                close();
+              }}
+            >
+              Continue
+            </button>
+          )}
           <button className="btn" css={buttonStyles} onClick={close}>
-            OK
+            {options?.onContinue ? 'Cancel' : 'OK'}
           </button>
         </div>
       </DialogContent>
