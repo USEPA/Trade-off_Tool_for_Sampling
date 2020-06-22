@@ -56,10 +56,10 @@ const errorContainerStyles = css`
   margin: 10px;
 `;
 
-const appStyles = css`
+const appStyles = (offset: number) => css`
   display: flex;
   flex-direction: column;
-  height: calc(100vh);
+  height: calc(100vh - ${offset}px);
   width: calc(100% + ${epaMarginOffset * 2 + 'px'});
   margin-left: -${epaMarginOffset}px;
 `;
@@ -120,11 +120,23 @@ function App() {
     setSizeCheckInitialized(true);
   }, [width, height, sizeCheckInitialized, setOptions]);
 
+  const totsRef = React.useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = React.useState(0);
+  React.useEffect(() => {
+    if (!totsRef?.current) return;
+
+    console.log(
+      'totsRef.current: ',
+      totsRef.current.getBoundingClientRect().top,
+    );
+    setOffset(totsRef.current.getBoundingClientRect().top);
+  }, [totsRef]);
+
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
 
-      <div className="tots">
+      <div className="tots" ref={totsRef}>
         <ErrorBoundary>
           {isIE() ? (
             <div css={errorContainerStyles}>{unsupportedBrowserMessage}</div>
@@ -135,7 +147,7 @@ function App() {
               {window.location.search.includes('devMode=true') && (
                 <TestingToolbar />
               )}
-              <div css={appStyles}>
+              <div css={appStyles(offset)}>
                 <div css={containerStyles}>
                   <div ref={toolbarRef}>
                     <Toolbar />
