@@ -46,7 +46,7 @@ const messageTextStyles = css`
 // --- components (MessageBox) ---
 type Props = {
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   severity: 'error' | 'warning' | 'info';
 };
 
