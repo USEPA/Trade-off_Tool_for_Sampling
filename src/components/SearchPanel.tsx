@@ -140,6 +140,16 @@ const totalStyles = css`
   margin-left: 10px;
 `;
 
+const exitDisclaimerStyles = css`
+  margin: 1.5em 0;
+  padding: 0.75em 0.5em;
+  text-align: center;
+
+  a {
+    margin: 0 0 0 0.3333333333em;
+  }
+`;
+
 // --- components (SearchPanel) ---
 type LocationType =
   | { value: 'ArcGIS Online'; label: 'ArcGIS Online' }
@@ -533,6 +543,19 @@ function SearchPanel() {
           )}
         </button>
       </div>
+      {searchResults?.data?.results && searchResults.data.results.length > 0 && (
+        <span className="disclaimer" css={exitDisclaimerStyles}>
+          The following links exit the site{' '}
+          <a
+            className="exit-disclaimer"
+            href="https://www.epa.gov/home/exit-epa"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Exit
+          </a>
+        </span>
+      )}
       <hr />
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
