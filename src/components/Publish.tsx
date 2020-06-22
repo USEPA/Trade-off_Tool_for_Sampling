@@ -420,6 +420,14 @@ function Publish() {
           >
             share
           </a>{' '}
+          <a
+            className="exit-disclaimer"
+            href="https://www.epa.gov/home/exit-epa"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            EXIT
+          </a>{' '}
           the layer and file with everyone (the public), your organization, or
           members of specific groups. You can edit{' '}
           <a
@@ -437,7 +445,15 @@ function Publish() {
           >
             feature layer settings
           </a>
-          .
+          .{' '}
+          <a
+            className="exit-disclaimer"
+            href="https://www.epa.gov/home/exit-epa"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            EXIT
+          </a>
         </p>
         <p css={layerInfo}>
           <strong>Layer Name: </strong>
