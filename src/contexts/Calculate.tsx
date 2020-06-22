@@ -29,6 +29,7 @@ type CalculateType = {
   setSamplingLaborCost: React.Dispatch<React.SetStateAction<number>>;
   surfaceArea: number;
   setSurfaceArea: React.Dispatch<React.SetStateAction<number>>;
+  resetCalculateContext: Function;
 };
 
 export const CalculateContext = React.createContext<CalculateType>({
@@ -52,6 +53,7 @@ export const CalculateContext = React.createContext<CalculateType>({
   setSamplingLaborCost: () => {},
   surfaceArea: 7400,
   setSurfaceArea: () => {},
+  resetCalculateContext: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -101,6 +103,23 @@ export function CalculateProvider({ children }: Props) {
         setSamplingLaborCost,
         surfaceArea,
         setSurfaceArea,
+        resetCalculateContext: () => {
+          setCalculateResults({
+            status: 'none',
+            panelOpen: false,
+            data: null,
+          });
+          setContaminationMap(null);
+
+          setNumLabs(1);
+          setNumLabHours(24);
+          setNumSamplingHours(5);
+          setNumSamplingPersonnel(3);
+          setNumSamplingShifts(1);
+          setNumSamplingTeams(1);
+          setSamplingLaborCost(420);
+          setSurfaceArea(7400);
+        },
       }}
     >
       {children}

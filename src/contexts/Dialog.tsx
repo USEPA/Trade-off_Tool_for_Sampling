@@ -7,6 +7,7 @@ export type AlertDialogOptions = {
   title: string;
   ariaLabel: string;
   description: string;
+  onContinue?: Function;
 };
 
 type DialogType = {

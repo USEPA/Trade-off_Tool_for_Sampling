@@ -939,6 +939,15 @@ function MapWidgets({ mapView }: Props) {
     setHighlight(nextHighlight);
   }, [highlight, nextHighlight]);
 
+  // Clear the highlight states if the sketchLayer is cleared.
+  React.useEffect(() => {
+    if (!sketchLayer?.sketchLayer) {
+      const highlight: HighlightType = { graphics: [], handle: null };
+      setHighlight(highlight);
+      setNextHighlight(highlight);
+    }
+  }, [sketchLayer]);
+
   return null;
 }
 

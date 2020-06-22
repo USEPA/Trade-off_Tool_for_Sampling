@@ -401,3 +401,65 @@ export function getCurrentDateTime() {
     currentdate.getMilliseconds()
   );
 }
+
+/**
+ * Builds the default sample layer.
+ *
+ * @param GraphicsLayer The esri graphics layer constructor object
+ * @returns LayerType The default sample layer
+ */
+export function getDefaultSampleLayer(
+  GraphicsLayer: __esri.GraphicsLayerConstructor,
+) {
+  const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
+
+  return {
+    id: -1,
+    layerId: graphicsLayer.id,
+    portalId: '',
+    value: 'sketchLayer',
+    name: 'Default Sample Layer',
+    label: 'Default Sample Layer',
+    layerType: 'Samples',
+    scenarioName: '',
+    scenarioDescription: '',
+    editType: 'add',
+    defaultVisibility: true,
+    geometryType: 'esriGeometryPolygon',
+    addedFrom: 'sketch',
+    status: 'added',
+    sketchLayer: graphicsLayer,
+  } as LayerType;
+}
+
+/**
+ * Builds the default area of interest layer.
+ *
+ * @param GraphicsLayer The esri graphics layer constructor object
+ * @returns LayerType The default area of interest layer
+ */
+export function getDefaultAreaOfInterestLayer(
+  GraphicsLayer: __esri.GraphicsLayerConstructor,
+) {
+  const graphicsLayer = new GraphicsLayer({
+    title: 'Sketched Area of Interest',
+  });
+
+  return {
+    id: -1,
+    layerId: graphicsLayer.id,
+    portalId: '',
+    value: 'sketchAoi',
+    name: 'Sketched Area of Interest',
+    label: 'Sketched Area of Interest',
+    layerType: 'Area of Interest',
+    scenarioName: '',
+    scenarioDescription: '',
+    editType: 'add',
+    defaultVisibility: true,
+    geometryType: 'esriGeometryPolygon',
+    addedFrom: 'sketch',
+    status: 'added',
+    sketchLayer: graphicsLayer,
+  } as LayerType;
+}
