@@ -11,7 +11,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
 import Search from 'components/Search';
-import SplashScreenContent from 'components/SplashScreenContent';
+import GettingStarted from 'components/GettingStarted';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
@@ -361,7 +361,7 @@ function NavBar({ height }: Props) {
 
   return (
     <React.Fragment>
-      <SplashScreenContent isOpen={helpOpen}>
+      <GettingStarted isOpen={helpOpen}>
         <div css={helpOkContainerStyles}>
           <button
             className="btn"
@@ -371,7 +371,7 @@ function NavBar({ height }: Props) {
             OK
           </button>
         </div>
-      </SplashScreenContent>
+      </GettingStarted>
       <div css={navPanelStyles(height)}>
         <div css={navPanelContainerStyles}>
           <div>
