@@ -26,24 +26,13 @@ const dialogStyles = css`
     margin: 0;
     padding: 1.5rem;
     width: auto;
-    max-width: 60rem;
+    max-width: 35rem;
   }
 
-  p {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0;
-    font-size: 1.0625rem;
+  p,
+  li {
+    font-size: 0.875rem;
     line-height: 1.375;
-
-    &:first-of-type {
-      margin-top: 0;
-    }
-  }
-
-  a {
-    color: #9f9;
-    outline: none;
   }
 `;
 
