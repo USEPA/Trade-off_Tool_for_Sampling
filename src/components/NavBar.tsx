@@ -288,7 +288,9 @@ function NavBar({ height }: Props) {
     currentPanel,
     setCurrentPanel,
     goTo,
-    setGoTo, //
+    setGoTo,
+    gettingStartedOpen,
+    setGettingStartedOpen,
   } = React.useContext(NavigationContext);
 
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
@@ -334,8 +336,6 @@ function NavBar({ height }: Props) {
     }
   }, [calculateResults]);
 
-  const [helpOpen, setHelpOpen] = React.useState(false);
-
   // determine how far to the right the expand/collapse buttons should be
   let expandLeft = navPanelWidth;
   if (expanded) {
@@ -361,12 +361,12 @@ function NavBar({ height }: Props) {
 
   return (
     <React.Fragment>
-      <GettingStarted isOpen={helpOpen}>
+      <GettingStarted isOpen={gettingStartedOpen}>
         <div css={helpOkContainerStyles}>
           <button
             className="btn"
             css={helpOkButtonStyles}
-            onClick={(ev) => setHelpOpen(false)}
+            onClick={(ev) => setGettingStartedOpen(false)}
           >
             OK
           </button>
@@ -417,7 +417,7 @@ function NavBar({ height }: Props) {
           )}
 
           <button
-            onClick={(ev) => setHelpOpen(!helpOpen)}
+            onClick={(ev) => setGettingStartedOpen(!gettingStartedOpen)}
             css={navButtonStyles(false)}
           >
             <i className="fas fa-question" css={helpIconStyles} />

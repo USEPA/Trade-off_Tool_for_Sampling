@@ -4,6 +4,8 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 import Cookies from 'universal-cookie';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
+// contexts
+import { NavigationContext } from 'contexts/Navigation';
 // styles
 import { colors } from 'styles';
 // images
@@ -47,6 +49,12 @@ const dialogStyles = css`
   a {
     color: #9f9;
     outline: none;
+
+    &:hover,
+    &:focus {
+      text-decoration: none;
+      color: #4c2c92;
+    }
   }
 `;
 
@@ -62,6 +70,26 @@ const headingStyles = css`
 const footerStyles = css`
   display: flex;
   justify-content: space-between;
+`;
+
+const linkButtonStyles = css`
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  color: #9f9;
+  background-color: transparent;
+  cursor: pointer;
+  outline: none;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+    color: #4c2c92;
+  }
 `;
 
 const buttonStyles = css`
@@ -80,6 +108,8 @@ const buttonStyles = css`
 
 // --- components (SplashScreen) ---
 function SplashScreen() {
+  const { setGettingStartedOpen } = React.useContext(NavigationContext);
+
   // Initialize the cookies object
   const [cookies, setCookies] = React.useState<Cookies | null>(null);
   React.useEffect(() => {
@@ -161,8 +191,18 @@ function SplashScreen() {
         </p>
 
         <p>
-          Review <strong>Getting Started</strong> for a quick overview of the
-          tools' primary features. Users are welcome to{' '}
+          Review{' '}
+          <button
+            css={linkButtonStyles}
+            onClick={() => {
+              setGettingStartedOpen(true);
+              setIsOpen(false);
+            }}
+          >
+            Getting Started
+          </button>{' '}
+          for a quick overview of the tools' primary features. Users are welcome
+          to{' '}
           <a
             href={
               'https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research'
