@@ -131,7 +131,6 @@ const helpOkButtonStyles = css`
   font-weight: bold;
   font-size: 0.875rem;
   line-height: 1;
-  background-color: ${colors.white(0.875)};
   cursor: pointer;
 `;
 
@@ -368,7 +367,7 @@ function NavBar({ height }: Props) {
             css={helpOkButtonStyles}
             onClick={(ev) => setGettingStartedOpen(false)}
           >
-            OK
+            Close
           </button>
         </div>
       </GettingStarted>

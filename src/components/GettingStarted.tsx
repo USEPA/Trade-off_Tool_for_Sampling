@@ -15,8 +15,8 @@ const overlayStyles = css`
 `;
 
 const dialogStyles = css`
-  color: ${colors.white()};
-  background-color: ${colors.epaBlue};
+  color: ${colors.black()};
+  background-color: ${colors.white()};
 
   &[data-reach-dialog-content] {
     position: relative;
@@ -37,6 +37,7 @@ const dialogStyles = css`
 `;
 
 const headingStyles = css`
+  font-size: 117.6471%;
   text-align: center;
 `;
 
@@ -54,7 +55,7 @@ function GettingStarted({ isOpen, children }: Props) {
       data-testid="tots-getting-started"
     >
       <DialogContent css={dialogStyles} aria-label="Getting Started">
-        <h4 css={headingStyles}>Getting Started</h4>
+        <h1 css={headingStyles}>Getting Started</h1>
 
         <p>
           Create sampling designs and estimate the associated resource demand
