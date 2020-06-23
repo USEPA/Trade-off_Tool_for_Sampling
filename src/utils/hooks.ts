@@ -18,7 +18,12 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
+import {
+  findLayerInEdits,
+  getDefaultAreaOfInterestLayer,
+  getDefaultSampleLayer,
+  getPopupTemplate,
+} from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 
 // Saves data to session storage
@@ -61,6 +66,457 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+// Hook that allows the user to easily start over without
+// having to manually start a new session.
+export function useStartOver() {
+  const { GraphicsLayer, Point } = useEsriModulesContext();
+  const { resetCalculateContext } = React.useContext(CalculateContext);
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    map,
+    mapView,
+    setLayers,
+    setEdits,
+    setUrlLayers,
+    setReferenceLayers,
+    setPortalLayers,
+    setSketchLayer,
+    setAoiSketchLayer,
+  } = React.useContext(SketchContext);
+
+  function startOver() {
+    setSketchLayer(null);
+    setAoiSketchLayer(null);
+
+    // clear the map
+    map?.removeAll();
+
+    // set the layers to just the defaults
+    setLayers([
+      getDefaultAreaOfInterestLayer(GraphicsLayer),
+      getDefaultSampleLayer(GraphicsLayer),
+    ]);
+
+    // clear other layer related variables
+    setEdits({ count: 0, edits: [] });
+    setUrlLayers([]);
+    setReferenceLayers([]);
+    setPortalLayers([]);
+
+    // set the calculate settings back to defaults
+    resetCalculateContext();
+
+    // reset the zoom
+    if (mapView) {
+      mapView.center = new Point({ longitude: -95, latitude: 37 });
+      mapView.zoom = 3;
+    }
+  }
+
+  return function () {
+    setOptions({
+      title: 'Would you like to continue?',
+      ariaLabel: 'Would you like to continue?',
+      description: 'This operation will clear all of your progress so far.',
+      onContinue: startOver,
+    });
+  };
+}
+
+// Runs sampling plan calculations whenever the
+// samples change or the variables on the calculate tab
+// change.
+export function useCalculatePlan() {
+  const {
+    geometryEngine,
+    Polygon,
+    projection,
+    SpatialReference,
+    webMercatorUtils,
+  } = useEsriModulesContext();
+  const { edits, sketchLayer } = React.useContext(SketchContext);
+  const {
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  } = React.useContext(CalculateContext);
+
+  // Load the esri projection module. This needs
+  // to happen before the projection module will work.
+  const [
+    loadedProjection,
+    setLoadedProjection, //
+  ] = React.useState<__esri.projection | null>(null);
+  React.useEffect(() => {
+    projection.load().then(() => {
+      setLoadedProjection(projection);
+    });
+  });
+
+  // Reset the calculateResults context variable, whenever anything
+  // changes that will cause a re-calculation.
+  React.useEffect(() => {
+    if (
+      !sketchLayer?.sketchLayer ||
+      sketchLayer.sketchLayer.type !== 'graphics' ||
+      sketchLayer.sketchLayer.graphics.length === 0
+    ) {
+      setCalculateResults({ status: 'none', panelOpen: false, data: null });
+      return;
+    }
+    if (sketchLayer.editType === 'properties') return;
+
+    // to improve performance, do not perform calculations if
+    // only the scenario name/description changed
+    const layer = findLayerInEdits(edits.edits, sketchLayer);
+    if (layer.editType === 'properties') return;
+
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        status: 'fetching',
+        panelOpen: calculateResults.panelOpen,
+        data: null,
+      };
+    });
+  }, [
+    edits,
+    sketchLayer,
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  ]);
+
+  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
+  const [totals, setTotals] = React.useState({
+    ttpk: 0,
+    ttc: 0,
+    tta: 0,
+    ttps: 0,
+    lod_p: 0,
+    lod_non: 0,
+    mcps: 0,
+    tcps: 0,
+    wvps: 0,
+    wwps: 0,
+    sa: 0,
+    alc: 0,
+    amc: 0,
+    ac: 0,
+  });
+  const [totalArea, setTotalArea] = React.useState(0);
+
+  // perform geospatial calculatations
+  React.useEffect(() => {
+    // exit early checks
+    if (!loadedProjection) return;
+    if (!sketchLayer?.sketchLayer || edits.count === 0) return;
+    if (sketchLayer.sketchLayer.type !== 'graphics') return;
+
+    // to improve performance, do not perform calculations if
+    // only the scenario name/description changed
+    if (sketchLayer.editType === 'properties') return;
+    const layer = findLayerInEdits(edits.edits, sketchLayer);
+    if (layer?.editType === 'properties') return;
+
+    let ttpk = 0;
+    let ttc = 0;
+    let tta = 0;
+    let ttps = 0;
+    let lod_p = 0;
+    let lod_non = 0;
+    let mcps = 0;
+    let tcps = 0;
+    let wvps = 0;
+    let wwps = 0;
+    let sa = 0;
+    let alc = 0;
+    let amc = 0;
+    let ac = 0;
+
+    // caluclate the area for graphics
+    let totalAreaSquereFeet = 0;
+    const calcGraphics: __esri.Graphic[] = [];
+    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
+      const calcGraphic = graphic.clone();
+
+      // convert the geometry to WGS84 for geometryEngine
+      // Cast the geometry as a Polygon to avoid typescript errors on
+      // accessing the centroid.
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      ) as __esri.Polygon;
+
+      // get the spatial reference from the centroid
+      const { latitude, longitude } = wgsGeometry.centroid;
+      const base_wkid = latitude > 0 ? 32600 : 32700;
+      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+      const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+      // project the geometry
+      const projectedGeometry = loadedProjection.project(
+        wgsGeometry,
+        spatialReference,
+      ) as __esri.Polygon;
+
+      // calulate the area
+      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
+
+      // convert area to square inches
+      const areaSF = areaSI * 0.00694444;
+      totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
+
+      // Get the number of reference surface areas that are in the actual area.
+      // This is to prevent users from cheating the system by drawing larger shapes
+      // then the reference surface area and it only getting counted as "1" sample.
+      const { SA } = calcGraphic.attributes;
+      let areaCount = 1;
+      if (areaSI >= SA) {
+        areaCount = Math.round(areaSI / SA);
+      }
+
+      // set the AA on the original graphic, so it is visible in the popup
+      graphic.setAttribute('AA', Math.round(areaSI));
+      graphic.setAttribute('AC', areaCount);
+
+      // TODO: Remove this console log. It is only for debugging area calculations.
+      console.log(
+        `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
+      );
+
+      // multiply all of the attributes by the area
+      const {
+        TTPK,
+        TTC,
+        TTA,
+        TTPS,
+        LOD_P,
+        LOD_NON,
+        MCPS,
+        TCPS,
+        WVPS,
+        WWPS,
+        ALC,
+        AMC,
+      } = calcGraphic.attributes;
+
+      if (TTPK) {
+        ttpk = ttpk + Number(TTPK) * areaCount;
+      }
+      if (TTC) {
+        ttc = ttc + Number(TTC) * areaCount;
+      }
+      if (TTA) {
+        tta = tta + Number(TTA) * areaCount;
+      }
+      if (TTPS) {
+        ttps = ttps + Number(TTPS) * areaCount;
+      }
+      if (LOD_P) {
+        lod_p = lod_p + Number(LOD_P);
+      }
+      if (LOD_NON) {
+        lod_non = lod_non + Number(LOD_NON);
+      }
+      if (MCPS) {
+        mcps = mcps + Number(MCPS) * areaCount;
+      }
+      if (TCPS) {
+        tcps = tcps + Number(TCPS) * areaCount;
+      }
+      if (WVPS) {
+        wvps = wvps + Number(WVPS) * areaCount;
+      }
+      if (WWPS) {
+        wwps = wwps + Number(WWPS) * areaCount;
+      }
+      if (SA) {
+        sa = sa + Number(SA);
+      }
+      if (ALC) {
+        alc = alc + Number(ALC) * areaCount;
+      }
+      if (AMC) {
+        amc = amc + Number(AMC) * areaCount;
+      }
+      if (areaCount) {
+        ac = ac + Number(areaCount);
+      }
+
+      calcGraphics.push(calcGraphic);
+    });
+
+    setTotals({
+      ttpk,
+      ttc,
+      tta,
+      ttps,
+      lod_p,
+      lod_non,
+      mcps,
+      tcps,
+      wvps,
+      wwps,
+      sa,
+      alc,
+      amc,
+      ac,
+    });
+    setCalcGraphics(calcGraphics);
+    setTotalArea(totalAreaSquereFeet);
+  }, [
+    // esri modules
+    geometryEngine,
+    loadedProjection,
+    Polygon,
+    SpatialReference,
+    webMercatorUtils,
+
+    // TOTS items
+    edits,
+    sketchLayer,
+  ]);
+
+  // perform non-geospatial calculations
+  React.useEffect(() => {
+    // exit early checks
+    if (calcGraphics.length === 0 || totalArea === 0) return;
+
+    // calculate spatial items
+    let userSpecifiedAOI = null;
+    let percentAreaSampled = null;
+    if (surfaceArea > 0) {
+      userSpecifiedAOI = surfaceArea;
+      percentAreaSampled = (totalArea / surfaceArea) * 100;
+    }
+
+    // calculate the sampling items
+    const samplingTimeHours = totals.ttpk + totals.ttc;
+    const samplingHours =
+      numSamplingTeams * numSamplingHours * numSamplingShifts;
+    const samplingPersonnelHoursPerDay = samplingHours * numSamplingPersonnel;
+    const samplingPersonnelLaborCost = samplingLaborCost / numSamplingPersonnel;
+    const timeCompleteSampling = (totals.ttc + totals.ttpk) / samplingHours;
+    const totalSamplingLaborCost =
+      numSamplingTeams *
+      numSamplingPersonnel *
+      numSamplingHours *
+      numSamplingShifts *
+      samplingPersonnelLaborCost *
+      timeCompleteSampling;
+
+    // calculate lab throughput
+    const totalLabHours = numLabs * numLabHours;
+    const labThroughput = totals.tta / totalLabHours;
+
+    // calculate total cost and time
+    const totalCost =
+      totalSamplingLaborCost + totals.mcps + totals.alc + totals.amc;
+
+    // Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
+    // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
+    // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
+    let totalTime = 0;
+    if (labThroughput < timeCompleteSampling) {
+      totalTime = timeCompleteSampling;
+    } else {
+      totalTime = labThroughput + 1;
+    }
+
+    // Get limiting time factor (will be undefined if they are equal)
+    let limitingFactor: CalculateResultsDataType['Limiting Time Factor'] = '';
+    if (timeCompleteSampling > labThroughput) {
+      limitingFactor = 'Sampling';
+    }
+    if (timeCompleteSampling < labThroughput) {
+      limitingFactor = 'Analysis';
+    }
+
+    const resultObject: CalculateResultsDataType = {
+      // assign input parameters
+      'User Specified Number of Available Teams for Sampling': numSamplingTeams,
+      'User Specified Personnel per Sampling Team': numSamplingPersonnel,
+      'User Specified Sampling Team Hours per Shift': numSamplingHours,
+      'User Specified Sampling Team Shifts per Day': numSamplingShifts,
+      'User Specified Sampling Team Labor Cost': samplingLaborCost,
+      'User Specified Number of Available Labs for Analysis': numLabs,
+      'User Specified Analysis Lab Hours per Day': numLabHours,
+      'User Specified Surface Area': surfaceArea,
+      'Total Number of User-Defined Samples': calcGraphics.length,
+
+      // assign counts
+      'Total Number of Samples': totals.ac,
+      'Total Sampled Area': totalArea,
+      'Time to Prepare Kits': totals.ttpk,
+      'Time to Collect': totals.ttc,
+      'Material Cost': totals.mcps,
+      'Time to Analyze': totals.tta,
+      'Analysis Labor Cost': totals.alc,
+      'Analysis Material Cost': totals.amc,
+      'Waste Volume': totals.wvps,
+      'Waste Weight': totals.wwps,
+
+      // spatial items
+      'User Specified Total AOI': userSpecifiedAOI,
+      'Percent of Area Sampled': percentAreaSampled,
+
+      // sampling
+      'Total Required Sampling Time': samplingTimeHours,
+      'Sampling Hours per Day': samplingHours,
+      'Sampling Personnel hours per Day': samplingPersonnelHoursPerDay,
+      'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
+      'Time to Complete Sampling': timeCompleteSampling,
+      'Total Sampling Labor Cost': totalSamplingLaborCost,
+
+      // analysis
+      'Time to Complete Analyses': labThroughput,
+
+      //totals
+      'Total Cost': totalCost,
+      'Total Time': Math.round(totalTime * 10) / 10,
+      'Limiting Time Factor': limitingFactor,
+    };
+
+    // display loading spinner for 1 second
+    setCalculateResults((calculateResults: CalculateResultsType) => {
+      return {
+        status: 'success',
+        panelOpen: calculateResults.panelOpen,
+        data: resultObject,
+      };
+    });
+  }, [
+    calcGraphics,
+    totals,
+    totalArea,
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  ]);
+}
+
+///////////////////////////////////////////////////////////////////
+////////////////// Browser storage related hooks //////////////////
+///////////////////////////////////////////////////////////////////
+
+// Uses browser storage for holding the training mode selection.
 function useTrainingModeStorage() {
   const key = 'tots_training_mode';
 
@@ -81,7 +537,6 @@ function useTrainingModeStorage() {
     if (!trainingModeStr) return;
 
     const trainingMode = JSON.parse(trainingModeStr);
-    console.log('trainingMode: ', trainingMode);
     setTrainingMode(trainingMode);
   }, [localTrainingModeInitialized, setTrainingMode]);
 
@@ -895,393 +1350,4 @@ export function useSessionStorage() {
   useCalculateSettingsStorage();
   useCurrentTabSettings();
   useBasemapStorage();
-}
-
-// Runs sampling plan calculations whenever the
-// samples change or the variables on the calculate tab
-// change.
-export function useCalculatePlan() {
-  const {
-    geometryEngine,
-    Polygon,
-    projection,
-    SpatialReference,
-    webMercatorUtils,
-  } = useEsriModulesContext();
-  const { edits, sketchLayer } = React.useContext(SketchContext);
-  const {
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  } = React.useContext(CalculateContext);
-
-  // Load the esri projection module. This needs
-  // to happen before the projection module will work.
-  const [
-    loadedProjection,
-    setLoadedProjection, //
-  ] = React.useState<__esri.projection | null>(null);
-  React.useEffect(() => {
-    projection.load().then(() => {
-      setLoadedProjection(projection);
-    });
-  });
-
-  // Reset the calculateResults context variable, whenever anything
-  // changes that will cause a re-calculation.
-  React.useEffect(() => {
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics' ||
-      sketchLayer.sketchLayer.graphics.length === 0
-    ) {
-      setCalculateResults({ status: 'none', panelOpen: false, data: null });
-      return;
-    }
-    if (sketchLayer.editType === 'properties') return;
-
-    // to improve performance, do not perform calculations if
-    // only the scenario name/description changed
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer.editType === 'properties') return;
-
-    setCalculateResults((calculateResults: CalculateResultsType) => {
-      return {
-        status: 'fetching',
-        panelOpen: calculateResults.panelOpen,
-        data: null,
-      };
-    });
-  }, [
-    edits,
-    sketchLayer,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  ]);
-
-  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
-  const [totals, setTotals] = React.useState({
-    ttpk: 0,
-    ttc: 0,
-    tta: 0,
-    ttps: 0,
-    lod_p: 0,
-    lod_non: 0,
-    mcps: 0,
-    tcps: 0,
-    wvps: 0,
-    wwps: 0,
-    sa: 0,
-    alc: 0,
-    amc: 0,
-    ac: 0,
-  });
-  const [totalArea, setTotalArea] = React.useState(0);
-
-  // perform geospatial calculatations
-  React.useEffect(() => {
-    // exit early checks
-    if (!loadedProjection) return;
-    if (!sketchLayer?.sketchLayer || edits.count === 0) return;
-    if (sketchLayer.sketchLayer.type !== 'graphics') return;
-
-    // to improve performance, do not perform calculations if
-    // only the scenario name/description changed
-    if (sketchLayer.editType === 'properties') return;
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer?.editType === 'properties') return;
-
-    let ttpk = 0;
-    let ttc = 0;
-    let tta = 0;
-    let ttps = 0;
-    let lod_p = 0;
-    let lod_non = 0;
-    let mcps = 0;
-    let tcps = 0;
-    let wvps = 0;
-    let wwps = 0;
-    let sa = 0;
-    let alc = 0;
-    let amc = 0;
-    let ac = 0;
-
-    // caluclate the area for graphics
-    let totalAreaSquereFeet = 0;
-    const calcGraphics: __esri.Graphic[] = [];
-    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      const calcGraphic = graphic.clone();
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-      ) as __esri.Polygon;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry.centroid;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Polygon;
-
-      // calulate the area
-      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-
-      // convert area to square inches
-      const areaSF = areaSI * 0.00694444;
-      totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
-
-      // Get the number of reference surface areas that are in the actual area.
-      // This is to prevent users from cheating the system by drawing larger shapes
-      // then the reference surface area and it only getting counted as "1" sample.
-      const { SA } = calcGraphic.attributes;
-      let areaCount = 1;
-      if (areaSI >= SA) {
-        areaCount = Math.round(areaSI / SA);
-      }
-
-      // set the AA on the original graphic, so it is visible in the popup
-      graphic.setAttribute('AA', Math.round(areaSI));
-      graphic.setAttribute('AC', areaCount);
-
-      // TODO: Remove this console log. It is only for debugging area calculations.
-      console.log(
-        `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
-      );
-
-      // multiply all of the attributes by the area
-      const {
-        TTPK,
-        TTC,
-        TTA,
-        TTPS,
-        LOD_P,
-        LOD_NON,
-        MCPS,
-        TCPS,
-        WVPS,
-        WWPS,
-        ALC,
-        AMC,
-      } = calcGraphic.attributes;
-
-      if (TTPK) {
-        ttpk = ttpk + Number(TTPK) * areaCount;
-      }
-      if (TTC) {
-        ttc = ttc + Number(TTC) * areaCount;
-      }
-      if (TTA) {
-        tta = tta + Number(TTA) * areaCount;
-      }
-      if (TTPS) {
-        ttps = ttps + Number(TTPS) * areaCount;
-      }
-      if (LOD_P) {
-        lod_p = lod_p + Number(LOD_P);
-      }
-      if (LOD_NON) {
-        lod_non = lod_non + Number(LOD_NON);
-      }
-      if (MCPS) {
-        mcps = mcps + Number(MCPS) * areaCount;
-      }
-      if (TCPS) {
-        tcps = tcps + Number(TCPS) * areaCount;
-      }
-      if (WVPS) {
-        wvps = wvps + Number(WVPS) * areaCount;
-      }
-      if (WWPS) {
-        wwps = wwps + Number(WWPS) * areaCount;
-      }
-      if (SA) {
-        sa = sa + Number(SA);
-      }
-      if (ALC) {
-        alc = alc + Number(ALC) * areaCount;
-      }
-      if (AMC) {
-        amc = amc + Number(AMC) * areaCount;
-      }
-      if (areaCount) {
-        ac = ac + Number(areaCount);
-      }
-
-      calcGraphics.push(calcGraphic);
-    });
-
-    setTotals({
-      ttpk,
-      ttc,
-      tta,
-      ttps,
-      lod_p,
-      lod_non,
-      mcps,
-      tcps,
-      wvps,
-      wwps,
-      sa,
-      alc,
-      amc,
-      ac,
-    });
-    setCalcGraphics(calcGraphics);
-    setTotalArea(totalAreaSquereFeet);
-  }, [
-    // esri modules
-    geometryEngine,
-    loadedProjection,
-    Polygon,
-    SpatialReference,
-    webMercatorUtils,
-
-    // TOTS items
-    edits,
-    sketchLayer,
-  ]);
-
-  // perform non-geospatial calculations
-  React.useEffect(() => {
-    // exit early checks
-    if (calcGraphics.length === 0 || totalArea === 0) return;
-
-    // calculate spatial items
-    let userSpecifiedAOI = null;
-    let percentAreaSampled = null;
-    if (surfaceArea > 0) {
-      userSpecifiedAOI = surfaceArea;
-      percentAreaSampled = (totalArea / surfaceArea) * 100;
-    }
-
-    // calculate the sampling items
-    const samplingTimeHours = totals.ttpk + totals.ttc;
-    const samplingHours =
-      numSamplingTeams * numSamplingHours * numSamplingShifts;
-    const samplingPersonnelHoursPerDay = samplingHours * numSamplingPersonnel;
-    const samplingPersonnelLaborCost = samplingLaborCost / numSamplingPersonnel;
-    const timeCompleteSampling = (totals.ttc + totals.ttpk) / samplingHours;
-    const totalSamplingLaborCost =
-      numSamplingTeams *
-      numSamplingPersonnel *
-      numSamplingHours *
-      numSamplingShifts *
-      samplingPersonnelLaborCost *
-      timeCompleteSampling;
-
-    // calculate lab throughput
-    const totalLabHours = numLabs * numLabHours;
-    const labThroughput = totals.tta / totalLabHours;
-
-    // calculate total cost and time
-    const totalCost =
-      totalSamplingLaborCost + totals.mcps + totals.alc + totals.amc;
-
-    // Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
-    // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
-    // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
-    let totalTime = 0;
-    if (labThroughput < timeCompleteSampling) {
-      totalTime = timeCompleteSampling;
-    } else {
-      totalTime = labThroughput + 1;
-    }
-
-    // Get limiting time factor (will be undefined if they are equal)
-    let limitingFactor: CalculateResultsDataType['Limiting Time Factor'] = '';
-    if (timeCompleteSampling > labThroughput) {
-      limitingFactor = 'Sampling';
-    }
-    if (timeCompleteSampling < labThroughput) {
-      limitingFactor = 'Analysis';
-    }
-
-    const resultObject: CalculateResultsDataType = {
-      // assign input parameters
-      'User Specified Number of Available Teams for Sampling': numSamplingTeams,
-      'User Specified Personnel per Sampling Team': numSamplingPersonnel,
-      'User Specified Sampling Team Hours per Shift': numSamplingHours,
-      'User Specified Sampling Team Shifts per Day': numSamplingShifts,
-      'User Specified Sampling Team Labor Cost': samplingLaborCost,
-      'User Specified Number of Available Labs for Analysis': numLabs,
-      'User Specified Analysis Lab Hours per Day': numLabHours,
-      'User Specified Surface Area': surfaceArea,
-      'Total Number of User-Defined Samples': calcGraphics.length,
-
-      // assign counts
-      'Total Number of Samples': totals.ac,
-      'Total Sampled Area': totalArea,
-      'Time to Prepare Kits': totals.ttpk,
-      'Time to Collect': totals.ttc,
-      'Material Cost': totals.mcps,
-      'Time to Analyze': totals.tta,
-      'Analysis Labor Cost': totals.alc,
-      'Analysis Material Cost': totals.amc,
-      'Waste Volume': totals.wvps,
-      'Waste Weight': totals.wwps,
-
-      // spatial items
-      'User Specified Total AOI': userSpecifiedAOI,
-      'Percent of Area Sampled': percentAreaSampled,
-
-      // sampling
-      'Total Required Sampling Time': samplingTimeHours,
-      'Sampling Hours per Day': samplingHours,
-      'Sampling Personnel hours per Day': samplingPersonnelHoursPerDay,
-      'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
-      'Time to Complete Sampling': timeCompleteSampling,
-      'Total Sampling Labor Cost': totalSamplingLaborCost,
-
-      // analysis
-      'Time to Complete Analyses': labThroughput,
-
-      //totals
-      'Total Cost': totalCost,
-      'Total Time': Math.round(totalTime * 10) / 10,
-      'Limiting Time Factor': limitingFactor,
-    };
-
-    // display loading spinner for 1 second
-    setCalculateResults((calculateResults: CalculateResultsType) => {
-      return {
-        status: 'success',
-        panelOpen: calculateResults.panelOpen,
-        data: resultObject,
-      };
-    });
-  }, [
-    calcGraphics,
-    totals,
-    totalArea,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  ]);
 }

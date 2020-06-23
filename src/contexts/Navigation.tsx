@@ -19,6 +19,8 @@ type NavigateType = {
   trainingMode: boolean;
   setTrainingMode: React.Dispatch<React.SetStateAction<boolean>>;
   getTrainingMode: Function;
+  gettingStartedOpen: boolean;
+  setGettingStartedOpen: Function;
 };
 
 export const NavigationContext = React.createContext<NavigateType>({
@@ -31,6 +33,8 @@ export const NavigationContext = React.createContext<NavigateType>({
   trainingMode: false,
   setTrainingMode: () => {},
   getTrainingMode: () => {},
+  gettingStartedOpen: false,
+  setGettingStartedOpen: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -42,6 +46,7 @@ export function NavigationProvider({ children }: Props) {
   const [goTo, setGoTo] = React.useState<PanelValueType | ''>('');
   const [goToOptions, setGoToOptions] = React.useState<GoToOptions>(null);
   const [trainingMode, setTrainingMode] = React.useState(false);
+  const [gettingStartedOpen, setGettingStartedOpen] = React.useState(false);
 
   // Syncs up the widgetsTrainingMode with the trainingMode context variable.
   // This is so the context variable can be used within esri events
@@ -63,6 +68,8 @@ export function NavigationProvider({ children }: Props) {
         getTrainingMode: () => {
           return globalTrainingMode;
         },
+        gettingStartedOpen,
+        setGettingStartedOpen,
       }}
     >
       {children}

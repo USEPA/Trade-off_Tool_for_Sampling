@@ -5,6 +5,8 @@ import { jsx, css } from '@emotion/core';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
+// components
+import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -146,11 +148,6 @@ const fileIconText = css`
 
 const checkBoxStyles = css`
   margin-right: 5px;
-`;
-
-const warningIcon = css`
-  margin-right: 10px;
-  font-size: 25px;
 `;
 
 const layerInfo = css`
@@ -1036,23 +1033,30 @@ function FilePanel() {
         <React.Fragment>
           <p css={sectionParagraph}>Locate the file you want to import.</p>
           <p css={sectionParagraph}>
-            <i className="fas fa-exclamation-triangle" css={warningIcon} />{' '}
-            Requirements for uploading files:
-          </p>
-          <p css={layerInfo}>
-            <strong>Shapefile</strong> - ZIP archive containing all required
-            shapefile files
-          </p>
-          <p css={layerInfo}>
-            <strong>CSV or TXT</strong> - files with optional address, place or
-            coordinate locations (comma, semi-colon or tab delimited)
-          </p>
-          <p css={layerInfo}>
-            <strong>GPX</strong> - GPS Exchange Format
-          </p>
-          <p css={layerInfo}>
-            <strong>GeoJSON</strong> - open standard format for simple
-            geographical
+            <MessageBox
+              severity="warning"
+              title="Requirements for uploading files:"
+              message={
+                <React.Fragment>
+                  <p css={layerInfo}>
+                    <strong>Shapefile</strong> - ZIP archive containing all
+                    required shapefile files
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>CSV or TXT</strong> - files with optional address,
+                    place or coordinate locations (comma, semi-colon or tab
+                    delimited)
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>GPX</strong> - GPS Exchange Format
+                  </p>
+                  <p css={layerInfo}>
+                    <strong>GeoJSON</strong> - open standard format for simple
+                    geographical
+                  </p>
+                </React.Fragment>
+              }
+            />
           </p>
         </React.Fragment>
       ) : (
@@ -1098,23 +1102,25 @@ function FilePanel() {
                         view the comparison against your sampling plan.
                       </p>
                       <p css={sectionParagraph}>
-                        <i
-                          className="fas fa-exclamation-triangle"
-                          css={warningIcon}
-                        />{' '}
-                        The Contamination Map layer must include the following
-                        attributes to be uploaded:
-                      </p>
-                      <p css={layerInfo}>
-                        <strong>CONTAM_TYPE</strong> (domain values: chemical,
-                        radiological, biological)
-                      </p>
-                      <p css={layerInfo}>
-                        <strong>CONTAM_VALUE</strong> (integer value)
-                      </p>
-                      <p css={layerInfo}>
-                        <strong>CONTAM_UNIT</strong> (domain values: cfu, others
-                        TBD)
+                        <MessageBox
+                          severity="warning"
+                          title="The Contamination Map layer must include the following attributes to be uploaded:"
+                          message={
+                            <React.Fragment>
+                              <p css={layerInfo}>
+                                <strong>CONTAM_TYPE</strong> (domain values:
+                                chemical, radiological, biological)
+                              </p>
+                              <p css={layerInfo}>
+                                <strong>CONTAM_VALUE</strong> (integer value)
+                              </p>
+                              <p css={layerInfo}>
+                                <strong>CONTAM_UNIT</strong> (domain values:
+                                cfu, others TBD)
+                              </p>
+                            </React.Fragment>
+                          }
+                        />
                       </p>
                     </React.Fragment>
                   )}

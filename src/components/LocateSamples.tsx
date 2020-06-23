@@ -24,8 +24,11 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
+import { useStartOver } from 'utils/hooks';
 import {
   getCurrentDateTime,
+  getDefaultAreaOfInterestLayer,
+  getDefaultSampleLayer,
   getPopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -194,6 +197,11 @@ const headerContainer = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  h2 {
+    margin: 0;
+    padding: 0;
+  }
 `;
 
 const deleteButtonStyles = css`
@@ -209,6 +217,15 @@ const deleteButtonStyles = css`
 
   &:hover {
     background-color: white;
+  }
+`;
+
+const trainingStyles = css`
+  margin-left: 25px;
+  font-size: 0.875rem;
+
+  input {
+    margin-right: 5px;
   }
 `;
 
@@ -228,9 +245,12 @@ type SampleSelectionType = {
 };
 
 function LocateSamples() {
-  const { setGoTo, setGoToOptions, trainingMode } = React.useContext(
-    NavigationContext,
-  );
+  const {
+    setGoTo,
+    setGoToOptions,
+    trainingMode,
+    setTrainingMode,
+  } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -254,6 +274,7 @@ function LocateSamples() {
     GraphicsLayer,
     Polygon,
   } = useEsriModulesContext();
+  const startOver = useStartOver();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
@@ -280,25 +301,7 @@ function LocateSamples() {
     if (defaultIndex > -1) return;
 
     // no sketchable layers were available, create one
-    const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
-
-    const tempSketchLayer: LayerType = {
-      id: -1,
-      layerId: graphicsLayer.id,
-      portalId: '',
-      value: 'sketchLayer',
-      name: 'Default Sample Layer',
-      label: 'Default Sample Layer',
-      layerType: 'Samples',
-      scenarioName: '',
-      scenarioDescription: '',
-      editType: 'add',
-      defaultVisibility: true,
-      geometryType: 'esriGeometryPolygon',
-      addedFrom: 'sketch',
-      status: 'added',
-      sketchLayer: graphicsLayer,
-    };
+    const tempSketchLayer = getDefaultSampleLayer(GraphicsLayer);
 
     // add the sketch layer to the map
     setLayers((layers) => {
@@ -339,26 +342,7 @@ function LocateSamples() {
     );
     if (defaultIndex > -1) return;
 
-    const graphicsLayer = new GraphicsLayer({
-      title: 'Sketched Area of Interest',
-    });
-    const newAoiSketchLayer: LayerType = {
-      id: -1,
-      layerId: graphicsLayer.id,
-      portalId: '',
-      value: 'sketchAoi',
-      name: 'Sketched Area of Interest',
-      label: 'Sketched Area of Interest',
-      layerType: 'Area of Interest',
-      scenarioName: '',
-      scenarioDescription: '',
-      editType: 'add',
-      defaultVisibility: true,
-      geometryType: 'esriGeometryPolygon',
-      addedFrom: 'sketch',
-      status: 'added',
-      sketchLayer: graphicsLayer,
-    };
+    const newAoiSketchLayer = getDefaultAreaOfInterestLayer(GraphicsLayer);
 
     // add the layer to the map
     setLayers((layers) => {
@@ -632,6 +616,22 @@ function LocateSamples() {
         <div css={sectionContainer}>
           <div css={headerContainer}>
             <h2>Create Plan</h2>
+            <button css={deleteButtonStyles} onClick={startOver}>
+              <i className="fas fa-redo-alt" />
+              <br />
+              Start Over
+            </button>
+          </div>
+          <div css={headerContainer}>
+            <div css={trainingStyles}>
+              <input
+                id="training-mode-toggle"
+                type="checkbox"
+                checked={trainingMode}
+                onChange={(ev) => setTrainingMode(!trainingMode)}
+              />
+              <label htmlFor="training-mode-toggle">Training Mode</label>
+            </div>
             <button
               css={deleteButtonStyles}
               onClick={() => {

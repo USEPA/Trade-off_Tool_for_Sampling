@@ -11,7 +11,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
 import Search from 'components/Search';
-import SplashScreenContent from 'components/SplashScreenContent';
+import GettingStarted from 'components/GettingStarted';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
@@ -131,7 +131,6 @@ const helpOkButtonStyles = css`
   font-weight: bold;
   font-size: 0.875rem;
   line-height: 1;
-  background-color: ${colors.white(0.875)};
   cursor: pointer;
 `;
 
@@ -288,7 +287,9 @@ function NavBar({ height }: Props) {
     currentPanel,
     setCurrentPanel,
     goTo,
-    setGoTo, //
+    setGoTo,
+    gettingStartedOpen,
+    setGettingStartedOpen,
   } = React.useContext(NavigationContext);
 
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
@@ -334,8 +335,6 @@ function NavBar({ height }: Props) {
     }
   }, [calculateResults]);
 
-  const [helpOpen, setHelpOpen] = React.useState(false);
-
   // determine how far to the right the expand/collapse buttons should be
   let expandLeft = navPanelWidth;
   if (expanded) {
@@ -361,17 +360,17 @@ function NavBar({ height }: Props) {
 
   return (
     <React.Fragment>
-      <SplashScreenContent isOpen={helpOpen}>
+      <GettingStarted isOpen={gettingStartedOpen}>
         <div css={helpOkContainerStyles}>
           <button
             className="btn"
             css={helpOkButtonStyles}
-            onClick={(ev) => setHelpOpen(false)}
+            onClick={(ev) => setGettingStartedOpen(false)}
           >
-            OK
+            Close
           </button>
         </div>
-      </SplashScreenContent>
+      </GettingStarted>
       <div css={navPanelStyles(height)}>
         <div css={navPanelContainerStyles}>
           <div>
@@ -417,7 +416,7 @@ function NavBar({ height }: Props) {
           )}
 
           <button
-            onClick={(ev) => setHelpOpen(!helpOpen)}
+            onClick={(ev) => setGettingStartedOpen(!gettingStartedOpen)}
             css={navButtonStyles(false)}
           >
             <i className="fas fa-question" css={helpIconStyles} />
