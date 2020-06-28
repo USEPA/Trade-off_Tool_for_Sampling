@@ -15,6 +15,7 @@ class Toolbox(object):
       self.tools.append(ContaminationResults);
       self.tools.append(SampleData);
       self.tools.append(Debug);
+      self.tools.append(GetSRID);
 
 ###############################################################################
 class GenerateRandom(object):
@@ -309,6 +310,8 @@ class GenerateRandom(object):
          ,"SA"
          ,"ALC"
          ,"AMC"
+         ,"LOD_P"
+         ,"LOD_NON"
       ];
 
       with arcpy.da.UpdateCursor(
@@ -333,6 +336,8 @@ class GenerateRandom(object):
                row[11] = 144;
                row[12] = 151;
                row[13] = 288;
+               row[14] = 105;
+               row[15] = 0;
                
             elif str_sample_type == "Wet Vac":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -349,6 +354,8 @@ class GenerateRandom(object):
                row[11] = 28800;
                row[12] = 151;
                row[13] = 200;
+               row[14] = 105;
+               row[15] = 40;
                
             elif str_sample_type == "Sponge":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -365,6 +372,8 @@ class GenerateRandom(object):
                row[11] = 100;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 14;
+               row[15] = 0;
                
             elif str_sample_type == "Robot":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -381,6 +390,8 @@ class GenerateRandom(object):
                row[11] = 144000;
                row[12] = 200;
                row[13] = 288;
+               row[14] = 105;
+               row[15] = 140;
                
             elif str_sample_type == "Aggressive Air":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -397,6 +408,8 @@ class GenerateRandom(object):
                row[11] = 12000;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 105;
+               row[15] = 140;
                
             elif str_sample_type == "Swab":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -413,6 +426,8 @@ class GenerateRandom(object):
                row[11] = 4;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 25;
+               row[15] = 0;
             
             cursor.updateRow(row);
             
@@ -650,6 +665,8 @@ class VSPImport(object):
          ,"SA"
          ,"ALC"
          ,"AMC"
+         ,"LOD_P"
+         ,"LOD_NON"
       ];
 
       with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
@@ -671,6 +688,8 @@ class VSPImport(object):
                row[11] = 144;
                row[12] = 151;
                row[13] = 288;
+               row[14] = 105;
+               row[15] = 0;
 
             elif str_sample_type == "Wet Vac":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -687,6 +706,8 @@ class VSPImport(object):
                row[11] = 28800;
                row[12] = 151;
                row[13] = 200;
+               row[14] = 105;
+               row[15] = 40;
                
             elif str_sample_type == "Sponge":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -703,6 +724,8 @@ class VSPImport(object):
                row[11] = 100;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 14;
+               row[15] = 0;
                
             elif str_sample_type == "Robot":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -719,6 +742,8 @@ class VSPImport(object):
                row[11] = 144000;
                row[12] = 200;
                row[13] = 288;
+               row[14] = 105;
+               row[15] = 140;
                
             elif str_sample_type == "Aggressive Air":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -735,6 +760,8 @@ class VSPImport(object):
                row[11] = 12000;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 105;
+               row[15] = 140;
                
             elif str_sample_type == "Swab":
                row[0]  = '{' + str(uuid.uuid4()) + '}';
@@ -751,6 +778,8 @@ class VSPImport(object):
                row[11] = 4;
                row[12] = 118;
                row[13] = 239;
+               row[14] = 25;
+               row[15] = 0;
             
             cursor.updateRow(row);
             
@@ -1248,7 +1277,86 @@ class Debug(object):
 
       #########################################################################
       arcpy.SetParameter(1,str_dump);
+      
+###############################################################################
+class GetSRID(object):
 
+   #...........................................................................
+   def __init__(self):
+
+      self.label = "Get SRID"
+      self.name  = "GetSRID"
+      self.description = "Determine proper UTM SRID of input"
+      self.canRunInBackground = False;
+
+   #...........................................................................
+   def getParameterInfo(self):
+
+      #########################################################################
+      param0 = arcpy.Parameter(
+          displayName   = "InputFC"
+         ,name          = "InputFC"
+         ,datatype      = "DEFeatureClass"
+         ,parameterType = "Required"
+         ,direction     = "Input"
+      );
+      
+      #########################################################################
+      param1 = arcpy.Parameter(
+          displayName   = "CS SRID"
+         ,name          = "CSSRID"
+         ,datatype      = "GPLong"
+         ,parameterType = "Derived"
+         ,direction     = "Output"
+      );
+      
+      params = [
+          param0
+         ,param1
+      ];
+
+      return params;
+
+   #...........................................................................
+   def isLicensed(self):
+
+      return True;
+
+   #...........................................................................
+   def updateParameters(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def updateMessages(self,parameters):
+
+      return;
+
+   #...........................................................................
+   def execute(self,parameters,messages):
+
+      #########################################################################
+      # Step 10
+      # Ingest Parameters
+      #########################################################################
+      fc_input = parameters[0].value;
+      
+      #########################################################################
+      with arcpy.da.SearchCursor(
+          in_table    = fc_input
+         ,field_names = ['SHAPE@']
+      ) as cursor:
+      
+         for row in cursor:
+            samp = row[0];
+            break;
+
+      int_srid =  determine_srid(
+         arcpy.PointGeometry(samp.centroid,samp.spatialReference)
+      );
+
+      #########################################################################
+      arcpy.SetParameter(1,int_srid);
 
 ###############################################################################
 def sampling_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
@@ -1282,31 +1390,31 @@ def sampling_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
    dz_addfields(
        in_table = scratch_full_o
       ,field_description = [
-          ['GLOBALID'            ,'GUID'  ,'GlobalID'                    ,None,None,'']
-         ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'        ,None,None,'']
-         ,['TYPE'                ,'TEXT'  ,'Sampling Method Type'        ,255 ,None,'']
-         ,['TTPK'                ,'DOUBLE','Time to Prepare Kits'        ,None,None,'']
-         ,['TTC'                 ,'DOUBLE','Time to Collect'             ,None,None,'']
-         ,['TTA'                 ,'DOUBLE','Time to Analyze'             ,None,None,'']
-         ,['TTPS'                ,'DOUBLE','Total Time per Sample'       ,None,None,'']
-         ,['LOD_P'               ,'DOUBLE','Limit of Detection Porous'   ,None,None,'']
-         ,['LOD_NON'             ,'DOUBLE','Limit of Detection Nonporous',None,None,'']
-         ,['MCPS'                ,'DOUBLE','Material Cost per Sample'    ,None,None,'']
-         ,['TCPS'                ,'DOUBLE','Total Cost Per Sample'       ,None,None,'']
-         ,['WVPS'                ,'DOUBLE','Waste Volume per Sample'     ,None,None,'']
-         ,['WWPS'                ,'DOUBLE','Waste Weight per Sample'     ,None,None,'']
-         ,['SA'                  ,'DOUBLE','Sampling Surface Area'       ,None,None,'']
-         ,['Notes'               ,'TEXT'  ,'Notes'                       ,2000,None,'']
-         ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'         ,None,None,'']
-         ,['AMC'                 ,'DOUBLE','Analysis Material Cost'      ,None,None,'']
-         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'          ,64  ,None,'']
-         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'         ,None,None,'']
-         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'          ,64  ,None,'']
-         ,['CREATEDDATE'         ,'DATE'  ,'Created Date'                ,None,None,'']
-         ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                ,None,None,'']
-         ,['USERNAME'            ,'TEXT'  ,'Username'                    ,255 ,None,'']
-         ,['ORGANIZATION'        ,'TEXT'  ,'Organization'                ,255 ,None,'']
-         ,['ELEVATIONSERIES'     ,'TEXT'  ,'Elevation Series'            ,255 ,None,'']
+          ['GLOBALID'            ,'GUID'  ,'GlobalID'                      ,None,None,'']
+         ,['PERMANENT_IDENTIFIER','GUID'  ,'Permanent Identifier'          ,None,None,'']
+         ,['TYPE'                ,'TEXT'  ,'Sampling Method Type'          ,255 ,None,'']
+         ,['TTPK'                ,'DOUBLE','Time to Prepare Kits'          ,None,None,'']
+         ,['TTC'                 ,'DOUBLE','Time to Collect'               ,None,None,'']
+         ,['TTA'                 ,'DOUBLE','Time to Analyze'               ,None,None,'']
+         ,['TTPS'                ,'DOUBLE','Total Time per Sample'         ,None,None,'']
+         ,['LOD_P'               ,'DOUBLE','Limit of Detection - Porous'   ,None,None,'']
+         ,['LOD_NON'             ,'DOUBLE','Limit of Detection - Nonporous',None,None,'']
+         ,['MCPS'                ,'DOUBLE','Material Cost per Sample'      ,None,None,'']
+         ,['TCPS'                ,'DOUBLE','Total Cost Per Sample'         ,None,None,'']
+         ,['WVPS'                ,'DOUBLE','Waste Volume per Sample'       ,None,None,'']
+         ,['WWPS'                ,'DOUBLE','Waste Weight per Sample'       ,None,None,'']
+         ,['SA'                  ,'DOUBLE','Sampling Surface Area'         ,None,None,'']
+         ,['Notes'               ,'TEXT'  ,'Notes'                         ,2000,None,'']
+         ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'           ,None,None,'']
+         ,['AMC'                 ,'DOUBLE','Analysis Material Cost'        ,None,None,'']
+         ,['CONTAMTYPE'          ,'TEXT'  ,'Contamination Type'            ,64  ,None,'']
+         ,['CONTAMVAL'           ,'DOUBLE','Contamination Value'           ,None,None,'']
+         ,['CONTAMUNIT'          ,'TEXT'  ,'Contamination Unit'            ,64  ,None,'']
+         ,['CREATEDDATE'         ,'DATE'  ,'Created Date'                  ,None,None,'']
+         ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                  ,None,None,'']
+         ,['USERNAME'            ,'TEXT'  ,'Username'                      ,255 ,None,'']
+         ,['ORGANIZATION'        ,'TEXT'  ,'Organization'                  ,255 ,None,'']
+         ,['ELEVATIONSERIES'     ,'TEXT'  ,'Elevation Series'              ,255 ,None,'']
        ]
    );
    
