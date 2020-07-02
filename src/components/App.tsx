@@ -125,10 +125,6 @@ function App() {
   React.useEffect(() => {
     if (!totsRef?.current) return;
 
-    console.log(
-      'totsRef.current: ',
-      totsRef.current.getBoundingClientRect().top,
-    );
     setOffset(totsRef.current.getBoundingClientRect().top);
   }, [totsRef]);
 
