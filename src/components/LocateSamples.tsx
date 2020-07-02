@@ -102,6 +102,10 @@ const sectionContainer = css`
   padding: 20px;
 `;
 
+const sectionContainerWidthOnly = css`
+  padding: 0 20px;
+`;
+
 const layerSelectStyles = css`
   margin-bottom: 10px;
 `;
@@ -153,6 +157,7 @@ const textStyles = css`
 `;
 
 const centerTextStyles = css`
+  margin-top: 10px;
   text-align: center;
 `;
 
@@ -185,13 +190,18 @@ const inlineMenuStyles = css`
   justify-content: space-between;
 `;
 
+const userDefinedButtonStyles = css`
+  ${inlineMenuStyles}
+  margin-bottom: 10px;
+`;
+
 const addButtonStyles = css`
   margin: 0;
   height: 38px; /* same height as ReactSelect */
 `;
 
 const checkAreaButtonStyles = css`
-  margin: 9px 0 0;
+  margin: 0;
 `;
 
 const fullWidthSelectStyles = css`
@@ -208,7 +218,7 @@ const inlineSelectStyles = css`
 const inputStyles = css`
   width: 100%;
   height: 36px;
-  margin: 0;
+  margin: 0 0 10px 0;
   padding-left: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -927,7 +937,7 @@ function LocateSamples() {
 
           <EditLayerMetaData />
         </div>
-        <div css={sectionContainer}>
+        <div css={sectionContainerWidthOnly}>
           <p>
             In the panels below, add targeted and/ or multiple samples to the
             plan.
@@ -948,7 +958,7 @@ function LocateSamples() {
                 }
                 options={allSampleOptions}
               />
-              <div css={inlineMenuStyles}>
+              <div css={userDefinedButtonStyles}>
                 <button
                   css={addButtonStyles}
                   onClick={(ev) => {
@@ -1209,7 +1219,6 @@ function LocateSamples() {
                       onChange={(ev) => setAmc(ev.target.value)}
                     />
                   </div>
-                  <br />
                   {validationMessage &&
                     userDefinedValidationMessage(validationMessage)}
                   <div css={inlineMenuStyles}>
@@ -1361,6 +1370,7 @@ function LocateSamples() {
                   <Select
                     id="sample-type-select"
                     inputId="sample-type-select-input"
+                    css={fullWidthSelectStyles}
                     value={sampleType}
                     onChange={(ev) => setSampleType(ev as SampleSelectType)}
                     options={SampleSelectOptions}
@@ -1393,7 +1403,6 @@ function LocateSamples() {
                       Add
                     </button>
                   </div>
-                  <br />
                   <div css={centerTextStyles}>
                     <em>OR</em>
                   </div>
