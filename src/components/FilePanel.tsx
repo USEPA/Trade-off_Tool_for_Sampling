@@ -30,7 +30,6 @@ import {
   sampleAttributes,
   SampleSelectOptions,
   SampleSelectType,
-  SampleType,
 } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import {
@@ -699,7 +698,7 @@ function FilePanel() {
           if (!sampleAttributes.hasOwnProperty(TYPE)) {
             unknownSampleTypes = true;
           } else {
-            graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
+            graphic.attributes = { ...sampleAttributes[TYPE] };
 
             // TODO: Remove this item. It is only for debugging area calculations.
             graphic.attributes['OAA'] = AA;

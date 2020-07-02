@@ -14,7 +14,11 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
 // config
-import { predefinedBoxTypes } from 'config/sampleAttributes';
+import {
+  sampleAttributes,
+  SampleSelectOptions,
+  SampleSelectType,
+} from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
@@ -239,11 +243,6 @@ type GenerateRandomType = {
   data: __esri.Graphic[];
 };
 
-type SampleSelectionType = {
-  value: string;
-  label: string;
-};
-
 function LocateSamples() {
   const {
     setGoTo,
@@ -368,7 +367,7 @@ function LocateSamples() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectionType>({ value: 'Sponge', label: 'Sponge' });
+  ] = React.useState<SampleSelectType>({ value: 'Sponge', label: 'Sponge' });
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
@@ -389,7 +388,7 @@ function LocateSamples() {
 
     // determine whether the sketch button draws points or polygons
     let shapeType = 'polygon';
-    if (predefinedBoxTypes.includes(label)) {
+    if (sampleAttributes[label].IsPoint) {
       shapeType = 'point';
     }
 
@@ -690,36 +689,20 @@ function LocateSamples() {
             initiallyExpanded={true}
           >
             <div css={sketchButtonContainerStyles}>
-              <SketchButton
-                label="Sponge"
-                iconClass="fas fa-pen-fancy"
-                onClick={() => sketchButtonClick('Sponge')}
-              />
-              <SketchButton
-                label="Micro Vac"
-                iconClass="fas fa-pen-fancy"
-                onClick={() => sketchButtonClick('Micro Vac')}
-              />
-              <SketchButton
-                label="Wet Vac"
-                iconClass="fas fa-draw-polygon"
-                onClick={() => sketchButtonClick('Wet Vac')}
-              />
-              <SketchButton
-                label="Robot"
-                iconClass="fas fa-draw-polygon"
-                onClick={() => sketchButtonClick('Robot')}
-              />
-              <SketchButton
-                label="Aggressive Air"
-                iconClass="fas fa-draw-polygon"
-                onClick={() => sketchButtonClick('Aggressive Air')}
-              />
-              <SketchButton
-                label="Swab"
-                iconClass="fas fa-pen-fancy"
-                onClick={() => sketchButtonClick('Swab')}
-              />
+              {SampleSelectOptions.map((option, index) => {
+                const sampleType = option.label;
+                const isPoint = sampleAttributes[sampleType].IsPoint;
+                return (
+                  <SketchButton
+                    key={index}
+                    label={sampleType}
+                    iconClass={
+                      isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
+                    }
+                    onClick={() => sketchButtonClick(sampleType)}
+                  />
+                );
+              })}
             </div>
           </AccordionItem>
           <AccordionItem title={'Add Multiple Random Samples'}>
@@ -741,15 +724,8 @@ function LocateSamples() {
                     id="sample-type-select"
                     inputId="sample-type-select-input"
                     value={sampleType}
-                    onChange={(ev) => setSampleType(ev as SampleSelectionType)}
-                    options={[
-                      { value: 'Sponge', label: 'Sponge' },
-                      { value: 'Micro Vac', label: 'Micro Vac' },
-                      { value: 'Wet Vac', label: 'Wet Vac' },
-                      { value: 'Robot', label: 'Robot' },
-                      { value: 'Aggressive Air', label: 'Aggressive Air' },
-                      { value: 'Swab', label: 'Swab' },
-                    ]}
+                    onChange={(ev) => setSampleType(ev as SampleSelectType)}
+                    options={SampleSelectOptions}
                   />
                   <label htmlFor="aoi-mask-select-input">
                     Area of Interest Mask

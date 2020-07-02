@@ -1,62 +1,35 @@
-export const freeFormTypes = ['Wet Vac', 'Robot', 'Aggressive Air'];
-
-export const predefinedBoxTypes = ['Sponge', 'Micro Vac', 'Swab'];
-
-export type SampleType =
-  | 'Sponge'
-  | 'Micro Vac'
-  | 'Wet Vac'
-  | 'Robot'
-  | 'Aggressive Air'
-  | 'Swab';
-
-export type SampleSelectType = {
-  value: SampleType;
-  label: SampleType;
-};
-
-export const SampleSelectOptions: SampleSelectType[] = [
-  { value: 'Sponge', label: 'Sponge' },
-  { value: 'Micro Vac', label: 'Micro Vac' },
-  { value: 'Wet Vac', label: 'Wet Vac' },
-  { value: 'Robot', label: 'Robot' },
-  { value: 'Aggressive Air', label: 'Aggressive Air' },
-  { value: 'Swab', label: 'Swab' },
-];
-
-type SampleProperties =
-  | 'OBJECTID'
-  | 'PERMANENT_IDENTIFIER'
-  | 'GLOBALID'
-  | 'TYPE'
-  | 'SA'
-  | 'AA'
-  | 'OAA' // TODO: Delete this before release - original AA for debug
-  | 'TTPK'
-  | 'TTC'
-  | 'TTA'
-  | 'TTPS'
-  | 'LOD_P'
-  | 'LOD_NON'
-  | 'MCPS'
-  | 'TCPS'
-  | 'WVPS'
-  | 'WWPS'
-  | 'ALC'
-  | 'AMC'
-  | 'Notes'
-  | 'CONTAMTYPE'
-  | 'CONTAMVAL'
-  | 'CONTAMUNIT'
-  | 'CREATEDDATE'
-  | 'UPDATEDDATE'
-  | 'USERNAME'
-  | 'ORGANIZATION'
-  | 'ELEVATIONSERIES';
-
 type Attributes = {
-  [key in SampleType]: {
-    [key in SampleProperties]: string | null;
+  [key: string]: {
+    OBJECTID: string | null;
+    PERMANENT_IDENTIFIER: string | null;
+    GLOBALID: string | null;
+    TYPE: string;
+    IsPoint: boolean;
+    Width: number;
+    SA: string | null;
+    AA: string | null;
+    OAA: string | null; // TODO: Delete this before release - original AA for debug
+    TTPK: string | null;
+    TTC: string | null;
+    TTA: string | null;
+    TTPS: string | null;
+    LOD_P: string | null;
+    LOD_NON: string | null;
+    MCPS: string | null;
+    TCPS: string | null;
+    WVPS: string | null;
+    WWPS: string | null;
+    ALC: string | null;
+    AMC: string | null;
+    Notes: string | null;
+    CONTAMTYPE: string | null;
+    CONTAMVAL: string | null;
+    CONTAMUNIT: string | null;
+    CREATEDDATE: string | null;
+    UPDATEDDATE: null;
+    USERNAME: string | null;
+    ORGANIZATION: string | null;
+    ELEVATIONSERIES: string | null;
   };
 };
 
@@ -66,6 +39,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Sponge',
+    IsPoint: true,
+    Width: 10,
     SA: '100',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -96,6 +71,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Micro Vac',
+    IsPoint: true,
+    Width: 12.2794,
     SA: '144',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -126,6 +103,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Wet Vac',
+    IsPoint: false,
+    Width: 169.9664,
     SA: '28800',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -156,6 +135,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Robot',
+    IsPoint: false,
+    Width: 379.80360065,
     SA: '144000',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -186,6 +167,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Aggressive Air',
+    IsPoint: false,
+    Width: 109.7886,
     SA: '12000',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -216,6 +199,8 @@ const sampleAttributes: Attributes = {
     PERMANENT_IDENTIFIER: null,
     GLOBALID: null,
     TYPE: 'Swab',
+    IsPoint: true,
+    Width: 2,
     SA: '4',
     AA: '',
     OAA: '', // TODO: Delete this before release - original AA for debug
@@ -242,5 +227,17 @@ const sampleAttributes: Attributes = {
     ELEVATIONSERIES: null,
   },
 };
+
+export type SampleSelectType = {
+  value: string;
+  label: string;
+};
+
+export const SampleSelectOptions: SampleSelectType[] = Object.values(
+  sampleAttributes,
+).map((item) => {
+  const value = item.TYPE;
+  return { value, label: value };
+});
 
 export { sampleAttributes };

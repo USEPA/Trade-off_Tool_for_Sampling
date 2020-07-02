@@ -10,11 +10,7 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType, LayerTypeName } from 'types/Layer';
 // config
-import {
-  predefinedBoxTypes,
-  SampleType,
-  sampleAttributes,
-} from 'config/sampleAttributes';
+import { sampleAttributes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 // utils
 import {
@@ -25,10 +21,6 @@ import {
 } from 'utils/sketchUtils';
 // styles
 import { colors } from 'styles';
-
-const sponge_SA = 5;
-const vac_SA = 6.1397;
-const swab_SA = 1;
 
 type SaveStatusType = 'none' | 'success' | 'failure';
 
@@ -423,7 +415,6 @@ function MapWidgets({ mapView }: Props) {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
-          const key = id as SampleType;
           deactivateButtons();
 
           if (!id) {
@@ -447,7 +438,7 @@ function MapWidgets({ mapView }: Props) {
             };
           } else {
             graphic.attributes = {
-              ...sampleAttributes[key],
+              ...sampleAttributes[id],
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -462,11 +453,10 @@ function MapWidgets({ mapView }: Props) {
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
-          if (predefinedBoxTypes.includes(id)) {
-            let halfWidth = 0;
-            if (id === 'Sponge') halfWidth = sponge_SA;
-            if (id === 'Micro Vac') halfWidth = vac_SA;
-            if (id === 'Swab') halfWidth = swab_SA;
+          if (graphic.attributes.IsPoint) {
+            // determine the buffer needed to get the desired area which is half
+            // the width of the box
+            let halfWidth = graphic.attributes.Width / 2;
 
             // create the graphic
             const prevGeo = graphic.geometry as __esri.Point;
@@ -528,18 +518,19 @@ function MapWidgets({ mapView }: Props) {
           isActive = false;
         }
 
-        // Swab, Micro Vac, Wet Vac, etc.
-        const firstGraphicType =
-          event.graphics[0].attributes && event.graphics[0].attributes.TYPE;
-
         const isShapeChange =
           event.toolEventInfo &&
           (event.toolEventInfo.type.includes('reshape') ||
             event.toolEventInfo.type.includes('scale'));
 
+        let hasPredefinedBoxes = false;
+        event.graphics.forEach((graphic) => {
+          if (graphic.attributes.IsPoint) hasPredefinedBoxes = true;
+        });
+
         // prevent scale and reshape changes on the predefined graphics
         // allow moves and rotates
-        if (isShapeChange && predefinedBoxTypes.includes(firstGraphicType)) {
+        if (isShapeChange && hasPredefinedBoxes) {
           // workaround for an error that said "target" does not exist on
           // type 'SketchViewModelUpdateEvent'.
           const tempEvent = event as any;
