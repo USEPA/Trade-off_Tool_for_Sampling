@@ -713,7 +713,6 @@ function LocateSamples() {
   // which edit type is being used.
   function setSampleTypeInputs(editType: EditType) {
     if (editType === 'create') {
-      console.log('set things back to undefined');
       setEditingStatus(editType);
       setShapeType(null);
       setWidth('');
@@ -792,13 +791,8 @@ function LocateSamples() {
       return false;
     }
 
-    console.log(
-      `sampleTypeName: "${sampleTypeName}" ${
-        sampleTypeName ? 'true' : 'false'
-      }`,
-    );
+    // validate any fields that need it
     if (!sampleTypeName) {
-      console.log('sampleTypeName validation failed');
       isValid = false;
       messageParts.push('User Defined types must have a sample type name.');
     }
@@ -854,9 +848,8 @@ function LocateSamples() {
     }
 
     const message = messageParts.map((part, index) => {
-      console.log('part: ', part);
       return (
-        <React.Fragment>
+        <React.Fragment key={index}>
           {index !== 0 ? <br /> : ''}
           {part}
         </React.Fragment>
