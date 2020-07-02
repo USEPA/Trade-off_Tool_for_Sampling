@@ -231,13 +231,14 @@ const sampleAttributes: Attributes = {
 export type SampleSelectType = {
   value: string;
   label: string;
+  isPredefined: boolean;
 };
 
 export const SampleSelectOptions: SampleSelectType[] = Object.values(
   sampleAttributes,
 ).map((item) => {
   const value = item.TYPE;
-  return { value, label: value };
+  return { value, label: value, isPredefined: true };
 });
 
 export { sampleAttributes };

@@ -39,12 +39,6 @@ import {
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 
-type UserDefinedSelect = {
-  value: string;
-  label: string;
-  isPredefined: boolean;
-};
-
 type ShapeTypeSelect = {
   value: string;
   label: string;
@@ -69,7 +63,7 @@ function getSketchableAoiLayers(layers: LayerType[]) {
  * it appends in index to the end (i.e. '<desiredName> (2)').
  */
 function getSampleTypeName(
-  sampleTypes: UserDefinedSelect[],
+  sampleTypes: SampleSelectType[],
   desiredName: string,
 ) {
   // get a list of names in use
@@ -323,6 +317,8 @@ function LocateSamples() {
     sketchVM,
     aoiSketchVM,
     getGpMaxRecordCount,
+    userDefinedOptions,
+    setUserDefinedOptions,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -426,7 +422,11 @@ function LocateSamples() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType>({ value: 'Sponge', label: 'Sponge' });
+  ] = React.useState<SampleSelectType>({
+    value: 'Sponge',
+    label: 'Sponge',
+    isPredefined: true,
+  });
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
@@ -668,31 +668,18 @@ function LocateSamples() {
       });
   }
 
-  const [userDefinedOptions, setUserDefinedOptions] = React.useState<
-    UserDefinedSelect[]
-  >([]);
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    UserDefinedSelect[]
-  >([]);
-
   // Keep the allSampleOptions array up to date
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
   React.useEffect(() => {
-    setAllSampleOptions([
-      ...SampleSelectOptions.map((option) => {
-        return {
-          label: option.label,
-          value: option.value,
-          isPredefined: true,
-        };
-      }),
-      ...userDefinedOptions,
-    ]);
+    setAllSampleOptions([...SampleSelectOptions, ...userDefinedOptions]);
   }, [userDefinedOptions]);
 
   const [
     userDefinedSampleType,
     setUserDefinedSampleType,
-  ] = React.useState<UserDefinedSelect | null>(null);
+  ] = React.useState<SampleSelectType | null>(null);
   const [editingStatus, setEditingStatus] = React.useState<EditType | null>(
     null,
   );
@@ -954,7 +941,7 @@ function LocateSamples() {
                 isDisabled={editingStatus ? true : false}
                 value={userDefinedSampleType}
                 onChange={(ev) =>
-                  setUserDefinedSampleType(ev as UserDefinedSelect)
+                  setUserDefinedSampleType(ev as SampleSelectType)
                 }
                 options={allSampleOptions}
               />
