@@ -25,6 +25,7 @@ import {
   cantUseWithVspMessage,
   generateRandomExceededTransferLimitMessage,
   generateRandomSuccessMessage,
+  userDefinedValidationMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
@@ -38,6 +39,19 @@ import {
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 
+type UserDefinedSelect = {
+  value: string;
+  label: string;
+  isPredefined: boolean;
+};
+
+type ShapeTypeSelect = {
+  value: string;
+  label: string;
+};
+
+type EditType = 'create' | 'edit' | 'clone' | 'view';
+
 // gets an array of layers that can be used with the sketch widget.
 function getSketchableLayers(layers: LayerType[]) {
   return layers.filter(
@@ -48,6 +62,32 @@ function getSketchableLayers(layers: LayerType[]) {
 // gets an array of layers that can be used with the aoi sketch widget.
 function getSketchableAoiLayers(layers: LayerType[]) {
   return layers.filter((layer) => layer.layerType === 'Area of Interest');
+}
+
+/**
+ * Determines if the desired name has already been used. If it has
+ * it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+function getSampleTypeName(
+  sampleTypes: UserDefinedSelect[],
+  desiredName: string,
+) {
+  // get a list of names in use
+  let usedNames: string[] = [];
+  sampleTypes.forEach((sampleType) => {
+    usedNames.push(sampleType.label);
+  });
+
+  // Find a name where there is not a collision.
+  // Most of the time this loop will be skipped.
+  let duplicateCount = 0;
+  let newName = desiredName;
+  while (usedNames.includes(newName)) {
+    duplicateCount += 1;
+    newName = `${desiredName} (${duplicateCount})`;
+  }
+
+  return newName;
 }
 
 // --- styles (SketchButton) ---
@@ -67,7 +107,6 @@ const layerSelectStyles = css`
 `;
 
 const sketchButtonContainerStyles = css`
-  padding: 20px;
   margin-left: 1px;
   margin-top: 1px;
 
@@ -151,7 +190,17 @@ const addButtonStyles = css`
   height: 38px; /* same height as ReactSelect */
 `;
 
+const checkAreaButtonStyles = css`
+  margin: 9px 0 0;
+`;
+
 const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+  margin-bottom: 10px;
+`;
+
+const inlineSelectStyles = css`
   width: 100%;
   margin-right: 10px;
 `;
@@ -609,6 +658,214 @@ function LocateSamples() {
       });
   }
 
+  const [userDefinedOptions, setUserDefinedOptions] = React.useState<
+    UserDefinedSelect[]
+  >([]);
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    UserDefinedSelect[]
+  >([]);
+
+  // Keep the allSampleOptions array up to date
+  React.useEffect(() => {
+    setAllSampleOptions([
+      ...SampleSelectOptions.map((option) => {
+        return {
+          label: option.label,
+          value: option.value,
+          isPredefined: true,
+        };
+      }),
+      ...userDefinedOptions,
+    ]);
+  }, [userDefinedOptions]);
+
+  const [
+    userDefinedSampleType,
+    setUserDefinedSampleType,
+  ] = React.useState<UserDefinedSelect | null>(null);
+  const [editingStatus, setEditingStatus] = React.useState<EditType | null>(
+    null,
+  );
+  const [sampleTypeName, setSampleTypeName] = React.useState<string>('');
+  const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
+    null,
+  );
+  const [width, setWidth] = React.useState<string | null>('');
+  const [areaTest, setAreaTest] = React.useState<number | null>(null);
+  const [ttpk, setTtpk] = React.useState<string | null>('');
+  const [ttc, setTtc] = React.useState<string | null>('');
+  const [tta, setTta] = React.useState<string | null>('');
+  const [ttps, setTtps] = React.useState<string | null>('');
+  const [lodp, setLodp] = React.useState<string | null>('');
+  const [lodnon, setLodnon] = React.useState<string | null>('');
+  const [mcps, setMcps] = React.useState<string | null>('');
+  const [tcps, setTcps] = React.useState<string | null>('');
+  const [wvps, setWvps] = React.useState<string | null>('');
+  const [wwps, setWwps] = React.useState<string | null>('');
+  const [sa, setSa] = React.useState<string | null>('');
+  const [alc, setAlc] = React.useState<string | null>('');
+  const [amc, setAmc] = React.useState<string | null>('');
+  const [validationMessage, setValidationMessage] = React.useState<
+    JSX.Element[] | string
+  >('');
+
+  // Sets all of the user defined sample type inputs based on
+  // which edit type is being used.
+  function setSampleTypeInputs(editType: EditType) {
+    if (editType === 'create') {
+      console.log('set things back to undefined');
+      setEditingStatus(editType);
+      setShapeType(null);
+      setWidth('');
+      setAreaTest(null);
+      setTtpk('');
+      setTtc('');
+      setTta('');
+      setTtps('');
+      setLodp('');
+      setLodnon('');
+      setMcps('');
+      setTcps('');
+      setWvps('');
+      setWwps('');
+      setSa('');
+      setAlc('');
+      setAmc('');
+      setSampleTypeName('');
+      return;
+    }
+
+    if (!userDefinedSampleType) return;
+
+    // get the sample type name, for a clone operation
+    // add a number to the end of the name.
+    let sampleTypeName = userDefinedSampleType.label;
+    const attributes = sampleAttributes[sampleTypeName];
+    if (editType === 'clone') {
+      sampleTypeName = getSampleTypeName(allSampleOptions, sampleTypeName);
+    }
+
+    const shapeType = attributes.IsPoint
+      ? { value: 'point', label: 'Point' }
+      : { value: 'polygon', label: 'Polygon' };
+
+    setEditingStatus(editType);
+    setShapeType(shapeType);
+    setWidth(attributes.Width.toString());
+    setAreaTest(null);
+    setTtpk(attributes.TTPK);
+    setTtc(attributes.TTC);
+    setTta(attributes.TTA);
+    setTtps(attributes.TTPS);
+    setLodp(attributes.LOD_P);
+    setLodnon(attributes.LOD_NON);
+    setMcps(attributes.MCPS);
+    setTcps(attributes.TCPS);
+    setWvps(attributes.WVPS);
+    setWwps(attributes.WWPS);
+    setSa(attributes.SA);
+    setAlc(attributes.ALC);
+    setAmc(attributes.AMC);
+    setSampleTypeName(sampleTypeName);
+  }
+
+  // Validates the user input.
+  // TODO: This logic needs to be updated to be more robust. Currently,
+  //        this just makes sure that all of the fields have been filled out.
+  function validateEdits() {
+    let isValid = true;
+    const messageParts: string[] = [];
+
+    function isNumberValid(
+      numberStr: string | null,
+      valueValidation?: '' | 'greaterThan0',
+    ) {
+      if (numberStr === undefined || numberStr === null || numberStr === '') {
+        return;
+      }
+
+      const number = Number(numberStr);
+      if (isNaN(number)) return false;
+      if (!valueValidation) return true;
+      if (valueValidation === 'greaterThan0' && number > 0) return true;
+
+      return false;
+    }
+
+    console.log(
+      `sampleTypeName: "${sampleTypeName}" ${
+        sampleTypeName ? 'true' : 'false'
+      }`,
+    );
+    if (!sampleTypeName) {
+      console.log('sampleTypeName validation failed');
+      isValid = false;
+      messageParts.push('User Defined types must have a sample type name.');
+    }
+    if (shapeType?.value === 'point' && !isNumberValid(width, 'greaterThan0')) {
+      isValid = false;
+      messageParts.push('Points must have a width greater than 0.');
+    }
+    if (!isNumberValid(ttpk)) {
+      isValid = false;
+      messageParts.push('Time to Prepare Kits needs a numeric value.');
+    }
+    if (!isNumberValid(ttc)) {
+      isValid = false;
+      messageParts.push('Time to Collect needs a numeric value.');
+    }
+    if (!isNumberValid(tta)) {
+      isValid = false;
+      messageParts.push('Time to Analyze needs a numeric value.');
+    }
+    if (!isNumberValid(ttps)) {
+      isValid = false;
+      messageParts.push('Total Time per Sample needs a numeric value.');
+    }
+    if (!isNumberValid(mcps)) {
+      isValid = false;
+      messageParts.push('Material Cost needs a numeric value.');
+    }
+    if (!isNumberValid(tcps)) {
+      isValid = false;
+      messageParts.push('Total Cost per Sample needs a numeric value.');
+    }
+    if (!isNumberValid(wvps)) {
+      isValid = false;
+      messageParts.push('Waste Volume needs a numeric value.');
+    }
+    if (!isNumberValid(wwps)) {
+      isValid = false;
+      messageParts.push('Waste Weight needs a numeric value.');
+    }
+    if (!isNumberValid(sa, 'greaterThan0')) {
+      isValid = false;
+      messageParts.push(
+        'Reference Surface Area needs a numeric value greater than 0.',
+      );
+    }
+    if (!isNumberValid(alc)) {
+      isValid = false;
+      messageParts.push('Analysis Labor Cost needs a numeric value.');
+    }
+    if (!isNumberValid(amc)) {
+      isValid = false;
+      messageParts.push('Analysis Material Cost needs a numeric value.');
+    }
+
+    const message = messageParts.map((part, index) => {
+      console.log('part: ', part);
+      return (
+        <React.Fragment>
+          {index !== 0 ? <br /> : ''}
+          {part}
+        </React.Fragment>
+      );
+    });
+    setValidationMessage(message);
+    return isValid;
+  }
+
   return (
     <div css={panelContainer}>
       <div>
@@ -684,25 +941,413 @@ function LocateSamples() {
           </p>
         </div>
         <AccordionList>
+          <AccordionItem title={'Create User Defined Sample Types'}>
+            <div css={sectionContainer}>
+              <label htmlFor="sample-type-select">Sample Type</label>
+              <Select
+                id="sample-type-select"
+                inputId="sample-type-select-input"
+                css={fullWidthSelectStyles}
+                isDisabled={editingStatus ? true : false}
+                value={userDefinedSampleType}
+                onChange={(ev) =>
+                  setUserDefinedSampleType(ev as UserDefinedSelect)
+                }
+                options={allSampleOptions}
+              />
+              <div css={inlineMenuStyles}>
+                <button
+                  css={addButtonStyles}
+                  onClick={(ev) => {
+                    if (editingStatus === 'create') {
+                      setEditingStatus(null);
+                      return;
+                    }
+
+                    setSampleTypeInputs('create');
+                  }}
+                >
+                  {editingStatus === 'create' ? 'Cancel' : 'Create'}
+                </button>
+                {userDefinedSampleType && (
+                  <React.Fragment>
+                    {userDefinedSampleType.isPredefined ? (
+                      <button
+                        css={addButtonStyles}
+                        onClick={(ev) => {
+                          if (editingStatus === 'view') {
+                            setEditingStatus(null);
+                            return;
+                          }
+
+                          setSampleTypeInputs('view');
+                        }}
+                      >
+                        {editingStatus === 'view' ? 'Hide' : 'View'}
+                      </button>
+                    ) : (
+                      <button
+                        css={addButtonStyles}
+                        onClick={(ev) => {
+                          if (editingStatus === 'edit') {
+                            setEditingStatus(null);
+                            return;
+                          }
+
+                          setSampleTypeInputs('edit');
+                        }}
+                      >
+                        {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                      </button>
+                    )}
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        if (editingStatus === 'clone') {
+                          setEditingStatus(null);
+                          return;
+                        }
+
+                        setSampleTypeInputs('clone');
+                      }}
+                    >
+                      {editingStatus === 'clone' ? 'Cancel' : 'Clone'}
+                    </button>
+                  </React.Fragment>
+                )}
+              </div>
+              {editingStatus && (
+                <div>
+                  <div>
+                    <label htmlFor="sample-type-name-input">
+                      Sample Type Name
+                    </label>
+                    <input
+                      id="sample-type-name-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={sampleTypeName}
+                      onChange={(ev) => setSampleTypeName(ev.target.value)}
+                    />
+                    <label htmlFor="shape-type-select">Shape Type</label>
+                    <Select
+                      id="shape-type-select"
+                      inputId="shape-type-select-input"
+                      css={fullWidthSelectStyles}
+                      value={shapeType}
+                      isDisabled={editingStatus === 'view'}
+                      onChange={(ev) => setShapeType(ev as ShapeTypeSelect)}
+                      options={[
+                        { value: 'point', label: 'Point' },
+                        { value: 'polygon', label: 'Polygon' },
+                      ]}
+                    />
+                    {shapeType?.value === 'point' && (
+                      <React.Fragment>
+                        <div css={inlineMenuStyles}>
+                          <div
+                            css={css`
+                              margin-right: 10px;
+                            `}
+                          >
+                            <label htmlFor="shape-width-input">
+                              Shape Width
+                            </label>
+                            <input
+                              id="shape-width-input"
+                              disabled={editingStatus === 'view'}
+                              css={inputStyles}
+                              value={width ? width : ''}
+                              onChange={(ev) => setWidth(ev.target.value)}
+                            />
+                          </div>
+                          <button
+                            css={checkAreaButtonStyles}
+                            onClick={(ev) => {
+                              if (!userDefinedSampleType) return;
+
+                              // TODO: Replace this with an actual area
+                              const area =
+                                sampleAttributes[userDefinedSampleType.label]
+                                  .SA;
+                              setAreaTest(Number(area));
+                            }}
+                          >
+                            Check Area
+                          </button>
+                        </div>
+
+                        {areaTest && (
+                          <React.Fragment>
+                            <span>
+                              Approximate Area (not correct): {areaTest}
+                            </span>
+                            <br />
+                          </React.Fragment>
+                        )}
+                      </React.Fragment>
+                    )}
+                    <label htmlFor="ttpk-input">
+                      Time to Prepare Kits <em>(person hrs/sample)</em>
+                    </label>
+                    <input
+                      id="ttpk-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={ttpk ? ttpk : ''}
+                      onChange={(ev) => setTtpk(ev.target.value)}
+                    />
+                    <label htmlFor="ttc-input">
+                      Time to Collect <em>(person hrs/sample)</em>
+                    </label>
+                    <input
+                      id="ttc-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={ttc ? ttc : ''}
+                      onChange={(ev) => setTtc(ev.target.value)}
+                    />
+                    <label htmlFor="tta-input">
+                      Time to Analyze <em>(person hrs/sample)</em>
+                    </label>
+                    <input
+                      id="tta-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={tta ? tta : ''}
+                      onChange={(ev) => setTta(ev.target.value)}
+                    />
+                    <label htmlFor="ttps-input">
+                      Total Time per Sample <em>(person hrs/sample)</em>
+                    </label>
+                    <input
+                      id="ttps-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={ttps ? ttps : ''}
+                      onChange={(ev) => setTtps(ev.target.value)}
+                    />
+                    <label htmlFor="lod_p-input">
+                      Limit of Detection (CFU) Porous{' '}
+                      <em>(only used for reference)</em>
+                    </label>
+                    <input
+                      id="lod_p-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={lodp ? lodp : ''}
+                      onChange={(ev) => setLodp(ev.target.value)}
+                    />
+                    <label htmlFor="lod_non-input">
+                      Limit of Detection (CFU) Nonporous{' '}
+                      <em>(only used for reference)</em>
+                    </label>
+                    <input
+                      id="lod_non-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={lodnon ? lodnon : ''}
+                      onChange={(ev) => setLodnon(ev.target.value)}
+                    />
+                    <label htmlFor="mcps-input">
+                      Material Cost <em>($/sample)</em>
+                    </label>
+                    <input
+                      id="mcps-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={mcps ? mcps : ''}
+                      onChange={(ev) => setMcps(ev.target.value)}
+                    />
+                    <label htmlFor="tcps-input">
+                      Total Cost per Sample <em>(Labor + Material + Waste)</em>
+                    </label>
+                    <input
+                      id="tcps-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={tcps ? tcps : ''}
+                      onChange={(ev) => setTcps(ev.target.value)}
+                    />
+                    <label htmlFor="wvps-input">
+                      Waste Volume <em>(L/sample)</em>
+                    </label>
+                    <input
+                      id="wvps-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={wvps ? wvps : ''}
+                      onChange={(ev) => setWvps(ev.target.value)}
+                    />
+                    <label htmlFor="wwps-input">
+                      Waste Weight <em>(lbs/sample)</em>
+                    </label>
+                    <input
+                      id="wwps-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={wwps ? wwps : ''}
+                      onChange={(ev) => setWwps(ev.target.value)}
+                    />
+                    <label htmlFor="sa-input">
+                      Reference Surface Area <em>(sq inch)</em>
+                    </label>
+                    <input
+                      id="sa-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={sa ? sa : ''}
+                      onChange={(ev) => setSa(ev.target.value)}
+                    />
+                    <label htmlFor="alc-input">Analysis Labor Cost</label>
+                    <input
+                      id="alc-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={alc ? alc : ''}
+                      onChange={(ev) => setAlc(ev.target.value)}
+                    />
+                    <label htmlFor="amc-input">Analysis Material Cost</label>
+                    <input
+                      id="amc-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={amc ? amc : ''}
+                      onChange={(ev) => setAmc(ev.target.value)}
+                    />
+                  </div>
+                  <br />
+                  {validationMessage &&
+                    userDefinedValidationMessage(validationMessage)}
+                  <div css={inlineMenuStyles}>
+                    {editingStatus !== 'view' && (
+                      <button
+                        css={addButtonStyles}
+                        onClick={(ev) => {
+                          const isValid = validateEdits();
+                          if (isValid && sampleTypeName) {
+                            const newSampleType = {
+                              value: sampleTypeName,
+                              label: sampleTypeName,
+                              isPredefined: false,
+                            };
+
+                            // add the new option to the dropdown if it doesn't exist
+                            if (
+                              !sampleAttributes.hasOwnProperty(sampleTypeName)
+                            ) {
+                              setUserDefinedOptions([
+                                ...userDefinedOptions,
+                                newSampleType,
+                              ]);
+                            }
+
+                            // update the sample attributes
+                            sampleAttributes[sampleTypeName] = {
+                              OBJECTID: '-1',
+                              PERMANENT_IDENTIFIER: null,
+                              GLOBALID: null,
+                              TYPE: sampleTypeName,
+                              IsPoint:
+                                shapeType?.value === 'point' ? true : false,
+                              Width: Number(width),
+                              TTPK: ttpk ? ttpk.toString() : null,
+                              TTC: ttc ? ttc.toString() : null,
+                              TTA: tta ? tta.toString() : null,
+                              TTPS: ttps ? ttps.toString() : null,
+                              LOD_P: lodp ? lodp.toString() : null,
+                              LOD_NON: lodnon ? lodnon.toString() : null,
+                              MCPS: mcps ? mcps.toString() : null,
+                              TCPS: tcps ? tcps.toString() : null,
+                              WVPS: wvps ? wvps.toString() : null,
+                              WWPS: wwps ? wwps.toString() : null,
+                              SA: sa ? sa.toString() : null,
+                              AA: '',
+                              OAA: '', // TODO: Delete this before release - original AA for debug
+                              ALC: alc ? alc.toString() : null,
+                              AMC: amc ? amc.toString() : null,
+                              Notes: '',
+                              CONTAMTYPE: null,
+                              CONTAMVAL: null,
+                              CONTAMUNIT: null,
+                              CREATEDDATE: null,
+                              UPDATEDDATE: null,
+                              USERNAME: null,
+                              ORGANIZATION: null,
+                              ELEVATIONSERIES: null,
+                            };
+
+                            // select the new sample type
+                            setUserDefinedSampleType(newSampleType);
+
+                            setEditingStatus(null);
+                          }
+                        }}
+                      >
+                        Save
+                      </button>
+                    )}
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        setEditingStatus(null);
+                      }}
+                    >
+                      {editingStatus === 'view' ? 'Hide' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              )}{' '}
+            </div>
+          </AccordionItem>
           <AccordionItem
             title={'Add Targeted Samples'}
             initiallyExpanded={true}
           >
-            <div css={sketchButtonContainerStyles}>
-              {SampleSelectOptions.map((option, index) => {
-                const sampleType = option.label;
-                const isPoint = sampleAttributes[sampleType].IsPoint;
-                return (
-                  <SketchButton
-                    key={index}
-                    label={sampleType}
-                    iconClass={
-                      isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
-                    }
-                    onClick={() => sketchButtonClick(sampleType)}
-                  />
-                );
-              })}
+            <div css={sectionContainer}>
+              <div>
+                <h3>EPA Sample Types</h3>
+                <div css={sketchButtonContainerStyles}>
+                  {SampleSelectOptions.map((option, index) => {
+                    const sampleType = option.label;
+                    const isPoint = sampleAttributes[sampleType].IsPoint;
+                    return (
+                      <SketchButton
+                        key={index}
+                        label={sampleType}
+                        iconClass={
+                          isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
+                        }
+                        onClick={() => sketchButtonClick(sampleType)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              {userDefinedOptions.length > 0 && (
+                <div>
+                  <br />
+                  <h3>User Defined Sample Types</h3>
+                  <div css={sketchButtonContainerStyles}>
+                    {userDefinedOptions.map((option, index) => {
+                      if (option.isPredefined) return null;
+
+                      const sampleType = option.label;
+                      const isPoint = sampleAttributes[sampleType].IsPoint;
+                      return (
+                        <SketchButton
+                          key={index}
+                          label={sampleType}
+                          iconClass={
+                            isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
+                          }
+                          onClick={() => sketchButtonClick(sampleType)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </AccordionItem>
           <AccordionItem title={'Add Multiple Random Samples'}>
@@ -734,7 +1379,7 @@ function LocateSamples() {
                     <Select
                       id="aoi-mask-select"
                       inputId="aoi-mask-select-input"
-                      css={fullWidthSelectStyles}
+                      css={inlineSelectStyles}
                       isClearable={true}
                       value={aoiSketchLayer}
                       onChange={(ev) => setAoiSketchLayer(ev as LayerType)}

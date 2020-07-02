@@ -224,6 +224,12 @@ export const contaminationHitsSuccessMessage = (numberOfHits: number) => (
   />
 );
 
+export const userDefinedValidationMessage = (
+  message: JSX.Element[] | string,
+) => (
+  <MessageBox severity="error" title="Validation Failure" message={message} />
+);
+
 // calculate results panel
 export const screenshotFailureMessage = (
   <MessageBox
