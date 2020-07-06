@@ -115,6 +115,7 @@ const sketchButtonContainerStyles = css`
 
 const sketchButtonStyles = css`
   position: relative;
+  height: 90px;
   width: 33.33%;
   background-color: white;
   color: black;
@@ -136,18 +137,20 @@ const sketchButtonStyles = css`
   }
 `;
 
-const textStyles = css`
+const textContainerStyles = css`
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
   right: 0;
-  line-height: 100%;
-  height: 100%;
-  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+`;
+
+const textStyles = css`
+  max-height: 85px;
+  word-break: break-word;
 `;
 
 const centerTextStyles = css`
@@ -230,6 +233,9 @@ type SketchButtonProps = {
 };
 
 function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
+  // put an ellipses on the end if the text is to long
+  const displayLabel = label.length > 38 ? `${label.substr(0, 38)}...` : label;
+
   return (
     <button
       id={label}
@@ -238,11 +244,11 @@ function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
       onClick={() => onClick()}
       css={sketchButtonStyles}
     >
-      <div css={textStyles}>
-        <div>
+      <div css={textContainerStyles}>
+        <div css={textStyles}>
           <i className={iconClass} />
           <br />
-          {label}
+          {displayLabel}
         </div>
       </div>
     </button>
