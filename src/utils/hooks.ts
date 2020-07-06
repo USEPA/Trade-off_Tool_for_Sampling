@@ -25,6 +25,11 @@ import {
   getPopupTemplate,
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
+import {
+  UserDefinedAttributes,
+  SampleSelectType,
+  sampleAttributes,
+} from 'config/sampleAttributes';
 
 // Saves data to session storage
 export async function writeToStorage(
@@ -1335,6 +1340,82 @@ function useBasemapStorage() {
   ]);
 }
 
+// Uses browser storage for holding the url layers that have been added.
+function useUserDefinedSampleOptionsStorage() {
+  const key = 'tots_user_defined_sample_options';
+  const { setOptions } = React.useContext(DialogContext);
+  const { userDefinedOptions, setUserDefinedOptions } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives url layers from browser storage when the app loads
+  const [
+    localUserDefinedSamplesInitialized,
+    setLocalUserDefinedSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!setUserDefinedOptions || localUserDefinedSamplesInitialized) return;
+
+    setLocalUserDefinedSamplesInitialized(true);
+    const userDefinedSamplesStr = readFromStorage(key);
+    if (!userDefinedSamplesStr) return;
+
+    const userDefinedSamples: SampleSelectType[] = JSON.parse(
+      userDefinedSamplesStr,
+    );
+
+    setUserDefinedOptions(userDefinedSamples);
+  }, [localUserDefinedSamplesInitialized, setUserDefinedOptions]);
+
+  // Saves the url layers to browser storage everytime they change
+  React.useEffect(() => {
+    if (!localUserDefinedSamplesInitialized) return;
+    writeToStorage(key, userDefinedOptions, setOptions);
+  }, [userDefinedOptions, localUserDefinedSamplesInitialized, setOptions]);
+}
+
+// Uses browser storage for holding the url layers that have been added.
+function useUserDefinedSampleAttributesStorage() {
+  const key = 'tots_user_defined_sample_attributes';
+  const { setOptions } = React.useContext(DialogContext);
+  const { userDefinedAttributes, setUserDefinedAttributes } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives url layers from browser storage when the app loads
+  const [
+    localUserDefinedSamplesInitialized,
+    setLocalUserDefinedSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!setUserDefinedAttributes || localUserDefinedSamplesInitialized) return;
+
+    setLocalUserDefinedSamplesInitialized(true);
+    const userDefinedAttributesStr = readFromStorage(key);
+    console.log('userDefinedAttributesStr: ', userDefinedAttributesStr);
+    if (!userDefinedAttributesStr) return;
+
+    // parse the storage value
+    const userDefinedAttributesObj: UserDefinedAttributes = JSON.parse(
+      userDefinedAttributesStr,
+    );
+
+    // add the user defined attributes to the global attributes
+    Object.keys(userDefinedAttributesObj.attributes).forEach((key) => {
+      sampleAttributes[key] = userDefinedAttributesObj.attributes[key];
+    });
+
+    // set the state
+    setUserDefinedAttributes(userDefinedAttributesObj);
+  }, [localUserDefinedSamplesInitialized, setUserDefinedAttributes]);
+
+  // Saves the url layers to browser storage everytime they change
+  React.useEffect(() => {
+    if (!localUserDefinedSamplesInitialized) return;
+    writeToStorage(key, userDefinedAttributes, setOptions);
+  }, [userDefinedAttributes, localUserDefinedSamplesInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -1350,4 +1431,6 @@ export function useSessionStorage() {
   useCalculateSettingsStorage();
   useCurrentTabSettings();
   useBasemapStorage();
+  useUserDefinedSampleOptionsStorage();
+  useUserDefinedSampleAttributesStorage();
 }

@@ -319,6 +319,7 @@ function LocateSamples() {
     getGpMaxRecordCount,
     userDefinedOptions,
     setUserDefinedOptions,
+    setUserDefinedAttributes,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -844,16 +845,27 @@ function LocateSamples() {
       messageParts.push('Analysis Material Cost needs a numeric value.');
     }
 
-    const message = messageParts.map((part, index) => {
-      return (
-        <React.Fragment key={index}>
-          {index !== 0 ? <br /> : ''}
-          {part}
-        </React.Fragment>
-      );
-    });
-    setValidationMessage(message);
+    if (messageParts.length > 0) {
+      const message = messageParts.map((part, index) => {
+        return (
+          <React.Fragment key={index}>
+            {index !== 0 ? <br /> : ''}
+            {part}
+          </React.Fragment>
+        );
+      });
+      setValidationMessage(message);
+    }
+
     return isValid;
+  }
+
+  function didSampleTypeNameChange() {
+    return (
+      editingStatus === 'edit' &&
+      userDefinedSampleType &&
+      sampleTypeName !== userDefinedSampleType.label
+    );
   }
 
   return (
@@ -1221,18 +1233,8 @@ function LocateSamples() {
                               isPredefined: false,
                             };
 
-                            // add the new option to the dropdown if it doesn't exist
-                            if (
-                              !sampleAttributes.hasOwnProperty(sampleTypeName)
-                            ) {
-                              setUserDefinedOptions([
-                                ...userDefinedOptions,
-                                newSampleType,
-                              ]);
-                            }
-
                             // update the sample attributes
-                            sampleAttributes[sampleTypeName] = {
+                            const newAttributes = {
                               OBJECTID: '-1',
                               PERMANENT_IDENTIFIER: null,
                               GLOBALID: null,
@@ -1265,6 +1267,61 @@ function LocateSamples() {
                               ORGANIZATION: null,
                               ELEVATIONSERIES: null,
                             };
+
+                            // check if the sample is in the sampleAttributes
+                            const hasSample = sampleAttributes.hasOwnProperty(
+                              sampleTypeName,
+                            );
+
+                            // add/update the sample's attributes
+                            sampleAttributes[sampleTypeName] = newAttributes;
+                            setUserDefinedAttributes((item) => {
+                              item.attributes[sampleTypeName] = newAttributes;
+
+                              // if the sampleTypeName changed, remove the attributes tied to the old name
+                              if (
+                                didSampleTypeNameChange() &&
+                                userDefinedSampleType
+                              ) {
+                                delete item.attributes[
+                                  userDefinedSampleType.label
+                                ];
+                              }
+
+                              return {
+                                editCount: item.editCount + 1,
+                                attributes: item.attributes,
+                              };
+                            });
+
+                            // add the new option to the dropdown if it doesn't exist
+                            if (!hasSample) {
+                              setUserDefinedOptions((options) => {
+                                if (!didSampleTypeNameChange()) {
+                                  return {
+                                    ...options,
+                                    newSampleType,
+                                  };
+                                }
+
+                                const newOptions: SampleSelectType[] = [];
+                                options.forEach((option) => {
+                                  // if the sampleTypeName changed, replace the option tied to the old name with the new one
+                                  if (
+                                    didSampleTypeNameChange() &&
+                                    option.label ===
+                                      userDefinedSampleType?.label
+                                  ) {
+                                    newOptions.push(newSampleType);
+                                    return;
+                                  }
+
+                                  newOptions.push(option);
+                                });
+
+                                return newOptions;
+                              });
+                            }
 
                             // select the new sample type
                             setUserDefinedSampleType(newSampleType);

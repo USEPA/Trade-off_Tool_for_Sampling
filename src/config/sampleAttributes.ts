@@ -1,4 +1,4 @@
-type Attributes = {
+export type Attributes = {
   [key: string]: {
     OBJECTID: string | null;
     PERMANENT_IDENTIFIER: string | null;
@@ -33,7 +33,12 @@ type Attributes = {
   };
 };
 
-const sampleAttributes: Attributes = {
+export type UserDefinedAttributes = {
+  editCount: number;
+  attributes: Attributes;
+};
+
+export const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
     PERMANENT_IDENTIFIER: null,
@@ -240,5 +245,3 @@ export const SampleSelectOptions: SampleSelectType[] = Object.values(
   const value = item.TYPE;
   return { value, label: value, isPredefined: true };
 });
-
-export { sampleAttributes };
