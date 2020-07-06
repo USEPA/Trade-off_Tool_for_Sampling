@@ -629,7 +629,7 @@ function useEditsLayerStorage() {
       displayedFeatures.forEach((graphic) => {
         features.push(
           new Graphic({
-            attributes: graphic.attributes,
+            attributes: { ...graphic.attributes },
             symbol: polygonSymbol,
             geometry: new Polygon({
               spatialReference: {
