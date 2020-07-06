@@ -13,6 +13,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
+import { FeatureEditsType } from 'types/Edits';
 // config
 import {
   sampleAttributes,
@@ -31,6 +32,7 @@ import {
 // utils
 import { useStartOver } from 'utils/hooks';
 import {
+  convertToSimpleGraphic,
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
   getDefaultSampleLayer,
@@ -330,6 +332,7 @@ function LocateSamples() {
   const {
     Collection,
     FeatureSet,
+    geometryEngine,
     Geoprocessor,
     Graphic,
     GraphicsLayer,
@@ -866,12 +869,91 @@ function LocateSamples() {
     return isValid;
   }
 
+  // Checks to see if the sample type name changed.
   function didSampleTypeNameChange() {
     return (
       editingStatus === 'edit' &&
       userDefinedSampleType &&
       sampleTypeName !== userDefinedSampleType.label
     );
+  }
+
+  // Updates the attributes of graphics that have had property changes
+  function updateAttributes({
+    graphics,
+    newAttributes,
+    oldType,
+  }: {
+    graphics: __esri.Graphic[] | FeatureEditsType[];
+    newAttributes: any;
+    oldType: string;
+  }) {
+    graphics.forEach((graphic: __esri.Graphic | FeatureEditsType) => {
+      // update attributes for the edited type
+      if (graphic.attributes.TYPE === oldType) {
+        const widthChanged = graphic.attributes.Width !== newAttributes.Width;
+        const shapeTypeChanged =
+          graphic.attributes.IsPoint !== newAttributes.IsPoint;
+
+        graphic.attributes.TYPE = newAttributes.TYPE;
+        graphic.attributes.IsPoint = newAttributes.IsPoint;
+        graphic.attributes.Width = newAttributes.Width;
+        graphic.attributes.SA = newAttributes.SA;
+        graphic.attributes.TTPK = newAttributes.TTPK;
+        graphic.attributes.TTC = newAttributes.TTC;
+        graphic.attributes.TTA = newAttributes.TTA;
+        graphic.attributes.TTPS = newAttributes.TTPS;
+        graphic.attributes.LOD_P = newAttributes.LOD_P;
+        graphic.attributes.LOD_NON = newAttributes.LOD_NON;
+        graphic.attributes.MCPS = newAttributes.MCPS;
+        graphic.attributes.TCPS = newAttributes.TCPS;
+        graphic.attributes.WVPS = newAttributes.WVPS;
+        graphic.attributes.WWPS = newAttributes.WWPS;
+        graphic.attributes.ALC = newAttributes.ALC;
+        graphic.attributes.AMC = newAttributes.AMC;
+
+        // redraw the graphic if the width changed or if the graphic went from a
+        // polygon to a point
+        if (newAttributes.IsPoint && (widthChanged || shapeTypeChanged)) {
+          // determine the buffer needed to get the desired area which is half
+          // the width of the box
+          let halfWidth = newAttributes.Width / 2;
+
+          // convert the geometry _esriPolygon if it is missing stuff
+          const tempGeometry = graphic.geometry as any;
+          const isFullGraphic = tempGeometry.centroid ? true : false;
+          const geometry = isFullGraphic
+            ? (graphic.geometry as __esri.Polygon)
+            : new Polygon(graphic.geometry);
+
+          // create the graphic
+          const center = geometry.centroid as __esri.Point;
+
+          const ptBuff = geometryEngine.geodesicBuffer(
+            center,
+            halfWidth,
+            109009,
+          ) as __esri.Polygon;
+
+          graphic.geometry = new Polygon({
+            spatialReference: center.spatialReference,
+            centroid: center,
+            rings: [
+              [
+                [ptBuff.extent.xmin, ptBuff.extent.ymin],
+                [ptBuff.extent.xmin, ptBuff.extent.ymax],
+                [ptBuff.extent.xmax, ptBuff.extent.ymax],
+                [ptBuff.extent.xmax, ptBuff.extent.ymin],
+                [ptBuff.extent.xmin, ptBuff.extent.ymin],
+              ],
+            ],
+          });
+
+          if (isFullGraphic) return;
+          graphic = convertToSimpleGraphic(graphic as __esri.Graphic);
+        }
+      }
+    });
   }
 
   return (
@@ -1274,11 +1356,6 @@ function LocateSamples() {
                               ELEVATIONSERIES: null,
                             };
 
-                            // check if the sample is in the sampleAttributes
-                            const hasSample = sampleAttributes.hasOwnProperty(
-                              sampleTypeName,
-                            );
-
                             // add/update the sample's attributes
                             sampleAttributes[sampleTypeName] = newAttributes;
                             setUserDefinedAttributes((item) => {
@@ -1301,13 +1378,14 @@ function LocateSamples() {
                             });
 
                             // add the new option to the dropdown if it doesn't exist
+                            const hasSample =
+                              userDefinedOptions.findIndex(
+                                (option) => option.label === sampleTypeName,
+                              ) > -1;
                             if (!hasSample) {
                               setUserDefinedOptions((options) => {
                                 if (!didSampleTypeNameChange()) {
-                                  return {
-                                    ...options,
-                                    newSampleType,
-                                  };
+                                  return [...options, newSampleType];
                                 }
 
                                 const newOptions: SampleSelectType[] = [];
@@ -1326,6 +1404,65 @@ function LocateSamples() {
                                 });
 
                                 return newOptions;
+                              });
+                            }
+
+                            if (
+                              editingStatus === 'edit' &&
+                              userDefinedSampleType
+                            ) {
+                              const oldType = userDefinedSampleType.label;
+
+                              // Update the attributes of the graphics on the map on edits
+                              layers.forEach((layer) => {
+                                if (
+                                  !['Samples', 'VSP'].includes(
+                                    layer.layerType,
+                                  ) ||
+                                  layer.sketchLayer.type !== 'graphics'
+                                ) {
+                                  return;
+                                }
+
+                                updateAttributes({
+                                  graphics: layer.sketchLayer.graphics.toArray(),
+                                  newAttributes,
+                                  oldType,
+                                });
+                              });
+
+                              //Update the attributes of the edits context/session storage
+                              setEdits((edits) => {
+                                edits.edits.forEach((edits) => {
+                                  if (
+                                    !['Samples', 'VSP'].includes(
+                                      edits.layerType,
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  updateAttributes({
+                                    graphics: edits.adds as __esri.Graphic[],
+                                    newAttributes,
+                                    oldType,
+                                  });
+                                  updateAttributes({
+                                    graphics: edits.updates as __esri.Graphic[],
+                                    newAttributes,
+                                    oldType,
+                                  });
+                                  updateAttributes({
+                                    graphics: edits.published as __esri.Graphic[],
+                                    newAttributes,
+                                    oldType,
+                                  });
+                                });
+
+                                return {
+                                  count: edits.count + 1,
+                                  edits: edits.edits,
+                                };
                               });
                             }
 
