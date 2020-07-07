@@ -199,8 +199,16 @@ const addButtonStyles = css`
   height: 38px; /* same height as ReactSelect */
 `;
 
+const widthAreaCheckContainerStyles = css`
+  margin-bottom: 10px;
+`;
+
+const widthInputContainerStyles = css`
+  margin-right: 10px;
+`;
+
 const checkAreaButtonStyles = css`
-  margin: 0;
+  margin: 10px 0 0 0;
 `;
 
 const fullWidthSelectStyles = css`
@@ -221,6 +229,11 @@ const inputStyles = css`
   padding-left: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+`;
+
+const widthInputStyles = css`
+  ${inputStyles}
+  margin: 0;
 `;
 
 const submitButtonStyles = css`
@@ -335,10 +348,11 @@ function LocateSamples() {
     Geoprocessor,
     Graphic,
     GraphicsLayer,
+    Point,
     Polygon,
   } = useEsriModulesContext();
   const startOver = useStartOver();
-  const { createBuffer } = useGeometryTools();
+  const { calculateArea, createBuffer } = useGeometryTools();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
@@ -698,7 +712,7 @@ function LocateSamples() {
     null,
   );
   const [width, setWidth] = React.useState<string | null>('');
-  const [areaTest, setAreaTest] = React.useState<number | null>(null);
+  const [areaTest, setAreaTest] = React.useState<string | null>(null);
   const [ttpk, setTtpk] = React.useState<string | null>('');
   const [ttc, setTtc] = React.useState<string | null>('');
   const [tta, setTta] = React.useState<string | null>('');
@@ -1094,6 +1108,16 @@ function LocateSamples() {
                       value={sampleTypeName}
                       onChange={(ev) => setSampleTypeName(ev.target.value)}
                     />
+                    <label htmlFor="sa-input">
+                      Reference Surface Area <em>(sq inch)</em>
+                    </label>
+                    <input
+                      id="sa-input"
+                      disabled={editingStatus === 'view'}
+                      css={inputStyles}
+                      value={sa ? sa : ''}
+                      onChange={(ev) => setSa(ev.target.value)}
+                    />
                     <label htmlFor="shape-type-select">Shape Type</label>
                     <Select
                       id="shape-type-select"
@@ -1108,20 +1132,16 @@ function LocateSamples() {
                       ]}
                     />
                     {shapeType?.value === 'point' && (
-                      <React.Fragment>
+                      <div css={widthAreaCheckContainerStyles}>
                         <div css={inlineMenuStyles}>
-                          <div
-                            css={css`
-                              margin-right: 10px;
-                            `}
-                          >
+                          <div css={widthInputContainerStyles}>
                             <label htmlFor="shape-width-input">
                               Shape Width
                             </label>
                             <input
                               id="shape-width-input"
                               disabled={editingStatus === 'view'}
-                              css={inputStyles}
+                              css={widthInputStyles}
                               value={width ? width : ''}
                               onChange={(ev) => setWidth(ev.target.value)}
                             />
@@ -1131,11 +1151,25 @@ function LocateSamples() {
                             onClick={(ev) => {
                               if (!userDefinedSampleType) return;
 
-                              // TODO: Replace this with an actual area
-                              const area =
-                                sampleAttributes[userDefinedSampleType.label]
-                                  .SA;
-                              setAreaTest(Number(area));
+                              // Create a point in Washington DC
+                              const geometry = new Point({
+                                spatialReference: { wkid: 3857 },
+                                latitude: 38.9072,
+                                longitude: -77.0369,
+                              });
+                              const testPoint = new Graphic({ geometry });
+
+                              createBuffer(testPoint, Number(width));
+                              const area = calculateArea(testPoint);
+
+                              let areaStr = '';
+                              if (typeof area === 'number') {
+                                areaStr = String(Math.round(area * 10) / 10);
+                              } else {
+                                areaStr = area;
+                              }
+
+                              setAreaTest(areaStr);
                             }}
                           >
                             Check Area
@@ -1143,14 +1177,9 @@ function LocateSamples() {
                         </div>
 
                         {areaTest && (
-                          <React.Fragment>
-                            <span>
-                              Approximate Area (not correct): {areaTest}
-                            </span>
-                            <br />
-                          </React.Fragment>
+                          <span>Approximate Area: {areaTest} sq in</span>
                         )}
-                      </React.Fragment>
+                      </div>
                     )}
                     <label htmlFor="ttpk-input">
                       Time to Prepare Kits <em>(person hrs/sample)</em>
@@ -1253,16 +1282,6 @@ function LocateSamples() {
                       css={inputStyles}
                       value={wwps ? wwps : ''}
                       onChange={(ev) => setWwps(ev.target.value)}
-                    />
-                    <label htmlFor="sa-input">
-                      Reference Surface Area <em>(sq inch)</em>
-                    </label>
-                    <input
-                      id="sa-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={sa ? sa : ''}
-                      onChange={(ev) => setSa(ev.target.value)}
                     />
                     <label htmlFor="alc-input">Analysis Labor Cost</label>
                     <input
