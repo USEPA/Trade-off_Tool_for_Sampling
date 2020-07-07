@@ -9,6 +9,7 @@ import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
+import { DialogContext } from 'contexts/Dialog';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -199,6 +200,11 @@ const addButtonStyles = css`
   height: 38px; /* same height as ReactSelect */
 `;
 
+const deleteSampleTypeButtonStyles = css`
+  ${addButtonStyles}
+  background-color: red;
+`;
+
 const widthAreaCheckContainerStyles = css`
   margin-bottom: 10px;
 `;
@@ -318,6 +324,7 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
+  const { setOptions } = React.useContext(DialogContext);
   const {
     setGoTo,
     setGoToOptions,
@@ -1093,6 +1100,99 @@ function LocateSamples() {
                   </React.Fragment>
                 )}
               </div>
+              {!editingStatus &&
+                userDefinedSampleType &&
+                !userDefinedSampleType.isPredefined && (
+                  <div css={userDefinedButtonStyles}>
+                    <button
+                      css={deleteSampleTypeButtonStyles}
+                      onClick={() => {
+                        const sampleTypeName = userDefinedSampleType.value;
+
+                        setOptions({
+                          title: 'Would you like to continue?',
+                          ariaLabel: 'Would you like to continue?',
+                          description:
+                            'This operation will delete the sample type and any associated samples.',
+                          onContinue: () => {
+                            setUserDefinedOptions(
+                              userDefinedOptions.filter(
+                                (option) => option.value !== sampleTypeName,
+                              ),
+                            );
+                            setUserDefinedAttributes((userDefined) => {
+                              delete userDefined.attributes[sampleTypeName];
+                              userDefined.editCount += 1;
+                              return userDefined;
+                            });
+
+                            // Update the attributes of the graphics on the map on edits
+                            layers.forEach((layer) => {
+                              if (
+                                !['Samples', 'VSP'].includes(layer.layerType) ||
+                                layer.sketchLayer.type !== 'graphics'
+                              ) {
+                                return;
+                              }
+
+                              const graphicsToRemove: __esri.Graphic[] = [];
+                              layer.sketchLayer.graphics.forEach((graphic) => {
+                                if (
+                                  graphic.attributes.TYPE === sampleTypeName
+                                ) {
+                                  graphicsToRemove.push(graphic);
+                                }
+                              });
+                              layer.sketchLayer.removeMany(graphicsToRemove);
+                            });
+
+                            //Update the attributes of the edits context/session storage
+                            setEdits((edits) => {
+                              edits.edits.forEach((edits) => {
+                                if (
+                                  !['Samples', 'VSP'].includes(edits.layerType)
+                                ) {
+                                  return;
+                                }
+
+                                edits.adds = edits.adds.filter(
+                                  (graphic) =>
+                                    graphic.attributes.TYPE !== sampleTypeName,
+                                );
+                                edits.updates = edits.updates.filter(
+                                  (graphic) =>
+                                    graphic.attributes.TYPE !== sampleTypeName,
+                                );
+                                edits.published = edits.published.filter(
+                                  (graphic) =>
+                                    graphic.attributes.TYPE !== sampleTypeName,
+                                );
+                              });
+
+                              return {
+                                count: edits.count + 1,
+                                edits: edits.edits,
+                              };
+                            });
+
+                            // TODO: Add code for deleteing the user defined type
+                            //       from ArcGIS Online.
+
+                            setUserDefinedSampleType(null);
+                          },
+                        });
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      css={addButtonStyles}
+                      onClick={() => alert('Feature coming soon...')}
+                    >
+                      Publish
+                    </button>
+                  </div>
+                )}
               {editingStatus && (
                 <div>
                   <div>
@@ -1476,7 +1576,7 @@ function LocateSamples() {
                     </button>
                   </div>
                 </div>
-              )}{' '}
+              )}
             </div>
           </AccordionItem>
           <AccordionItem
