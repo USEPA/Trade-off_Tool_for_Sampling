@@ -400,7 +400,7 @@ function NavBar({ height }: Props) {
                 <hr css={resourceTallySeparator} />
               </div>
               {calculateResults.data['Limiting Time Factor'] && (
-                <React.Fragment>
+                <div>
                   Limiting Factor
                   <br />
                   {calculateResults.data['Limiting Time Factor'] ===
@@ -410,7 +410,7 @@ function NavBar({ height }: Props) {
                   <span css={limitingFactorStyles}>
                     {calculateResults.data['Limiting Time Factor']}
                   </span>
-                </React.Fragment>
+                </div>
               )}
             </div>
           )}
