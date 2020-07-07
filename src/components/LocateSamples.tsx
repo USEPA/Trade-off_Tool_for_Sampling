@@ -1294,17 +1294,21 @@ function LocateSamples() {
                       css={addButtonStyles}
                       onClick={(ev) => {
                         const isValid = validateEdits();
+                        const predefinedEdited =
+                          editingStatus === 'edit' &&
+                          userDefinedSampleType?.isPredefined;
                         if (isValid && sampleTypeName) {
                           let newSampleType = {
                             value: sampleTypeName,
                             label: sampleTypeName,
                             isPredefined: false,
                           };
-                          if (
-                            editingStatus === 'edit' &&
-                            userDefinedSampleType?.isPredefined
-                          ) {
-                            newSampleType = userDefinedSampleType;
+                          if (predefinedEdited && userDefinedSampleType) {
+                            newSampleType = {
+                              value: userDefinedSampleType.value,
+                              label: `${userDefinedSampleType?.value} (edited)`,
+                              isPredefined: userDefinedSampleType.isPredefined,
+                            };
                           }
 
                           // update the sample attributes
@@ -1370,7 +1374,10 @@ function LocateSamples() {
                             ) > -1;
                           if (
                             !hasSample &&
-                            !userDefinedSampleType?.isPredefined
+                            userDefinedSampleType &&
+                            (editingStatus !== 'edit' ||
+                              (editingStatus === 'edit' &&
+                                !userDefinedSampleType.isPredefined))
                           ) {
                             setUserDefinedOptions((options) => {
                               if (!didSampleTypeNameChange()) {
@@ -1382,7 +1389,7 @@ function LocateSamples() {
                                 // if the sampleTypeName changed, replace the option tied to the old name with the new one
                                 if (
                                   didSampleTypeNameChange() &&
-                                  option.value === userDefinedSampleType?.value
+                                  option.value === userDefinedSampleType.value
                                 ) {
                                   newOptions.push(newSampleType);
                                   return;
@@ -1483,10 +1490,13 @@ function LocateSamples() {
                   {SampleSelectOptions.map((option, index) => {
                     const sampleType = option.value;
                     const isPoint = sampleAttributes[sampleType].IsPoint;
+                    const edited = userDefinedAttributes.attributes.hasOwnProperty(
+                      sampleType,
+                    );
                     return (
                       <SketchButton
                         key={index}
-                        label={sampleType}
+                        label={edited ? `${sampleType} (edited)` : sampleType}
                         iconClass={
                           isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
                         }
