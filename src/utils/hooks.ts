@@ -128,6 +128,112 @@ export function useStartOver() {
   };
 }
 
+// Provides geometry engine related tools
+//    calculateArea    - Function for calculating the area of the provided graphic.
+//    createBuffer     - Function for creating a square around the center point of
+//                       the provided graphic with the provided width.
+//    loadedProjection - The esri projection library. Mainly used to test if the
+//                       library is ready for use.
+export function useGeometryTools() {
+  const {
+    geometryEngine,
+    Polygon,
+    projection,
+    SpatialReference,
+    webMercatorUtils,
+  } = useEsriModulesContext();
+
+  // Load the esri projection module. This needs
+  // to happen before the projection module will work.
+  const [
+    loadedProjection,
+    setLoadedProjection, //
+  ] = React.useState<__esri.projection | null>(null);
+  React.useEffect(() => {
+    projection.load().then(() => {
+      setLoadedProjection(projection);
+    });
+  });
+
+  // Calculates the area of the provided graphic using a
+  // spatial reference system based on where the sample is located.
+  const calculateArea = React.useCallback(
+    (graphic: __esri.Graphic) => {
+      if (!loadedProjection) return 'ERROR - Projection library not loaded';
+
+      // convert the geometry to WGS84 for geometryEngine
+      // Cast the geometry as a Polygon to avoid typescript errors on
+      // accessing the centroid.
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      ) as __esri.Polygon;
+
+      // get the spatial reference from the centroid
+      const { latitude, longitude } = wgsGeometry.centroid;
+      const base_wkid = latitude > 0 ? 32600 : 32700;
+      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+      const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+      // project the geometry
+      const projectedGeometry = loadedProjection.project(
+        wgsGeometry,
+        spatialReference,
+      ) as __esri.Polygon;
+
+      // calulate the area
+      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
+      return areaSI;
+    },
+    [geometryEngine, loadedProjection, SpatialReference, webMercatorUtils],
+  );
+
+  // Creates a square buffer around the center of the provided graphic,
+  // where the width of the sqaure is the provided width.
+  const createBuffer = React.useCallback(
+    (graphic: __esri.Graphic, width: number) => {
+      // create the graphic
+      let geometry;
+      let center: __esri.Point | null = null;
+      if (graphic.geometry.type === 'point') {
+        geometry = graphic.geometry as __esri.Point;
+        center = geometry;
+      }
+      if (graphic.geometry.type === 'polygon') {
+        geometry = graphic.geometry as __esri.Polygon;
+        center = geometry.centroid as __esri.Point;
+      }
+
+      if (!center) return;
+
+      // create a circular buffer around the center point
+      const halfWidth = width / 2;
+      const ptBuff = geometryEngine.geodesicBuffer(
+        center,
+        halfWidth,
+        109009,
+      ) as __esri.Polygon;
+
+      // use the extent to make the buffer a square
+      graphic.geometry = new Polygon({
+        spatialReference: center.spatialReference,
+        centroid: center,
+        rings: [
+          [
+            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymax],
+            [ptBuff.extent.xmax, ptBuff.extent.ymax],
+            [ptBuff.extent.xmax, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+          ],
+        ],
+      });
+    },
+    [geometryEngine, Polygon],
+  );
+
+  return { calculateArea, createBuffer, loadedProjection };
+}
+
 // Runs sampling plan calculations whenever the
 // samples change or the variables on the calculate tab
 // change.
@@ -135,7 +241,6 @@ export function useCalculatePlan() {
   const {
     geometryEngine,
     Polygon,
-    projection,
     SpatialReference,
     webMercatorUtils,
   } = useEsriModulesContext();
@@ -152,17 +257,7 @@ export function useCalculatePlan() {
     setCalculateResults,
   } = React.useContext(CalculateContext);
 
-  // Load the esri projection module. This needs
-  // to happen before the projection module will work.
-  const [
-    loadedProjection,
-    setLoadedProjection, //
-  ] = React.useState<__esri.projection | null>(null);
-  React.useEffect(() => {
-    projection.load().then(() => {
-      setLoadedProjection(projection);
-    });
-  });
+  const { calculateArea, loadedProjection } = useGeometryTools();
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
@@ -256,29 +351,11 @@ export function useCalculatePlan() {
     sketchLayer.sketchLayer.graphics.forEach((graphic) => {
       const calcGraphic = graphic.clone();
 
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-      ) as __esri.Polygon;
+      // calculate the area using the custom hook
+      const areaSI = calculateArea(graphic);
+      if (typeof areaSI !== 'number') return;
 
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry.centroid;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Polygon;
-
-      // calulate the area
-      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-
-      // convert area to square inches
+      // convert area to square feet
       const areaSF = areaSI * 0.00694444;
       totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
@@ -391,6 +468,7 @@ export function useCalculatePlan() {
     // TOTS items
     edits,
     sketchLayer,
+    calculateArea,
   ]);
 
   // perform non-geospatial calculations

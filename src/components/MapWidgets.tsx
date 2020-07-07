@@ -13,6 +13,7 @@ import { LayerType, LayerTypeName } from 'types/Layer';
 import { sampleAttributes } from 'config/sampleAttributes';
 import { polygonSymbol } from 'config/symbols';
 // utils
+import { useGeometryTools } from 'utils/hooks';
 import {
   generateUUID,
   getCurrentDateTime,
@@ -293,13 +294,12 @@ function MapWidgets({ mapView }: Props) {
     map,
   } = React.useContext(SketchContext);
   const {
-    geometryEngine,
     Home,
     Locate,
-    Polygon,
     PopupTemplate,
     SketchViewModel,
   } = useEsriModulesContext();
+  const { createBuffer } = useGeometryTools();
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
@@ -454,32 +454,7 @@ function MapWidgets({ mapView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.IsPoint) {
-            // determine the buffer needed to get the desired area which is half
-            // the width of the box
-            let halfWidth = graphic.attributes.Width / 2;
-
-            // create the graphic
-            const prevGeo = graphic.geometry as __esri.Point;
-
-            const ptBuff = geometryEngine.geodesicBuffer(
-              graphic.geometry,
-              halfWidth,
-              109009,
-            ) as __esri.Polygon;
-
-            graphic.geometry = new Polygon({
-              spatialReference: prevGeo.spatialReference,
-              centroid: prevGeo,
-              rings: [
-                [
-                  [ptBuff.extent.xmin, ptBuff.extent.ymin],
-                  [ptBuff.extent.xmin, ptBuff.extent.ymax],
-                  [ptBuff.extent.xmax, ptBuff.extent.ymax],
-                  [ptBuff.extent.xmax, ptBuff.extent.ymin],
-                  [ptBuff.extent.xmin, ptBuff.extent.ymin],
-                ],
-              ],
-            });
+            createBuffer(graphic, graphic.attributes.Width);
           }
 
           // save the graphic
@@ -558,7 +533,7 @@ function MapWidgets({ mapView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [geometryEngine, Polygon, PopupTemplate, map, getTrainingMode],
+    [createBuffer, getTrainingMode, map, PopupTemplate],
   );
 
   // Setup the sketch view model events for the base sketchVM

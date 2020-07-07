@@ -30,7 +30,7 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
-import { useStartOver } from 'utils/hooks';
+import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
   convertToSimpleGraphic,
   getCurrentDateTime,
@@ -332,13 +332,13 @@ function LocateSamples() {
   const {
     Collection,
     FeatureSet,
-    geometryEngine,
     Geoprocessor,
     Graphic,
     GraphicsLayer,
     Polygon,
   } = useEsriModulesContext();
   const startOver = useStartOver();
+  const { createBuffer } = useGeometryTools();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
@@ -915,39 +915,14 @@ function LocateSamples() {
         // redraw the graphic if the width changed or if the graphic went from a
         // polygon to a point
         if (newAttributes.IsPoint && (widthChanged || shapeTypeChanged)) {
-          // determine the buffer needed to get the desired area which is half
-          // the width of the box
-          let halfWidth = newAttributes.Width / 2;
-
           // convert the geometry _esriPolygon if it is missing stuff
           const tempGeometry = graphic.geometry as any;
           const isFullGraphic = tempGeometry.centroid ? true : false;
-          const geometry = isFullGraphic
+          graphic.geometry = isFullGraphic
             ? (graphic.geometry as __esri.Polygon)
             : new Polygon(graphic.geometry);
 
-          // create the graphic
-          const center = geometry.centroid as __esri.Point;
-
-          const ptBuff = geometryEngine.geodesicBuffer(
-            center,
-            halfWidth,
-            109009,
-          ) as __esri.Polygon;
-
-          graphic.geometry = new Polygon({
-            spatialReference: center.spatialReference,
-            centroid: center,
-            rings: [
-              [
-                [ptBuff.extent.xmin, ptBuff.extent.ymin],
-                [ptBuff.extent.xmin, ptBuff.extent.ymax],
-                [ptBuff.extent.xmax, ptBuff.extent.ymax],
-                [ptBuff.extent.xmax, ptBuff.extent.ymin],
-                [ptBuff.extent.xmin, ptBuff.extent.ymin],
-              ],
-            ],
-          });
+          createBuffer(graphic as __esri.Graphic, Number(width));
 
           if (isFullGraphic) return;
           graphic = convertToSimpleGraphic(graphic as __esri.Graphic);
