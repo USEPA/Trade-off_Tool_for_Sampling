@@ -87,6 +87,8 @@ export function useStartOver() {
     setPortalLayers,
     setSketchLayer,
     setAoiSketchLayer,
+    setUserDefinedAttributes,
+    setUserDefinedOptions,
   } = React.useContext(SketchContext);
 
   function startOver() {
@@ -107,6 +109,8 @@ export function useStartOver() {
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
+    setUserDefinedAttributes({ editCount: 0, attributes: {} });
+    setUserDefinedOptions([]);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
