@@ -74,7 +74,7 @@ export const attributeOverwriteWarning = (
   sampleType: SampleSelectType | null,
 ) => {
   const sampleTypeStr = sampleType
-    ? sampleType.label
+    ? sampleType.value
     : 'the corresponding sample type';
   return (
     <MessageBox

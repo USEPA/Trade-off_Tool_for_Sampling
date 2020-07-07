@@ -71,7 +71,7 @@ function getSampleTypeName(
   // get a list of names in use
   let usedNames: string[] = [];
   sampleTypes.forEach((sampleType) => {
-    usedNames.push(sampleType.label);
+    usedNames.push(sampleType.value);
   });
 
   // Find a name where there is not a collision.
@@ -340,6 +340,7 @@ function LocateSamples() {
     getGpMaxRecordCount,
     userDefinedOptions,
     setUserDefinedOptions,
+    userDefinedAttributes,
     setUserDefinedAttributes,
   } = React.useContext(SketchContext);
   const {
@@ -446,11 +447,7 @@ function LocateSamples() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType>({
-    value: 'Sponge',
-    label: 'Sponge',
-    isPredefined: true,
-  });
+  ] = React.useState<SampleSelectType>(SampleSelectOptions[0]);
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
@@ -697,8 +694,25 @@ function LocateSamples() {
     SampleSelectType[]
   >([]);
   React.useEffect(() => {
-    setAllSampleOptions([...SampleSelectOptions, ...userDefinedOptions]);
-  }, [userDefinedOptions]);
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    SampleSelectOptions.forEach((option) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes]);
 
   const [
     userDefinedSampleType,
@@ -759,7 +773,7 @@ function LocateSamples() {
 
     // get the sample type name, for a clone operation
     // add a number to the end of the name.
-    let sampleTypeName = userDefinedSampleType.label;
+    let sampleTypeName = userDefinedSampleType.value;
     const attributes = sampleAttributes[sampleTypeName];
     if (editType === 'clone') {
       sampleTypeName = getSampleTypeName(allSampleOptions, sampleTypeName);
@@ -888,7 +902,7 @@ function LocateSamples() {
     return (
       editingStatus === 'edit' &&
       userDefinedSampleType &&
-      sampleTypeName !== userDefinedSampleType.label
+      sampleTypeName !== userDefinedSampleType.value
     );
   }
 
@@ -1050,35 +1064,19 @@ function LocateSamples() {
                 </button>
                 {userDefinedSampleType && (
                   <React.Fragment>
-                    {userDefinedSampleType.isPredefined ? (
-                      <button
-                        css={addButtonStyles}
-                        onClick={(ev) => {
-                          if (editingStatus === 'view') {
-                            setEditingStatus(null);
-                            return;
-                          }
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        if (editingStatus === 'edit') {
+                          setEditingStatus(null);
+                          return;
+                        }
 
-                          setSampleTypeInputs('view');
-                        }}
-                      >
-                        {editingStatus === 'view' ? 'Hide' : 'View'}
-                      </button>
-                    ) : (
-                      <button
-                        css={addButtonStyles}
-                        onClick={(ev) => {
-                          if (editingStatus === 'edit') {
-                            setEditingStatus(null);
-                            return;
-                          }
-
-                          setSampleTypeInputs('edit');
-                        }}
-                      >
-                        {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
-                      </button>
-                    )}
+                        setSampleTypeInputs('edit');
+                      }}
+                    >
+                      {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                    </button>
                     <button
                       css={addButtonStyles}
                       onClick={(ev) => {
@@ -1103,7 +1101,10 @@ function LocateSamples() {
                     </label>
                     <input
                       id="sample-type-name-input"
-                      disabled={editingStatus === 'view'}
+                      disabled={
+                        editingStatus === 'edit' &&
+                        userDefinedSampleType?.isPredefined
+                      }
                       css={inputStyles}
                       value={sampleTypeName}
                       onChange={(ev) => setSampleTypeName(ev.target.value)}
@@ -1113,7 +1114,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="sa-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={sa ? sa : ''}
                       onChange={(ev) => setSa(ev.target.value)}
@@ -1140,7 +1140,6 @@ function LocateSamples() {
                             </label>
                             <input
                               id="shape-width-input"
-                              disabled={editingStatus === 'view'}
                               css={widthInputStyles}
                               value={width ? width : ''}
                               onChange={(ev) => setWidth(ev.target.value)}
@@ -1186,7 +1185,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="ttpk-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={ttpk ? ttpk : ''}
                       onChange={(ev) => setTtpk(ev.target.value)}
@@ -1196,7 +1194,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="ttc-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={ttc ? ttc : ''}
                       onChange={(ev) => setTtc(ev.target.value)}
@@ -1206,7 +1203,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="tta-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={tta ? tta : ''}
                       onChange={(ev) => setTta(ev.target.value)}
@@ -1216,7 +1212,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="ttps-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={ttps ? ttps : ''}
                       onChange={(ev) => setTtps(ev.target.value)}
@@ -1227,7 +1222,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="lod_p-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={lodp ? lodp : ''}
                       onChange={(ev) => setLodp(ev.target.value)}
@@ -1238,7 +1232,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="lod_non-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={lodnon ? lodnon : ''}
                       onChange={(ev) => setLodnon(ev.target.value)}
@@ -1248,7 +1241,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="mcps-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={mcps ? mcps : ''}
                       onChange={(ev) => setMcps(ev.target.value)}
@@ -1258,7 +1250,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="tcps-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={tcps ? tcps : ''}
                       onChange={(ev) => setTcps(ev.target.value)}
@@ -1268,7 +1259,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="wvps-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={wvps ? wvps : ''}
                       onChange={(ev) => setWvps(ev.target.value)}
@@ -1278,7 +1268,6 @@ function LocateSamples() {
                     </label>
                     <input
                       id="wwps-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={wwps ? wwps : ''}
                       onChange={(ev) => setWwps(ev.target.value)}
@@ -1286,7 +1275,6 @@ function LocateSamples() {
                     <label htmlFor="alc-input">Analysis Labor Cost</label>
                     <input
                       id="alc-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={alc ? alc : ''}
                       onChange={(ev) => setAlc(ev.target.value)}
@@ -1294,7 +1282,6 @@ function LocateSamples() {
                     <label htmlFor="amc-input">Analysis Material Cost</label>
                     <input
                       id="amc-input"
-                      disabled={editingStatus === 'view'}
                       css={inputStyles}
                       value={amc ? amc : ''}
                       onChange={(ev) => setAmc(ev.target.value)}
@@ -1303,173 +1290,175 @@ function LocateSamples() {
                   {validationMessage &&
                     userDefinedValidationMessage(validationMessage)}
                   <div css={inlineMenuStyles}>
-                    {editingStatus !== 'view' && (
-                      <button
-                        css={addButtonStyles}
-                        onClick={(ev) => {
-                          const isValid = validateEdits();
-                          if (isValid && sampleTypeName) {
-                            const newSampleType = {
-                              value: sampleTypeName,
-                              label: sampleTypeName,
-                              isPredefined: false,
-                            };
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        const isValid = validateEdits();
+                        if (isValid && sampleTypeName) {
+                          let newSampleType = {
+                            value: sampleTypeName,
+                            label: sampleTypeName,
+                            isPredefined: false,
+                          };
+                          if (
+                            editingStatus === 'edit' &&
+                            userDefinedSampleType?.isPredefined
+                          ) {
+                            newSampleType = userDefinedSampleType;
+                          }
 
-                            // update the sample attributes
-                            const newAttributes = {
-                              OBJECTID: '-1',
-                              PERMANENT_IDENTIFIER: null,
-                              GLOBALID: null,
-                              TYPE: sampleTypeName,
-                              IsPoint:
-                                shapeType?.value === 'point' ? true : false,
-                              Width: Number(width),
-                              TTPK: ttpk ? ttpk.toString() : null,
-                              TTC: ttc ? ttc.toString() : null,
-                              TTA: tta ? tta.toString() : null,
-                              TTPS: ttps ? ttps.toString() : null,
-                              LOD_P: lodp ? lodp.toString() : null,
-                              LOD_NON: lodnon ? lodnon.toString() : null,
-                              MCPS: mcps ? mcps.toString() : null,
-                              TCPS: tcps ? tcps.toString() : null,
-                              WVPS: wvps ? wvps.toString() : null,
-                              WWPS: wwps ? wwps.toString() : null,
-                              SA: sa ? sa.toString() : null,
-                              AA: '',
-                              OAA: '', // TODO: Delete this before release - original AA for debug
-                              ALC: alc ? alc.toString() : null,
-                              AMC: amc ? amc.toString() : null,
-                              Notes: '',
-                              CONTAMTYPE: null,
-                              CONTAMVAL: null,
-                              CONTAMUNIT: null,
-                              CREATEDDATE: null,
-                              UPDATEDDATE: null,
-                              USERNAME: null,
-                              ORGANIZATION: null,
-                              ELEVATIONSERIES: null,
-                            };
+                          // update the sample attributes
+                          const newAttributes = {
+                            OBJECTID: '-1',
+                            PERMANENT_IDENTIFIER: null,
+                            GLOBALID: null,
+                            TYPE: sampleTypeName,
+                            IsPoint:
+                              shapeType?.value === 'point' ? true : false,
+                            Width: Number(width),
+                            TTPK: ttpk ? ttpk.toString() : null,
+                            TTC: ttc ? ttc.toString() : null,
+                            TTA: tta ? tta.toString() : null,
+                            TTPS: ttps ? ttps.toString() : null,
+                            LOD_P: lodp ? lodp.toString() : null,
+                            LOD_NON: lodnon ? lodnon.toString() : null,
+                            MCPS: mcps ? mcps.toString() : null,
+                            TCPS: tcps ? tcps.toString() : null,
+                            WVPS: wvps ? wvps.toString() : null,
+                            WWPS: wwps ? wwps.toString() : null,
+                            SA: sa ? sa.toString() : null,
+                            AA: '',
+                            OAA: '', // TODO: Delete this before release - original AA for debug
+                            ALC: alc ? alc.toString() : null,
+                            AMC: amc ? amc.toString() : null,
+                            Notes: '',
+                            CONTAMTYPE: null,
+                            CONTAMVAL: null,
+                            CONTAMUNIT: null,
+                            CREATEDDATE: null,
+                            UPDATEDDATE: null,
+                            USERNAME: null,
+                            ORGANIZATION: null,
+                            ELEVATIONSERIES: null,
+                          };
 
-                            // add/update the sample's attributes
-                            sampleAttributes[sampleTypeName] = newAttributes;
-                            setUserDefinedAttributes((item) => {
-                              item.attributes[sampleTypeName] = newAttributes;
+                          // add/update the sample's attributes
+                          sampleAttributes[sampleTypeName] = newAttributes;
+                          setUserDefinedAttributes((item) => {
+                            item.attributes[sampleTypeName] = newAttributes;
 
-                              // if the sampleTypeName changed, remove the attributes tied to the old name
-                              if (
-                                didSampleTypeNameChange() &&
-                                userDefinedSampleType
-                              ) {
-                                delete item.attributes[
-                                  userDefinedSampleType.label
-                                ];
-                              }
-
-                              return {
-                                editCount: item.editCount + 1,
-                                attributes: item.attributes,
-                              };
-                            });
-
-                            // add the new option to the dropdown if it doesn't exist
-                            const hasSample =
-                              userDefinedOptions.findIndex(
-                                (option) => option.label === sampleTypeName,
-                              ) > -1;
-                            if (!hasSample) {
-                              setUserDefinedOptions((options) => {
-                                if (!didSampleTypeNameChange()) {
-                                  return [...options, newSampleType];
-                                }
-
-                                const newOptions: SampleSelectType[] = [];
-                                options.forEach((option) => {
-                                  // if the sampleTypeName changed, replace the option tied to the old name with the new one
-                                  if (
-                                    didSampleTypeNameChange() &&
-                                    option.label ===
-                                      userDefinedSampleType?.label
-                                  ) {
-                                    newOptions.push(newSampleType);
-                                    return;
-                                  }
-
-                                  newOptions.push(option);
-                                });
-
-                                return newOptions;
-                              });
-                            }
-
+                            // if the sampleTypeName changed, remove the attributes tied to the old name
                             if (
-                              editingStatus === 'edit' &&
+                              didSampleTypeNameChange() &&
                               userDefinedSampleType
                             ) {
-                              const oldType = userDefinedSampleType.label;
+                              delete item.attributes[
+                                userDefinedSampleType.value
+                              ];
+                            }
 
-                              // Update the attributes of the graphics on the map on edits
-                              layers.forEach((layer) => {
+                            return {
+                              editCount: item.editCount + 1,
+                              attributes: item.attributes,
+                            };
+                          });
+
+                          // add the new option to the dropdown if it doesn't exist
+                          const hasSample =
+                            userDefinedOptions.findIndex(
+                              (option) => option.value === sampleTypeName,
+                            ) > -1;
+                          if (
+                            !hasSample &&
+                            !userDefinedSampleType?.isPredefined
+                          ) {
+                            setUserDefinedOptions((options) => {
+                              if (!didSampleTypeNameChange()) {
+                                return [...options, newSampleType];
+                              }
+
+                              const newOptions: SampleSelectType[] = [];
+                              options.forEach((option) => {
+                                // if the sampleTypeName changed, replace the option tied to the old name with the new one
                                 if (
-                                  !['Samples', 'VSP'].includes(
-                                    layer.layerType,
-                                  ) ||
-                                  layer.sketchLayer.type !== 'graphics'
+                                  didSampleTypeNameChange() &&
+                                  option.value === userDefinedSampleType?.value
+                                ) {
+                                  newOptions.push(newSampleType);
+                                  return;
+                                }
+
+                                newOptions.push(option);
+                              });
+
+                              return newOptions;
+                            });
+                          }
+
+                          if (
+                            editingStatus === 'edit' &&
+                            userDefinedSampleType
+                          ) {
+                            const oldType = userDefinedSampleType.value;
+
+                            // Update the attributes of the graphics on the map on edits
+                            layers.forEach((layer) => {
+                              if (
+                                !['Samples', 'VSP'].includes(layer.layerType) ||
+                                layer.sketchLayer.type !== 'graphics'
+                              ) {
+                                return;
+                              }
+
+                              updateAttributes({
+                                graphics: layer.sketchLayer.graphics.toArray(),
+                                newAttributes,
+                                oldType,
+                              });
+                            });
+
+                            //Update the attributes of the edits context/session storage
+                            setEdits((edits) => {
+                              edits.edits.forEach((edits) => {
+                                if (
+                                  !['Samples', 'VSP'].includes(edits.layerType)
                                 ) {
                                   return;
                                 }
 
                                 updateAttributes({
-                                  graphics: layer.sketchLayer.graphics.toArray(),
+                                  graphics: edits.adds as __esri.Graphic[],
+                                  newAttributes,
+                                  oldType,
+                                });
+                                updateAttributes({
+                                  graphics: edits.updates as __esri.Graphic[],
+                                  newAttributes,
+                                  oldType,
+                                });
+                                updateAttributes({
+                                  graphics: edits.published as __esri.Graphic[],
                                   newAttributes,
                                   oldType,
                                 });
                               });
 
-                              //Update the attributes of the edits context/session storage
-                              setEdits((edits) => {
-                                edits.edits.forEach((edits) => {
-                                  if (
-                                    !['Samples', 'VSP'].includes(
-                                      edits.layerType,
-                                    )
-                                  ) {
-                                    return;
-                                  }
-
-                                  updateAttributes({
-                                    graphics: edits.adds as __esri.Graphic[],
-                                    newAttributes,
-                                    oldType,
-                                  });
-                                  updateAttributes({
-                                    graphics: edits.updates as __esri.Graphic[],
-                                    newAttributes,
-                                    oldType,
-                                  });
-                                  updateAttributes({
-                                    graphics: edits.published as __esri.Graphic[],
-                                    newAttributes,
-                                    oldType,
-                                  });
-                                });
-
-                                return {
-                                  count: edits.count + 1,
-                                  edits: edits.edits,
-                                };
-                              });
-                            }
-
-                            // select the new sample type
-                            setUserDefinedSampleType(newSampleType);
-
-                            setEditingStatus(null);
+                              return {
+                                count: edits.count + 1,
+                                edits: edits.edits,
+                              };
+                            });
                           }
-                        }}
-                      >
-                        Save
-                      </button>
-                    )}
+
+                          // select the new sample type
+                          setUserDefinedSampleType(newSampleType);
+
+                          setEditingStatus(null);
+                        }
+                      }}
+                    >
+                      Save
+                    </button>
                     <button
                       css={addButtonStyles}
                       onClick={(ev) => {
@@ -1492,7 +1481,7 @@ function LocateSamples() {
                 <h3>EPA Sample Types</h3>
                 <div css={sketchButtonContainerStyles}>
                   {SampleSelectOptions.map((option, index) => {
-                    const sampleType = option.label;
+                    const sampleType = option.value;
                     const isPoint = sampleAttributes[sampleType].IsPoint;
                     return (
                       <SketchButton
@@ -1515,7 +1504,7 @@ function LocateSamples() {
                     {userDefinedOptions.map((option, index) => {
                       if (option.isPredefined) return null;
 
-                      const sampleType = option.label;
+                      const sampleType = option.value;
                       const isPoint = sampleAttributes[sampleType].IsPoint;
                       return (
                         <SketchButton
