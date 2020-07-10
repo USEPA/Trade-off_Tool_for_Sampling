@@ -290,9 +290,10 @@ function NavBar({ height }: Props) {
     setGoTo,
     gettingStartedOpen,
     setGettingStartedOpen,
+    latestStepIndex,
+    setLatestStepIndex,
   } = React.useContext(NavigationContext);
 
-  const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [expanded, setExpanded] = React.useState(false);
   const toggleExpand = React.useCallback(
     (panel: PanelType, panelIndex: number) => {
@@ -306,7 +307,7 @@ function NavBar({ height }: Props) {
 
       if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
     },
-    [currentPanel, setCurrentPanel, latestStepIndex],
+    [currentPanel, setCurrentPanel, latestStepIndex, setLatestStepIndex],
   );
 
   React.useEffect(() => {
