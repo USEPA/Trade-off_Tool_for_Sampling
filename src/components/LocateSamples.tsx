@@ -1185,12 +1185,6 @@ function LocateSamples() {
                     >
                       Delete
                     </button>
-                    <button
-                      css={addButtonStyles}
-                      onClick={() => alert('Feature coming soon...')}
-                    >
-                      Publish
-                    </button>
                   </div>
                 )}
               {editingStatus && (
