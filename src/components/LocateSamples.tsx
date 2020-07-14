@@ -14,7 +14,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
-import { FeatureEditsType } from 'types/Edits';
+import { EditsType } from 'types/Edits';
 // config
 import {
   sampleAttributes,
@@ -33,7 +33,6 @@ import {
 // utils
 import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
-  convertToSimpleGraphic,
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
   getDefaultSampleLayer,
@@ -917,11 +916,12 @@ function LocateSamples() {
     newAttributes,
     oldType,
   }: {
-    graphics: __esri.Graphic[] | FeatureEditsType[];
+    graphics: __esri.Graphic[];
     newAttributes: any;
     oldType: string;
   }) {
-    graphics.forEach((graphic: __esri.Graphic | FeatureEditsType) => {
+    const editedGraphics: __esri.Graphic[] = [];
+    graphics.forEach((graphic: __esri.Graphic) => {
       // update attributes for the edited type
       if (graphic.attributes.TYPE === oldType) {
         const widthChanged = graphic.attributes.Width !== newAttributes.Width;
@@ -952,19 +952,14 @@ function LocateSamples() {
           (widthChanged || shapeTypeChanged)
         ) {
           // convert the geometry _esriPolygon if it is missing stuff
-          const tempGeometry = graphic.geometry as any;
-          const isFullGraphic = tempGeometry.centroid ? true : false;
-          graphic.geometry = isFullGraphic
-            ? (graphic.geometry as __esri.Polygon)
-            : new Polygon(graphic.geometry);
-
           createBuffer(graphic as __esri.Graphic, Number(width));
-
-          if (isFullGraphic) return;
-          graphic = convertToSimpleGraphic(graphic as __esri.Graphic);
         }
+
+        editedGraphics.push(graphic);
       }
     });
+
+    return editedGraphics;
   }
 
   return (
@@ -1128,6 +1123,7 @@ function LocateSamples() {
                             });
 
                             // Update the attributes of the graphics on the map on edits
+                            let editsCopy: EditsType = edits;
                             layers.forEach((layer) => {
                               if (
                                 !['Samples', 'VSP'].includes(layer.layerType) ||
@@ -1145,36 +1141,22 @@ function LocateSamples() {
                                 }
                               });
                               layer.sketchLayer.removeMany(graphicsToRemove);
+
+                              if (graphicsToRemove.length > 0) {
+                                const collection = new Collection<
+                                  __esri.Graphic
+                                >();
+                                collection.addMany(graphicsToRemove);
+                                editsCopy = updateLayerEdits({
+                                  edits: editsCopy,
+                                  layer,
+                                  type: 'delete',
+                                  changes: collection,
+                                });
+                              }
                             });
 
-                            //Update the attributes of the edits context/session storage
-                            setEdits((edits) => {
-                              edits.edits.forEach((edits) => {
-                                if (
-                                  !['Samples', 'VSP'].includes(edits.layerType)
-                                ) {
-                                  return;
-                                }
-
-                                edits.adds = edits.adds.filter(
-                                  (graphic) =>
-                                    graphic.attributes.TYPE !== sampleTypeName,
-                                );
-                                edits.updates = edits.updates.filter(
-                                  (graphic) =>
-                                    graphic.attributes.TYPE !== sampleTypeName,
-                                );
-                                edits.published = edits.published.filter(
-                                  (graphic) =>
-                                    graphic.attributes.TYPE !== sampleTypeName,
-                                );
-                              });
-
-                              return {
-                                count: edits.count + 1,
-                                edits: edits.edits,
-                              };
-                            });
+                            setEdits(editsCopy);
 
                             // TODO: Add code for deleteing the user defined type
                             //       from ArcGIS Online.
@@ -1503,6 +1485,7 @@ function LocateSamples() {
                             const oldType = userDefinedSampleType.value;
 
                             // Update the attributes of the graphics on the map on edits
+                            let editsCopy: EditsType = edits;
                             layers.forEach((layer) => {
                               if (
                                 !['Samples', 'VSP'].includes(layer.layerType) ||
@@ -1511,44 +1494,27 @@ function LocateSamples() {
                                 return;
                               }
 
-                              updateAttributes({
+                              const editedGraphics = updateAttributes({
                                 graphics: layer.sketchLayer.graphics.toArray(),
                                 newAttributes,
                                 oldType,
                               });
+
+                              if (editedGraphics.length > 0) {
+                                const collection = new Collection<
+                                  __esri.Graphic
+                                >();
+                                collection.addMany(editedGraphics);
+                                editsCopy = updateLayerEdits({
+                                  edits: editsCopy,
+                                  layer,
+                                  type: 'update',
+                                  changes: collection,
+                                });
+                              }
                             });
 
-                            //Update the attributes of the edits context/session storage
-                            setEdits((edits) => {
-                              edits.edits.forEach((edits) => {
-                                if (
-                                  !['Samples', 'VSP'].includes(edits.layerType)
-                                ) {
-                                  return;
-                                }
-
-                                updateAttributes({
-                                  graphics: edits.adds as __esri.Graphic[],
-                                  newAttributes,
-                                  oldType,
-                                });
-                                updateAttributes({
-                                  graphics: edits.updates as __esri.Graphic[],
-                                  newAttributes,
-                                  oldType,
-                                });
-                                updateAttributes({
-                                  graphics: edits.published as __esri.Graphic[],
-                                  newAttributes,
-                                  oldType,
-                                });
-                              });
-
-                              return {
-                                count: edits.count + 1,
-                                edits: edits.edits,
-                              };
-                            });
+                            setEdits(editsCopy);
                           }
 
                           // select the new sample type
