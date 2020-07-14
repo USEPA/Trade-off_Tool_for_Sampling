@@ -474,10 +474,7 @@ function LocateSamples() {
     }
 
     // determine whether the sketch button draws points or polygons
-    let shapeType = 'polygon';
-    if (sampleAttributes[label].IsPoint) {
-      shapeType = 'point';
-    }
+    let shapeType = sampleAttributes[label].ShapeType;
 
     // disable popups for the active sketch layer, so the user doesn't
     // get shape edit controls and a popup at the same time.
@@ -786,27 +783,28 @@ function LocateSamples() {
       sampleTypeName = getSampleTypeName(allSampleOptions, sampleTypeName);
     }
 
-    const shapeType = attributes.IsPoint
-      ? { value: 'point', label: 'Point' }
-      : { value: 'polygon', label: 'Polygon' };
+    const shapeType =
+      attributes.ShapeType === 'point'
+        ? { value: 'point', label: 'Point' }
+        : { value: 'polygon', label: 'Polygon' };
 
     setEditingStatus(editType);
     setShapeType(shapeType);
     setWidth(attributes.Width.toString());
     setAreaTest(null);
-    setTtpk(attributes.TTPK);
-    setTtc(attributes.TTC);
-    setTta(attributes.TTA);
-    setTtps(attributes.TTPS);
-    setLodp(attributes.LOD_P);
-    setLodnon(attributes.LOD_NON);
-    setMcps(attributes.MCPS);
-    setTcps(attributes.TCPS);
-    setWvps(attributes.WVPS);
-    setWwps(attributes.WWPS);
-    setSa(attributes.SA);
-    setAlc(attributes.ALC);
-    setAmc(attributes.AMC);
+    setTtpk(attributes.TTPK ? attributes.TTPK.toString() : null);
+    setTtc(attributes.TTC ? attributes.TTC.toString() : null);
+    setTta(attributes.TTA ? attributes.TTA.toString() : null);
+    setTtps(attributes.TTPS ? attributes.TTPS.toString() : null);
+    setLodp(attributes.LOD_P ? attributes.LOD_P.toString() : null);
+    setLodnon(attributes.LOD_NON ? attributes.LOD_NON.toString() : null);
+    setMcps(attributes.MCPS ? attributes.MCPS.toString() : null);
+    setTcps(attributes.TCPS ? attributes.TCPS.toString() : null);
+    setWvps(attributes.WVPS ? attributes.WVPS.toString() : null);
+    setWwps(attributes.WWPS ? attributes.WWPS.toString() : null);
+    setSa(attributes.SA ? attributes.SA.toString() : null);
+    setAlc(attributes.ALC ? attributes.ALC.toString() : null);
+    setAmc(attributes.AMC ? attributes.AMC.toString() : null);
     setSampleTypeName(sampleTypeName);
   }
 
@@ -928,10 +926,10 @@ function LocateSamples() {
       if (graphic.attributes.TYPE === oldType) {
         const widthChanged = graphic.attributes.Width !== newAttributes.Width;
         const shapeTypeChanged =
-          graphic.attributes.IsPoint !== newAttributes.IsPoint;
+          graphic.attributes.ShapeType !== newAttributes.ShapeType;
 
         graphic.attributes.TYPE = newAttributes.TYPE;
-        graphic.attributes.IsPoint = newAttributes.IsPoint;
+        graphic.attributes.ShapeType = newAttributes.ShapeType;
         graphic.attributes.Width = newAttributes.Width;
         graphic.attributes.SA = newAttributes.SA;
         graphic.attributes.TTPK = newAttributes.TTPK;
@@ -949,7 +947,10 @@ function LocateSamples() {
 
         // redraw the graphic if the width changed or if the graphic went from a
         // polygon to a point
-        if (newAttributes.IsPoint && (widthChanged || shapeTypeChanged)) {
+        if (
+          newAttributes.ShapeType === 'point' &&
+          (widthChanged || shapeTypeChanged)
+        ) {
           // convert the geometry _esriPolygon if it is missing stuff
           const tempGeometry = graphic.geometry as any;
           const isFullGraphic = tempGeometry.centroid ? true : false;
@@ -1391,7 +1392,7 @@ function LocateSamples() {
                         const predefinedEdited =
                           editingStatus === 'edit' &&
                           userDefinedSampleType?.isPredefined;
-                        if (isValid && sampleTypeName) {
+                        if (isValid && sampleTypeName && shapeType) {
                           let newSampleType = {
                             value: sampleTypeName,
                             label: sampleTypeName,
@@ -1411,24 +1412,23 @@ function LocateSamples() {
                             PERMANENT_IDENTIFIER: null,
                             GLOBALID: null,
                             TYPE: sampleTypeName,
-                            IsPoint:
-                              shapeType?.value === 'point' ? true : false,
+                            ShapeType: shapeType.value,
                             Width: Number(width),
-                            TTPK: ttpk ? ttpk.toString() : null,
-                            TTC: ttc ? ttc.toString() : null,
-                            TTA: tta ? tta.toString() : null,
-                            TTPS: ttps ? ttps.toString() : null,
-                            LOD_P: lodp ? lodp.toString() : null,
-                            LOD_NON: lodnon ? lodnon.toString() : null,
-                            MCPS: mcps ? mcps.toString() : null,
-                            TCPS: tcps ? tcps.toString() : null,
-                            WVPS: wvps ? wvps.toString() : null,
-                            WWPS: wwps ? wwps.toString() : null,
-                            SA: sa ? sa.toString() : null,
-                            AA: '',
-                            OAA: '', // TODO: Delete this before release - original AA for debug
-                            ALC: alc ? alc.toString() : null,
-                            AMC: amc ? amc.toString() : null,
+                            TTPK: ttpk ? Number(ttpk) : null,
+                            TTC: ttc ? Number(ttc) : null,
+                            TTA: tta ? Number(tta) : null,
+                            TTPS: ttps ? Number(ttps) : null,
+                            LOD_P: lodp ? Number(lodp) : null,
+                            LOD_NON: lodnon ? Number(lodnon) : null,
+                            MCPS: mcps ? Number(mcps) : null,
+                            TCPS: tcps ? Number(tcps) : null,
+                            WVPS: wvps ? Number(wvps) : null,
+                            WWPS: wwps ? Number(wwps) : null,
+                            SA: sa ? Number(sa) : null,
+                            AA: null,
+                            OAA: null, // TODO: Delete this before release - original AA for debug
+                            ALC: alc ? Number(alc) : null,
+                            AMC: amc ? Number(amc) : null,
                             Notes: '',
                             CONTAMTYPE: null,
                             CONTAMVAL: null,
@@ -1583,7 +1583,7 @@ function LocateSamples() {
                 <div css={sketchButtonContainerStyles}>
                   {SampleSelectOptions.map((option, index) => {
                     const sampleType = option.value;
-                    const isPoint = sampleAttributes[sampleType].IsPoint;
+                    const shapeType = sampleAttributes[sampleType].ShapeType;
                     const edited = userDefinedAttributes.attributes.hasOwnProperty(
                       sampleType,
                     );
@@ -1592,7 +1592,9 @@ function LocateSamples() {
                         key={index}
                         label={edited ? `${sampleType} (edited)` : sampleType}
                         iconClass={
-                          isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
+                          shapeType === 'point'
+                            ? 'fas fa-pen-fancy'
+                            : 'fas fa-draw-polygon'
                         }
                         onClick={() => sketchButtonClick(sampleType)}
                       />
@@ -1609,13 +1611,15 @@ function LocateSamples() {
                       if (option.isPredefined) return null;
 
                       const sampleType = option.value;
-                      const isPoint = sampleAttributes[sampleType].IsPoint;
+                      const shapeType = sampleAttributes[sampleType].ShapeType;
                       return (
                         <SketchButton
                           key={index}
                           label={sampleType}
                           iconClass={
-                            isPoint ? 'fas fa-pen-fancy' : 'fas fa-draw-polygon'
+                            shapeType === 'point'
+                              ? 'fas fa-pen-fancy'
+                              : 'fas fa-draw-polygon'
                           }
                           onClick={() => sketchButtonClick(sampleType)}
                         />

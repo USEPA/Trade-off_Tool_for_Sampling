@@ -453,7 +453,7 @@ function MapWidgets({ mapView }: Props) {
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
-          if (graphic.attributes.IsPoint) {
+          if (graphic.attributes.ShapeType === 'point') {
             createBuffer(graphic, graphic.attributes.Width);
           }
 
@@ -500,7 +500,8 @@ function MapWidgets({ mapView }: Props) {
 
         let hasPredefinedBoxes = false;
         event.graphics.forEach((graphic) => {
-          if (graphic.attributes.IsPoint) hasPredefinedBoxes = true;
+          if (graphic.attributes.ShapeType === 'point')
+            hasPredefinedBoxes = true;
         });
 
         // prevent scale and reshape changes on the predefined graphics
