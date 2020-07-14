@@ -16,6 +16,8 @@ type NavigateType = {
   setGoTo: React.Dispatch<React.SetStateAction<PanelValueType | ''>>;
   goToOptions: GoToOptions;
   setGoToOptions: React.Dispatch<React.SetStateAction<GoToOptions>>;
+  latestStepIndex: number;
+  setLatestStepIndex: React.Dispatch<React.SetStateAction<number>>;
   trainingMode: boolean;
   setTrainingMode: React.Dispatch<React.SetStateAction<boolean>>;
   getTrainingMode: Function;
@@ -30,6 +32,8 @@ export const NavigationContext = React.createContext<NavigateType>({
   setGoTo: () => {},
   goToOptions: null,
   setGoToOptions: () => {},
+  latestStepIndex: -1,
+  setLatestStepIndex: () => {},
   trainingMode: false,
   setTrainingMode: () => {},
   getTrainingMode: () => {},
@@ -45,6 +49,7 @@ export function NavigationProvider({ children }: Props) {
   );
   const [goTo, setGoTo] = React.useState<PanelValueType | ''>('');
   const [goToOptions, setGoToOptions] = React.useState<GoToOptions>(null);
+  const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [trainingMode, setTrainingMode] = React.useState(false);
   const [gettingStartedOpen, setGettingStartedOpen] = React.useState(false);
 
@@ -63,6 +68,8 @@ export function NavigationProvider({ children }: Props) {
         setGoTo,
         goToOptions,
         setGoToOptions,
+        latestStepIndex,
+        setLatestStepIndex,
         trainingMode,
         setTrainingMode,
         getTrainingMode: () => {

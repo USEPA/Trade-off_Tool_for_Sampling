@@ -21,10 +21,6 @@ type SketchType = {
   >;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
-  featureService: any;
-  setFeatureService: React.Dispatch<React.SetStateAction<any>>;
-  featureServiceUrl: string;
-  setFeatureServiceUrl: React.Dispatch<React.SetStateAction<string>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
   layersInitialized: boolean;
@@ -41,8 +37,6 @@ type SketchType = {
   setSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   aoiSketchLayer: LayerType | null;
   setAoiSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
-  lastSketchLayer: any | null;
-  setLastSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
   map: __esri.Map | null;
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
@@ -71,10 +65,6 @@ export const SketchContext = React.createContext<SketchType>({
   setBasemapWidget: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
-  featureService: null,
-  setFeatureService: () => {},
-  featureServiceUrl: '',
-  setFeatureServiceUrl: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
   layersInitialized: false,
@@ -91,8 +81,6 @@ export const SketchContext = React.createContext<SketchType>({
   setSketchLayer: () => {},
   aoiSketchLayer: null,
   setAoiSketchLayer: () => {},
-  lastSketchLayer: null,
-  setLastSketchLayer: () => {},
   map: null,
   setMap: () => {},
   mapView: null,
@@ -116,8 +104,6 @@ export function SketchProvider({ children }: Props) {
     setBasemapWidget, //
   ] = React.useState<__esri.BasemapGallery | null>(null);
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
-  const [featureService, setFeatureService] = React.useState<any>(null);
-  const [featureServiceUrl, setFeatureServiceUrl] = React.useState('');
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
   const [portalLayers, setPortalLayers] = React.useState<PortalLayerType[]>([]);
@@ -127,10 +113,6 @@ export function SketchProvider({ children }: Props) {
   const [aoiSketchLayer, setAoiSketchLayer] = React.useState<LayerType | null>(
     null,
   );
-  const [
-    lastSketchLayer,
-    setLastSketchLayer,
-  ] = React.useState<LayerType | null>(null);
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
@@ -180,10 +162,6 @@ export function SketchProvider({ children }: Props) {
         setBasemapWidget,
         edits,
         setEdits,
-        featureService,
-        setFeatureService,
-        featureServiceUrl,
-        setFeatureServiceUrl,
         homeWidget,
         setHomeWidget,
         layersInitialized,
@@ -200,8 +178,6 @@ export function SketchProvider({ children }: Props) {
         setSketchLayer,
         aoiSketchLayer,
         setAoiSketchLayer,
-        lastSketchLayer,
-        setLastSketchLayer,
         map,
         setMap,
         mapView,
