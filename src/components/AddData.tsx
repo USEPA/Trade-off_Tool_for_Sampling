@@ -60,7 +60,9 @@ function AddData() {
     <div css={panelContainer}>
       <div>
         <h2>Add Data</h2>
-        <label htmlFor="add-data-select">From</label>
+        <label htmlFor="add-data-select" className="sr-only">
+          From
+        </label>
         <Select
           inputId="add-data-select"
           css={panelSelectStyles}

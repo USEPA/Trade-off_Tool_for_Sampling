@@ -64,15 +64,6 @@ const searchBoxStyles = css`
   }
 `;
 
-const srOnlyStyles = css`
-  position: absolute;
-  left: -10000px;
-  top: auto;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-`;
-
 // --- components (Search) ---
 function Search() {
   const { Search } = useEsriModulesContext();
@@ -128,7 +119,7 @@ function Search() {
           representations to add to support designing a plan for an indoor
           environment.
         </p>
-        <label htmlFor="esri-search-component" css={srOnlyStyles}>
+        <label htmlFor="esri-search-component" className="sr-only">
           Find address or place
         </label>
         <div id="search-container" css={searchBoxStyles} />
