@@ -46,11 +46,11 @@ const basemapNames = [
 // --- styles (Toolbar) ---
 const toolBarTitle = css`
   color: white;
+  margin: 0;
   padding: 0 16px;
+  font-size: 100%;
   font-weight: bold;
   line-height: 1.3;
-  margin: 0;
-  font-size: 100%;
 `;
 
 const toolBarStyles = css`
