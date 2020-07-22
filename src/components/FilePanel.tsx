@@ -139,9 +139,13 @@ const fileIcon = css`
   width: 100%;
 `;
 
+const fileIconTextColor = css`
+  color: #545454;
+`;
+
 const fileIconText = css`
+  ${fileIconTextColor}
   font-size: 16px;
-  color: #9ea4b3;
   margin-top: 5px;
   width: 100%;
 `;
@@ -194,6 +198,10 @@ const searchContainerStyles = css`
     outline: none;
     transition: border 0.24s ease-in-out;
     text-align: center;
+
+    .div {
+      color: #545454;
+    }
   }
 `;
 
@@ -1194,11 +1202,15 @@ function FilePanel() {
                   </label>
                   <br />
                   <div {...getRootProps({ className: 'dropzone' })}>
-                    <input data-testid="tots-dropzone" {...getInputProps()} />
+                    <input
+                      id="tots-dropzone"
+                      data-testid="tots-dropzone"
+                      {...getInputProps()}
+                    />
                     {isDragActive ? (
                       <p>Drop the files here ...</p>
                     ) : (
-                      <div>
+                      <div css={fileIconTextColor}>
                         <div>
                           <FileIcon label="Shape File" />
                           <FileIcon label="CSV" />
@@ -1208,7 +1220,7 @@ function FilePanel() {
                           <FileIcon label="Geo JSON" />
                         </div>
                         <br />
-                        Drop or Browse
+                        <label htmlFor="tots-dropzone">Drop or Browse</label>
                         <br />
                         <button onClick={open}>Browse</button>
                       </div>

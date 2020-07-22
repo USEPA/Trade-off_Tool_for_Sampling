@@ -14,4 +14,13 @@ const colors = {
   gray6: '#666',
 };
 
-export { colors };
+const reactSelectStyles = {
+  placeholder: (defaultStyles: React.CSSProperties) => {
+    return {
+      ...defaultStyles,
+      color: '#495057',
+    };
+  },
+};
+
+export { colors, reactSelectStyles };

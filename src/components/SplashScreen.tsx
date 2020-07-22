@@ -47,14 +47,8 @@ const dialogStyles = css`
   }
 
   a {
-    color: #9f9;
+    color: #fffe99;
     outline: none;
-
-    &:hover,
-    &:focus {
-      text-decoration: none;
-      color: #4c2c92;
-    }
   }
 `;
 
@@ -64,6 +58,12 @@ const logoStyles = css`
 `;
 
 const headingStyles = css`
+  color: white;
+  margin: 0;
+  padding: 0 0 0.5em;
+  font-size: 100%;
+  font-weight: bold;
+  line-height: 1.3;
   text-align: center;
 `;
 
@@ -80,16 +80,10 @@ const linkButtonStyles = css`
   font-family: inherit;
   font-size: 0.875rem;
   text-decoration: underline;
-  color: #9f9;
+  color: #fffe99;
   background-color: transparent;
   cursor: pointer;
   outline: none;
-
-  &:hover,
-  &:focus {
-    text-decoration: none;
-    color: #4c2c92;
-  }
 `;
 
 const buttonStyles = css`
@@ -159,9 +153,9 @@ function SplashScreen() {
       >
         <img css={logoStyles} src={epaLogo} alt="EPA Logo" />
 
-        <h4 css={headingStyles}>
+        <h2 css={headingStyles}>
           Welcome to EPA’s Trade-off Tool for Sampling (TOTS)
-        </h4>
+        </h2>
 
         <p>
           A large-scale release of a biological or radiological (BR) agent can

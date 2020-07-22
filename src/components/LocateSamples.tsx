@@ -33,6 +33,8 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
+// styles
+import { reactSelectStyles } from 'styles';
 
 // gets an array of layers that can be used with the sketch widget.
 function getSketchableLayers(layers: LayerType[]) {
@@ -176,7 +178,7 @@ function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
   return (
     <button
       id={label}
-      title={label}
+      title={`Draw a ${label}`}
       className="sketch-button"
       onClick={() => onClick()}
       css={sketchButtonStyles}
@@ -759,6 +761,7 @@ function LocateSamples() {
                       id="aoi-mask-select"
                       inputId="aoi-mask-select-input"
                       css={fullWidthSelectStyles}
+                      styles={reactSelectStyles}
                       isClearable={true}
                       value={aoiSketchLayer}
                       onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
