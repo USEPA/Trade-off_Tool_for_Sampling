@@ -50,6 +50,15 @@ const gloablStyles = css`
     /* revert back to 16px font-size on our application code itself */
     font-size: 1rem;
   }
+
+  .sr-only {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
 `;
 
 const errorContainerStyles = css`

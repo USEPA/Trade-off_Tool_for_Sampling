@@ -165,6 +165,15 @@ const resourceTallyStyles = css`
   }
 `;
 
+const tallyTitle = css`
+  color: white;
+  margin: 0;
+  padding: 0 0 0.5em;
+  font-size: 100%;
+  font-weight: bold;
+  line-height: 1.3;
+`;
+
 const resourceTallyContainerStyles = css`
   display: inline-block;
   text-align: left;
@@ -391,7 +400,7 @@ function NavBar({ height }: Props) {
           {calculateResults.status === 'fetching' && <LoadingSpinner />}
           {calculateResults.status === 'success' && calculateResults.data && (
             <div css={resourceTallyStyles}>
-              <h4>Resource Tally</h4>
+              <h3 css={tallyTitle}>Resource Tally</h3>
               <div css={resourceTallyContainerStyles}>
                 <i className="fas fa-dollar-sign fa-fw" />{' '}
                 {calculateResults.data['Total Cost'].toLocaleString()}
@@ -468,6 +477,9 @@ function NavBar({ height }: Props) {
                 {currentPanel && (
                   <button
                     css={collapsePanelButton}
+                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${
+                      currentPanel.label
+                    } Panel`}
                     onClick={() => setExpanded(!expanded)}
                   >
                     <i
@@ -481,6 +493,9 @@ function NavBar({ height }: Props) {
                   calculateResults.panelOpen === true && (
                     <button
                       css={resultsCollapsePanelButton}
+                      aria-label={`${
+                        resultsExpanded ? 'Collapse' : 'Expand'
+                      } Calculate Results Panel`}
                       onClick={() => setResultsExpanded(!resultsExpanded)}
                     >
                       <i

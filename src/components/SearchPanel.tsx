@@ -74,6 +74,11 @@ const searchButtonStyles = css`
   border-radius: 4px;
 `;
 
+const buttonHiddenTextStyles = css`
+  font: 0/0 a, sans-serif;
+  text-indent: -999em;
+`;
+
 const filterContainerStyles = css`
   /* This is disabled and only ever enabled for testing.
    * In development, it is sometimes helpful enable
@@ -426,11 +431,13 @@ function SearchPanel() {
           onClick={(ev) => setSearch(searchText)}
         >
           <i className="fas fa-search"></i>
+          <span css={buttonHiddenTextStyles}>Search</span>
         </button>
       </form>
       <div css={filterContainerStyles}>
         <div>
           <input
+            id="within_map_filter"
             type="checkbox"
             checked={withinMap}
             onChange={(ev) => setWithinMap(!withinMap)}
@@ -534,19 +541,21 @@ function SearchPanel() {
             ] as SortByType[]
           }
         />
-        <button
-          css={sortOrderStyles}
-          disabled={sortBy.value === 'none' ? true : false}
-          onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-        >
-          {sortBy.value !== 'none' && (
+        {sortBy.value !== 'none' && (
+          <button
+            css={sortOrderStyles}
+            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+          >
             <i
               className={`fas fa-long-arrow-alt-${
                 sortOrder === 'desc' ? 'up' : 'down'
               }`}
             ></i>
-          )}
-        </button>
+            <span css={buttonHiddenTextStyles}>
+              {sortOrder === 'desc' ? 'Sort Ascending' : 'Sort Descending'}
+            </span>
+          </button>
+        )}
       </div>
       {searchResults?.data?.results && searchResults.data.results.length > 0 && (
         <span className="disclaimer" css={exitDisclaimerStyles}>
@@ -590,6 +599,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(1)}
                   >
                     <i className="fas fa-angle-double-left"></i>
+                    <span css={buttonHiddenTextStyles}>Go to first page</span>
                   </button>
                   <button
                     css={pageControlStyles}
@@ -597,6 +607,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(pageNumber - 1)}
                   >
                     <i className="fas fa-angle-left"></i>
+                    <span css={buttonHiddenTextStyles}>Previous</span>
                   </button>
                   <span>{pageNumber}</span>
                   <button
@@ -605,6 +616,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(pageNumber + 1)}
                   >
                     <i className="fas fa-angle-right"></i>
+                    <span css={buttonHiddenTextStyles}>Next</span>
                   </button>
                   <span css={totalStyles}>
                     {searchResults.data.total.toLocaleString()} Items
@@ -634,11 +646,12 @@ const cardTitleStyles = css`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 `;
 
 const cardInfoStyles = css`
-  font-size: 10px;
-  color: #898989;
+  font-size: 11px;
+  color: #545454;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -650,7 +663,7 @@ const cardButtonContainerStyles = css`
 `;
 
 const cardMessageStyles = css`
-  font-size: 10px;
+  font-size: 11px;
   font-style: italic;
   margin-left: 4px;
   margin-right: 4px;
@@ -1129,9 +1142,9 @@ function ResultCard({ result }: ResultCardProps) {
       <img
         css={cardThumbnailStyles}
         src={result.thumbnailUrl}
-        alt={result.title}
+        alt={`${result.title} Thumbnail`}
       />
-      <h4 css={cardTitleStyles}>{result.title}</h4>
+      <h3 css={cardTitleStyles}>{result.title}</h3>
       <span css={cardInfoStyles}>
         {result.type} by {result.owner}
       </span>
@@ -1184,7 +1197,7 @@ function ResultCard({ result }: ResultCardProps) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Details
+          Layer Details
         </a>
       </div>
     </div>

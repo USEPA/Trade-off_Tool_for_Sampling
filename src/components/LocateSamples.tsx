@@ -40,6 +40,8 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
+// styles
+import { reactSelectStyles } from 'styles';
 
 type ShapeTypeSelect = {
   value: string;
@@ -259,7 +261,7 @@ function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
   return (
     <button
       id={label}
-      title={label}
+      title={`Draw a ${label}`}
       className="sketch-button"
       onClick={() => onClick()}
       css={sketchButtonStyles}
@@ -1040,7 +1042,7 @@ function LocateSamples() {
           {!trainingMode && (
             <AccordionItem title={'Create User Defined Sample Types'}>
               <div css={sectionContainer}>
-                <label htmlFor="sample-type-select">Sample Type</label>
+                <label htmlFor="sample-type-select-input">Sample Type</label>
                 <Select
                   id="sample-type-select"
                   inputId="sample-type-select-input"
@@ -1200,7 +1202,9 @@ function LocateSamples() {
                         value={sa ? sa : ''}
                         onChange={(ev) => setSa(ev.target.value)}
                       />
-                      <label htmlFor="shape-type-select">Shape Type</label>
+                      <label htmlFor="shape-type-select-input">
+                        Shape Type
+                      </label>
                       <Select
                         id="shape-type-select"
                         inputId="shape-type-select-input"
@@ -1637,6 +1641,7 @@ function LocateSamples() {
                       id="aoi-mask-select"
                       inputId="aoi-mask-select-input"
                       css={inlineSelectStyles}
+                      styles={reactSelectStyles}
                       isClearable={true}
                       value={aoiSketchLayer}
                       onChange={(ev) => setAoiSketchLayer(ev as LayerType)}

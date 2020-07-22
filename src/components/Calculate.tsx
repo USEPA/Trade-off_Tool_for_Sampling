@@ -30,6 +30,8 @@ import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
 import { chunkArray } from 'utils/utils';
+// styles
+import { reactSelectStyles } from 'styles';
 
 type ContaminationResultsType = {
   status:
@@ -780,6 +782,7 @@ function Calculate() {
                       id="contamination-map-select"
                       inputId="contamination-map-select-input"
                       css={fullWidthSelectStyles}
+                      styles={reactSelectStyles}
                       isClearable={true}
                       value={contaminationMap}
                       onChange={(ev) => setContaminationMap(ev as LayerType)}

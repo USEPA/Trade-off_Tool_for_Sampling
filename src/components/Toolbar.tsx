@@ -46,7 +46,11 @@ const basemapNames = [
 // --- styles (Toolbar) ---
 const toolBarTitle = css`
   color: white;
+  margin: 0;
   padding: 0 16px;
+  font-size: 100%;
+  font-weight: bold;
+  line-height: 1.3;
 `;
 
 const toolBarStyles = css`
@@ -557,9 +561,9 @@ function Toolbar() {
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
-      <h4 css={toolBarTitle}>
+      <h2 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
-      </h4>
+      </h2>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
