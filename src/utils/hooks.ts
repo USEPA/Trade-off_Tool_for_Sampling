@@ -18,12 +18,7 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { PanelValueType } from 'config/navigation';
 import { polygonSymbol } from 'config/symbols';
 // utils
-import {
-  findLayerInEdits,
-  getDefaultAreaOfInterestLayer,
-  getDefaultSampleLayer,
-  getPopupTemplate,
-} from 'utils/sketchUtils';
+import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 
 // Saves data to session storage
@@ -69,12 +64,22 @@ function getLayerById(layers: LayerType[], id: string) {
 // Hook that allows the user to easily start over without
 // having to manually start a new session.
 export function useStartOver() {
-  const { GraphicsLayer, Point } = useEsriModulesContext();
+  const { Point } = useEsriModulesContext();
   const { resetCalculateContext } = React.useContext(CalculateContext);
   const { setOptions } = React.useContext(DialogContext);
   const {
+    setCurrentPanel,
+    setGettingStartedOpen,
+    setGoTo,
+    setGoToOptions,
+    setLatestStepIndex,
+    setTrainingMode,
+  } = React.useContext(NavigationContext);
+  const {
+    basemapWidget,
     map,
     mapView,
+    homeWidget,
     setLayers,
     setEdits,
     setUrlLayers,
@@ -92,16 +97,24 @@ export function useStartOver() {
     map?.removeAll();
 
     // set the layers to just the defaults
-    setLayers([
-      getDefaultAreaOfInterestLayer(GraphicsLayer),
-      getDefaultSampleLayer(GraphicsLayer),
-    ]);
-
-    // clear other layer related variables
+    setLayers([]);
     setEdits({ count: 0, edits: [] });
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
+
+    // clear navigation
+    setCurrentPanel(null);
+    setGoTo('');
+    setGoToOptions(null);
+    writeToStorage(
+      'tots_current_tab',
+      { goTo: '', goToOptions: null },
+      setOptions,
+    );
+    setLatestStepIndex(-1);
+    setTrainingMode(false);
+    setGettingStartedOpen(false);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -110,6 +123,22 @@ export function useStartOver() {
     if (mapView) {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
+
+      if (homeWidget) {
+        homeWidget.viewpoint = mapView.viewpoint;
+      }
+
+      if (basemapWidget) {
+        // Search for the basemap with the matching portal id
+        const portalId = 'f81bc478e12c4f1691d0d7ab6361f5a6';
+        let selectedBasemap: __esri.Basemap | null = null;
+        basemapWidget.source.basemaps.forEach((basemap) => {
+          if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
+        });
+
+        // Set the activeBasemap to the basemap that was found
+        if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
+      }
     }
   }
 
@@ -161,6 +190,7 @@ export function useCalculatePlan() {
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
+  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
   React.useEffect(() => {
     if (
       !sketchLayer?.sketchLayer ||
@@ -168,6 +198,7 @@ export function useCalculatePlan() {
       sketchLayer.sketchLayer.graphics.length === 0
     ) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
+      setCalcGraphics([]);
       return;
     }
     if (sketchLayer.editType === 'properties') return;
@@ -198,7 +229,6 @@ export function useCalculatePlan() {
     setCalculateResults,
   ]);
 
-  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
   const [totals, setTotals] = React.useState({
     ttpk: 0,
     ttc: 0,
@@ -391,7 +421,10 @@ export function useCalculatePlan() {
   // perform non-geospatial calculations
   React.useEffect(() => {
     // exit early checks
-    if (calcGraphics.length === 0 || totalArea === 0) return;
+    if (calcGraphics.length === 0 || totalArea === 0) {
+      setCalculateResults({ status: 'none', panelOpen: false, data: null });
+      return;
+    }
 
     // calculate spatial items
     let userSpecifiedAOI = null;
@@ -419,6 +452,7 @@ export function useCalculatePlan() {
     // calculate lab throughput
     const totalLabHours = numLabs * numLabHours;
     const labThroughput = totals.tta / totalLabHours;
+    const totalLabTime = totals.tta < 1 ? 1 : totals.tta;
 
     // calculate total cost and time
     const totalCost =
@@ -428,7 +462,7 @@ export function useCalculatePlan() {
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
     // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
     let totalTime = 0;
-    if (labThroughput < timeCompleteSampling) {
+    if (totalLabTime < timeCompleteSampling) {
       totalTime = timeCompleteSampling;
     } else {
       totalTime = labThroughput + 1;
@@ -461,7 +495,7 @@ export function useCalculatePlan() {
       'Time to Prepare Kits': totals.ttpk,
       'Time to Collect': totals.ttc,
       'Material Cost': totals.mcps,
-      'Time to Analyze': totals.tta,
+      'Time to Analyze': totalLabTime,
       'Analysis Labor Cost': totals.alc,
       'Analysis Material Cost': totals.amc,
       'Waste Volume': totals.wvps,

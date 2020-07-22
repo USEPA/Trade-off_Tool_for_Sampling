@@ -178,8 +178,9 @@ function URLPanel() {
         <strong>CSV file</strong> - web-based, comma-separated values text file
         that includes location information
       </p>
-      <label>Type</label>
+      <label htmlFor="url-type-select">Type</label>
       <Select
+        inputId="url-type-select"
         value={urlType}
         onChange={(ev) => {
           setUrlType(ev as UrlType);
