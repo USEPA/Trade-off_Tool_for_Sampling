@@ -33,7 +33,7 @@ export type SaveStatusType =
 const inputStyles = css`
   width: 100%;
   height: 36px;
-  margin: 0 0 10px 0;
+  margin: 0;
   padding-left: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
