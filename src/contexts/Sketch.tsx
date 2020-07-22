@@ -9,6 +9,10 @@ import { totsGPServer } from 'config/webService';
 // types
 import { EditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
+import {
+  UserDefinedAttributes,
+  SampleSelectType,
+} from 'config/sampleAttributes';
 
 type SketchType = {
   basemapWidget: __esri.BasemapGallery | null;
@@ -46,6 +50,14 @@ type SketchType = {
     React.SetStateAction<__esri.SketchViewModel | null>
   >;
   getGpMaxRecordCount: (() => Promise<number>) | null;
+  userDefinedOptions: SampleSelectType[];
+  setUserDefinedOptions: React.Dispatch<
+    React.SetStateAction<SampleSelectType[]>
+  >;
+  userDefinedAttributes: UserDefinedAttributes;
+  setUserDefinedAttributes: React.Dispatch<
+    React.SetStateAction<UserDefinedAttributes>
+  >;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -78,6 +90,10 @@ export const SketchContext = React.createContext<SketchType>({
   aoiSketchVM: null,
   setAoiSketchVM: () => {},
   getGpMaxRecordCount: null,
+  userDefinedOptions: [],
+  setUserDefinedOptions: () => {},
+  userDefinedAttributes: { editCount: 0, attributes: {} },
+  setUserDefinedAttributes: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -108,6 +124,12 @@ export function SketchProvider({ children }: Props) {
     aoiSketchVM,
     setAoiSketchVM, //
   ] = React.useState<__esri.SketchViewModel | null>(null);
+  const [userDefinedOptions, setUserDefinedOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
+  const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
+    UserDefinedAttributes
+  >({ editCount: 0, attributes: {} });
 
   // define the context funtion for getting the max record count
   // of the gp server
@@ -165,6 +187,10 @@ export function SketchProvider({ children }: Props) {
         aoiSketchVM,
         setAoiSketchVM,
         getGpMaxRecordCount,
+        userDefinedOptions,
+        setUserDefinedOptions,
+        userDefinedAttributes,
+        setUserDefinedAttributes,
       }}
     >
       {children}
