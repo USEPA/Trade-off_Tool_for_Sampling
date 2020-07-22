@@ -25,6 +25,11 @@ import { escapeForLucene } from 'utils/utils';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType } from 'types/Edits';
+import {
+  Attributes,
+  sampleAttributes,
+  SampleSelectType,
+} from 'config/sampleAttributes';
 // config
 import { polygonSymbol } from 'config/symbols';
 import {
@@ -704,6 +709,8 @@ function ResultCard({ result }: ResultCardProps) {
     setPortalLayers,
     setReferenceLayers,
     setSketchLayer,
+    setUserDefinedOptions,
+    setUserDefinedAttributes,
   } = React.useContext(SketchContext);
 
   // Used to determine if the layer for this card has been added or not
@@ -789,6 +796,8 @@ function ResultCard({ result }: ResultCardProps) {
               if (isSampleLayer || isVspLayer) {
                 // get the graphics from the layer
                 const graphics: __esri.Graphic[] = [];
+                const newAttributes: Attributes = {};
+                const newUserSampleTypes: SampleSelectType[] = [];
                 layerFeatures.features.forEach((feature: any) => {
                   const graphic: any = Graphic.fromJSON(feature);
                   graphic.geometry.spatialReference = {
@@ -796,8 +805,74 @@ function ResultCard({ result }: ResultCardProps) {
                   };
                   graphic.popupTemplate = popupTemplate;
                   graphic.symbol = polygonSymbol;
+
+                  // Add the user defined type if it does not exist
+                  if (
+                    !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                  ) {
+                    const attributes = graphic.attributes;
+                    newUserSampleTypes.push({
+                      value: attributes.TYPE,
+                      label: attributes.TYPE,
+                      isPredefined: false,
+                    });
+                    newAttributes[attributes.TYPE] = {
+                      OBJECTID: '-1',
+                      PERMANENT_IDENTIFIER: null,
+                      GLOBALID: null,
+                      TYPE: attributes.TYPE,
+                      ShapeType: attributes.ShapeType,
+                      Width: Number(attributes.Width),
+                      TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                      TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                      TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                      TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                      LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
+                      LOD_NON: attributes.LOD_NON
+                        ? Number(attributes.LOD_NON)
+                        : null,
+                      MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                      TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                      WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                      WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                      SA: attributes.SA ? Number(attributes.SA) : null,
+                      AA: null,
+                      OAA: null, // TODO: Delete this before release - original AA for debug
+                      ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                      AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                      Notes: '',
+                      CONTAMTYPE: null,
+                      CONTAMVAL: null,
+                      CONTAMUNIT: null,
+                      CREATEDDATE: null,
+                      UPDATEDDATE: null,
+                      USERNAME: null,
+                      ORGANIZATION: null,
+                      ELEVATIONSERIES: null,
+                    };
+                  }
+
                   graphics.push(graphic);
                 });
+
+                if (newUserSampleTypes.length > 0) {
+                  setUserDefinedAttributes((item) => {
+                    Object.keys(newAttributes).forEach((key) => {
+                      const attributes = newAttributes[key];
+                      sampleAttributes[attributes.TYPE] = attributes;
+                      item.attributes[attributes.TYPE] = attributes;
+                    });
+
+                    return {
+                      editCount: item.editCount + 1,
+                      attributes: item.attributes,
+                    };
+                  });
+
+                  setUserDefinedOptions((options) => {
+                    return [...options, ...newUserSampleTypes];
+                  });
+                }
 
                 // build the graphics layer
                 const graphicsLayer = new GraphicsLayer({
