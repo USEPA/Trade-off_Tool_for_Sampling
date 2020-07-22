@@ -74,7 +74,7 @@ export const attributeOverwriteWarning = (
   sampleType: SampleSelectType | null,
 ) => {
   const sampleTypeStr = sampleType
-    ? sampleType.value
+    ? sampleType.label
     : 'the corresponding sample type';
   return (
     <MessageBox
@@ -222,12 +222,6 @@ export const contaminationHitsSuccessMessage = (numberOfHits: number) => (
     title="Contamination Hits"
     message={`${numberOfHits} sample(s) placed in contaminated areas`}
   />
-);
-
-export const userDefinedValidationMessage = (
-  message: JSX.Element[] | string,
-) => (
-  <MessageBox severity="error" title="Validation Failure" message={message} />
 );
 
 // calculate results panel
