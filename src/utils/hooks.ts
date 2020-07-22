@@ -1508,7 +1508,6 @@ function useUserDefinedSampleAttributesStorage() {
 
     setLocalUserDefinedSamplesInitialized(true);
     const userDefinedAttributesStr = readFromStorage(key);
-    console.log('userDefinedAttributesStr: ', userDefinedAttributesStr);
     if (!userDefinedAttributesStr) return;
 
     // parse the storage value
