@@ -80,7 +80,7 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
   // currently we only have polygons
   // in the future we may need to add code to handle different geometry types
   return {
-    attributes: graphic.attributes ? { ...graphic.attributes } : {},
+    attributes: graphic.attributes ? graphic.attributes : {},
     geometry: geometry,
   };
 }

@@ -22,7 +22,6 @@ import {
   pulblishSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
-import { LayerType } from 'types/Layer';
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -73,7 +72,6 @@ function Publish() {
   const {
     edits,
     setEdits,
-    layers,
     setLayers,
     sketchLayer, //
   } = React.useContext(SketchContext);
@@ -135,14 +133,7 @@ function Publish() {
       rawData: null,
     });
 
-    let layerToCheck: LayerType | undefined;
-    layers.forEach((layer) => {
-      if (layer.layerId !== sketchLayer.layerId) return;
-
-      layerToCheck = layer;
-    });
-
-    if (layerToCheck?.status === 'edited') {
+    if (sketchLayer.status === 'edited') {
       setHasNameBeenChecked(true);
       return;
     }
@@ -170,7 +161,7 @@ function Publish() {
           rawData: err,
         });
       });
-  }, [portal, sketchLayer, publishButtonClicked, hasNameBeenChecked, layers]);
+  }, [portal, sketchLayer, publishButtonClicked, hasNameBeenChecked]);
 
   // Run the publish
   const [publishResponse, setPublishResponse] = React.useState<PublishType>({
