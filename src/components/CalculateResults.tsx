@@ -50,7 +50,7 @@ function LabelValue({ label, value }: LabelValueProps) {
 
   return (
     <div css={labelValueStyles}>
-      <label>{label}: </label>
+      <span>{label}: </span>
       <span css={valueStyles}>
         <ShowLessMore text={formattedValue} charLimit={20} />
       </span>
