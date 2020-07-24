@@ -1056,103 +1056,12 @@ function LocateSamples() {
                 <div css={iconButtonContainerStyles}>
                   <label htmlFor="sample-type-select-input">Sample Type</label>
                   <div>
-                    <button
-                      css={iconButtonStyles}
-                      onClick={(ev) => {
-                        if (editingStatus === 'create') {
-                          setEditingStatus(null);
-                          return;
-                        }
-
-                        setSampleTypeInputs('create');
-                      }}
-                    >
-                      <i
-                        className={
-                          editingStatus === 'create'
-                            ? 'fas fa-times'
-                            : 'fas fa-plus'
-                        }
-                      />
-                      <span className="sr-only">
-                        {editingStatus === 'create' ? 'Cancel' : 'Create'}
-                      </span>
-                    </button>
                     {userDefinedSampleType && (
                       <React.Fragment>
-                        {userDefinedSampleType.isPredefined ? (
-                          <button
-                            css={iconButtonStyles}
-                            onClick={(ev) => {
-                              if (editingStatus === 'view') {
-                                setEditingStatus(null);
-                                return;
-                              }
-
-                              setSampleTypeInputs('view');
-                            }}
-                          >
-                            <i
-                              className={
-                                editingStatus === 'view'
-                                  ? 'fas fa-times'
-                                  : 'fas fa-edit'
-                              }
-                            />
-                            <span className="sr-only">
-                              {editingStatus === 'view' ? 'Hide' : 'View'}
-                            </span>
-                          </button>
-                        ) : (
-                          <button
-                            css={iconButtonStyles}
-                            onClick={(ev) => {
-                              if (editingStatus === 'edit') {
-                                setEditingStatus(null);
-                                return;
-                              }
-
-                              setSampleTypeInputs('edit');
-                            }}
-                          >
-                            <i
-                              className={
-                                editingStatus === 'edit'
-                                  ? 'fas fa-times'
-                                  : 'fas fa-edit'
-                              }
-                            />
-                            <span className="sr-only">
-                              {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
-                            </span>
-                          </button>
-                        )}
-                        <button
-                          css={iconButtonStyles}
-                          onClick={(ev) => {
-                            if (editingStatus === 'clone') {
-                              setEditingStatus(null);
-                              return;
-                            }
-
-                            setSampleTypeInputs('clone');
-                          }}
-                        >
-                          <i
-                            className={
-                              editingStatus === 'clone'
-                                ? 'fas fa-times'
-                                : 'fas fa-clone'
-                            }
-                          />
-                          <span className="sr-only">
-                            {editingStatus === 'clone' ? 'Cancel' : 'Clone'}
-                          </span>
-                        </button>
-
                         {!editingStatus && !userDefinedSampleType.isPredefined && (
                           <button
                             css={iconButtonStyles}
+                            title="Delete"
                             onClick={() => {
                               const sampleTypeName =
                                 userDefinedSampleType.value;
@@ -1232,8 +1141,103 @@ function LocateSamples() {
                             <span className="sr-only">Delete</span>
                           </button>
                         )}
+                        <button
+                          css={iconButtonStyles}
+                          title={editingStatus === 'clone' ? 'Cancel' : 'Clone'}
+                          onClick={(ev) => {
+                            if (editingStatus === 'clone') {
+                              setEditingStatus(null);
+                              return;
+                            }
+
+                            setSampleTypeInputs('clone');
+                          }}
+                        >
+                          <i
+                            className={
+                              editingStatus === 'clone'
+                                ? 'fas fa-times'
+                                : 'fas fa-clone'
+                            }
+                          />
+                          <span className="sr-only">
+                            {editingStatus === 'clone' ? 'Cancel' : 'Clone'}
+                          </span>
+                        </button>
+                        {userDefinedSampleType.isPredefined ? (
+                          <button
+                            css={iconButtonStyles}
+                            title={editingStatus === 'view' ? 'Hide' : 'View'}
+                            onClick={(ev) => {
+                              if (editingStatus === 'view') {
+                                setEditingStatus(null);
+                                return;
+                              }
+
+                              setSampleTypeInputs('view');
+                            }}
+                          >
+                            <i
+                              className={
+                                editingStatus === 'view'
+                                  ? 'fas fa-times'
+                                  : 'fas fa-edit'
+                              }
+                            />
+                            <span className="sr-only">
+                              {editingStatus === 'view' ? 'Hide' : 'View'}
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            css={iconButtonStyles}
+                            title={editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                            onClick={(ev) => {
+                              if (editingStatus === 'edit') {
+                                setEditingStatus(null);
+                                return;
+                              }
+
+                              setSampleTypeInputs('edit');
+                            }}
+                          >
+                            <i
+                              className={
+                                editingStatus === 'edit'
+                                  ? 'fas fa-times'
+                                  : 'fas fa-edit'
+                              }
+                            />
+                            <span className="sr-only">
+                              {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                            </span>
+                          </button>
+                        )}
                       </React.Fragment>
                     )}
+                    <button
+                      css={iconButtonStyles}
+                      title={editingStatus === 'create' ? 'Cancel' : 'Create'}
+                      onClick={(ev) => {
+                        if (editingStatus === 'create') {
+                          setEditingStatus(null);
+                          return;
+                        }
+
+                        setSampleTypeInputs('create');
+                      }}
+                    >
+                      <i
+                        className={
+                          editingStatus === 'create'
+                            ? 'fas fa-times'
+                            : 'fas fa-plus'
+                        }
+                      />
+                      <span className="sr-only">
+                        {editingStatus === 'create' ? 'Cancel' : 'Create'}
+                      </span>
+                    </button>
                   </div>
                 </div>
                 <Select
