@@ -244,15 +244,6 @@ function Toolbar() {
       listItemCreatedFunction: function (event) {
         const item = event.item;
 
-        // item is a sub layer, just add the legend
-        if (item.parent) {
-          item.panel = {
-            content: 'legend',
-            open: true,
-          };
-          return;
-        }
-
         // create the slider
         const sliderContainer = document.createElement('div');
         const slider: any = new Slider({
@@ -273,6 +264,66 @@ function Toolbar() {
 
         const container = document.createElement('div');
         container.append(slider.domNode);
+
+        // item is a sub layer, just add the legend
+        if (item.parent) {
+          if (item.layer.type === 'graphics') {
+            const legendContainer = document.createElement('div');
+            const content = (
+              <div className="esri-legend esri-widget--panel esri-widget">
+                <div className="esri-legend__layer">
+                  <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+                    <div className="esri-legend__layer-body">
+                      <div className="esri-legend__layer-row">
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
+                          <div className="esri-legend__symbol">
+                            <div css={graphicsIconStyles}>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="22"
+                                height="22"
+                              >
+                                <defs></defs>
+                                <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
+                                  <path
+                                    fill={`rgba(${polygonSymbol.color.toString()})`}
+                                    fillRule="evenodd"
+                                    stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
+                                    strokeWidth={polygonSymbol.outline.width}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeDasharray="none"
+                                    strokeMiterlimit="4"
+                                    d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
+                                  />
+                                </g>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+            ReactDOM.render(content, legendContainer);
+            container.append(legendContainer);
+
+            item.panel = {
+              content: container,
+              className: 'esri-icon-layer-list',
+              open: true,
+            };
+          } else {
+            item.panel = {
+              content: 'legend',
+              open: true,
+            };
+          }
+          return;
+        }
 
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { jsx, css } from '@emotion/core';
+import Select from 'components/Select';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
@@ -44,6 +45,10 @@ const saveButtonContainerStyles = css`
   justify-content: flex-end;
 `;
 
+const layerSelectStyles = css`
+  margin-bottom: 10px;
+`;
+
 const saveButtonStyles = (status: string) => {
   let backgroundColor = '';
   if (status === 'success') {
@@ -62,12 +67,16 @@ const saveButtonStyles = (status: string) => {
 // --- components (EditLayerMetaData) ---
 type Props = {
   buttonText?: string;
+  nameLabel?: string;
+  descriptionLabel?: string;
   initialStatus?: SaveStatusType;
   onSave?: (saveStatus: SaveStatusType) => void;
 };
 
 function EditLayerMetaData({
   buttonText = 'Save',
+  nameLabel = 'Scenario Name',
+  descriptionLabel = 'Scenario Description',
   initialStatus = 'none',
   onSave,
 }: Props) {
@@ -157,6 +166,8 @@ function EditLayerMetaData({
       });
   }
 
+  const [linkedLayer, setLinkedLayer] = React.useState<LayerType | null>(null);
+
   if (!sketchLayer) return null;
 
   return (
@@ -165,7 +176,7 @@ function EditLayerMetaData({
         ev.preventDefault();
       }}
     >
-      <label htmlFor="scenario-name-input">Scenario Name</label>
+      <label htmlFor="scenario-name-input">{nameLabel}</label>
       <input
         id="scenario-name-input"
         disabled={!sketchLayer || sketchLayer.status !== 'added'}
@@ -189,29 +200,51 @@ function EditLayerMetaData({
         }}
       />
 
-      <label htmlFor="scenario-description-input">Scenario Description</label>
-      <input
-        id="scenario-description-input"
-        disabled={!sketchLayer || sketchLayer.status !== 'added'}
-        css={inputStyles}
-        maxLength={2048}
-        placeholder="Layer description (2048 characters)"
-        value={sketchLayer.scenarioDescription}
-        onChange={(ev) => {
-          const newValue = ev.target.value;
-          setSaveStatus('changes');
-          if (sketchLayer) {
-            setSketchLayer((sketchLayer: LayerType | null) => {
-              if (!sketchLayer) return sketchLayer;
-              return {
-                ...sketchLayer,
-                editType: 'properties',
-                scenarioDescription: newValue,
-              };
-            });
-          }
-        }}
-      />
+      {descriptionLabel ? (
+        <React.Fragment>
+          <label htmlFor="scenario-description-input">{descriptionLabel}</label>
+          <input
+            id="scenario-description-input"
+            disabled={!sketchLayer || sketchLayer.status !== 'added'}
+            css={inputStyles}
+            maxLength={2048}
+            placeholder="Layer description (2048 characters)"
+            value={sketchLayer.scenarioDescription}
+            onChange={(ev) => {
+              const newValue = ev.target.value;
+              setSaveStatus('changes');
+              if (sketchLayer) {
+                setSketchLayer((sketchLayer: LayerType | null) => {
+                  if (!sketchLayer) return sketchLayer;
+                  return {
+                    ...sketchLayer,
+                    editType: 'properties',
+                    scenarioDescription: newValue,
+                  };
+                });
+              }
+            }}
+          />
+        </React.Fragment>
+      ) : (
+        <React.Fragment>
+          <label htmlFor="linked-layer-select-input">
+            Linked Reference Layer
+          </label>
+          <Select
+            id="linked-layer-select"
+            inputId="linked-layer-select-input"
+            css={layerSelectStyles}
+            value={linkedLayer}
+            onChange={(ev) => setLinkedLayer(ev as LayerType)}
+            options={layers.filter(
+              (layer) =>
+                layer.layerType === 'Reference Layer' ||
+                layer.layerType === 'Area of Interest',
+            )}
+          />
+        </React.Fragment>
+      )}
 
       {saveStatus === 'fetching' && <LoadingSpinner />}
       {saveStatus === 'failure' && webServiceErrorMessage}

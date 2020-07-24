@@ -3,6 +3,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { jsx, css } from '@emotion/core';
+import Select from 'components/Select';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
@@ -90,7 +91,7 @@ function getUpdateEventInfo(
 
 // --- styles (FeatureTool) ---
 const containerStyles = css`
-  width: 160px;
+  width: 260px;
   padding: 6px;
   background-color: white;
 
@@ -123,11 +124,16 @@ const buttonStyles = css`
 
 const noteStyles = css`
   height: 75px;
+  width: 100%;
 `;
 
 const saveButtonContainerStyles = css`
   display: flex;
   justify-content: flex-end;
+`;
+
+const inputContainerStyles = css`
+  margin-bottom: 10px;
 `;
 
 const saveButtonStyles = (status: SaveStatusType) => {
@@ -213,9 +219,25 @@ function FeatureTool({
       </div>
       {selectedGraphicsIds.length === 1 && (
         <React.Fragment>
-          <div>
+          <div css={inputContainerStyles}>
             <label>Type: </label>
             {type}
+          </div>
+          <div css={inputContainerStyles}>
+            <label>Layer:</label>
+            <Select
+              id="layer-type-select"
+              inputId="layer-type-select-input"
+              // css={selectStyles}
+              // value={layerType}
+              options={[
+                { label: 'Building A Floor 1', value: 'bAf1' },
+                { label: 'Building A Floor 2', value: 'bAf2' },
+                { label: 'Building A Floor 3', value: 'bAf3' },
+                { label: 'Building B Floor 1', value: 'bBf1' },
+                { label: 'Building B Floor 2', value: 'bBf2' },
+              ]}
+            />
           </div>
           <div>
             <label htmlFor="graphic-note">Note: </label>

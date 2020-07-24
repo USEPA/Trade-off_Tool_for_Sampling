@@ -153,6 +153,15 @@ const checkBoxStyles = css`
   margin-right: 5px;
 `;
 
+const inputStyles = css`
+  width: 100%;
+  height: 36px;
+  margin: 0 0 10px 0;
+  padding-left: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+`;
+
 const layerInfo = css`
   padding-bottom: 0.5em;
 `;
@@ -1187,6 +1196,13 @@ function FilePanel() {
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
+                  <label htmlFor="sample-type-name-input">Layer Name</label>
+                  <input
+                    id="sample-type-name-input"
+                    css={inputStyles}
+                    //value={sampleTypeName}
+                    //onChange={(ev) => setSampleTypeName(ev.target.value)}
+                  />
                   <input
                     id="generalize-features-input"
                     type="checkbox"

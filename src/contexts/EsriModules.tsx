@@ -48,6 +48,7 @@ type EsriConstructors = [
   typeof import('esri/widgets/Search'),
   typeof import('esri/widgets/Slider'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
+  typeof import('esri/layers/GroupLayer'),
 ];
 
 type Props = { children: React.ReactNode };
@@ -94,6 +95,7 @@ type State = {
   Search: EsriConstructors[38];
   Slider: EsriConstructors[39];
   SketchViewModel: EsriConstructors[40];
+  GroupLayer: EsriConstructors[41];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -143,6 +145,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/Search',
         'esri/widgets/Slider',
         'esri/widgets/Sketch/SketchViewModel',
+        'esri/layers/GroupLayer',
       ],
       {
         version: '4.15',
@@ -191,6 +194,7 @@ function EsriModulesProvider({ children }: Props) {
         Search,
         Slider,
         SketchViewModel,
+        GroupLayer,
       ]) => {
         setModules({
           modulesLoaded: true,
@@ -234,6 +238,7 @@ function EsriModulesProvider({ children }: Props) {
           Search,
           Slider,
           SketchViewModel,
+          GroupLayer,
         });
 
         config.request.proxyUrl = proxyUrl;

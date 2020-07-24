@@ -7,6 +7,12 @@ export type EditsType = {
 
 export type EditType = 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
 
+export type ScenarioType = {
+  scenarioName: string;
+  scenarioDescription: string;
+  layers: LayerEditsType[];
+};
+
 export type LayerEditsType = {
   id: number; // layer id
   layerId: string; // id from esri layer

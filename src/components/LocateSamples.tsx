@@ -305,6 +305,22 @@ const deleteButtonStyles = css`
   }
 `;
 
+const iconButtonStyles = css`
+  width: 25px;
+  margin: 0 2px;
+  padding: 0.25em 0;
+  color: black;
+  background-color: white;
+  border-radius: 0;
+  line-height: 16px;
+  text-decoration-line: none;
+  font-weight: bold;
+
+  &:hover {
+    background-color: white;
+  }
+`;
+
 const trainingStyles = css`
   margin-left: 25px;
   font-size: 0.875rem;
@@ -357,6 +373,7 @@ function LocateSamples() {
     Geoprocessor,
     Graphic,
     GraphicsLayer,
+    GroupLayer,
     Point,
     Polygon,
   } = useEsriModulesContext();
@@ -964,6 +981,29 @@ function LocateSamples() {
     return editedGraphics;
   }
 
+  const [editEnabled, setEditEnabled] = React.useState(false);
+  const [editEnabled2, setEditEnabled2] = React.useState(false);
+  const [editEnabled3, setEditEnabled3] = React.useState(false);
+
+  const [demoLayerInit, setDemoLayerInit] = React.useState(false);
+  React.useEffect(() => {
+    if (demoLayerInit || !map) return;
+
+    setDemoLayerInit(true);
+
+    const group = new GroupLayer({
+      title: 'Decommissioned Facility',
+      layers: [
+        new GraphicsLayer({ title: 'Building B Floor 2' }),
+        new GraphicsLayer({ title: 'Building B Floor 1' }),
+        new GraphicsLayer({ title: 'Building A Floor 3' }),
+        new GraphicsLayer({ title: 'Building A Floor 2' }),
+        new GraphicsLayer({ title: 'Building A Floor 1' }),
+      ],
+    });
+    map.add(group);
+  }, [demoLayerInit, GraphicsLayer, GroupLayer, map]);
+
   return (
     <div css={panelContainer}>
       <div>
@@ -1018,19 +1058,106 @@ function LocateSamples() {
             feature layer name if published to your ArcGIS Online account in the{' '}
             <strong>Publish Plan</strong> step.
           </p>
-          <label htmlFor="sampling-layer-select-input">
-            Specify Sampling Layer
-          </label>
+
+          {editEnabled ? (
+            <EditLayerMetaData />
+          ) : (
+            <React.Fragment>
+              <div
+                css={css`
+                  display: flex;
+                  justify-content: space-between;
+                `}
+              >
+                <label htmlFor="sampling-layer-select-input2">
+                  Specify Scenario
+                </label>
+                <div>
+                  <button
+                    css={iconButtonStyles}
+                    onClick={() => setEditEnabled2(!editEnabled2)}
+                  >
+                    <i className="fas fa-plus" />
+                  </button>
+                  <button
+                    css={iconButtonStyles}
+                    onClick={() => setEditEnabled2(!editEnabled2)}
+                  >
+                    <i className="fas fa-edit" />
+                  </button>
+                  <button css={iconButtonStyles}>
+                    <i className="fas fa-trash-alt" />
+                  </button>
+                </div>
+              </div>
+              <Select
+                id="sampling-layer-select2"
+                inputId="sampling-layer-select-input2"
+                css={layerSelectStyles}
+                value={{ value: 'val1', label: 'Decommissioned Facility' }}
+                //onChange={(ev) => setSketchLayer(ev as LayerType)}
+                options={[{ value: 'val1', label: 'Decommissioned Facility' }]}
+              />
+              {editEnabled2 && <EditLayerMetaData />}
+            </React.Fragment>
+          )}
+
+          <div
+            css={css`
+              display: flex;
+              justify-content: space-between;
+            `}
+          >
+            <label htmlFor="sampling-layer-select-input">
+              Active Sampling Layer
+            </label>
+            <div>
+              <button
+                css={iconButtonStyles}
+                onClick={() => setEditEnabled3(!editEnabled3)}
+              >
+                <i className="fas fa-plus" />
+              </button>
+              <button
+                css={iconButtonStyles}
+                onClick={() => setEditEnabled3(!editEnabled3)}
+              >
+                <i className="fas fa-edit" />
+              </button>
+              <button css={iconButtonStyles}>
+                <i className={editEnabled ? 'fas fa-link' : 'fas fa-unlink'} />
+              </button>
+              <button css={iconButtonStyles}>
+                <i className="fas fa-trash-alt" />
+              </button>
+            </div>
+          </div>
           <Select
             id="sampling-layer-select"
             inputId="sampling-layer-select-input"
             css={layerSelectStyles}
             value={sketchLayer}
             onChange={(ev) => setSketchLayer(ev as LayerType)}
-            options={getSketchableLayers(layers)}
+            options={[
+              {
+                label: 'Decommissioned Facility Layers',
+                options: [
+                  { label: 'Building A Floor 1', value: 'bAf1' },
+                  { label: 'Building A Floor 2', value: 'bAf2' },
+                  { label: 'Building A Floor 3', value: 'bAf3' },
+                  { label: 'Building B Floor 1', value: 'bBf1' },
+                  { label: 'Building B Floor 2', value: 'bBf2' },
+                ],
+              },
+              {
+                label: 'Unlinked Layers',
+                options: getSketchableLayers(layers),
+              },
+            ]}
           />
-
-          <EditLayerMetaData />
+          {editEnabled3 && (
+            <EditLayerMetaData nameLabel="Layer Name" descriptionLabel="" />
+          )}
         </div>
         <div css={sectionContainerWidthOnly}>
           <p>
@@ -1739,6 +1866,17 @@ function LocateSamples() {
             </div>
           </AccordionItem>
         </AccordionList>
+      </div>
+      <div css={sectionContainer}>
+        <div css={trainingStyles}>
+          <input
+            id="training-mode-toggle2"
+            type="checkbox"
+            checked={editEnabled}
+            onChange={(ev) => setEditEnabled(!editEnabled)}
+          />
+          <label htmlFor="training-mode-toggle2">Edit Mode</label>
+        </div>
       </div>
       <div css={sectionContainer}>
         <NavigationButton goToPanel="calculate" />
