@@ -191,19 +191,9 @@ const inlineMenuStyles = css`
   justify-content: space-between;
 `;
 
-const userDefinedButtonStyles = css`
-  ${inlineMenuStyles}
-  margin-bottom: 10px;
-`;
-
 const addButtonStyles = css`
   margin: 0;
   height: 38px; /* same height as ReactSelect */
-`;
-
-const deleteSampleTypeButtonStyles = css`
-  ${addButtonStyles}
-  background-color: red;
 `;
 
 const widthAreaCheckContainerStyles = css`
@@ -286,6 +276,27 @@ const headerContainer = css`
   h2 {
     margin: 0;
     padding: 0;
+  }
+`;
+
+const iconButtonContainerStyles = css`
+  display: flex;
+  justify-content: space-between;
+`;
+
+const iconButtonStyles = css`
+  width: 25px;
+  margin: 0 2px;
+  padding: 0.25em 0;
+  color: black;
+  background-color: white;
+  border-radius: 0;
+  line-height: 16px;
+  text-decoration-line: none;
+  font-weight: bold;
+
+  &:hover {
+    background-color: white;
   }
 `;
 
@@ -1042,7 +1053,193 @@ function LocateSamples() {
           {!trainingMode && (
             <AccordionItem title={'Create User Defined Sample Types'}>
               <div css={sectionContainer}>
-                <label htmlFor="sample-type-select-input">Sample Type</label>
+                <div css={iconButtonContainerStyles}>
+                  <label htmlFor="sample-type-select-input">Sample Type</label>
+                  <div>
+                    {userDefinedSampleType && (
+                      <React.Fragment>
+                        {!editingStatus && !userDefinedSampleType.isPredefined && (
+                          <button
+                            css={iconButtonStyles}
+                            title="Delete"
+                            onClick={() => {
+                              const sampleTypeName =
+                                userDefinedSampleType.value;
+
+                              setOptions({
+                                title: 'Would you like to continue?',
+                                ariaLabel: 'Would you like to continue?',
+                                description:
+                                  'This operation will delete the sample type and any associated samples.',
+                                onContinue: () => {
+                                  setUserDefinedOptions(
+                                    userDefinedOptions.filter(
+                                      (option) =>
+                                        option.value !== sampleTypeName,
+                                    ),
+                                  );
+                                  setUserDefinedAttributes((userDefined) => {
+                                    delete userDefined.attributes[
+                                      sampleTypeName
+                                    ];
+                                    userDefined.editCount += 1;
+                                    return userDefined;
+                                  });
+
+                                  // Update the attributes of the graphics on the map on edits
+                                  let editsCopy: EditsType = edits;
+                                  layers.forEach((layer) => {
+                                    if (
+                                      !['Samples', 'VSP'].includes(
+                                        layer.layerType,
+                                      ) ||
+                                      layer.sketchLayer.type !== 'graphics'
+                                    ) {
+                                      return;
+                                    }
+
+                                    const graphicsToRemove: __esri.Graphic[] = [];
+                                    layer.sketchLayer.graphics.forEach(
+                                      (graphic) => {
+                                        if (
+                                          graphic.attributes.TYPE ===
+                                          sampleTypeName
+                                        ) {
+                                          graphicsToRemove.push(graphic);
+                                        }
+                                      },
+                                    );
+                                    layer.sketchLayer.removeMany(
+                                      graphicsToRemove,
+                                    );
+
+                                    if (graphicsToRemove.length > 0) {
+                                      const collection = new Collection<
+                                        __esri.Graphic
+                                      >();
+                                      collection.addMany(graphicsToRemove);
+                                      editsCopy = updateLayerEdits({
+                                        edits: editsCopy,
+                                        layer,
+                                        type: 'delete',
+                                        changes: collection,
+                                      });
+                                    }
+                                  });
+
+                                  setEdits(editsCopy);
+
+                                  // TODO: Add code for deleteing the user defined type
+                                  //       from ArcGIS Online.
+
+                                  setUserDefinedSampleType(null);
+                                },
+                              });
+                            }}
+                          >
+                            <i className="fas fa-trash-alt" />
+                            <span className="sr-only">Delete</span>
+                          </button>
+                        )}
+                        <button
+                          css={iconButtonStyles}
+                          title={editingStatus === 'clone' ? 'Cancel' : 'Clone'}
+                          onClick={(ev) => {
+                            if (editingStatus === 'clone') {
+                              setEditingStatus(null);
+                              return;
+                            }
+
+                            setSampleTypeInputs('clone');
+                          }}
+                        >
+                          <i
+                            className={
+                              editingStatus === 'clone'
+                                ? 'fas fa-times'
+                                : 'fas fa-clone'
+                            }
+                          />
+                          <span className="sr-only">
+                            {editingStatus === 'clone' ? 'Cancel' : 'Clone'}
+                          </span>
+                        </button>
+                        {userDefinedSampleType.isPredefined ? (
+                          <button
+                            css={iconButtonStyles}
+                            title={editingStatus === 'view' ? 'Hide' : 'View'}
+                            onClick={(ev) => {
+                              if (editingStatus === 'view') {
+                                setEditingStatus(null);
+                                return;
+                              }
+
+                              setSampleTypeInputs('view');
+                            }}
+                          >
+                            <i
+                              className={
+                                editingStatus === 'view'
+                                  ? 'fas fa-times'
+                                  : 'fas fa-edit'
+                              }
+                            />
+                            <span className="sr-only">
+                              {editingStatus === 'view' ? 'Hide' : 'View'}
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            css={iconButtonStyles}
+                            title={editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                            onClick={(ev) => {
+                              if (editingStatus === 'edit') {
+                                setEditingStatus(null);
+                                return;
+                              }
+
+                              setSampleTypeInputs('edit');
+                            }}
+                          >
+                            <i
+                              className={
+                                editingStatus === 'edit'
+                                  ? 'fas fa-times'
+                                  : 'fas fa-edit'
+                              }
+                            />
+                            <span className="sr-only">
+                              {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
+                            </span>
+                          </button>
+                        )}
+                      </React.Fragment>
+                    )}
+                    <button
+                      css={iconButtonStyles}
+                      title={editingStatus === 'create' ? 'Cancel' : 'Create'}
+                      onClick={(ev) => {
+                        if (editingStatus === 'create') {
+                          setEditingStatus(null);
+                          return;
+                        }
+
+                        setSampleTypeInputs('create');
+                      }}
+                    >
+                      <i
+                        className={
+                          editingStatus === 'create'
+                            ? 'fas fa-times'
+                            : 'fas fa-plus'
+                        }
+                      />
+                      <span className="sr-only">
+                        {editingStatus === 'create' ? 'Cancel' : 'Create'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
                 <Select
                   id="sample-type-select"
                   inputId="sample-type-select-input"
@@ -1054,146 +1251,6 @@ function LocateSamples() {
                   }
                   options={allSampleOptions}
                 />
-                <div css={userDefinedButtonStyles}>
-                  <button
-                    css={addButtonStyles}
-                    onClick={(ev) => {
-                      if (editingStatus === 'create') {
-                        setEditingStatus(null);
-                        return;
-                      }
-
-                      setSampleTypeInputs('create');
-                    }}
-                  >
-                    {editingStatus === 'create' ? 'Cancel' : 'Create'}
-                  </button>
-                  {userDefinedSampleType && (
-                    <React.Fragment>
-                      {userDefinedSampleType.isPredefined ? (
-                        <button
-                          css={addButtonStyles}
-                          onClick={(ev) => {
-                            if (editingStatus === 'view') {
-                              setEditingStatus(null);
-                              return;
-                            }
-
-                            setSampleTypeInputs('view');
-                          }}
-                        >
-                          {editingStatus === 'view' ? 'Hide' : 'View'}
-                        </button>
-                      ) : (
-                        <button
-                          css={addButtonStyles}
-                          onClick={(ev) => {
-                            if (editingStatus === 'edit') {
-                              setEditingStatus(null);
-                              return;
-                            }
-
-                            setSampleTypeInputs('edit');
-                          }}
-                        >
-                          {editingStatus === 'edit' ? 'Cancel' : 'Edit'}
-                        </button>
-                      )}
-
-                      <button
-                        css={addButtonStyles}
-                        onClick={(ev) => {
-                          if (editingStatus === 'clone') {
-                            setEditingStatus(null);
-                            return;
-                          }
-
-                          setSampleTypeInputs('clone');
-                        }}
-                      >
-                        {editingStatus === 'clone' ? 'Cancel' : 'Clone'}
-                      </button>
-                    </React.Fragment>
-                  )}
-                </div>
-                {!editingStatus &&
-                  userDefinedSampleType &&
-                  !userDefinedSampleType.isPredefined && (
-                    <div css={userDefinedButtonStyles}>
-                      <button
-                        css={deleteSampleTypeButtonStyles}
-                        onClick={() => {
-                          const sampleTypeName = userDefinedSampleType.value;
-
-                          setOptions({
-                            title: 'Would you like to continue?',
-                            ariaLabel: 'Would you like to continue?',
-                            description:
-                              'This operation will delete the sample type and any associated samples.',
-                            onContinue: () => {
-                              setUserDefinedOptions(
-                                userDefinedOptions.filter(
-                                  (option) => option.value !== sampleTypeName,
-                                ),
-                              );
-                              setUserDefinedAttributes((userDefined) => {
-                                delete userDefined.attributes[sampleTypeName];
-                                userDefined.editCount += 1;
-                                return userDefined;
-                              });
-
-                              // Update the attributes of the graphics on the map on edits
-                              let editsCopy: EditsType = edits;
-                              layers.forEach((layer) => {
-                                if (
-                                  !['Samples', 'VSP'].includes(
-                                    layer.layerType,
-                                  ) ||
-                                  layer.sketchLayer.type !== 'graphics'
-                                ) {
-                                  return;
-                                }
-
-                                const graphicsToRemove: __esri.Graphic[] = [];
-                                layer.sketchLayer.graphics.forEach(
-                                  (graphic) => {
-                                    if (
-                                      graphic.attributes.TYPE === sampleTypeName
-                                    ) {
-                                      graphicsToRemove.push(graphic);
-                                    }
-                                  },
-                                );
-                                layer.sketchLayer.removeMany(graphicsToRemove);
-
-                                if (graphicsToRemove.length > 0) {
-                                  const collection = new Collection<
-                                    __esri.Graphic
-                                  >();
-                                  collection.addMany(graphicsToRemove);
-                                  editsCopy = updateLayerEdits({
-                                    edits: editsCopy,
-                                    layer,
-                                    type: 'delete',
-                                    changes: collection,
-                                  });
-                                }
-                              });
-
-                              setEdits(editsCopy);
-
-                              // TODO: Add code for deleteing the user defined type
-                              //       from ArcGIS Online.
-
-                              setUserDefinedSampleType(null);
-                            },
-                          });
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
                 {editingStatus && (
                   <div>
                     <div>
