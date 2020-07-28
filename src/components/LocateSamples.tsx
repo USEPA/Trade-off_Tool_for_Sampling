@@ -316,22 +316,6 @@ const deleteButtonStyles = css`
   }
 `;
 
-const iconButtonStyles = css`
-  width: 25px;
-  margin: 0 2px;
-  padding: 0.25em 0;
-  color: black;
-  background-color: white;
-  border-radius: 0;
-  line-height: 16px;
-  text-decoration-line: none;
-  font-weight: bold;
-
-  &:hover {
-    background-color: white;
-  }
-`;
-
 const trainingStyles = css`
   margin-left: 25px;
   font-size: 0.875rem;
