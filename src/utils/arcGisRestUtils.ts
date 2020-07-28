@@ -5,7 +5,7 @@ import { LayerType } from 'types/Layer';
 import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
-import { escapeForLucene } from 'utils/utils';
+import { chunkArray, escapeForLucene } from 'utils/utils';
 
 type ServiceMetaDataType = {
   name: string;
@@ -380,17 +380,61 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
-    const data = {
+    const query = {
       f: 'json',
       token: tempPortal.credential.token,
       where: '0=0',
-      outFields: '*',
-      returnGeometry: true,
+      returnIdsOnly: true,
+      returnGeometry: false,
     };
 
-    fetchPost(`${serviceUrl}/query`, data)
-      .then((res) => {
-        resolve(res);
+    fetchPost(`${serviceUrl}/query`, query)
+      .then((objectIds: any) => {
+        if (!objectIds) {
+          resolve({ features: [] });
+          return;
+        }
+
+        // Break the data up into chunks of 1000 or the max record count
+        const chunkedObjectIds = chunkArray(objectIds.objectIds, 1000);
+
+        // request data with each chunk of objectIds
+        const requests: Promise<any>[] = [];
+
+        // fire off the requests for the features with geometry
+        chunkedObjectIds.forEach((chunk: Array<string>) => {
+          const data = {
+            f: 'json',
+            token: tempPortal.credential.token,
+            where: `OBJECTID in (${chunk.join(',')})`,
+            outFields: '*',
+            returnGeometry: true,
+          };
+          const request = fetchPost(`${serviceUrl}/query`, data);
+          requests.push(request);
+        });
+
+        // When all of the requests are complete, combine them and
+        // return the result.
+        Promise.all(requests)
+          .then((responses) => {
+            let result: any = {};
+            responses.forEach((res, index) => {
+              // first iteration just copy the entire response
+              if (index === 0) {
+                result = res;
+                return;
+              }
+
+              // subsequent iterations only append the features
+              res.features.forEach((feature: any) => {
+                result.features.push(feature);
+              });
+            });
+
+            resolve(result);
+          })
+          .catch((err) => reject(err));
       })
       .catch((err) => reject(err));
   });
