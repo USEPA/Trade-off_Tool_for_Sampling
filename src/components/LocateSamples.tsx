@@ -4,6 +4,7 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
+import ColorPicker from 'components/ColorPicker';
 import EditLayerMetaData from 'components/EditLayerMetaData';
 import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
@@ -189,6 +190,18 @@ const inlineMenuStyles = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
+`;
+
+const colorSettingContainerStyles = css`
+  margin-bottom: 15px;
+`;
+
+const colorContainerStyles = css`
+  display: flex;
+`;
+
+const colorLabelStyles = css`
+  margin-right: 10px;
 `;
 
 const addButtonStyles = css`
@@ -1648,6 +1661,19 @@ function LocateSamples() {
             initiallyExpanded={true}
           >
             <div css={sectionContainer}>
+              <div css={colorSettingContainerStyles}>
+                <h3>Color Settings</h3>
+                <div css={inlineMenuStyles}>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Fill</span>
+                    <ColorPicker />
+                  </div>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Outline</span>
+                    <ColorPicker />
+                  </div>
+                </div>
+              </div>
               <div>
                 <h3>EPA Sample Types</h3>
                 <div css={sketchButtonContainerStyles}>
