@@ -31,7 +31,6 @@ import {
   SampleSelectType,
 } from 'config/sampleAttributes';
 // config
-import { polygonSymbol } from 'config/symbols';
 import {
   notLoggedInMessage,
   webServiceErrorMessage,
@@ -704,6 +703,7 @@ function ResultCard({ result }: ResultCardProps) {
     setLayers,
     map,
     mapView,
+    polygonSymbol,
     portalLayers,
     setPortalLayers,
     setReferenceLayers,

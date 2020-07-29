@@ -22,7 +22,6 @@ import {
   SampleSelectOptions,
   SampleSelectType,
 } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
   cantUseWithVspMessage,
@@ -43,6 +42,7 @@ import {
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { reactSelectStyles } from 'styles';
+import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
   value: string;
@@ -87,6 +87,18 @@ function getSampleTypeName(
   }
 
   return newName;
+}
+
+/**
+ * Converts a number array (esri rgb color) to an rgb object (react-color).
+ */
+function convertArrayToRgbColor(color: number[]) {
+  return {
+    r: color[0],
+    g: color[1],
+    b: color[2],
+    a: color.length > 3 ? color[3] : 1,
+  } as RGBColor;
 }
 
 // --- styles (SketchButton) ---
@@ -363,6 +375,8 @@ function LocateSamples() {
     layers,
     setLayers,
     map,
+    polygonSymbol,
+    setPolygonSymbol,
     sketchLayer,
     setSketchLayer,
     aoiSketchLayer,
@@ -1666,11 +1680,42 @@ function LocateSamples() {
                 <div css={inlineMenuStyles}>
                   <div css={colorContainerStyles}>
                     <span css={colorLabelStyles}>Fill</span>
-                    <ColorPicker />
+                    <ColorPicker
+                      color={convertArrayToRgbColor(polygonSymbol.color)}
+                      onChange={(color: RGBColor) => {
+                        setPolygonSymbol((polygonSymbol) => {
+                          const alpha = color.a ? color.a : 1;
+                          return {
+                            ...polygonSymbol,
+                            color: [color.r, color.g, color.b, alpha],
+                          };
+                        });
+
+                        // update all of the symbols
+                      }}
+                    />
                   </div>
                   <div css={colorContainerStyles}>
                     <span css={colorLabelStyles}>Outline</span>
-                    <ColorPicker />
+                    <ColorPicker
+                      color={convertArrayToRgbColor(
+                        polygonSymbol.outline.color,
+                      )}
+                      onChange={(color: RGBColor) => {
+                        setPolygonSymbol((polygonSymbol) => {
+                          const alpha = color.a ? color.a : 1;
+                          return {
+                            ...polygonSymbol,
+                            outline: {
+                              ...polygonSymbol.outline,
+                              color: [color.r, color.g, color.b, alpha],
+                            },
+                          };
+                        });
+
+                        // update all of the symbols
+                      }}
+                    />
                   </div>
                 </div>
               </div>

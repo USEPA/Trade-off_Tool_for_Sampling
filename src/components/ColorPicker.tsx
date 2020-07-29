@@ -41,21 +41,20 @@ const coverStyles = css`
 `;
 
 // --- components ---
-type Props = {};
+type Props = {
+  color: RGBColor;
+  onChange: Function;
+};
 
-function ColorPicker() {
+function ColorPicker({ color, onChange = () => {} }: Props) {
   const [colorPickerVisible, setColorPickerVisible] = React.useState(false);
-  const [color, setColor] = React.useState<RGBColor>({
-    r: 241,
-    g: 112,
-    b: 19,
-    a: 1,
-  });
+  const [colorState, setColorState] = React.useState<RGBColor>(color);
 
   // Generate a random number for making a unique connection between the
   // color picker button and container
   const [uid] = React.useState(Date.now() + Math.random());
 
+  // Used to make the color picker visible and position it
   const [top, setTop] = React.useState(250);
   function toggleColorPicker(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     if (colorPickerVisible) {
@@ -98,6 +97,13 @@ function ColorPicker() {
     setTop(top);
   }
 
+  React.useEffect(() => {
+    if (colorPickerVisible || !onChange) return;
+    if (JSON.stringify(color) === JSON.stringify(colorState)) return;
+
+    onChange(colorState);
+  }, [color, colorState, onChange, colorPickerVisible]);
+
   return (
     <div>
       <div
@@ -112,7 +118,10 @@ function ColorPicker() {
         css={popoverStyles(colorPickerVisible, top)}
       >
         <div css={coverStyles} onClick={(ev) => setColorPickerVisible(false)} />
-        <SketchPicker color={color} onChange={(color) => setColor(color.rgb)} />
+        <SketchPicker
+          color={colorState}
+          onChange={(color) => setColorState(color.rgb)}
+        />
       </div>
     </div>
   );
