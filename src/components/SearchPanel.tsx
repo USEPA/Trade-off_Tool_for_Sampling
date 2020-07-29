@@ -90,7 +90,6 @@ const filterContainerStyles = css`
 
   > div {
     margin-right: 15px;
-    z-index: 99;
   }
 `;
 
@@ -100,7 +99,7 @@ const typeSelectStyles = css`
   border: 1px solid #ccc;
   border-radius: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  z-index: 1;
+  z-index: 2;
 
   ul {
     padding: 0.5em;
