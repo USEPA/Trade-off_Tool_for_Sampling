@@ -459,7 +459,10 @@ function NavBar({ height }: Props) {
           })}
         >
           <div css={floatPanelContentStyles(false)}>
-            <div css={floatPanelScrollContainerStyles}>
+            <div
+              id="tots-panel-scroll-container"
+              css={floatPanelScrollContainerStyles}
+            >
               {currentPanel.value === 'search' && <Search />}
               {currentPanel.value === 'addData' && <AddData />}
               {currentPanel.value === 'locateSamples' && <LocateSamples />}
