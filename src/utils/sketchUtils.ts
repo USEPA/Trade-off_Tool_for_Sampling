@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 // types
 import { EditsType, EditType, LayerEditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -462,4 +463,25 @@ export function getDefaultAreaOfInterestLayer(
     status: 'added',
     sketchLayer: graphicsLayer,
   } as LayerType;
+}
+
+/**
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided polygonSymbol.
+ *
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param polygonSymbol - The new polygon symbol.
+ */
+export function updatePolygonSymbol(
+  layers: LayerType[],
+  polygonSymbol: PolygonSymbol,
+) {
+  layers.forEach((layer) => {
+    if (layer.sketchLayer.type !== 'graphics') return;
+
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'polygon') return;
+      graphic.symbol = polygonSymbol as any;
+    });
+  });
 }

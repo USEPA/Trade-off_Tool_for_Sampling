@@ -21,6 +21,7 @@ import {
   sampleAttributes,
   SampleSelectOptions,
   SampleSelectType,
+  PolygonSymbol,
 } from 'config/sampleAttributes';
 import { totsGPServer } from 'config/webService';
 import {
@@ -38,6 +39,7 @@ import {
   getDefaultSampleLayer,
   getPopupTemplate,
   updateLayerEdits,
+  updatePolygonSymbol,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
@@ -1683,15 +1685,15 @@ function LocateSamples() {
                     <ColorPicker
                       color={convertArrayToRgbColor(polygonSymbol.color)}
                       onChange={(color: RGBColor) => {
-                        setPolygonSymbol((polygonSymbol) => {
-                          const alpha = color.a ? color.a : 1;
-                          return {
-                            ...polygonSymbol,
-                            color: [color.r, color.g, color.b, alpha],
-                          };
-                        });
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          color: [color.r, color.g, color.b, alpha],
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
 
                         // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
                       }}
                     />
                   </div>
@@ -1702,18 +1704,18 @@ function LocateSamples() {
                         polygonSymbol.outline.color,
                       )}
                       onChange={(color: RGBColor) => {
-                        setPolygonSymbol((polygonSymbol) => {
-                          const alpha = color.a ? color.a : 1;
-                          return {
-                            ...polygonSymbol,
-                            outline: {
-                              ...polygonSymbol.outline,
-                              color: [color.r, color.g, color.b, alpha],
-                            },
-                          };
-                        });
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          outline: {
+                            ...polygonSymbol.outline,
+                            color: [color.r, color.g, color.b, alpha],
+                          },
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
 
                         // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
                       }}
                     />
                   </div>

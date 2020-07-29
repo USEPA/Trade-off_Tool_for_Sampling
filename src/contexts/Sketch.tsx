@@ -12,16 +12,8 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
   UserDefinedAttributes,
   SampleSelectType,
+  PolygonSymbol,
 } from 'config/sampleAttributes';
-
-type PolygonSymbol = {
-  type: 'simple-fill';
-  color: number[];
-  outline: {
-    color: number[];
-    width: number;
-  };
-};
 
 type SketchType = {
   basemapWidget: __esri.BasemapGallery | null;
