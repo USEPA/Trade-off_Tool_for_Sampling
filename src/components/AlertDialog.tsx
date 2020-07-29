@@ -11,7 +11,7 @@ import { colors } from 'styles';
 
 const overlayStyles = css`
   &[data-reach-dialog-overlay] {
-    z-index: 1000;
+    z-index: 101;
     background-color: ${colors.black(0.75)};
   }
 `;

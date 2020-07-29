@@ -16,7 +16,6 @@ import { EditsType, FeatureEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
-import { polygonSymbol } from 'config/symbols';
 // utils
 import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
@@ -637,6 +636,48 @@ export function useCalculatePlan() {
 ////////////////// Browser storage related hooks //////////////////
 ///////////////////////////////////////////////////////////////////
 
+// Uses browser storage for holding graphics color.
+function useGraphicColor() {
+  const key = 'tots_polygon_symbol';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    polygonSymbol,
+    setPolygonSymbol,
+    setSymbolsInitialized,
+  } = React.useContext(SketchContext);
+
+  // Retreives training mode data from browser storage when the app loads
+  const [localPolygonInitialized, setLocalPolygonInitialized] = React.useState(
+    false,
+  );
+  React.useEffect(() => {
+    if (localPolygonInitialized) return;
+
+    setLocalPolygonInitialized(true);
+
+    const polygonStr = readFromStorage(key);
+    if (!polygonStr) {
+      // if no key in browser storage, leave as default and say initialized
+      setSymbolsInitialized(true);
+      return;
+    }
+
+    const polygon = JSON.parse(polygonStr);
+
+    // validate the polygon
+    setPolygonSymbol(polygon);
+    setSymbolsInitialized(true);
+  }, [localPolygonInitialized, setPolygonSymbol, setSymbolsInitialized]);
+
+  React.useEffect(() => {
+    if (!localPolygonInitialized) return;
+
+    const polygonObj = polygonSymbol as object;
+    writeToStorage(key, polygonObj, setOptions);
+  }, [polygonSymbol, localPolygonInitialized, setOptions]);
+}
+
 // Uses browser storage for holding the training mode selection.
 function useTrainingModeStorage() {
   const key = 'tots_training_mode';
@@ -681,11 +722,20 @@ function useEditsLayerStorage() {
     layers,
     setLayers,
     map,
+    polygonSymbol,
+    symbolsInitialized,
   } = React.useContext(SketchContext);
 
   // Retreives edit data from browser storage when the app loads
   React.useEffect(() => {
-    if (!map || !setEdits || !setLayers || layersInitialized) return;
+    if (
+      !map ||
+      !setEdits ||
+      !setLayers ||
+      !symbolsInitialized ||
+      layersInitialized
+    )
+      return;
 
     const editsStr = readFromStorage(key);
     if (!editsStr) {
@@ -795,6 +845,8 @@ function useEditsLayerStorage() {
     layersInitialized,
     setLayersInitialized,
     map,
+    polygonSymbol,
+    symbolsInitialized,
   ]);
 
   // Saves the edits to browser storage everytime they change
@@ -1534,6 +1586,7 @@ function useUserDefinedSampleAttributesStorage() {
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
+  useGraphicColor();
   useEditsLayerStorage();
   useReferenceLayerStorage();
   useUrlLayerStorage();

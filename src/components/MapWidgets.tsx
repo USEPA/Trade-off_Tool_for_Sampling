@@ -11,7 +11,6 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType, LayerTypeName } from 'types/Layer';
 // config
 import { sampleAttributes } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 // utils
 import { useGeometryTools } from 'utils/hooks';
 import {
@@ -292,6 +291,7 @@ function MapWidgets({ mapView }: Props) {
     layers,
     setLayers,
     map,
+    polygonSymbol,
   } = React.useContext(SketchContext);
   const {
     Home,
@@ -350,7 +350,14 @@ function MapWidgets({ mapView }: Props) {
     });
 
     setSketchVM(svm);
-  }, [SketchViewModel, mapView, sketchVM, setSketchVM, sketchLayer]);
+  }, [
+    SketchViewModel,
+    mapView,
+    sketchVM,
+    setSketchVM,
+    sketchLayer,
+    polygonSymbol,
+  ]);
 
   // Creates the SketchViewModel
   React.useEffect(() => {
@@ -364,7 +371,14 @@ function MapWidgets({ mapView }: Props) {
     });
 
     setAoiSketchVM(svm);
-  }, [SketchViewModel, mapView, aoiSketchVM, setAoiSketchVM, aoiSketchLayer]);
+  }, [
+    SketchViewModel,
+    mapView,
+    aoiSketchVM,
+    setAoiSketchVM,
+    aoiSketchLayer,
+    polygonSymbol,
+  ]);
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
@@ -379,7 +393,10 @@ function MapWidgets({ mapView }: Props) {
       // disable the sketch vm for any panel other than locateSamples
       sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-  }, [currentPanel, sketchVM, sketchLayer]);
+
+    sketchVM.polygonSymbol = polygonSymbol as any;
+    sketchVM.pointSymbol = polygonSymbol as any;
+  }, [currentPanel, sketchVM, sketchLayer, polygonSymbol]);
 
   // Updates the selected layer of the aoiSketchViewModel
   React.useEffect(() => {
@@ -394,7 +411,10 @@ function MapWidgets({ mapView }: Props) {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-  }, [currentPanel, aoiSketchVM, aoiSketchLayer]);
+
+    aoiSketchVM.polygonSymbol = polygonSymbol as any;
+    aoiSketchVM.pointSymbol = polygonSymbol as any;
+  }, [currentPanel, aoiSketchVM, aoiSketchLayer, polygonSymbol]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const [

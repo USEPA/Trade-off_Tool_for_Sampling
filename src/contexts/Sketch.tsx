@@ -12,6 +12,7 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
   UserDefinedAttributes,
   SampleSelectType,
+  PolygonSymbol,
 } from 'config/sampleAttributes';
 
 type SketchType = {
@@ -23,6 +24,10 @@ type SketchType = {
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
+  polygonSymbol: PolygonSymbol;
+  setPolygonSymbol: React.Dispatch<React.SetStateAction<PolygonSymbol>>;
+  symbolsInitialized: boolean;
+  setSymbolsInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layersInitialized: boolean;
   setLayersInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layers: LayerType[];
@@ -67,6 +72,17 @@ export const SketchContext = React.createContext<SketchType>({
   setEdits: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
+  polygonSymbol: {
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  },
+  setPolygonSymbol: () => {},
+  symbolsInitialized: false,
+  setSymbolsInitialized: () => {},
   layersInitialized: false,
   setLayersInitialized: () => {},
   layers: [],
@@ -114,6 +130,15 @@ export function SketchProvider({ children }: Props) {
     null,
   );
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
+  const [polygonSymbol, setPolygonSymbol] = React.useState<PolygonSymbol>({
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  });
+  const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
   const [
@@ -164,6 +189,10 @@ export function SketchProvider({ children }: Props) {
         setEdits,
         homeWidget,
         setHomeWidget,
+        polygonSymbol,
+        setPolygonSymbol,
+        symbolsInitialized,
+        setSymbolsInitialized,
         layersInitialized,
         setLayersInitialized,
         layers,

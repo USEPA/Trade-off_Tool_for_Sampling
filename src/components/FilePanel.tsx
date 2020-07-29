@@ -31,7 +31,6 @@ import {
   SampleSelectOptions,
   SampleSelectType,
 } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 import {
   attributeOverwriteWarning,
   fileReadErrorMessage,
@@ -235,6 +234,7 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
+    polygonSymbol,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
@@ -840,6 +840,7 @@ function FilePanel() {
     file,
     map,
     mapView,
+    polygonSymbol,
     layers,
     setLayers,
     trainingMode,

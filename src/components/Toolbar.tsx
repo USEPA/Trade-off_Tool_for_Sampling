@@ -9,8 +9,6 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
-// config
-import { polygonSymbol } from 'config/symbols';
 // styles
 import { colors } from 'styles';
 
@@ -102,7 +100,7 @@ const floatContainerStyles = (containerVisible: boolean) => {
     border-radius: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     padding: 0.5em;
-    z-index: 99;
+    z-index: 50;
     max-height: 50%;
     overflow: auto;
 
@@ -167,6 +165,7 @@ function Toolbar() {
     setUrlLayers,
     setSketchLayer,
     setAoiSketchLayer,
+    polygonSymbol,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -404,7 +403,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [LayerList, Legend, Slider, mapView, legendInitialized]);
+  }, [LayerList, Legend, Slider, mapView, legendInitialized, polygonSymbol]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {

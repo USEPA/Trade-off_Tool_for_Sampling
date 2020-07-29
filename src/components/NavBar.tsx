@@ -201,15 +201,22 @@ const helpIconStyles = css`
   text-align: center;
 `;
 
-const floatPanelStyles = (
-  width: string,
-  height: number,
-  left: string,
-  expanded: boolean,
-) => {
+const floatPanelStyles = ({
+  width,
+  height,
+  left,
+  expanded,
+  zIndex,
+}: {
+  width: string;
+  height: number;
+  left: string;
+  expanded: boolean;
+  zIndex: number;
+}) => {
   return css`
     display: ${expanded ? 'block' : 'none'};
-    z-index: 99;
+    z-index: ${zIndex};
     position: absolute;
     height: ${height}px;
     left: ${left};
@@ -218,21 +225,28 @@ const floatPanelStyles = (
   `;
 };
 
-const floatPanelContentStyles = css`
-  float: left;
-  position: relative;
-  height: 100%;
-  overflow: auto;
-  pointer-events: all;
+const floatPanelContentStyles = (includeOverflow: boolean = true) => {
+  return css`
+    float: left;
+    position: relative;
+    height: 100%;
+    ${includeOverflow ? 'overflow: auto;' : ''}
+    pointer-events: all;
 
-  /* styles to be overridden */
-  width: ${panelWidth};
-  color: black;
-  background-color: white;
+    /* styles to be overridden */
+    width: ${panelWidth};
+    color: black;
+    background-color: white;
+  `;
+};
+
+const floatPanelScrollContainerStyles = css`
+  overflow: auto;
+  height: 100%;
 `;
 
 const resultsFloatPanelContentStyles = css`
-  ${floatPanelContentStyles}
+  ${floatPanelContentStyles()}
 
   width: ${resultsPanelWidth};
   color: white;
@@ -436,26 +450,38 @@ function NavBar({ height }: Props) {
       </div>
       {currentPanel && (
         <div
-          css={floatPanelStyles(panelWidth, height, navPanelWidth, expanded)}
+          css={floatPanelStyles({
+            width: panelWidth,
+            height,
+            left: navPanelWidth,
+            expanded,
+            zIndex: 2,
+          })}
         >
-          <div css={floatPanelContentStyles}>
-            {currentPanel.value === 'search' && <Search />}
-            {currentPanel.value === 'addData' && <AddData />}
-            {currentPanel.value === 'locateSamples' && <LocateSamples />}
-            {currentPanel.value === 'calculate' && <Calculate />}
-            {currentPanel.value === 'publish' && <Publish />}
+          <div css={floatPanelContentStyles(false)}>
+            <div
+              id="tots-panel-scroll-container"
+              css={floatPanelScrollContainerStyles}
+            >
+              {currentPanel.value === 'search' && <Search />}
+              {currentPanel.value === 'addData' && <AddData />}
+              {currentPanel.value === 'locateSamples' && <LocateSamples />}
+              {currentPanel.value === 'calculate' && <Calculate />}
+              {currentPanel.value === 'publish' && <Publish />}
+            </div>
           </div>
         </div>
       )}
       {currentPanel?.value === 'calculate' &&
         calculateResults.panelOpen === true && (
           <div
-            css={floatPanelStyles(
-              resultsPanelWidth,
+            css={floatPanelStyles({
+              width: resultsPanelWidth,
               height,
-              `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
-              resultsExpanded,
-            )}
+              left: `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
+              expanded: resultsExpanded,
+              zIndex: 2,
+            })}
           >
             <div css={resultsFloatPanelContentStyles}>
               <CalculateResults />
@@ -464,12 +490,13 @@ function NavBar({ height }: Props) {
         )}
       {(currentPanel || calculateResults.panelOpen === true) && (
         <div
-          css={floatPanelStyles(
-            panelCollapseButtonWidth,
+          css={floatPanelStyles({
+            width: panelCollapseButtonWidth,
             height,
-            expandLeft,
-            true,
-          )}
+            left: expandLeft,
+            expanded: true,
+            zIndex: 1,
+          })}
         >
           <div css={floatPanelButtonContainer(expanded)}>
             <div css={floatPanelTableContainer}>
