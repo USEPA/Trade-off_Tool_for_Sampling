@@ -1116,15 +1116,15 @@ function FilePanel() {
                           message={
                             <React.Fragment>
                               <p css={layerInfo}>
-                                <strong>CONTAM_TYPE</strong> (domain values:
+                                <strong>CONTAMTYPE</strong> (domain values:
                                 chemical, radiological, biological)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_VALUE</strong> (integer value)
+                                <strong>CONTAMVAL</strong> (integer value)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_UNIT</strong> (domain values:
-                                cfu, others TBD)
+                                <strong>CONTAMUNIT</strong> (domain values: cfu,
+                                others TBD)
                               </p>
                             </React.Fragment>
                           }
