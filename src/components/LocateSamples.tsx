@@ -371,6 +371,8 @@ function LocateSamples() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    autoZoom,
+    setAutoZoom,
     edits,
     setEdits,
     layersInitialized,
@@ -1025,6 +1027,14 @@ function LocateSamples() {
                 onChange={(ev) => setTrainingMode(!trainingMode)}
               />
               <label htmlFor="training-mode-toggle">Training Mode</label>
+              <br />
+              <input
+                id="auto-zoom-toggle"
+                type="checkbox"
+                checked={autoZoom}
+                onChange={(ev) => setAutoZoom(!autoZoom)}
+              />
+              <label htmlFor="auto-zoom-toggle">Auto Zoom</label>
             </div>
             <button
               css={deleteButtonStyles}

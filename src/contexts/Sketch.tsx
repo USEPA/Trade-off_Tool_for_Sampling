@@ -16,6 +16,8 @@ import {
 } from 'config/sampleAttributes';
 
 type SketchType = {
+  autoZoom: boolean;
+  setAutoZoom: React.Dispatch<React.SetStateAction<boolean>>;
   basemapWidget: __esri.BasemapGallery | null;
   setBasemapWidget: React.Dispatch<
     React.SetStateAction<__esri.BasemapGallery | null>
@@ -66,6 +68,8 @@ type SketchType = {
 };
 
 export const SketchContext = React.createContext<SketchType>({
+  autoZoom: false,
+  setAutoZoom: () => {},
   basemapWidget: null,
   setBasemapWidget: () => {},
   edits: { count: 0, edits: [] },
@@ -115,6 +119,7 @@ export const SketchContext = React.createContext<SketchType>({
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
     setBasemapWidget, //
@@ -183,6 +188,8 @@ export function SketchProvider({ children }: Props) {
   return (
     <SketchContext.Provider
       value={{
+        autoZoom,
+        setAutoZoom,
         basemapWidget,
         setBasemapWidget,
         edits,
