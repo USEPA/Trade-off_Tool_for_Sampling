@@ -124,6 +124,8 @@ export function updateLayerEdits({
     // handle property changes
     layerToEdit.scenarioName = layer.scenarioName;
     layerToEdit.scenarioDescription = layer.scenarioDescription;
+    layerToEdit.visible = layer.visible;
+    layerToEdit.listMode = layer.listMode;
 
     // if the status is published, set the status to edited to allow re-publishing
     if (layer.status === 'published') layer.status = 'edited';

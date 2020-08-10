@@ -108,6 +108,7 @@ function Calculate() {
     edits,
     setEdits,
     layers,
+    setLayers,
     sketchLayer,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
@@ -515,6 +516,42 @@ function Calculate() {
               }
             }
 
+            // make the contamination map visible in the legend
+            contaminationMap.listMode = 'show';
+            contaminationMap.sketchLayer.listMode = 'show';
+            setContaminationMap((layer) => {
+              return {
+                ...layer,
+                listMode: 'show',
+              } as LayerType;
+            });
+
+            // find the layer being edited
+            const index = layers.findIndex(
+              (layer) => layer.layerId === contaminationMap.layerId,
+            );
+
+            // update the layers context
+            if (index > -1) {
+              setLayers((layers) => {
+                return [
+                  ...layers.slice(0, index),
+                  {
+                    ...contaminationMap,
+                    listMode: 'show',
+                  },
+                  ...layers.slice(index + 1),
+                ];
+              });
+            }
+
+            // make a copy of the edits context variable
+            let editsCopy = updateLayerEdits({
+              edits,
+              layer: contaminationMap,
+              type: 'properties',
+            });
+
             // save the data to state, use an empty array if there is no data
             if (resFeatures.length > 0) {
               const popupTemplate = new PopupTemplate(
@@ -545,16 +582,14 @@ function Calculate() {
                 graphic.popupTemplate = popupTemplate;
               });
 
-              // make a copy of the edits context variable
-              const editsCopy = updateLayerEdits({
-                edits,
+              // update the graphics of the sketch layer
+              editsCopy = updateLayerEdits({
+                edits: editsCopy,
                 layer: sketchLayer,
                 type: 'update',
                 changes: layer.graphics,
                 hasContaminationRan: true,
               });
-
-              setEdits(editsCopy);
 
               setContaminationResults({
                 status: 'success',
@@ -566,6 +601,8 @@ function Calculate() {
                 data: [],
               });
             }
+
+            setEdits(editsCopy);
           })
           .catch((err) => {
             console.error(err);
@@ -819,7 +856,8 @@ function Calculate() {
                     'no-contamination-graphics' &&
                     noContaminationGraphicsMessage}
                   {contaminationResults.status === 'success' &&
-                    contaminationResults?.data?.length &&
+                    contaminationResults?.data &&
+                    contaminationResults.data.length > -1 &&
                     contaminationHitsSuccessMessage(
                       contaminationResults.data.length,
                     )}
