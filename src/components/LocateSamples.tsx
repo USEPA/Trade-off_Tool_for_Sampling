@@ -4,6 +4,7 @@ import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
+import ColorPicker from 'components/ColorPicker';
 import EditLayerMetaData from 'components/EditLayerMetaData';
 import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
@@ -20,8 +21,8 @@ import {
   sampleAttributes,
   SampleSelectOptions,
   SampleSelectType,
+  PolygonSymbol,
 } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 import { totsGPServer } from 'config/webService';
 import {
   cantUseWithVspMessage,
@@ -38,10 +39,12 @@ import {
   getDefaultSampleLayer,
   getPopupTemplate,
   updateLayerEdits,
+  updatePolygonSymbol,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { reactSelectStyles } from 'styles';
+import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
   value: string;
@@ -86,6 +89,18 @@ function getSampleTypeName(
   }
 
   return newName;
+}
+
+/**
+ * Converts a number array (esri rgb color) to an rgb object (react-color).
+ */
+function convertArrayToRgbColor(color: number[]) {
+  return {
+    r: color[0],
+    g: color[1],
+    b: color[2],
+    a: color.length > 3 ? color[3] : 1,
+  } as RGBColor;
 }
 
 // --- styles (SketchButton) ---
@@ -189,6 +204,18 @@ const inlineMenuStyles = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
+`;
+
+const colorSettingContainerStyles = css`
+  margin-bottom: 15px;
+`;
+
+const colorContainerStyles = css`
+  display: flex;
+`;
+
+const colorLabelStyles = css`
+  margin-right: 10px;
 `;
 
 const addButtonStyles = css`
@@ -344,12 +371,16 @@ function LocateSamples() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    autoZoom,
+    setAutoZoom,
     edits,
     setEdits,
     layersInitialized,
     layers,
     setLayers,
     map,
+    polygonSymbol,
+    setPolygonSymbol,
     sketchLayer,
     setSketchLayer,
     aoiSketchLayer,
@@ -1020,6 +1051,14 @@ function LocateSamples() {
                 onChange={(ev) => setTrainingMode(!trainingMode)}
               />
               <label htmlFor="training-mode-toggle">Training Mode</label>
+              <br />
+              <input
+                id="auto-zoom-toggle"
+                type="checkbox"
+                checked={autoZoom}
+                onChange={(ev) => setAutoZoom(!autoZoom)}
+              />
+              <label htmlFor="auto-zoom-toggle">Auto Zoom</label>
             </div>
             <button
               css={deleteButtonStyles}
@@ -1759,6 +1798,50 @@ function LocateSamples() {
             initiallyExpanded={true}
           >
             <div css={sectionContainer}>
+              <div css={colorSettingContainerStyles}>
+                <h3>Color Settings</h3>
+                <div css={inlineMenuStyles}>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Fill</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(polygonSymbol.color)}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          color: [color.r, color.g, color.b, alpha],
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Outline</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(
+                        polygonSymbol.outline.color,
+                      )}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          outline: {
+                            ...polygonSymbol.outline,
+                            color: [color.r, color.g, color.b, alpha],
+                          },
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
               <div>
                 <h3>EPA Sample Types</h3>
                 <div css={sketchButtonContainerStyles}>

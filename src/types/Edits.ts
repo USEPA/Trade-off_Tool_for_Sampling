@@ -24,6 +24,8 @@ export type LayerEditsType = {
   hasContaminationRan: boolean; // says whether or not contamination hits has been ran
   status: PublishStatus; // publish status
   editType: EditType; // edit type
+  visible: boolean; // layer visibility on map
+  listMode: 'hide' | 'hide-children' | 'show'; // layer visiblity in legend widget
   scenarioName: string; // user defined scenario name
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
   adds: FeatureEditsType[]; // features to add

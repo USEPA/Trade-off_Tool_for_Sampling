@@ -31,7 +31,6 @@ import {
   SampleSelectOptions,
   SampleSelectType,
 } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 import {
   attributeOverwriteWarning,
   fileReadErrorMessage,
@@ -244,6 +243,7 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
+    polygonSymbol,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
@@ -792,9 +792,14 @@ function FilePanel() {
 
     const layerName = getLayerName(layers, file.file.name);
     setNewLayerName(layerName);
+
+    const visible = layerType.value === 'Contamination Map' ? false : true;
+    const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
     const graphicsLayer = new GraphicsLayer({
       graphics,
       title: layerName,
+      visible,
+      listMode,
     });
 
     // create the graphics layer
@@ -809,7 +814,8 @@ function FilePanel() {
       scenarioName: '',
       scenarioDescription: '',
       editType: 'add',
-      defaultVisibility: true,
+      visible,
+      listMode,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       status: 'added',
@@ -849,6 +855,7 @@ function FilePanel() {
     file,
     map,
     mapView,
+    polygonSymbol,
     layers,
     setLayers,
     trainingMode,
@@ -1124,15 +1131,15 @@ function FilePanel() {
                           message={
                             <React.Fragment>
                               <p css={layerInfo}>
-                                <strong>CONTAM_TYPE</strong> (domain values:
+                                <strong>CONTAMTYPE</strong> (domain values:
                                 chemical, radiological, biological)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_VALUE</strong> (integer value)
+                                <strong>CONTAMVAL</strong> (integer value)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_UNIT</strong> (domain values:
-                                cfu, others TBD)
+                                <strong>CONTAMUNIT</strong> (domain values: cfu,
+                                others TBD)
                               </p>
                             </React.Fragment>
                           }

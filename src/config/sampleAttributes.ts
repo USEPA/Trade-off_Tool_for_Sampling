@@ -1,3 +1,12 @@
+export type PolygonSymbol = {
+  type: 'simple-fill';
+  color: number[];
+  outline: {
+    color: number[];
+    width: number;
+  };
+};
+
 export type Attributes = {
   [key: string]: {
     OBJECTID: string | null;

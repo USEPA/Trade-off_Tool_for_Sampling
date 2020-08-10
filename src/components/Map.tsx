@@ -31,6 +31,7 @@ function Map({ height }: Props) {
 
   const { contaminationMap } = React.useContext(CalculateContext);
   const {
+    autoZoom,
     homeWidget,
     map,
     setMap,
@@ -114,7 +115,7 @@ function Map({ height }: Props) {
 
   // Zooms to the graphics whenever the sketchLayer changes
   React.useEffect(() => {
-    if (!map || !mapView || !homeWidget) return;
+    if (!map || !mapView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
     const zoomGraphics = getGraphicsArray([
@@ -132,6 +133,7 @@ function Map({ height }: Props) {
       });
     }
   }, [
+    autoZoom,
     map,
     mapView,
     contaminationMap,

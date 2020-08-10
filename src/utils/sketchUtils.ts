@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 // types
 import { EditsType, EditType, LayerEditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -57,11 +58,13 @@ export function createLayerEditTemplate(
     addedFrom: layerToEdit.addedFrom,
     status: layerToEdit.status,
     editType,
+    visible: layerToEdit.visible,
+    listMode: layerToEdit.listMode,
     adds: [],
     updates: [],
     deletes: [],
     published: [],
-  };
+  } as LayerEditsType;
 }
 
 /**
@@ -121,6 +124,8 @@ export function updateLayerEdits({
     // handle property changes
     layerToEdit.scenarioName = layer.scenarioName;
     layerToEdit.scenarioDescription = layer.scenarioDescription;
+    layerToEdit.visible = layer.visible;
+    layerToEdit.listMode = layer.listMode;
 
     // if the status is published, set the status to edited to allow re-publishing
     if (layer.status === 'published') layer.status = 'edited';
@@ -424,7 +429,8 @@ export function getDefaultSampleLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
@@ -456,10 +462,32 @@ export function getDefaultAreaOfInterestLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
   } as LayerType;
+}
+
+/**
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided polygonSymbol.
+ *
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param polygonSymbol - The new polygon symbol.
+ */
+export function updatePolygonSymbol(
+  layers: LayerType[],
+  polygonSymbol: PolygonSymbol,
+) {
+  layers.forEach((layer) => {
+    if (layer.sketchLayer.type !== 'graphics') return;
+
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'polygon') return;
+      graphic.symbol = polygonSymbol as any;
+    });
+  });
 }
