@@ -783,9 +783,14 @@ function FilePanel() {
 
     const layerName = getLayerName(layers, file.file.name);
     setNewLayerName(layerName);
+
+    const visible = layerType.value === 'Contamination Map' ? false : true;
+    const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
     const graphicsLayer = new GraphicsLayer({
       graphics,
       title: layerName,
+      visible,
+      listMode,
     });
 
     // create the graphics layer
@@ -800,7 +805,8 @@ function FilePanel() {
       scenarioName: '',
       scenarioDescription: '',
       editType: 'add',
-      defaultVisibility: true,
+      visible,
+      listMode,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       status: 'added',

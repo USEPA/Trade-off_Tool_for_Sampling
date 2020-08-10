@@ -58,11 +58,13 @@ export function createLayerEditTemplate(
     addedFrom: layerToEdit.addedFrom,
     status: layerToEdit.status,
     editType,
+    visible: layerToEdit.visible,
+    listMode: layerToEdit.listMode,
     adds: [],
     updates: [],
     deletes: [],
     published: [],
-  };
+  } as LayerEditsType;
 }
 
 /**
@@ -122,6 +124,8 @@ export function updateLayerEdits({
     // handle property changes
     layerToEdit.scenarioName = layer.scenarioName;
     layerToEdit.scenarioDescription = layer.scenarioDescription;
+    layerToEdit.visible = layer.visible;
+    layerToEdit.listMode = layer.listMode;
 
     // if the status is published, set the status to edited to allow re-publishing
     if (layer.status === 'published') layer.status = 'edited';
@@ -425,7 +429,8 @@ export function getDefaultSampleLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
@@ -457,7 +462,8 @@ export function getDefaultAreaOfInterestLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',

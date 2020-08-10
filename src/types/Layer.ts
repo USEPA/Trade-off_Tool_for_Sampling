@@ -27,7 +27,8 @@ export type LayerType = {
   scenarioName: string;
   scenarioDescription: string;
   editType: EditType;
-  defaultVisibility: boolean;
+  visible: boolean;
+  listMode: 'hide' | 'hide-children' | 'show';
   geometryType: string;
   addedFrom: AddedFrom;
   status: PublishStatus;
