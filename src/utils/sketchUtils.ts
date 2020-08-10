@@ -58,11 +58,13 @@ export function createLayerEditTemplate(
     addedFrom: layerToEdit.addedFrom,
     status: layerToEdit.status,
     editType,
+    visible: layerToEdit.visible,
+    listMode: layerToEdit.listMode,
     adds: [],
     updates: [],
     deletes: [],
     published: [],
-  };
+  } as LayerEditsType;
 }
 
 /**
@@ -425,7 +427,8 @@ export function getDefaultSampleLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
@@ -457,7 +460,8 @@ export function getDefaultAreaOfInterestLayer(
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',

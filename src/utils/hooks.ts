@@ -756,6 +756,8 @@ function useEditsLayerStorage() {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.label,
         id: editsLayer.layerId,
+        visible: editsLayer.visible,
+        listMode: editsLayer.listMode,
       });
 
       const popupTemplate = getPopupTemplate(
@@ -823,7 +825,8 @@ function useEditsLayerStorage() {
         editType: 'add',
         addedFrom: editsLayer.addedFrom,
         status: editsLayer.status,
-        defaultVisibility: true,
+        visible: editsLayer.visible,
+        listMode: editsLayer.listMode,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
       });
