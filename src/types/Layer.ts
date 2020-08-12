@@ -24,8 +24,6 @@ export type LayerType = {
   name: string;
   label: string;
   layerType: LayerTypeName;
-  scenarioName: string;
-  scenarioDescription: string;
   editType: EditType;
   visible: boolean;
   listMode: 'hide' | 'hide-children' | 'show';
@@ -33,6 +31,7 @@ export type LayerType = {
   addedFrom: AddedFrom;
   status: PublishStatus;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+  parentLayer: __esri.GroupLayer | null;
 };
 
 export type PortalLayerType = {

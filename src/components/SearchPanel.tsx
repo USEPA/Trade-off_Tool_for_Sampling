@@ -887,8 +887,6 @@ function ResultCard({ result }: ResultCardProps) {
                   name: layerName,
                   label: layerName,
                   layerType: isVspLayer ? 'VSP' : 'Samples',
-                  scenarioName: layerName,
-                  scenarioDescription: layerDetails.description,
                   editType: 'add',
                   visible: true,
                   listMode: 'show',
@@ -896,6 +894,7 @@ function ResultCard({ result }: ResultCardProps) {
                   addedFrom: 'tots',
                   status: 'published',
                   sketchLayer: graphicsLayer,
+                  parentLayer: null,
                 };
                 layersToAdd.push(layerToAdd);
 

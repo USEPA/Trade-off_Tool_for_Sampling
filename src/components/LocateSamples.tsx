@@ -5,7 +5,7 @@ import { jsx, css } from '@emotion/core';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
-import EditLayerMetaData from 'components/EditLayerMetaData';
+import { EditScenario, EditLayer } from 'components/EditLayerMetaData';
 import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
 // contexts
@@ -15,7 +15,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
-import { EditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // config
 import {
   sampleAttributes,
@@ -36,7 +36,7 @@ import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
-  getDefaultSampleLayer,
+  createSampleLayer,
   getPopupTemplate,
   updateLayerEdits,
   updatePolygonSymbol,
@@ -53,11 +53,28 @@ type ShapeTypeSelect = {
 
 type EditType = 'create' | 'edit' | 'clone' | 'view';
 
-// gets an array of layers that can be used with the sketch widget.
-function getSketchableLayers(layers: LayerType[]) {
+// Gets a list of scenarios from the provided edits list
+function getScenarios(edits: EditsType) {
+  return edits.edits.filter(
+    (item) => item.type === 'scenario',
+  ) as ScenarioEditsType[];
+}
+
+// gets an array of layers, included in the provided edits parameter,
+// that can be used with the sketch widget. The search will look in
+// child layers of scenarios as well.
+function getSketchableLayers(
+  layers: LayerType[],
+  edits: (ScenarioEditsType | LayerEditsType)[],
+) {
   return layers.filter(
-    (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
-  );
+    (layer) =>
+      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+      edits.findIndex(
+        (editsLayer) =>
+          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
+      ) > -1,
+  ) as LayerType[];
 }
 
 // gets an array of layers that can be used with the aoi sketch widget.
@@ -381,6 +398,8 @@ function LocateSamples() {
     map,
     polygonSymbol,
     setPolygonSymbol,
+    selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     setSketchLayer,
     aoiSketchLayer,
@@ -399,7 +418,6 @@ function LocateSamples() {
     Geoprocessor,
     Graphic,
     GraphicsLayer,
-    GroupLayer,
     Point,
     Polygon,
   } = useEsriModulesContext();
@@ -416,13 +434,30 @@ function LocateSamples() {
   React.useEffect(() => {
     if (!map || !layersInitialized || sketchLayerInitialized) return;
 
-    // get the first layer that can be used for sketching and return
-    const sketchableLayers = getSketchableLayers(layers);
-    if (!sketchLayer && sketchableLayers.length > 0) {
-      setSketchLayer(sketchableLayers[0]);
+    setSketchLayerInitialized(true);
+
+    // determine which scenario to get layers for and
+    // select a scenario if necessary
+    const scenarios = getScenarios(edits);
+    let layerEdits = edits.edits;
+    if (selectedScenario) {
+      // get the layers for the selected scenario
+      layerEdits = selectedScenario.layers;
+    }
+    if (!selectedScenario && scenarios.length > 0) {
+      // select the first availble scenario and get it's layers
+      setSelectedScenario(scenarios[0]);
+      layerEdits = scenarios[0].layers;
     }
 
-    setSketchLayerInitialized(true);
+    // get the first layer that can be used for sketching and return
+    const sketchableLayers = getSketchableLayers(layers, layerEdits);
+    if (!sketchLayer && sketchableLayers.length > 0) {
+      // select the first availble sample layer. This will be
+      // an unlinked layer if there is no selected scenario or
+      // the selected scenario has no layers
+      setSketchLayer(sketchableLayers[0]);
+    }
 
     // check if the default sketch layer has been added already or not
     const defaultIndex = sketchableLayers.findIndex(
@@ -431,7 +466,7 @@ function LocateSamples() {
     if (defaultIndex > -1) return;
 
     // no sketchable layers were available, create one
-    const tempSketchLayer = getDefaultSampleLayer(GraphicsLayer);
+    const tempSketchLayer = createSampleLayer(GraphicsLayer);
 
     // add the sketch layer to the map
     setLayers((layers) => {
@@ -444,10 +479,13 @@ function LocateSamples() {
     }
   }, [
     GraphicsLayer,
-    map,
+    edits,
     layersInitialized,
     layers,
     setLayers,
+    map,
+    selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     setSketchLayer,
     sketchLayerInitialized,
@@ -1007,28 +1045,59 @@ function LocateSamples() {
     return editedGraphics;
   }
 
-  const [editEnabled, setEditEnabled] = React.useState(false);
-  const [editEnabled2, setEditEnabled2] = React.useState(false);
-  const [editEnabled3, setEditEnabled3] = React.useState(false);
-
-  const [demoLayerInit, setDemoLayerInit] = React.useState(false);
+  // Changes the selected layer if the scenario is changed. The first
+  // available layer in the scenario will be chosen. If the scenario
+  // has no layers, then the first availble unlinked layer is chosen.
   React.useEffect(() => {
-    if (demoLayerInit || !map) return;
+    if (!selectedScenario) return;
+    if (
+      sketchLayer &&
+      (!sketchLayer.parentLayer ||
+        sketchLayer.parentLayer.id === selectedScenario.layerId)
+    ) {
+      return;
+    }
 
-    setDemoLayerInit(true);
+    // select the first layer within the selected scenario
+    if (selectedScenario.layers.length > 0) {
+      const newSketchLayer = layers.find(
+        (layer) => layer.layerId === selectedScenario.layers[0].layerId,
+      );
+      if (newSketchLayer) {
+        setSketchLayer(newSketchLayer);
+        return;
+      }
+    }
 
-    const group = new GroupLayer({
-      title: 'Decommissioned Facility',
-      layers: [
-        new GraphicsLayer({ title: 'Building B Floor 2' }),
-        new GraphicsLayer({ title: 'Building B Floor 1' }),
-        new GraphicsLayer({ title: 'Building A Floor 3' }),
-        new GraphicsLayer({ title: 'Building A Floor 2' }),
-        new GraphicsLayer({ title: 'Building A Floor 1' }),
-      ],
+    // select the first unlinked layer
+    const newSketchLayer = layers.find((layer) => !layer.parentLayer);
+    if (newSketchLayer) setSketchLayer(newSketchLayer);
+  }, [layers, selectedScenario, sketchLayer, setSketchLayer]);
+
+  // scenario and layer edit UI visibility controls
+  const [addScenarioVisible, setAddScenarioVisible] = React.useState(false);
+  const [editScenarioVisible, setEditScenarioVisible] = React.useState(false);
+  const [addLayerVisible, setAddLayerVisible] = React.useState(false);
+  const [editLayerVisible, setEditLayerVisible] = React.useState(false);
+
+  // get a list of scenarios from edits
+  const scenarios = getScenarios(edits);
+
+  // build the list of layers to be displayed in the sample layer dropdown
+  const sampleLayers: { label: string; options: LayerType[] }[] = [];
+  if (selectedScenario && selectedScenario.layers.length > 0) {
+    // get layers for the selected scenario
+    sampleLayers.push({
+      label: selectedScenario.label,
+      options: getSketchableLayers(layers, selectedScenario.layers),
     });
-    map.add(group);
-  }, [demoLayerInit, GraphicsLayer, GroupLayer, map]);
+  }
+
+  // get unlinked layers
+  sampleLayers.push({
+    label: 'Unlinked Layers',
+    options: getSketchableLayers(layers, edits.edits),
+  });
 
   return (
     <div css={panelContainer}>
@@ -1093,31 +1162,40 @@ function LocateSamples() {
             <strong>Publish Plan</strong> step.
           </p>
 
-          {editEnabled ? (
-            <EditLayerMetaData />
+          {scenarios.length === 0 ? (
+            <EditScenario />
           ) : (
             <React.Fragment>
-              <div
-                css={css`
-                  display: flex;
-                  justify-content: space-between;
-                `}
-              >
+              <div css={iconButtonContainerStyles}>
                 <label htmlFor="sampling-layer-select-input2">
                   Specify Scenario
                 </label>
                 <div>
                   <button
                     css={iconButtonStyles}
-                    onClick={() => setEditEnabled2(!editEnabled2)}
+                    onClick={() => {
+                      setEditScenarioVisible(false);
+                      setAddScenarioVisible(!addScenarioVisible);
+                    }}
                   >
-                    <i className="fas fa-plus" />
+                    <i
+                      className={
+                        addScenarioVisible ? 'fas fa-times' : 'fas fa-plus'
+                      }
+                    />
                   </button>
                   <button
                     css={iconButtonStyles}
-                    onClick={() => setEditEnabled2(!editEnabled2)}
+                    onClick={() => {
+                      setAddScenarioVisible(false);
+                      setEditScenarioVisible(!editScenarioVisible);
+                    }}
                   >
-                    <i className="fas fa-edit" />
+                    <i
+                      className={
+                        editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                      }
+                    />
                   </button>
                   <button css={iconButtonStyles}>
                     <i className="fas fa-trash-alt" />
@@ -1128,39 +1206,52 @@ function LocateSamples() {
                 id="sampling-layer-select2"
                 inputId="sampling-layer-select-input2"
                 css={layerSelectStyles}
-                value={{ value: 'val1', label: 'Decommissioned Facility' }}
-                //onChange={(ev) => setSketchLayer(ev as LayerType)}
-                options={[{ value: 'val1', label: 'Decommissioned Facility' }]}
+                value={selectedScenario}
+                onChange={(ev) => setSelectedScenario(ev as ScenarioEditsType)}
+                options={scenarios}
               />
-              {editEnabled2 && <EditLayerMetaData />}
+              {addScenarioVisible && (
+                <EditScenario onSave={() => setAddScenarioVisible(false)} />
+              )}
+              {editScenarioVisible && (
+                <EditScenario
+                  initialScenario={selectedScenario}
+                  onSave={() => setEditScenarioVisible(false)}
+                />
+              )}
             </React.Fragment>
           )}
 
-          <div
-            css={css`
-              display: flex;
-              justify-content: space-between;
-            `}
-          >
+          <div css={iconButtonContainerStyles}>
             <label htmlFor="sampling-layer-select-input">
               Active Sampling Layer
             </label>
             <div>
               <button
                 css={iconButtonStyles}
-                onClick={() => setEditEnabled3(!editEnabled3)}
+                onClick={() => setAddLayerVisible(!addLayerVisible)}
               >
-                <i className="fas fa-plus" />
+                <i
+                  className={addLayerVisible ? 'fas fa-times' : 'fas fa-plus'}
+                />
               </button>
               <button
                 css={iconButtonStyles}
-                onClick={() => setEditEnabled3(!editEnabled3)}
+                onClick={() => setEditLayerVisible(!editLayerVisible)}
               >
-                <i className="fas fa-edit" />
+                <i
+                  className={editLayerVisible ? 'fas fa-times' : 'fas fa-edit'}
+                />
               </button>
-              <button css={iconButtonStyles}>
-                <i className={editEnabled ? 'fas fa-link' : 'fas fa-unlink'} />
-              </button>
+              {sketchLayer && (
+                <button css={iconButtonStyles}>
+                  <i
+                    className={
+                      sketchLayer.parentLayer ? 'fas fa-unlink' : 'fas fa-link'
+                    }
+                  />
+                </button>
+              )}
               <button css={iconButtonStyles}>
                 <i className="fas fa-trash-alt" />
               </button>
@@ -1172,25 +1263,16 @@ function LocateSamples() {
             css={layerSelectStyles}
             value={sketchLayer}
             onChange={(ev) => setSketchLayer(ev as LayerType)}
-            options={[
-              {
-                label: 'Decommissioned Facility Layers',
-                options: [
-                  { label: 'Building A Floor 1', value: 'bAf1' },
-                  { label: 'Building A Floor 2', value: 'bAf2' },
-                  { label: 'Building A Floor 3', value: 'bAf3' },
-                  { label: 'Building B Floor 1', value: 'bBf1' },
-                  { label: 'Building B Floor 2', value: 'bBf2' },
-                ],
-              },
-              {
-                label: 'Unlinked Layers',
-                options: getSketchableLayers(layers),
-              },
-            ]}
+            options={sampleLayers}
           />
-          {editEnabled3 && (
-            <EditLayerMetaData nameLabel="Layer Name" descriptionLabel="" />
+          {addLayerVisible && (
+            <EditLayer onSave={() => setAddLayerVisible(false)} />
+          )}
+          {editLayerVisible && (
+            <EditLayer
+              initialLayer={sketchLayer}
+              onSave={() => setEditLayerVisible(false)}
+            />
           )}
         </div>
         <div css={sectionContainerWidthOnly}>
@@ -1990,17 +2072,6 @@ function LocateSamples() {
             </div>
           </AccordionItem>
         </AccordionList>
-      </div>
-      <div css={sectionContainer}>
-        <div css={trainingStyles}>
-          <input
-            id="training-mode-toggle2"
-            type="checkbox"
-            checked={editEnabled}
-            onChange={(ev) => setEditEnabled(!editEnabled)}
-          />
-          <label htmlFor="training-mode-toggle2">Edit Mode</label>
-        </div>
       </div>
       <div css={sectionContainer}>
         <NavigationButton goToPanel="calculate" />

@@ -152,15 +152,6 @@ const checkBoxStyles = css`
   margin-right: 5px;
 `;
 
-const inputStyles = css`
-  width: 100%;
-  height: 36px;
-  margin: 0 0 10px 0;
-  padding-left: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-`;
-
 const layerInfo = css`
   padding-bottom: 0.5em;
 `;
@@ -811,8 +802,6 @@ function FilePanel() {
       name: file.file.name,
       label: layerName,
       layerType: layerType.value,
-      scenarioName: '',
-      scenarioDescription: '',
       editType: 'add',
       visible,
       listMode,
@@ -820,6 +809,7 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      parentLayer: null,
     };
 
     // make a copy of the edits context variable
@@ -1203,13 +1193,6 @@ function FilePanel() {
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
-                  <label htmlFor="sample-type-name-input">Layer Name</label>
-                  <input
-                    id="sample-type-name-input"
-                    css={inputStyles}
-                    //value={sampleTypeName}
-                    //onChange={(ev) => setSampleTypeName(ev.target.value)}
-                  />
                   <input
                     id="generalize-features-input"
                     type="checkbox"

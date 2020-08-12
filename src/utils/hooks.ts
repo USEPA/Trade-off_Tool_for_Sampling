@@ -12,7 +12,12 @@ import {
   CalculateResultsType,
   CalculateResultsDataType,
 } from 'types/CalculateResults';
-import { EditsType, FeatureEditsType } from 'types/Edits';
+import {
+  EditsType,
+  FeatureEditsType,
+  LayerEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
@@ -308,8 +313,11 @@ export function useCalculatePlan() {
 
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer.editType === 'properties') return;
+    const { editsScenario } = findLayerInEdits(
+      edits.edits,
+      sketchLayer.layerId,
+    );
+    if (!editsScenario || editsScenario.editType === 'properties') return;
 
     setCalculateResults((calculateResults: CalculateResultsType) => {
       return {
@@ -360,8 +368,11 @@ export function useCalculatePlan() {
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
     if (sketchLayer.editType === 'properties') return;
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer?.editType === 'properties') return;
+    const { editsScenario } = findLayerInEdits(
+      edits.edits,
+      sketchLayer.layerId,
+    );
+    if (!editsScenario || editsScenario.editType === 'properties') return;
 
     let ttpk = 0;
     let ttc = 0;
@@ -713,7 +724,12 @@ function useTrainingModeStorage() {
 function useEditsLayerStorage() {
   const key = 'tots_edits';
   const { setOptions } = React.useContext(DialogContext);
-  const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
+  const {
+    Graphic,
+    GraphicsLayer,
+    GroupLayer,
+    Polygon,
+  } = useEsriModulesContext();
   const {
     edits,
     setEdits,
@@ -750,9 +766,11 @@ function useEditsLayerStorage() {
     });
     setEdits(edits);
 
-    const newLayers: LayerType[] = [];
-    const graphicsLayers: __esri.GraphicsLayer[] = [];
-    edits.edits.forEach((editsLayer) => {
+    function createLayer(
+      editsLayer: LayerEditsType,
+      newLayers: LayerType[],
+      parentLayer: __esri.GroupLayer | null = null,
+    ) {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.label,
         id: editsLayer.layerId,
@@ -810,7 +828,6 @@ function useEditsLayerStorage() {
         );
       });
       sketchLayer.addMany(features);
-      graphicsLayers.push(sketchLayer);
 
       newLayers.push({
         id: editsLayer.id,
@@ -820,8 +837,6 @@ function useEditsLayerStorage() {
         name: editsLayer.name,
         label: editsLayer.label,
         layerType: editsLayer.layerType,
-        scenarioName: editsLayer.scenarioName,
-        scenarioDescription: editsLayer.scenarioDescription,
         editType: 'add',
         addedFrom: editsLayer.addedFrom,
         status: editsLayer.status,
@@ -829,7 +844,35 @@ function useEditsLayerStorage() {
         listMode: editsLayer.listMode,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
+        parentLayer,
       });
+
+      return sketchLayer;
+    }
+
+    const newLayers: LayerType[] = [];
+    const graphicsLayers: (__esri.GraphicsLayer | __esri.GroupLayer)[] = [];
+    edits.edits.forEach((editsLayer) => {
+      // add layer edits directly
+      if (editsLayer.type === 'layer') {
+        graphicsLayers.push(createLayer(editsLayer, newLayers));
+      }
+      // scenarios need to be added to a group layer first
+      if (editsLayer.type === 'scenario') {
+        const groupLayer = new GroupLayer({
+          id: editsLayer.layerId,
+          title: editsLayer.scenarioName,
+        });
+
+        // create the layers and add them to the group layer
+        const scenarioLayers: __esri.GraphicsLayer[] = [];
+        editsLayer.layers.forEach((layer) => {
+          scenarioLayers.push(createLayer(layer, newLayers, groupLayer));
+        });
+        groupLayer.addMany(scenarioLayers);
+
+        graphicsLayers.push(groupLayer);
+      }
     });
 
     if (newLayers.length > 0) {
@@ -841,6 +884,7 @@ function useEditsLayerStorage() {
   }, [
     Graphic,
     GraphicsLayer,
+    GroupLayer,
     Polygon,
     setEdits,
     setLayers,
@@ -1176,11 +1220,17 @@ function useHomeWidgetStorage() {
 // Uses browser storage for holding the currently selected sample layer.
 function useSamplesLayerStorage() {
   const key = 'tots_selected_sample_layer';
+  const key2 = 'tots_selected_scenario';
 
   const { setOptions } = React.useContext(DialogContext);
-  const { layers, sketchLayer, setSketchLayer } = React.useContext(
-    SketchContext,
-  );
+  const {
+    edits,
+    layers,
+    selectedScenario,
+    setSelectedScenario,
+    sketchLayer,
+    setSketchLayer,
+  } = React.useContext(SketchContext);
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
@@ -1193,11 +1243,25 @@ function useSamplesLayerStorage() {
 
     setLocalSampleLayerInitialized(true);
 
+    // set the selected scenario first
+    const scenarioId = readFromStorage(key2);
+    const scenario = edits.edits.find(
+      (item) => item.type === 'scenario' && item.layerId === scenarioId,
+    );
+    if (scenario) setSelectedScenario(scenario as ScenarioEditsType);
+
+    // then set the layer
     const layerId = readFromStorage(key);
     if (!layerId) return;
 
     setSketchLayer(getLayerById(layers, layerId));
-  }, [layers, setSketchLayer, localSampleLayerInitialized]);
+  }, [
+    edits,
+    layers,
+    setSelectedScenario,
+    setSketchLayer,
+    localSampleLayerInitialized,
+  ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
   React.useEffect(() => {
@@ -1206,6 +1270,14 @@ function useSamplesLayerStorage() {
     const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
     writeToStorage(key, data, setOptions);
   }, [sketchLayer, localSampleLayerInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleLayerInitialized) return;
+
+    const data = selectedScenario?.layerId ? selectedScenario.layerId : '';
+    writeToStorage(key2, data, setOptions);
+  }, [selectedScenario, localSampleLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected contamination map layer.

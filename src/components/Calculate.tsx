@@ -110,6 +110,7 @@ function Calculate() {
     layers,
     setLayers,
     sketchLayer,
+    selectedScenario,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
@@ -651,17 +652,13 @@ function Calculate() {
             Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
-            <strong>Layer Name: </strong>
-            {sketchLayer?.label}
-          </p>
-          <p css={layerInfo}>
             <strong>Scenario Name: </strong>
-            {sketchLayer?.scenarioName}
+            {selectedScenario?.scenarioName}
           </p>
           <p css={layerInfo}>
             <strong>Scenario Description: </strong>
             <ShowLessMore
-              text={sketchLayer?.scenarioDescription}
+              text={selectedScenario?.scenarioDescription}
               charLimit={20}
             />
           </p>

@@ -27,6 +27,7 @@ type EsriConstructors = [
   typeof import('esri/layers/FeatureLayer'),
   typeof import('esri/layers/GeoRSSLayer'),
   typeof import('esri/layers/GraphicsLayer'),
+  typeof import('esri/layers/GroupLayer'),
   typeof import('esri/layers/KMLLayer'),
   typeof import('esri/layers/Layer'),
   typeof import('esri/layers/WMSLayer'),
@@ -48,7 +49,6 @@ type EsriConstructors = [
   typeof import('esri/widgets/Search'),
   typeof import('esri/widgets/Slider'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
-  typeof import('esri/layers/GroupLayer'),
 ];
 
 type Props = { children: React.ReactNode };
@@ -74,28 +74,28 @@ type State = {
   FeatureLayer: EsriConstructors[17];
   GeoRSSLayer: EsriConstructors[18];
   GraphicsLayer: EsriConstructors[19];
-  KMLLayer: EsriConstructors[20];
-  Layer: EsriConstructors[21];
-  WMSLayer: EsriConstructors[22];
-  WMTSLayer: EsriConstructors[23];
-  Field: EsriConstructors[24];
-  PopupTemplate: EsriConstructors[25];
-  Portal: EsriConstructors[26];
-  PortalItem: EsriConstructors[27];
-  rendererJsonUtils: EsriConstructors[28];
-  Geoprocessor: EsriConstructors[29];
-  FeatureSet: EsriConstructors[30];
-  MapView: EsriConstructors[31];
-  BasemapGallery: EsriConstructors[32];
-  PortalBasemapsSource: EsriConstructors[33];
-  Home: EsriConstructors[34];
-  LayerList: EsriConstructors[35];
-  Legend: EsriConstructors[36];
-  Locate: EsriConstructors[37];
-  Search: EsriConstructors[38];
-  Slider: EsriConstructors[39];
-  SketchViewModel: EsriConstructors[40];
-  GroupLayer: EsriConstructors[41];
+  GroupLayer: EsriConstructors[20];
+  KMLLayer: EsriConstructors[21];
+  Layer: EsriConstructors[22];
+  WMSLayer: EsriConstructors[23];
+  WMTSLayer: EsriConstructors[24];
+  Field: EsriConstructors[25];
+  PopupTemplate: EsriConstructors[26];
+  Portal: EsriConstructors[27];
+  PortalItem: EsriConstructors[28];
+  rendererJsonUtils: EsriConstructors[29];
+  Geoprocessor: EsriConstructors[30];
+  FeatureSet: EsriConstructors[31];
+  MapView: EsriConstructors[32];
+  BasemapGallery: EsriConstructors[33];
+  PortalBasemapsSource: EsriConstructors[34];
+  Home: EsriConstructors[35];
+  LayerList: EsriConstructors[36];
+  Legend: EsriConstructors[37];
+  Locate: EsriConstructors[38];
+  Search: EsriConstructors[39];
+  Slider: EsriConstructors[40];
+  SketchViewModel: EsriConstructors[41];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -124,6 +124,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/layers/FeatureLayer',
         'esri/layers/GeoRSSLayer',
         'esri/layers/GraphicsLayer',
+        'esri/layers/GroupLayer',
         'esri/layers/KMLLayer',
         'esri/layers/Layer',
         'esri/layers/WMSLayer',
@@ -145,7 +146,6 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/Search',
         'esri/widgets/Slider',
         'esri/widgets/Sketch/SketchViewModel',
-        'esri/layers/GroupLayer',
       ],
       {
         version: '4.15',
@@ -173,6 +173,7 @@ function EsriModulesProvider({ children }: Props) {
         FeatureLayer,
         GeoRSSLayer,
         GraphicsLayer,
+        GroupLayer,
         KMLLayer,
         Layer,
         WMSLayer,
@@ -194,7 +195,6 @@ function EsriModulesProvider({ children }: Props) {
         Search,
         Slider,
         SketchViewModel,
-        GroupLayer,
       ]) => {
         setModules({
           modulesLoaded: true,
@@ -217,6 +217,7 @@ function EsriModulesProvider({ children }: Props) {
           FeatureLayer,
           GeoRSSLayer,
           GraphicsLayer,
+          GroupLayer,
           KMLLayer,
           Layer,
           WMSLayer,
@@ -238,7 +239,6 @@ function EsriModulesProvider({ children }: Props) {
           Search,
           Slider,
           SketchViewModel,
-          GroupLayer,
         });
 
         config.request.proxyUrl = proxyUrl;

@@ -85,6 +85,7 @@ function CalculateResults() {
   } = React.useContext(CalculateContext);
   const {
     mapView,
+    selectedScenario,
     sketchLayer,
     aoiSketchLayer, //
   } = React.useContext(SketchContext);
@@ -231,7 +232,10 @@ function CalculateResults() {
     workbook
       .writeToBuffer()
       .then((buffer: any) => {
-        saveAs(new Blob([buffer]), `tots_${sketchLayer?.scenarioName}.xlsx`);
+        saveAs(
+          new Blob([buffer]),
+          `tots_${selectedScenario?.scenarioName}.xlsx`,
+        );
         setDownloadStatus('success');
       })
       .catch((err: any) => {
@@ -243,7 +247,7 @@ function CalculateResults() {
 
     function addSummarySheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || !calculateResults.data) return;
+      if (!selectedScenario || !calculateResults.data) return;
 
       // add the sheet
       const summarySheet = workbook.addWorksheet('Summary');
@@ -266,12 +270,12 @@ function CalculateResults() {
         .cell(4, 1)
         .string('Scenario Name')
         .style(underlinedLabelStyle);
-      summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
+      summarySheet.cell(4, 2).string(selectedScenario.scenarioName);
       summarySheet
         .cell(5, 1)
         .string('Scenario Description')
         .style(underlinedLabelStyle);
-      summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
+      summarySheet.cell(5, 2).string(selectedScenario.scenarioDescription);
 
       // col 1 & 2
       summarySheet
@@ -751,7 +755,13 @@ function CalculateResults() {
         currentRow += 1;
       });
     }
-  }, [sketchLayer, base64Screenshot, downloadStatus, calculateResults]);
+  }, [
+    selectedScenario,
+    sketchLayer,
+    base64Screenshot,
+    downloadStatus,
+    calculateResults,
+  ]);
 
   return (
     <div css={panelContainer}>
@@ -777,11 +787,11 @@ function CalculateResults() {
             <h3>Summary</h3>
             <LabelValue
               label="Scenario Name"
-              value={sketchLayer?.scenarioName}
+              value={selectedScenario?.scenarioName}
             />
             <LabelValue
               label="Scenario Description"
-              value={sketchLayer?.scenarioDescription}
+              value={selectedScenario?.scenarioDescription}
             />
             <br />
 

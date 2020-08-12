@@ -7,7 +7,7 @@ import { fetchCheck } from 'utils/fetchUtils';
 // config
 import { totsGPServer } from 'config/webService';
 // types
-import { EditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
   UserDefinedAttributes,
@@ -48,6 +48,10 @@ type SketchType = {
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
   setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
+  selectedScenario: ScenarioEditsType | null;
+  setSelectedScenario: React.Dispatch<
+    React.SetStateAction<ScenarioEditsType | null>
+  >;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: React.Dispatch<
     React.SetStateAction<__esri.SketchViewModel | null>
@@ -97,6 +101,8 @@ export const SketchContext = React.createContext<SketchType>({
   setReferenceLayers: () => {},
   urlLayers: [],
   setUrlLayers: () => {},
+  selectedScenario: null,
+  setSelectedScenario: () => {},
   sketchLayer: null,
   setSketchLayer: () => {},
   aoiSketchLayer: null,
@@ -146,6 +152,10 @@ export function SketchProvider({ children }: Props) {
   const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
+  const [
+    selectedScenario,
+    setSelectedScenario, //
+  ] = React.useState<ScenarioEditsType | null>(null);
   const [
     sketchVM,
     setSketchVM, //
@@ -210,6 +220,8 @@ export function SketchProvider({ children }: Props) {
         setReferenceLayers,
         urlLayers,
         setUrlLayers,
+        selectedScenario,
+        setSelectedScenario,
         sketchLayer,
         setSketchLayer,
         aoiSketchLayer,
