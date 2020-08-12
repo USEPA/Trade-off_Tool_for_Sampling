@@ -1171,6 +1171,26 @@ function LocateSamples() {
                   Specify Scenario
                 </label>
                 <div>
+                  {selectedScenario && (
+                    <React.Fragment>
+                      <button css={iconButtonStyles}>
+                        <i className="fas fa-trash-alt" />
+                      </button>
+                      <button
+                        css={iconButtonStyles}
+                        onClick={() => {
+                          setAddScenarioVisible(false);
+                          setEditScenarioVisible(!editScenarioVisible);
+                        }}
+                      >
+                        <i
+                          className={
+                            editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                          }
+                        />
+                      </button>
+                    </React.Fragment>
+                  )}
                   <button
                     css={iconButtonStyles}
                     onClick={() => {
@@ -1183,22 +1203,6 @@ function LocateSamples() {
                         addScenarioVisible ? 'fas fa-times' : 'fas fa-plus'
                       }
                     />
-                  </button>
-                  <button
-                    css={iconButtonStyles}
-                    onClick={() => {
-                      setAddScenarioVisible(false);
-                      setEditScenarioVisible(!editScenarioVisible);
-                    }}
-                  >
-                    <i
-                      className={
-                        editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
-                      }
-                    />
-                  </button>
-                  <button css={iconButtonStyles}>
-                    <i className="fas fa-trash-alt" />
                   </button>
                 </div>
               </div>
@@ -1227,6 +1231,32 @@ function LocateSamples() {
               Active Sampling Layer
             </label>
             <div>
+              {sketchLayer && (
+                <React.Fragment>
+                  <button css={iconButtonStyles}>
+                    <i className="fas fa-trash-alt" />
+                  </button>
+                  <button css={iconButtonStyles}>
+                    <i
+                      className={
+                        sketchLayer.parentLayer
+                          ? 'fas fa-unlink'
+                          : 'fas fa-link'
+                      }
+                    />
+                  </button>
+                  <button
+                    css={iconButtonStyles}
+                    onClick={() => setEditLayerVisible(!editLayerVisible)}
+                  >
+                    <i
+                      className={
+                        editLayerVisible ? 'fas fa-times' : 'fas fa-edit'
+                      }
+                    />
+                  </button>
+                </React.Fragment>
+              )}
               <button
                 css={iconButtonStyles}
                 onClick={() => setAddLayerVisible(!addLayerVisible)}
@@ -1234,26 +1264,6 @@ function LocateSamples() {
                 <i
                   className={addLayerVisible ? 'fas fa-times' : 'fas fa-plus'}
                 />
-              </button>
-              <button
-                css={iconButtonStyles}
-                onClick={() => setEditLayerVisible(!editLayerVisible)}
-              >
-                <i
-                  className={editLayerVisible ? 'fas fa-times' : 'fas fa-edit'}
-                />
-              </button>
-              {sketchLayer && (
-                <button css={iconButtonStyles}>
-                  <i
-                    className={
-                      sketchLayer.parentLayer ? 'fas fa-unlink' : 'fas fa-link'
-                    }
-                  />
-                </button>
-              )}
-              <button css={iconButtonStyles}>
-                <i className="fas fa-trash-alt" />
               </button>
             </div>
           </div>
