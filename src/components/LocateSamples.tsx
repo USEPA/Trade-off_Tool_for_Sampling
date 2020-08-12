@@ -1173,7 +1173,45 @@ function LocateSamples() {
                 <div>
                   {selectedScenario && (
                     <React.Fragment>
-                      <button css={iconButtonStyles}>
+                      <button
+                        css={iconButtonStyles}
+                        onClick={() => {
+                          // remove all of the child layers
+                          setLayers((layers) => {
+                            return layers.filter(
+                              (layer) =>
+                                selectedScenario.layers.findIndex(
+                                  (scenarioLayer) =>
+                                    scenarioLayer.layerId === layer.layerId,
+                                ) === -1,
+                            );
+                          });
+
+                          // remove the scenario from edits
+                          const newEdits: EditsType = {
+                            count: edits.count + 1,
+                            edits: edits.edits.filter(
+                              (item) =>
+                                item.layerId !== selectedScenario.layerId,
+                            ),
+                          };
+                          setEdits(newEdits);
+
+                          // select the next available scenario
+                          const scenarios = getScenarios(newEdits);
+                          setSelectedScenario(
+                            scenarios.length > 0 ? scenarios[0] : null,
+                          );
+
+                          if (!map) return;
+
+                          // remove the scenario from the map
+                          const mapLayer = map.layers.find(
+                            (layer) => layer.id === selectedScenario.layerId,
+                          );
+                          map.remove(mapLayer);
+                        }}
+                      >
                         <i className="fas fa-trash-alt" />
                       </button>
                       <button
