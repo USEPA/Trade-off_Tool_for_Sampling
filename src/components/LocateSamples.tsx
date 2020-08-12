@@ -1271,7 +1271,97 @@ function LocateSamples() {
             <div>
               {sketchLayer && (
                 <React.Fragment>
-                  <button css={iconButtonStyles}>
+                  <button
+                    css={iconButtonStyles}
+                    onClick={() => {
+                      // remove the layer from layers
+                      setLayers((layers) => {
+                        return layers.filter(
+                          (layer) => layer.layerId !== sketchLayer.layerId,
+                        );
+                      });
+
+                      const parentLayer = sketchLayer.parentLayer;
+                      if (parentLayer) {
+                        // remove the scenario from edits
+                        setEdits((edits) => {
+                          const index = edits.edits.findIndex(
+                            (edit) => edit.layerId === parentLayer.id,
+                          );
+
+                          const editedScenario = edits.edits[
+                            index
+                          ] as ScenarioEditsType;
+                          editedScenario.layers = editedScenario.layers.filter(
+                            (layer) => layer.layerId !== sketchLayer.layerId,
+                          );
+
+                          return {
+                            count: edits.count + 1,
+                            edits: [
+                              ...edits.edits.slice(0, index),
+                              editedScenario,
+                              ...edits.edits.slice(index + 1),
+                            ],
+                          };
+                        });
+                      } else {
+                        // remove the scenario from edits
+                        setEdits((edits) => {
+                          return {
+                            count: edits.count + 1,
+                            edits: edits.edits.filter(
+                              (item) => item.layerId !== sketchLayer.layerId,
+                            ),
+                          };
+                        });
+                      }
+
+                      // select the next available layer
+                      let newSketchLayerIndex: number = -1;
+
+                      // check in the selected scenario first, then in the root of edits
+                      if (selectedScenario) {
+                        const index = selectedScenario.layers.findIndex(
+                          (layer) => layer.layerId !== sketchLayer.layerId,
+                        );
+                        if (index > -1) {
+                          newSketchLayerIndex = layers.findIndex(
+                            (layer) =>
+                              layer.layerId ===
+                              selectedScenario.layers[index].layerId,
+                          );
+                        }
+                      }
+                      if (newSketchLayerIndex === -1) {
+                        const index = edits.edits.findIndex(
+                          (layer) =>
+                            layer.type === 'layer' &&
+                            layer.layerId !== sketchLayer.layerId,
+                        );
+                        if (index > -1) {
+                          newSketchLayerIndex = layers.findIndex(
+                            (layer) =>
+                              layer.layerId === edits.edits[index].layerId,
+                          );
+                        }
+                      }
+
+                      setSketchLayer(
+                        newSketchLayerIndex > -1
+                          ? layers[newSketchLayerIndex]
+                          : null,
+                      );
+
+                      // remove the scenario from the map
+                      const parent = parentLayer
+                        ? parentLayer
+                        : map
+                        ? map
+                        : null;
+                      if (parent) parent.remove(sketchLayer.sketchLayer);
+                    }}
+                  >
                     <i className="fas fa-trash-alt" />
                   </button>
                   <button css={iconButtonStyles}>

@@ -328,6 +328,7 @@ function EditLayer({
     layers,
     setLayers,
     selectedScenario,
+    setSelectedScenario,
     setSketchLayer,
     map,
   } = React.useContext(SketchContext);
@@ -381,17 +382,14 @@ function EditLayer({
 
       // update the list of layers, including setting the parentLayer
       setLayers((layers) => {
-        if (parentLayer) {
-          return [
-            ...layers.slice(0, index),
-            { ...initialLayer, name: layerName, label: layerName, parentLayer },
-            ...layers.slice(index + 1),
-          ];
-        }
-
         return [
           ...layers.slice(0, index),
-          { ...initialLayer, name: layerName, label: layerName },
+          {
+            ...initialLayer,
+            name: layerName,
+            label: layerName,
+            parentLayer: parentLayer,
+          },
           ...layers.slice(index + 1),
         ];
       });
@@ -437,6 +435,26 @@ function EditLayer({
 
       // make the new layer the active sketch layer
       setSketchLayer(tempLayer);
+
+      setSelectedScenario((selectedScenario) => {
+        if (!selectedScenario) return selectedScenario;
+
+        const scenario = editsCopy.edits.find(
+          (edit) =>
+            edit.type === 'scenario' &&
+            edit.layerId === selectedScenario.layerId,
+        ) as ScenarioEditsType;
+        const newLayer = scenario.layers.find(
+          (layer) => layer.layerId === tempLayer.layerId,
+        );
+
+        if (!newLayer) return selectedScenario;
+
+        return {
+          ...selectedScenario,
+          layers: [...selectedScenario.layers, newLayer],
+        };
+      });
     }
 
     setSaveStatus('success');
