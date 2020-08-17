@@ -139,6 +139,7 @@ const graphicsIconStyles = css`
 function Toolbar() {
   const {
     BasemapGallery,
+    Collection,
     IdentityManager,
     LayerList,
     Legend,
@@ -425,6 +426,7 @@ function Toolbar() {
     // add the delete layer button action
     layerList.on('trigger-action', (event) => {
       const id = event.action.id;
+      const tempLayer = event.item.layer as any;
 
       if (id === 'zoom-layer') {
         if (event.item.layer.type === 'graphics') {
@@ -433,14 +435,27 @@ function Toolbar() {
           return;
         }
         if (event.item.layer.type === 'group') {
-          const groupLayer = event.item.layer as __esri.GroupLayer;
-          let fullExtent: __esri.Extent | null = null;
-          groupLayer.layers.forEach((layer) => {
-            if (!fullExtent) fullExtent = layer.fullExtent;
-            else fullExtent.union(layer.fullExtent);
-          });
+          if (tempLayer.portalItem) {
+            const groupLayer = event.item.layer as __esri.GroupLayer;
+            let fullExtent: __esri.Extent | null = null;
+            groupLayer.layers.forEach((layer) => {
+              if (!fullExtent) fullExtent = layer.fullExtent;
+              else fullExtent.union(layer.fullExtent);
+            });
 
-          if (fullExtent) mapView.goTo(fullExtent);
+            if (fullExtent) mapView.goTo(fullExtent);
+          } else {
+            const groupLayer = event.item.layer as __esri.GroupLayer;
+            const graphics = new Collection<__esri.Graphic>();
+            groupLayer.layers.forEach((layer) => {
+              if (layer.type !== 'graphics') return;
+
+              const tempLayer = layer as __esri.GraphicsLayer;
+              graphics.addMany(tempLayer.graphics);
+            });
+
+            if (graphics.length > 0) mapView.goTo(graphics);
+          }
           return;
         }
 
@@ -454,7 +469,15 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [LayerList, Legend, Slider, mapView, legendInitialized, polygonSymbol]);
+  }, [
+    Collection,
+    LayerList,
+    Legend,
+    Slider,
+    mapView,
+    legendInitialized,
+    polygonSymbol,
+  ]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -469,7 +492,17 @@ function Toolbar() {
     const tempLayerToRemove = layerToRemove as any;
 
     // remove the layer from the session variable
-    if (layerToRemove.type === 'graphics') {
+    if (tempLayerToRemove.portalItem && tempLayerToRemove.portalItem.id) {
+      // this one was added via search panel, remove it from portalLayers
+      setPortalLayers(
+        portalLayers.filter(
+          (portalLayer) => portalLayer.id !== tempLayerToRemove.portalItem.id,
+        ),
+      );
+    } else if (
+      layerToRemove.type === 'graphics' ||
+      layerToRemove.type === 'group'
+    ) {
       // graphics layers are always put in edits
       setEdits({
         count: edits.count + 1,
@@ -525,16 +558,6 @@ function Toolbar() {
           ),
         );
       }
-    } else if (
-      tempLayerToRemove.portalItem &&
-      tempLayerToRemove.portalItem.id
-    ) {
-      // this one was added via search panel, remove it from portalLayers
-      setPortalLayers(
-        portalLayers.filter(
-          (portalLayer) => portalLayer.id !== tempLayerToRemove.portalItem.id,
-        ),
-      );
     } else {
       // first attempt to remove from url layers
       const newUrlLayers = urlLayers.filter(
