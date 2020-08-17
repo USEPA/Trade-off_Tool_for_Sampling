@@ -179,6 +179,11 @@ export function updateLayerEdits({
     } else {
       editsCopy.edits.push(editsLayer);
     }
+  } else if (scenario && editsScenario && type === 'move') {
+    editsScenario.layers.push(editsLayer);
+    editsCopy.edits = editsCopy.edits.filter(
+      (edit) => edit.layerId !== editsLayer.layerId,
+    );
   } else {
     // handle property changes
     if (editsScenario) {

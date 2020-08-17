@@ -5,7 +5,13 @@ export type EditsType = {
   edits: (ScenarioEditsType | LayerEditsType)[];
 };
 
-export type EditType = 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
+export type EditType =
+  | 'add'
+  | 'update'
+  | 'delete'
+  | 'arcgis'
+  | 'properties'
+  | 'move';
 
 export type ScenarioEditsType = {
   type: 'scenario';

@@ -34,9 +34,10 @@ import {
 // utils
 import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
+  createSampleLayer,
+  findLayerInEdits,
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
-  createSampleLayer,
   getPopupTemplate,
   updateLayerEdits,
   updatePolygonSymbol,
@@ -1070,8 +1071,13 @@ function LocateSamples() {
     }
 
     // select the first unlinked layer
-    const newSketchLayer = layers.find((layer) => !layer.parentLayer);
+    const newSketchLayer = layers.find(
+      (layer) =>
+        (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+        !layer.parentLayer,
+    );
     if (newSketchLayer) setSketchLayer(newSketchLayer);
+    else setSketchLayer(null);
   }, [layers, selectedScenario, sketchLayer, setSketchLayer]);
 
   // scenario and layer edit UI visibility controls
@@ -1167,9 +1173,7 @@ function LocateSamples() {
           ) : (
             <React.Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="sampling-layer-select-input2">
-                  Specify Scenario
-                </label>
+                <label htmlFor="scenario-select-input">Specify Scenario</label>
                 <div>
                   {selectedScenario && (
                     <React.Fragment>
@@ -1245,8 +1249,8 @@ function LocateSamples() {
                 </div>
               </div>
               <Select
-                id="sampling-layer-select2"
-                inputId="sampling-layer-select-input2"
+                id="scenario-select-input"
+                inputId="scenario-select-input"
                 css={layerSelectStyles}
                 value={selectedScenario}
                 onChange={(ev) => setSelectedScenario(ev as ScenarioEditsType)}
@@ -1364,15 +1368,162 @@ function LocateSamples() {
                   >
                     <i className="fas fa-trash-alt" />
                   </button>
-                  <button css={iconButtonStyles}>
-                    <i
-                      className={
-                        sketchLayer.parentLayer
-                          ? 'fas fa-unlink'
-                          : 'fas fa-link'
-                      }
-                    />
-                  </button>
+                  {sketchLayer.parentLayer ? (
+                    <button
+                      css={iconButtonStyles}
+                      onClick={() => {
+                        if (!map) return;
+
+                        // update edits (move the layer to the root)
+                        setEdits((edits) => {
+                          const {
+                            scenarioIndex,
+                            layerIndex,
+                            editsScenario,
+                            editsLayer,
+                          } = findLayerInEdits(
+                            edits.edits,
+                            sketchLayer.layerId,
+                          );
+
+                          if (editsScenario) {
+                            editsScenario.layers = [
+                              ...editsScenario.layers.slice(0, layerIndex),
+                              ...editsScenario.layers.slice(layerIndex + 1),
+                            ];
+
+                            return {
+                              count: edits.count + 1,
+                              edits: [
+                                ...edits.edits.slice(0, scenarioIndex),
+                                editsScenario,
+                                ...edits.edits.slice(scenarioIndex + 1),
+                                editsLayer,
+                              ],
+                            };
+                          }
+
+                          return {
+                            count: edits.count + 1,
+                            edits: [...edits.edits, editsLayer],
+                          };
+                        });
+
+                        // remove the layer from the parent group layer and add to map
+                        sketchLayer.parentLayer?.remove(
+                          sketchLayer.sketchLayer,
+                        );
+                        map.add(sketchLayer.sketchLayer);
+
+                        // update layers (clear parent layer)
+                        setLayers((layers) => {
+                          const layerIndex = layers.findIndex(
+                            (layer) => layer.layerId === sketchLayer.layerId,
+                          );
+
+                          if (layerIndex === -1) return layers;
+
+                          const layer = layers[layerIndex];
+                          layer.parentLayer = null;
+
+                          return [
+                            ...layers.slice(0, layerIndex),
+                            layer,
+                            ...layers.slice(layerIndex + 1),
+                          ];
+                        });
+
+                        // update sketchLayer (clear parent layer)
+                        setSketchLayer((sketchLayer) => {
+                          if (!sketchLayer) return sketchLayer;
+
+                          return {
+                            ...sketchLayer,
+                            parentLayer: null,
+                          };
+                        });
+
+                        // update the selected scenario
+                        setSelectedScenario((selectedScenario) => {
+                          if (!selectedScenario) return selectedScenario;
+
+                          return {
+                            ...selectedScenario,
+                            layers: selectedScenario.layers.filter(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            ),
+                          };
+                        });
+                      }}
+                    >
+                      <i className="fas fa-unlink" />
+                    </button>
+                  ) : (
+                    <button
+                      css={iconButtonStyles}
+                      onClick={() => {
+                        if (!map || !selectedScenario) return;
+
+                        // update edits (move the layer to the selected scenario)
+                        const editsCopy = updateLayerEdits({
+                          edits,
+                          scenario: selectedScenario,
+                          layer: sketchLayer,
+                          type: 'move',
+                        });
+                        setEdits(editsCopy);
+
+                        // find the new parent layer
+                        const groupLayer = map.layers.find(
+                          (layer) => layer.id === selectedScenario.layerId,
+                        ) as __esri.GroupLayer;
+                        if (!groupLayer) return;
+
+                        // add the layer to the parent group layer
+                        groupLayer.add(sketchLayer.sketchLayer);
+
+                        // update layers (set parent layer)
+                        setLayers((layers) => {
+                          const layerIndex = layers.findIndex(
+                            (layer) => layer.layerId === sketchLayer.layerId,
+                          );
+
+                          if (layerIndex === -1) return layers;
+
+                          const layer = layers[layerIndex];
+                          layer.parentLayer = groupLayer;
+
+                          return [
+                            ...layers.slice(0, layerIndex),
+                            layer,
+                            ...layers.slice(layerIndex + 1),
+                          ];
+                        });
+
+                        // update sketchLayer (clear parent layer)
+                        setSketchLayer((sketchLayer) => {
+                          if (!sketchLayer) return sketchLayer;
+
+                          return {
+                            ...sketchLayer,
+                            parentLayer: groupLayer,
+                          };
+                        });
+
+                        // update the selectedScenario to keep the active layer dropdown
+                        // synced up
+                        const scenario = editsCopy.edits.find(
+                          (edit) =>
+                            edit.type === 'scenario' &&
+                            edit.layerId === selectedScenario.layerId,
+                        );
+                        if (scenario)
+                          setSelectedScenario(scenario as ScenarioEditsType);
+                      }}
+                    >
+                      <i className="fas fa-link" />
+                    </button>
+                  )}
                   <button
                     css={iconButtonStyles}
                     onClick={() => setEditLayerVisible(!editLayerVisible)}
