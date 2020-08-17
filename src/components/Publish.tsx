@@ -483,11 +483,11 @@ function Publish() {
         {publishResponse.status !== 'name-not-available' && (
           <React.Fragment>
             <p css={layerInfo}>
-              <strong>Scenario Name: </strong>
+              <strong>Plan Name: </strong>
               {sketchLayer?.scenarioName}
             </p>
             <p css={layerInfo}>
-              <strong>Scenario Description: </strong>
+              <strong>Plan Description: </strong>
               <ShowLessMore
                 text={sketchLayer?.scenarioDescription}
                 charLimit={20}
