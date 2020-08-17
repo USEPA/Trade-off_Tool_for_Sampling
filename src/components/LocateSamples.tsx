@@ -15,7 +15,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
-import { EditsType, ScenarioEditsType, LayerEditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
 import {
   sampleAttributes,
@@ -39,6 +39,7 @@ import {
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
   getPopupTemplate,
+  getSketchableLayers,
   updateLayerEdits,
   updatePolygonSymbol,
 } from 'utils/sketchUtils';
@@ -59,23 +60,6 @@ function getScenarios(edits: EditsType) {
   return edits.edits.filter(
     (item) => item.type === 'scenario',
   ) as ScenarioEditsType[];
-}
-
-// gets an array of layers, included in the provided edits parameter,
-// that can be used with the sketch widget. The search will look in
-// child layers of scenarios as well.
-function getSketchableLayers(
-  layers: LayerType[],
-  edits: (ScenarioEditsType | LayerEditsType)[],
-) {
-  return layers.filter(
-    (layer) =>
-      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
-      edits.findIndex(
-        (editsLayer) =>
-          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
-      ) > -1,
-  ) as LayerType[];
 }
 
 // gets an array of layers that can be used with the aoi sketch widget.

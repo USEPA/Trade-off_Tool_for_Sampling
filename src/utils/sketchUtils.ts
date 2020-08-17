@@ -565,3 +565,25 @@ export function updatePolygonSymbol(
     });
   });
 }
+
+/**
+ * Gets an array of layers, included in the provided edits parameter,
+ * that can be used with the sketch widget. The search will look in
+ * child layers of scenarios as well.
+ *
+ * @param layers - The layers to search in.
+ * @param edits - The edits to search in.
+ */
+export function getSketchableLayers(
+  layers: LayerType[],
+  edits: (ScenarioEditsType | LayerEditsType)[],
+) {
+  return layers.filter(
+    (layer) =>
+      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+      edits.findIndex(
+        (editsLayer) =>
+          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
+      ) > -1,
+  ) as LayerType[];
+}
