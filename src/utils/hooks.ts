@@ -281,7 +281,7 @@ export function useCalculatePlan() {
     SpatialReference,
     webMercatorUtils,
   } = useEsriModulesContext();
-  const { edits, sketchLayer } = React.useContext(SketchContext);
+  const { edits, layers, selectedScenario } = React.useContext(SketchContext);
   const {
     numLabs,
     numLabHours,
@@ -300,22 +300,30 @@ export function useCalculatePlan() {
   // changes that will cause a re-calculation.
   const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
   React.useEffect(() => {
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics' ||
-      sketchLayer.sketchLayer.graphics.length === 0
-    ) {
+    // Get the number of graphics for the selected scenario
+    let numGraphics = 0;
+    if (selectedScenario && selectedScenario.layers.length > 0) {
+      layers.forEach((layer) => {
+        if (layer.parentLayer?.id !== selectedScenario.layerId) return;
+        if (layer.sketchLayer.type !== 'graphics') return;
+
+        numGraphics += layer.sketchLayer.graphics.length;
+      });
+    }
+
+    // exit early
+    if (!selectedScenario || numGraphics === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       setCalcGraphics([]);
       return;
     }
-    if (sketchLayer.editType === 'properties') return;
+    if (selectedScenario.editType === 'properties') return;
 
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
     const { editsScenario } = findLayerInEdits(
       edits.edits,
-      sketchLayer.layerId,
+      selectedScenario.layerId,
     );
     if (!editsScenario || editsScenario.editType === 'properties') return;
 
@@ -328,7 +336,8 @@ export function useCalculatePlan() {
     });
   }, [
     edits,
-    sketchLayer,
+    layers,
+    selectedScenario,
     numLabs,
     numLabHours,
     numSamplingHours,
@@ -362,15 +371,20 @@ export function useCalculatePlan() {
   React.useEffect(() => {
     // exit early checks
     if (!loadedProjection) return;
-    if (!sketchLayer?.sketchLayer || edits.count === 0) return;
-    if (sketchLayer.sketchLayer.type !== 'graphics') return;
+    if (
+      !selectedScenario ||
+      selectedScenario.layers.length === 0 ||
+      edits.count === 0
+    ) {
+      return;
+    }
 
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
-    if (sketchLayer.editType === 'properties') return;
+    if (selectedScenario.editType === 'properties') return;
     const { editsScenario } = findLayerInEdits(
       edits.edits,
-      sketchLayer.layerId,
+      selectedScenario.layerId,
     );
     if (!editsScenario || editsScenario.editType === 'properties') return;
 
@@ -389,98 +403,107 @@ export function useCalculatePlan() {
     let amc = 0;
     let ac = 0;
 
-    // caluclate the area for graphics
+    // caluclate the area for graphics for the selected scenario
     let totalAreaSquereFeet = 0;
     const calcGraphics: __esri.Graphic[] = [];
-    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      const calcGraphic = graphic.clone();
-
-      // calculate the area using the custom hook
-      const areaSI = calculateArea(graphic);
-      if (typeof areaSI !== 'number') return;
-
-      // convert area to square feet
-      const areaSF = areaSI * 0.00694444;
-      totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
-
-      // Get the number of reference surface areas that are in the actual area.
-      // This is to prevent users from cheating the system by drawing larger shapes
-      // then the reference surface area and it only getting counted as "1" sample.
-      const { SA } = calcGraphic.attributes;
-      let areaCount = 1;
-      if (areaSI >= SA) {
-        areaCount = Math.round(areaSI / SA);
+    layers.forEach((layer) => {
+      if (
+        layer.parentLayer?.id !== selectedScenario.layerId ||
+        layer.sketchLayer.type !== 'graphics'
+      ) {
+        return;
       }
 
-      // set the AA on the original graphic, so it is visible in the popup
-      graphic.setAttribute('AA', Math.round(areaSI));
-      graphic.setAttribute('AC', areaCount);
+      layer.sketchLayer.graphics.forEach((graphic) => {
+        const calcGraphic = graphic.clone();
 
-      // TODO: Remove this console log. It is only for debugging area calculations.
-      console.log(
-        `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
-      );
+        // calculate the area using the custom hook
+        const areaSI = calculateArea(graphic);
+        if (typeof areaSI !== 'number') return;
 
-      // multiply all of the attributes by the area
-      const {
-        TTPK,
-        TTC,
-        TTA,
-        TTPS,
-        LOD_P,
-        LOD_NON,
-        MCPS,
-        TCPS,
-        WVPS,
-        WWPS,
-        ALC,
-        AMC,
-      } = calcGraphic.attributes;
+        // convert area to square feet
+        const areaSF = areaSI * 0.00694444;
+        totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
-      if (TTPK) {
-        ttpk = ttpk + Number(TTPK) * areaCount;
-      }
-      if (TTC) {
-        ttc = ttc + Number(TTC) * areaCount;
-      }
-      if (TTA) {
-        tta = tta + Number(TTA) * areaCount;
-      }
-      if (TTPS) {
-        ttps = ttps + Number(TTPS) * areaCount;
-      }
-      if (LOD_P) {
-        lod_p = lod_p + Number(LOD_P);
-      }
-      if (LOD_NON) {
-        lod_non = lod_non + Number(LOD_NON);
-      }
-      if (MCPS) {
-        mcps = mcps + Number(MCPS) * areaCount;
-      }
-      if (TCPS) {
-        tcps = tcps + Number(TCPS) * areaCount;
-      }
-      if (WVPS) {
-        wvps = wvps + Number(WVPS) * areaCount;
-      }
-      if (WWPS) {
-        wwps = wwps + Number(WWPS) * areaCount;
-      }
-      if (SA) {
-        sa = sa + Number(SA);
-      }
-      if (ALC) {
-        alc = alc + Number(ALC) * areaCount;
-      }
-      if (AMC) {
-        amc = amc + Number(AMC) * areaCount;
-      }
-      if (areaCount) {
-        ac = ac + Number(areaCount);
-      }
+        // Get the number of reference surface areas that are in the actual area.
+        // This is to prevent users from cheating the system by drawing larger shapes
+        // then the reference surface area and it only getting counted as "1" sample.
+        const { SA } = calcGraphic.attributes;
+        let areaCount = 1;
+        if (areaSI >= SA) {
+          areaCount = Math.round(areaSI / SA);
+        }
 
-      calcGraphics.push(calcGraphic);
+        // set the AA on the original graphic, so it is visible in the popup
+        graphic.setAttribute('AA', Math.round(areaSI));
+        graphic.setAttribute('AC', areaCount);
+
+        // TODO: Remove this console log. It is only for debugging area calculations.
+        console.log(
+          `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
+        );
+
+        // multiply all of the attributes by the area
+        const {
+          TTPK,
+          TTC,
+          TTA,
+          TTPS,
+          LOD_P,
+          LOD_NON,
+          MCPS,
+          TCPS,
+          WVPS,
+          WWPS,
+          ALC,
+          AMC,
+        } = calcGraphic.attributes;
+
+        if (TTPK) {
+          ttpk = ttpk + Number(TTPK) * areaCount;
+        }
+        if (TTC) {
+          ttc = ttc + Number(TTC) * areaCount;
+        }
+        if (TTA) {
+          tta = tta + Number(TTA) * areaCount;
+        }
+        if (TTPS) {
+          ttps = ttps + Number(TTPS) * areaCount;
+        }
+        if (LOD_P) {
+          lod_p = lod_p + Number(LOD_P);
+        }
+        if (LOD_NON) {
+          lod_non = lod_non + Number(LOD_NON);
+        }
+        if (MCPS) {
+          mcps = mcps + Number(MCPS) * areaCount;
+        }
+        if (TCPS) {
+          tcps = tcps + Number(TCPS) * areaCount;
+        }
+        if (WVPS) {
+          wvps = wvps + Number(WVPS) * areaCount;
+        }
+        if (WWPS) {
+          wwps = wwps + Number(WWPS) * areaCount;
+        }
+        if (SA) {
+          sa = sa + Number(SA);
+        }
+        if (ALC) {
+          alc = alc + Number(ALC) * areaCount;
+        }
+        if (AMC) {
+          amc = amc + Number(AMC) * areaCount;
+        }
+        if (areaCount) {
+          ac = ac + Number(areaCount);
+        }
+
+        calcGraphics.push(calcGraphic);
+      });
     });
 
     setTotals({
@@ -511,7 +534,8 @@ export function useCalculatePlan() {
 
     // TOTS items
     edits,
-    sketchLayer,
+    layers,
+    selectedScenario,
     calculateArea,
   ]);
 
