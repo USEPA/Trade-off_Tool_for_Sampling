@@ -280,7 +280,7 @@ export const pulblishSuccessMessage = (
 export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
-    title="Scenario Name Not Available"
-    message={`The "${scenarioName}" name is already in use. Please rename the scenario and try again.`}
+    title="Plan Name Not Available"
+    message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
   />
 );
