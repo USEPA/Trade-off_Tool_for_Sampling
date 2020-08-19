@@ -1157,7 +1157,7 @@ function LocateSamples() {
           ) : (
             <React.Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="scenario-select-input">Specify Scenario</label>
+                <label htmlFor="scenario-select-input">Specify Plan</label>
                 <div>
                   {selectedScenario && (
                     <React.Fragment>
@@ -1555,8 +1555,204 @@ function LocateSamples() {
           </p>
         </div>
         <AccordionList>
+          <AccordionItem
+            title={'Add Targeted Samples'}
+            initiallyExpanded={true}
+          >
+            <div css={sectionContainer}>
+              <div css={colorSettingContainerStyles}>
+                <h3>Symbology Settings</h3>
+                <div css={inlineMenuStyles}>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Fill</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(polygonSymbol.color)}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          color: [color.r, color.g, color.b, alpha],
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Outline</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(
+                        polygonSymbol.outline.color,
+                      )}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          outline: {
+                            ...polygonSymbol.outline,
+                            color: [color.r, color.g, color.b, alpha],
+                          },
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3>Established Sample Types</h3>
+                <div css={sketchButtonContainerStyles}>
+                  {SampleSelectOptions.map((option, index) => {
+                    const sampleType = option.value;
+                    const shapeType = sampleAttributes[sampleType].ShapeType;
+                    const edited = userDefinedAttributes.attributes.hasOwnProperty(
+                      sampleType,
+                    );
+                    return (
+                      <SketchButton
+                        key={index}
+                        label={edited ? `${sampleType} (edited)` : sampleType}
+                        iconClass={
+                          shapeType === 'point'
+                            ? 'fas fa-pen-fancy'
+                            : 'fas fa-draw-polygon'
+                        }
+                        onClick={() => sketchButtonClick(sampleType)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              {!trainingMode && userDefinedOptions.length > 0 && (
+                <div>
+                  <br />
+                  <h3>User Defined Sample Types</h3>
+                  <div css={sketchButtonContainerStyles}>
+                    {userDefinedOptions.map((option, index) => {
+                      if (option.isPredefined) return null;
+
+                      const sampleType = option.value;
+                      const shapeType = sampleAttributes[sampleType].ShapeType;
+                      return (
+                        <SketchButton
+                          key={index}
+                          label={sampleType}
+                          iconClass={
+                            shapeType === 'point'
+                              ? 'fas fa-pen-fancy'
+                              : 'fas fa-draw-polygon'
+                          }
+                          onClick={() => sketchButtonClick(sampleType)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </AccordionItem>
+          <AccordionItem title={'Add Multiple Random Samples'}>
+            <div css={sectionContainer}>
+              {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
+              {sketchLayer?.layerType !== 'VSP' && (
+                <React.Fragment>
+                  <label htmlFor="number-of-samples-input">
+                    Number of Samples
+                  </label>
+                  <input
+                    id="number-of-samples-input"
+                    css={inputStyles}
+                    value={numberRandomSamples}
+                    onChange={(ev) => setNumberRandomSamples(ev.target.value)}
+                  />
+                  <label htmlFor="sample-type-select-input">Sample Type</label>
+                  <Select
+                    id="sample-type-select"
+                    inputId="sample-type-select-input"
+                    css={fullWidthSelectStyles}
+                    value={sampleType}
+                    onChange={(ev) => setSampleType(ev as SampleSelectType)}
+                    options={SampleSelectOptions}
+                  />
+                  <label htmlFor="aoi-mask-select-input">
+                    Area of Interest Mask
+                  </label>
+                  <div css={inlineMenuStyles}>
+                    <Select
+                      id="aoi-mask-select"
+                      inputId="aoi-mask-select-input"
+                      css={inlineSelectStyles}
+                      styles={reactSelectStyles}
+                      isClearable={true}
+                      value={aoiSketchLayer}
+                      onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
+                      options={layers.filter(
+                        (layer) => layer.layerType === 'Area of Interest',
+                      )}
+                    />
+                    <button
+                      css={addButtonStyles}
+                      onClick={(ev) => {
+                        setGoTo('addData');
+                        setGoToOptions({
+                          from: 'file',
+                          layerType: 'Area of Interest',
+                        });
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div css={centerTextStyles}>
+                    <em>OR</em>
+                  </div>
+                  <button
+                    id="aoi"
+                    title="Draw Area of Interest Mask"
+                    className="sketch-button"
+                    onClick={sketchAoiButtonClick}
+                    css={sketchAoiButtonStyles}
+                  >
+                    <span css={sketchAoiTextStyles}>
+                      <i className="fas fa-draw-polygon" />{' '}
+                      <span>Draw Area of Interest Mask</span>
+                    </span>
+                  </button>
+                  {generateRandomResponse.status === 'success' &&
+                    sketchLayer &&
+                    generateRandomSuccessMessage(
+                      generateRandomResponse.data.length,
+                      sketchLayer.label,
+                    )}
+                  {generateRandomResponse.status === 'failure' &&
+                    webServiceErrorMessage}
+                  {generateRandomResponse.status === 'exceededTransferLimit' &&
+                    generateRandomExceededTransferLimitMessage}
+                  {numberRandomSamples &&
+                    aoiSketchLayer?.sketchLayer.type === 'graphics' &&
+                    aoiSketchLayer.sketchLayer.graphics.length > 0 && (
+                      <button css={submitButtonStyles} onClick={randomSamples}>
+                        {generateRandomResponse.status !== 'fetching' &&
+                          'Submit'}
+                        {generateRandomResponse.status === 'fetching' && (
+                          <React.Fragment>
+                            <i className="fas fa-spinner fa-pulse" />
+                            &nbsp;&nbsp;Loading...
+                          </React.Fragment>
+                        )}
+                      </button>
+                    )}
+                </React.Fragment>
+              )}
+            </div>
+          </AccordionItem>
           {!trainingMode && (
-            <AccordionItem title={'Create User Defined Sample Types'}>
+            <AccordionItem title={'Create Custom Sample Types'}>
               <div css={sectionContainer}>
                 <div css={iconButtonContainerStyles}>
                   <label htmlFor="sample-type-select-input">Sample Type</label>
@@ -2148,202 +2344,6 @@ function LocateSamples() {
               </div>
             </AccordionItem>
           )}
-          <AccordionItem
-            title={'Add Targeted Samples'}
-            initiallyExpanded={true}
-          >
-            <div css={sectionContainer}>
-              <div css={colorSettingContainerStyles}>
-                <h3>Color Settings</h3>
-                <div css={inlineMenuStyles}>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Fill</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(polygonSymbol.color)}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          color: [color.r, color.g, color.b, alpha],
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Outline</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(
-                        polygonSymbol.outline.color,
-                      )}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          outline: {
-                            ...polygonSymbol.outline,
-                            color: [color.r, color.g, color.b, alpha],
-                          },
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3>EPA Sample Types</h3>
-                <div css={sketchButtonContainerStyles}>
-                  {SampleSelectOptions.map((option, index) => {
-                    const sampleType = option.value;
-                    const shapeType = sampleAttributes[sampleType].ShapeType;
-                    const edited = userDefinedAttributes.attributes.hasOwnProperty(
-                      sampleType,
-                    );
-                    return (
-                      <SketchButton
-                        key={index}
-                        label={edited ? `${sampleType} (edited)` : sampleType}
-                        iconClass={
-                          shapeType === 'point'
-                            ? 'fas fa-pen-fancy'
-                            : 'fas fa-draw-polygon'
-                        }
-                        onClick={() => sketchButtonClick(sampleType)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-              {!trainingMode && userDefinedOptions.length > 0 && (
-                <div>
-                  <br />
-                  <h3>User Defined Sample Types</h3>
-                  <div css={sketchButtonContainerStyles}>
-                    {userDefinedOptions.map((option, index) => {
-                      if (option.isPredefined) return null;
-
-                      const sampleType = option.value;
-                      const shapeType = sampleAttributes[sampleType].ShapeType;
-                      return (
-                        <SketchButton
-                          key={index}
-                          label={sampleType}
-                          iconClass={
-                            shapeType === 'point'
-                              ? 'fas fa-pen-fancy'
-                              : 'fas fa-draw-polygon'
-                          }
-                          onClick={() => sketchButtonClick(sampleType)}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </AccordionItem>
-          <AccordionItem title={'Add Multiple Random Samples'}>
-            <div css={sectionContainer}>
-              {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
-              {sketchLayer?.layerType !== 'VSP' && (
-                <React.Fragment>
-                  <label htmlFor="number-of-samples-input">
-                    Number of Samples
-                  </label>
-                  <input
-                    id="number-of-samples-input"
-                    css={inputStyles}
-                    value={numberRandomSamples}
-                    onChange={(ev) => setNumberRandomSamples(ev.target.value)}
-                  />
-                  <label htmlFor="sample-type-select-input">Sample Type</label>
-                  <Select
-                    id="sample-type-select"
-                    inputId="sample-type-select-input"
-                    css={fullWidthSelectStyles}
-                    value={sampleType}
-                    onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                    options={SampleSelectOptions}
-                  />
-                  <label htmlFor="aoi-mask-select-input">
-                    Area of Interest Mask
-                  </label>
-                  <div css={inlineMenuStyles}>
-                    <Select
-                      id="aoi-mask-select"
-                      inputId="aoi-mask-select-input"
-                      css={inlineSelectStyles}
-                      styles={reactSelectStyles}
-                      isClearable={true}
-                      value={aoiSketchLayer}
-                      onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
-                      options={layers.filter(
-                        (layer) => layer.layerType === 'Area of Interest',
-                      )}
-                    />
-                    <button
-                      css={addButtonStyles}
-                      onClick={(ev) => {
-                        setGoTo('addData');
-                        setGoToOptions({
-                          from: 'file',
-                          layerType: 'Area of Interest',
-                        });
-                      }}
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div css={centerTextStyles}>
-                    <em>OR</em>
-                  </div>
-                  <button
-                    id="aoi"
-                    title="Draw Area of Interest Mask"
-                    className="sketch-button"
-                    onClick={sketchAoiButtonClick}
-                    css={sketchAoiButtonStyles}
-                  >
-                    <span css={sketchAoiTextStyles}>
-                      <i className="fas fa-draw-polygon" />{' '}
-                      <span>Draw Area of Interest Mask</span>
-                    </span>
-                  </button>
-                  {generateRandomResponse.status === 'success' &&
-                    sketchLayer &&
-                    generateRandomSuccessMessage(
-                      generateRandomResponse.data.length,
-                      sketchLayer.label,
-                    )}
-                  {generateRandomResponse.status === 'failure' &&
-                    webServiceErrorMessage}
-                  {generateRandomResponse.status === 'exceededTransferLimit' &&
-                    generateRandomExceededTransferLimitMessage}
-                  {numberRandomSamples &&
-                    aoiSketchLayer?.sketchLayer.type === 'graphics' &&
-                    aoiSketchLayer.sketchLayer.graphics.length > 0 && (
-                      <button css={submitButtonStyles} onClick={randomSamples}>
-                        {generateRandomResponse.status !== 'fetching' &&
-                          'Submit'}
-                        {generateRandomResponse.status === 'fetching' && (
-                          <React.Fragment>
-                            <i className="fas fa-spinner fa-pulse" />
-                            &nbsp;&nbsp;Loading...
-                          </React.Fragment>
-                        )}
-                      </button>
-                    )}
-                </React.Fragment>
-              )}
-            </div>
-          </AccordionItem>
         </AccordionList>
       </div>
       <div css={sectionContainer}>

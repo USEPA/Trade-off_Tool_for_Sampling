@@ -266,14 +266,11 @@ function CalculateResults() {
         .string('Trade-off Tool for Sampling (TOTS) Summary')
         .style(sheetTitleStyle);
       summarySheet.cell(2, 1).string('Version: 1.0');
-      summarySheet
-        .cell(4, 1)
-        .string('Scenario Name')
-        .style(underlinedLabelStyle);
+      summarySheet.cell(4, 1).string('Plan Name').style(underlinedLabelStyle);
       summarySheet.cell(4, 2).string(selectedScenario.scenarioName);
       summarySheet
         .cell(5, 1)
-        .string('Scenario Description')
+        .string('Plan Description')
         .style(underlinedLabelStyle);
       summarySheet.cell(5, 2).string(selectedScenario.scenarioDescription);
 
@@ -786,11 +783,11 @@ function CalculateResults() {
           <div>
             <h3>Summary</h3>
             <LabelValue
-              label="Scenario Name"
+              label="Plan Name"
               value={selectedScenario?.scenarioName}
             />
             <LabelValue
-              label="Scenario Description"
+              label="Plan Description"
               value={selectedScenario?.scenarioDescription}
             />
             <br />

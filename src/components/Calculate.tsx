@@ -652,11 +652,11 @@ function Calculate() {
             Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
-            <strong>Scenario Name: </strong>
+            <strong>Plan Name: </strong>
             {selectedScenario?.scenarioName}
           </p>
           <p css={layerInfo}>
-            <strong>Scenario Description: </strong>
+            <strong>Plan Description: </strong>
             <ShowLessMore
               text={selectedScenario?.scenarioDescription}
               charLimit={20}

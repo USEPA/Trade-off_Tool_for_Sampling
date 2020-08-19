@@ -237,7 +237,7 @@ function EditScenario({
         ev.preventDefault();
       }}
     >
-      <label htmlFor="scenario-name-input">Scenario Name</label>
+      <label htmlFor="scenario-name-input">Plan Name</label>
       <input
         id="scenario-name-input"
         disabled={
@@ -252,7 +252,7 @@ function EditScenario({
           setSaveStatus('changes');
         }}
       />
-      <label htmlFor="scenario-description-input">Scenario Description</label>
+      <label htmlFor="scenario-description-input">Plan Description</label>
       <input
         id="scenario-description-input"
         disabled={
