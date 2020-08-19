@@ -825,7 +825,11 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
-    if (graphics.length > 0) mapView.goTo(graphics);
+
+    // zoom to the layer unless it is a contamination map
+    if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
+      mapView.goTo(graphics);
+    }
 
     setUploadStatus('success');
   }, [

@@ -6,7 +6,6 @@ import { jsx, css } from '@emotion/core';
 import MapWidgets from 'components/MapWidgets';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { getGraphicsArray } from 'utils/sketchUtils';
@@ -29,7 +28,6 @@ function Map({ height }: Props) {
 
   const mapRef = React.useRef<HTMLDivElement>(null);
 
-  const { contaminationMap } = React.useContext(CalculateContext);
   const {
     autoZoom,
     homeWidget,
@@ -118,11 +116,7 @@ function Map({ height }: Props) {
     if (!map || !mapView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
-    const zoomGraphics = getGraphicsArray([
-      sketchLayer,
-      aoiSketchLayer,
-      contaminationMap,
-    ]);
+    const zoomGraphics = getGraphicsArray([sketchLayer, aoiSketchLayer]);
 
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics).then(() => {
@@ -136,7 +130,6 @@ function Map({ height }: Props) {
     autoZoom,
     map,
     mapView,
-    contaminationMap,
     aoiSketchLayer,
     sketchLayer,
     homeWidget,
