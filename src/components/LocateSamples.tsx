@@ -1679,7 +1679,9 @@ function LocateSamples() {
                         value={wwps ? wwps : ''}
                         onChange={(ev) => setWwps(ev.target.value)}
                       />
-                      <label htmlFor="alc-input">Analysis Labor Cost</label>
+                      <label htmlFor="alc-input">
+                        Analysis Labor Cost <em>($)</em>
+                      </label>
                       <input
                         id="alc-input"
                         disabled={editingStatus === 'view'}
@@ -1687,7 +1689,9 @@ function LocateSamples() {
                         value={alc ? alc : ''}
                         onChange={(ev) => setAlc(ev.target.value)}
                       />
-                      <label htmlFor="amc-input">Analysis Material Cost</label>
+                      <label htmlFor="amc-input">
+                        Analysis Material Cost <em>($)</em>
+                      </label>
                       <input
                         id="amc-input"
                         disabled={editingStatus === 'view'}
