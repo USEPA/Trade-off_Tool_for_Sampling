@@ -215,8 +215,20 @@ function Calculate() {
 
   // updates context to run the calculations
   function runCalculation() {
+    if (!map) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
+    if (selectedScenario.layers.length === 0) {
       setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
@@ -275,14 +287,21 @@ function Calculate() {
   // map.
   function runContaminationCalculation() {
     if (!getGpMaxRecordCount) return;
+    if (!map || !sketchLayer?.sketchLayer) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      !map ||
-      !selectedScenario ||
-      selectedScenario.layers.length === 0
-    ) {
-      setContaminationResults({ status: 'no-layer', data: null });
+    if (selectedScenario.layers.length === 0) {
+      setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 

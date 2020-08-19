@@ -788,10 +788,16 @@ function CalculateResults() {
       {calculateResults.status === 'failure' && (
         <p>An error occurred while calculating. Please try again.</p>
       )}
+      {calculateResults.status === 'no-scenario' && (
+        <p>
+          No plan has been selected. Please go to the Create Plan tab, select a
+          plan and try again.
+        </p>
+      )}
       {calculateResults.status === 'no-layer' && (
         <p>
-          No sample layer has been selected. Please go to the Create Plan tab,
-          select a layer and try again.
+          The selected plan has no layers. Please go to the Create Plan tab, add
+          one or more layers to the plan, and try again.
         </p>
       )}
       {calculateResults.status === 'no-graphics' && (
