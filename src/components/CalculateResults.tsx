@@ -84,10 +84,11 @@ function CalculateResults() {
     contaminationMap, //
   } = React.useContext(CalculateContext);
   const {
+    aoiSketchLayer,
+    layers,
+    map,
     mapView,
     selectedScenario,
-    sketchLayer,
-    aoiSketchLayer, //
   } = React.useContext(SketchContext);
 
   const [
@@ -106,14 +107,20 @@ function CalculateResults() {
   ] = React.useState<__esri.Screenshot | null>(null);
   React.useEffect(() => {
     if (screenshotInitialized) return;
-    if (!mapView || downloadStatus !== 'fetching') return;
+    if (!mapView || !selectedScenario || downloadStatus !== 'fetching') return;
 
     // save the current extent
     const initialExtent = mapView.extent;
 
+    // get the sample layers for the selected scenario
+    const sampleLayers = layers.filter(
+      (layer) =>
+        layer.parentLayer && layer.parentLayer.id === selectedScenario.layerId,
+    );
+
     // zoom to the graphics for the active layers
     const zoomGraphics = getGraphicsArray([
-      sketchLayer,
+      ...sampleLayers,
       aoiSketchLayer,
       contaminationMap,
     ]);
@@ -143,12 +150,13 @@ function CalculateResults() {
 
     setScreenshotInitialized(true);
   }, [
-    mapView,
-    sketchLayer,
     aoiSketchLayer,
     contaminationMap,
     downloadStatus,
+    layers,
+    mapView,
     screenshotInitialized,
+    selectedScenario,
   ]);
 
   // convert the screenshot to base64
@@ -189,7 +197,7 @@ function CalculateResults() {
   // export the excel doc
   React.useEffect(() => {
     if (
-      !sketchLayer ||
+      !selectedScenario ||
       downloadStatus !== 'fetching' ||
       !base64Screenshot ||
       calculateResults.status !== 'success' ||
@@ -697,7 +705,16 @@ function CalculateResults() {
 
     function addSampleSheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || sketchLayer.sketchLayer.type !== 'graphics') return;
+      if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
+        return;
+      }
+
+      // get the group layer for the scenario
+      const scenarioGroupLayer = map.layers.find(
+        (layer) =>
+          layer.type === 'group' && layer.id === selectedScenario.layerId,
+      ) as __esri.GroupLayer;
+      if (!scenarioGroupLayer) return;
 
       // add the sheet
       const samplesSheet = workbook.addWorksheet('Sample Details');
@@ -724,40 +741,45 @@ function CalculateResults() {
 
       // add in the rows
       let currentRow = 4;
-      sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-        const {
-          PERMANENT_IDENTIFIER,
-          TYPE,
-          CONTAMVAL,
-          CONTAMUNIT,
-          Notes,
-        } = graphic.attributes;
+      scenarioGroupLayer.layers.forEach((layer) => {
+        if (layer.type !== 'graphics') return;
 
-        if (PERMANENT_IDENTIFIER) {
-          samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
-        }
-        if (TYPE) {
-          samplesSheet.cell(currentRow, 2).string(TYPE);
-        }
-        if (CONTAMVAL) {
-          samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
-        }
-        if (CONTAMUNIT) {
-          samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
-        }
-        if (Notes) {
-          samplesSheet.cell(currentRow, 5).string(Notes);
-        }
+        const graphicsLayer = layer as __esri.GraphicsLayer;
+        graphicsLayer.graphics.forEach((graphic) => {
+          const {
+            PERMANENT_IDENTIFIER,
+            TYPE,
+            CONTAMVAL,
+            CONTAMUNIT,
+            Notes,
+          } = graphic.attributes;
 
-        currentRow += 1;
+          if (PERMANENT_IDENTIFIER) {
+            samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
+          }
+          if (TYPE) {
+            samplesSheet.cell(currentRow, 2).string(TYPE);
+          }
+          if (CONTAMVAL) {
+            samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
+          }
+          if (CONTAMUNIT) {
+            samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
+          }
+          if (Notes) {
+            samplesSheet.cell(currentRow, 5).string(Notes);
+          }
+
+          currentRow += 1;
+        });
       });
     }
   }, [
-    selectedScenario,
-    sketchLayer,
     base64Screenshot,
-    downloadStatus,
     calculateResults,
+    downloadStatus,
+    map,
+    selectedScenario,
   ]);
 
   return (

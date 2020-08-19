@@ -46,6 +46,27 @@ type ContaminationResultsType = {
   data: any[] | null;
 };
 
+// Gets all of the graphics of a group layer associated with the provided layerId
+function getGraphics(map: __esri.Map, layerId: string) {
+  const graphics: __esri.Graphic[] = [];
+
+  // find the group layer
+  const tempGroupLayer = map.layers.find((layer) => layer.id === layerId);
+
+  // get the graphics
+  if (tempGroupLayer) {
+    const groupLayer = tempGroupLayer as __esri.GroupLayer;
+    groupLayer.layers.forEach((layer) => {
+      if (layer.type !== 'graphics') return;
+
+      const graphicsLayer = layer as __esri.GraphicsLayer;
+      graphics.push(...graphicsLayer.graphics.toArray());
+    });
+  }
+
+  return graphics;
+}
+
 // --- styles (Calculate) ---
 const inputStyles = css`
   width: 100%;
@@ -109,6 +130,7 @@ function Calculate() {
     setEdits,
     layers,
     setLayers,
+    map,
     sketchLayer,
     selectedScenario,
     getGpMaxRecordCount,
@@ -194,16 +216,15 @@ function Calculate() {
   // updates context to run the calculations
   function runCalculation() {
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
+    if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
       setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
+    const graphics = getGraphics(map, selectedScenario.layerId);
+
     // set the no graphics status
-    if (sketchLayer.sketchLayer.graphics.length === 0) {
+    if (graphics.length === 0) {
       setCalculateResults({
         status: 'no-graphics',
         panelOpen: true,
@@ -257,7 +278,9 @@ function Calculate() {
     // set the no layer status
     if (
       !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
+      !map ||
+      !selectedScenario ||
+      selectedScenario.layers.length === 0
     ) {
       setContaminationResults({ status: 'no-layer', data: null });
       return;
@@ -331,8 +354,7 @@ function Calculate() {
       ],
     });
 
-    const sketchedGraphics: __esri.Graphic[] = [];
-    sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
+    const sketchedGraphics = getGraphics(map, selectedScenario.layerId);
     if (sketchedGraphics.length === 0) {
       // display the no-graphics warning
       setContaminationResults({
@@ -553,6 +575,8 @@ function Calculate() {
               type: 'properties',
             });
 
+            // TODO - Need to figure out how to pass the multiple layrs to the
+            //    contamination hits gp service
             // save the data to state, use an empty array if there is no data
             if (resFeatures.length > 0) {
               const popupTemplate = new PopupTemplate(
