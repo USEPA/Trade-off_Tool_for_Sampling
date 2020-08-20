@@ -928,7 +928,9 @@ function ResultCard({ result }: ResultCardProps) {
                   const uuid = keys[j];
                   const graphicsList = graphics[uuid];
                   const firstAttributes = graphicsList[0].attributes;
-                  const layerName = firstAttributes.DECISIONUNIT;
+                  const layerName = firstAttributes.DECISIONUNIT
+                    ? firstAttributes.DECISIONUNIT
+                    : scenarioName;
 
                   // build the graphics layer
                   const graphicsLayer = new GraphicsLayer({
@@ -1032,7 +1034,7 @@ function ResultCard({ result }: ResultCardProps) {
 
             // zoom to the graphics layer
             if (zoomToGraphics.length > 0 && mapView) {
-              mapView?.goTo(zoomToGraphics);
+              mapView.goTo(zoomToGraphics);
             }
 
             // set the state for session storage
@@ -1131,9 +1133,18 @@ function ResultCard({ result }: ResultCardProps) {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
       let newSketchLayer: LayerType | null = null;
+      const parentLayerIds: string[] = [];
       layers.forEach((layer) => {
         if (layer.portalId === result.id) {
-          mapLayersToRemove.push(layer.sketchLayer);
+          if (!layer.parentLayer) {
+            mapLayersToRemove.push(layer.sketchLayer);
+            return;
+          }
+
+          if (parentLayerIds.includes(layer.parentLayer.id)) return;
+
+          mapLayersToRemove.push(layer.parentLayer);
+          parentLayerIds.push(layer.parentLayer.id);
         } else {
           if (
             !newSketchLayer &&
@@ -1143,6 +1154,8 @@ function ResultCard({ result }: ResultCardProps) {
           }
         }
       });
+
+      // TODO Update this to work with scenarios/layers
       setSketchLayer(newSketchLayer);
       map.removeMany(mapLayersToRemove);
 
