@@ -9,6 +9,10 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
+// utils
+import { findLayerInEdits } from 'utils/sketchUtils';
+// types
+import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
 import { colors } from 'styles';
 
@@ -512,9 +516,13 @@ function Toolbar() {
       });
 
       // find the layer
-      const totsLayerToRemove = layers.find(
-        (layer) => layer.layerId === layerToRemove.id,
+      let totsLayerToRemove: ScenarioEditsType | LayerEditsType | null = null;
+      const { editsScenario, editsLayer } = findLayerInEdits(
+        edits.edits,
+        layerToRemove.id,
       );
+      if (editsLayer) totsLayerToRemove = editsLayer;
+      if (editsScenario) totsLayerToRemove = editsScenario;
 
       // depending on the layer type, auto select the next available for the select
       // menus and sketch utility
@@ -554,7 +562,7 @@ function Toolbar() {
       if (totsLayerToRemove?.addedFrom === 'tots') {
         setPortalLayers(
           portalLayers.filter(
-            (portalLayer) => portalLayer.id !== totsLayerToRemove.portalId,
+            (portalLayer) => portalLayer.id !== totsLayerToRemove?.portalId,
           ),
         );
       }
