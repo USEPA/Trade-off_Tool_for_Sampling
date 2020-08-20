@@ -36,6 +36,7 @@ export type ScenarioEditsType = {
 export type LayerEditsType = {
   type: 'layer';
   id: number; // layer id
+  uuid: string; // unique id for the layer
   layerId: string; // id from esri layer
   portalId: string; // id from portal layer
   name: string; // layer name
@@ -47,6 +48,7 @@ export type LayerEditsType = {
   editType: EditType; // edit type
   visible: boolean; // layer visibility on map
   listMode: 'hide' | 'hide-children' | 'show'; // layer visiblity in legend widget
+  sort: number; // sort order for this layer
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
   deletes: DeleteFeatureType[]; // features to delete
@@ -61,4 +63,5 @@ export type FeatureEditsType = {
 export type DeleteFeatureType = {
   PERMANENT_IDENTIFIER: string;
   GLOBALID: string;
+  DECISIONUNITUUID: string;
 };

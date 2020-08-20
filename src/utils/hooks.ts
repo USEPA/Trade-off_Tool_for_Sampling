@@ -855,6 +855,7 @@ function useEditsLayerStorage() {
 
       newLayers.push({
         id: editsLayer.id,
+        uuid: editsLayer.uuid,
         layerId: editsLayer.layerId,
         portalId: editsLayer.portalId,
         value: editsLayer.label,
@@ -866,6 +867,7 @@ function useEditsLayerStorage() {
         status: editsLayer.status,
         visible: editsLayer.visible,
         listMode: editsLayer.listMode,
+        sort: editsLayer.sort,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
         parentLayer,

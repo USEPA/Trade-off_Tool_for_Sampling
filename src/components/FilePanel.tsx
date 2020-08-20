@@ -796,6 +796,7 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      uuid: generateUUID(),
       layerId: graphicsLayer.id,
       portalId: '',
       value: layerName,
@@ -805,6 +806,7 @@ function FilePanel() {
       editType: 'add',
       visible,
       listMode,
+      sort: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       status: 'added',

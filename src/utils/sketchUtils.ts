@@ -89,6 +89,7 @@ export function createLayerEditTemplate(
   return {
     type: 'layer',
     id: layerToEdit.id,
+    uuid: layerToEdit.uuid,
     layerId: layerToEdit.sketchLayer.id,
     portalId: layerToEdit.portalId,
     name: layerToEdit.name,
@@ -100,6 +101,7 @@ export function createLayerEditTemplate(
     editType,
     visible: layerToEdit.visible,
     listMode: layerToEdit.listMode,
+    sort: layerToEdit.sort,
     adds: [],
     updates: [],
     deletes: [],
@@ -189,6 +191,7 @@ export function updateLayerEdits({
     if (editsScenario) {
       editsScenario.visible = layer.visible;
       editsScenario.listMode = layer.listMode;
+      if (editsScenario.status === 'published') editsScenario.status = 'edited';
     }
 
     editsLayer.visible = layer.visible;
@@ -295,6 +298,7 @@ export function updateLayerEdits({
         editsLayer.deletes.push({
           PERMANENT_IDENTIFIER: change.attributes.PERMANENT_IDENTIFIER,
           GLOBALID: change.attributes.GLOBALID,
+          DECISIONUNITUUID: '',
         });
       });
     }
@@ -494,6 +498,7 @@ export function createSampleLayer(
 
   return {
     id: -1,
+    uuid: generateUUID(),
     layerId: graphicsLayer.id,
     portalId: '',
     value: graphicsLayer.id,
@@ -503,6 +508,7 @@ export function createSampleLayer(
     editType: 'add',
     visible: true,
     listMode: 'show',
+    sort: 0,
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
@@ -526,6 +532,7 @@ export function getDefaultAreaOfInterestLayer(
 
   return {
     id: -1,
+    uuid: '',
     layerId: graphicsLayer.id,
     portalId: '',
     value: 'sketchAoi',
@@ -537,6 +544,7 @@ export function getDefaultAreaOfInterestLayer(
     editType: 'add',
     visible: true,
     listMode: 'show',
+    sort: 0,
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',

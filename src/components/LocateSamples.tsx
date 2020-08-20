@@ -527,11 +527,14 @@ function LocateSamples() {
   function sketchButtonClick(label: string) {
     if (!sketchVM || !map || !sketchLayer) return;
 
-    // put the sketch layer on the map, if it isn't there already
+    // put the sketch layer on the map, if it isn't there already and
+    // is not part of a group layer
     const layerIndex = map.layers.findIndex(
       (layer) => layer.id === sketchLayer.layerId,
     );
-    if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
+    if (layerIndex === -1 && !sketchLayer.parentLayer) {
+      map.add(sketchLayer.sketchLayer);
+    }
 
     // save changes from other sketchVM and disable to prevent
     // interference
@@ -2232,7 +2235,9 @@ function LocateSamples() {
                                 UPDATEDDATE: null,
                                 USERNAME: null,
                                 ORGANIZATION: null,
-                                ELEVATIONSERIES: null,
+                                DECISIONUNITUUID: null,
+                                DECISIONUNIT: null,
+                                DECISIONUNITSORT: null,
                               };
 
                               // add/update the sample's attributes

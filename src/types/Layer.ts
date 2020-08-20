@@ -18,6 +18,7 @@ export type PublishStatus = 'added' | 'edited' | 'published';
 
 export type LayerType = {
   id: number;
+  uuid: string;
   layerId: string;
   portalId: string;
   value: string;
@@ -27,6 +28,7 @@ export type LayerType = {
   editType: EditType;
   visible: boolean;
   listMode: 'hide' | 'hide-children' | 'show';
+  sort: number;
   geometryType: string;
   addedFrom: AddedFrom;
   status: PublishStatus;

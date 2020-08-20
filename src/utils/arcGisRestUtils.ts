@@ -454,12 +454,10 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 export function applyEdits({
   portal,
   serviceUrl,
-  layers,
   edits,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
-  layers: LayerType[];
   edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
@@ -545,7 +543,7 @@ export function publish({
             });
 
             // publish the edits
-            applyEdits({ portal, serviceUrl, layers, edits })
+            applyEdits({ portal, serviceUrl, edits })
               .then((res) => resolve(res))
               .catch((err) => reject(err));
           })

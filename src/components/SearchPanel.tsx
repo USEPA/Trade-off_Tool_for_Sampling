@@ -847,7 +847,9 @@ function ResultCard({ result }: ResultCardProps) {
                       UPDATEDDATE: null,
                       USERNAME: null,
                       ORGANIZATION: null,
-                      ELEVATIONSERIES: null,
+                      DECISIONUNITUUID: null,
+                      DECISIONUNIT: null,
+                      DECISIONUNITSORT: null,
                     };
                   }
 
@@ -881,6 +883,7 @@ function ResultCard({ result }: ResultCardProps) {
 
                 const layerToAdd: LayerType = {
                   id: layerDetails.id,
+                  uuid: '', //layerDetails.uuid,
                   layerId: graphicsLayer.id,
                   portalId: result.id,
                   value: layerName,
@@ -890,6 +893,7 @@ function ResultCard({ result }: ResultCardProps) {
                   editType: 'add',
                   visible: true,
                   listMode: 'show',
+                  sort: 0, // layerDetails.sort,
                   geometryType: layerDetails.geometryType,
                   addedFrom: 'tots',
                   status: 'published',

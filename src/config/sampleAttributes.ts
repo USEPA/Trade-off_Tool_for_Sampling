@@ -38,7 +38,9 @@ export type Attributes = {
     UPDATEDDATE: null;
     USERNAME: string | null;
     ORGANIZATION: string | null;
-    ELEVATIONSERIES: string | null;
+    DECISIONUNITUUID: string | null;
+    DECISIONUNIT: string | null;
+    DECISIONUNITSORT: number | null;
   };
 };
 
@@ -78,7 +80,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
   'Micro Vac': {
     OBJECTID: '-1',
@@ -110,7 +114,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
   'Wet Vac': {
     OBJECTID: '-1',
@@ -142,7 +148,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
   Robot: {
     OBJECTID: '-1',
@@ -174,7 +182,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
   'Aggressive Air': {
     OBJECTID: '-1',
@@ -206,7 +216,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
   Swab: {
     OBJECTID: '-1',
@@ -238,7 +250,9 @@ export const sampleAttributes: Attributes = {
     UPDATEDDATE: null,
     USERNAME: null,
     ORGANIZATION: null,
-    ELEVATIONSERIES: null,
+    DECISIONUNITUUID: null,
+    DECISIONUNIT: null,
+    DECISIONUNITSORT: null,
   },
 };
 
