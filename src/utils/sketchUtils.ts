@@ -544,7 +544,7 @@ export function getDefaultAreaOfInterestLayer(
     scenarioDescription: '',
     editType: 'add',
     visible: true,
-    listMode: 'show',
+    listMode: 'hide',
     sort: 0,
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
