@@ -1212,14 +1212,14 @@ function LocateSamples() {
                   />
                   <button
                     id="aoi"
-                    title="Draw Area of Interest Mask"
+                    title="Draw Sampling Mask"
                     className="sketch-button"
                     onClick={sketchAoiButtonClick}
                     css={sketchAoiButtonStyles}
                   >
                     <span css={sketchAoiTextStyles}>
                       <i className="fas fa-draw-polygon" />{' '}
-                      <span>Draw Area of Interest Mask</span>
+                      <span>Draw Sampling Mask</span>
                     </span>
                   </button>
                   {generateRandomResponse.status === 'success' &&
