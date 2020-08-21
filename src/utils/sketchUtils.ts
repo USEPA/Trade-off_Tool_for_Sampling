@@ -449,6 +449,7 @@ export function getDefaultAreaOfInterestLayer(
 ) {
   const graphicsLayer = new GraphicsLayer({
     title: 'Sketched Area of Interest',
+    listMode: 'hide',
   });
 
   return {
