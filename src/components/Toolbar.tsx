@@ -164,7 +164,6 @@ function Toolbar() {
     urlLayers,
     setUrlLayers,
     setSketchLayer,
-    setAoiSketchLayer,
     polygonSymbol,
   } = React.useContext(SketchContext);
   const {
@@ -443,14 +442,6 @@ function Toolbar() {
         );
         setSketchLayer(newSampleLayer ? newSampleLayer : null);
       }
-      if (layerType === 'Area of Interest') {
-        const newAoiLayer = layers.find(
-          (layer) =>
-            layer.layerId !== layerToRemove.id &&
-            layer.layerType === 'Area of Interest',
-        );
-        setAoiSketchLayer(newAoiLayer ? newAoiLayer : null);
-      }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
           (layer) =>
@@ -517,7 +508,6 @@ function Toolbar() {
     urlLayers,
     setUrlLayers,
     setSketchLayer,
-    setAoiSketchLayer,
     setContaminationMap,
   ]);
 

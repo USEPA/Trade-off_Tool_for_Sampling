@@ -1245,8 +1245,8 @@ function useContaminationMapStorage() {
 }
 
 // Uses browser storage for holding the currently selected area of interest layer.
-function useAreaOfInterestStorage() {
-  const key = 'tots_selected_area_of_interest_layer';
+function useGenerateRandomMaskStorage() {
+  const key = 'tots_generate_random_mask_layer';
   const { setOptions } = React.useContext(DialogContext);
   const { layers } = React.useContext(SketchContext);
   const {
@@ -1598,7 +1598,7 @@ export function useSessionStorage() {
   useHomeWidgetStorage();
   useSamplesLayerStorage();
   useContaminationMapStorage();
-  useAreaOfInterestStorage();
+  useGenerateRandomMaskStorage();
   useCalculateSettingsStorage();
   useCurrentTabSettings();
   useBasemapStorage();
