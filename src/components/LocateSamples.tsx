@@ -1145,6 +1145,7 @@ function LocateSamples() {
                     <React.Fragment>
                       <button
                         css={iconButtonStyles}
+                        title="Delete Plan"
                         onClick={() => {
                           // remove all of the child layers
                           setLayers((layers) => {
@@ -1183,9 +1184,11 @@ function LocateSamples() {
                         }}
                       >
                         <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Plan</span>
                       </button>
                       <button
                         css={iconButtonStyles}
+                        title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
                         onClick={() => {
                           setAddScenarioVisible(false);
                           setEditScenarioVisible(!editScenarioVisible);
@@ -1196,11 +1199,15 @@ function LocateSamples() {
                             editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
                           }
                         />
+                        <span className="sr-only">
+                          {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                        </span>
                       </button>
                     </React.Fragment>
                   )}
                   <button
                     css={iconButtonStyles}
+                    title={addScenarioVisible ? 'Cancel' : 'Add Plan'}
                     onClick={() => {
                       setEditScenarioVisible(false);
                       setAddScenarioVisible(!addScenarioVisible);
@@ -1211,6 +1218,9 @@ function LocateSamples() {
                         addScenarioVisible ? 'fas fa-times' : 'fas fa-plus'
                       }
                     />
+                    <span className="sr-only">
+                      {addScenarioVisible ? 'Cancel' : 'Add Plan'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1245,6 +1255,7 @@ function LocateSamples() {
                     <React.Fragment>
                       <button
                         css={iconButtonStyles}
+                        title="Delete Layer"
                         onClick={() => {
                           // remove the layer from layers
                           setLayers((layers) => {
@@ -1337,10 +1348,12 @@ function LocateSamples() {
                         }}
                       >
                         <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Layer</span>
                       </button>
                       {sketchLayer.parentLayer ? (
                         <button
                           css={iconButtonStyles}
+                          title="Unlink Layer"
                           onClick={() => {
                             if (!map) return;
 
@@ -1429,10 +1442,12 @@ function LocateSamples() {
                           }}
                         >
                           <i className="fas fa-unlink" />
+                          <span className="sr-only">Unlink Layer</span>
                         </button>
                       ) : (
                         <button
                           css={iconButtonStyles}
+                          title="Link Layer"
                           onClick={() => {
                             if (!map || !selectedScenario) return;
 
@@ -1497,10 +1512,12 @@ function LocateSamples() {
                           }}
                         >
                           <i className="fas fa-link" />
+                          <span className="sr-only">Link Layer</span>
                         </button>
                       )}
                       <button
                         css={iconButtonStyles}
+                        title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
                         onClick={() => setEditLayerVisible(!editLayerVisible)}
                       >
                         <i
@@ -1508,11 +1525,15 @@ function LocateSamples() {
                             editLayerVisible ? 'fas fa-times' : 'fas fa-edit'
                           }
                         />
+                        <span className="sr-only">
+                          {editLayerVisible ? 'Cancel' : 'Edit Layer'}
+                        </span>
                       </button>
                     </React.Fragment>
                   )}
                   <button
                     css={iconButtonStyles}
+                    title={addLayerVisible ? 'Cancel' : 'Add Layer'}
                     onClick={() => setAddLayerVisible(!addLayerVisible)}
                   >
                     <i
@@ -1520,6 +1541,9 @@ function LocateSamples() {
                         addLayerVisible ? 'fas fa-times' : 'fas fa-plus'
                       }
                     />
+                    <span className="sr-only">
+                      {addLayerVisible ? 'Cancel' : 'Add Layer'}
+                    </span>
                   </button>
                 </div>
               </div>

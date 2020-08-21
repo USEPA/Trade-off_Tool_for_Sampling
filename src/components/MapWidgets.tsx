@@ -289,10 +289,10 @@ function FeatureTool({
             {type}
           </div>
           <div css={inputContainerStyles}>
-            <label>Layer:</label>
+            <label htmlFor="layer-change-select-input">Layer:</label>
             <Select
-              id="layer-type-select"
-              inputId="layer-type-select-input"
+              id="layer-change-select"
+              inputId="layer-change-select-input"
               value={selectedLayer}
               onChange={(ev) => setSelectedLayer(ev as LayerType)}
               options={layerOptions}

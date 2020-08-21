@@ -84,6 +84,11 @@ function EditScenario({
     SketchContext,
   );
 
+  // focus on the first input
+  React.useEffect(() => {
+    document.getElementById('scenario-name-input')?.focus();
+  }, []);
+
   const [
     saveStatus,
     setSaveStatus, //
@@ -341,6 +346,11 @@ function EditLayer({
   const [layerName, setLayerName] = React.useState(
     initialLayer ? initialLayer.name : '',
   );
+
+  // focus on the first input
+  React.useEffect(() => {
+    document.getElementById('layer-name-input')?.focus();
+  }, []);
 
   // Saves the scenario name and description to the layer and edits objects.
   function handleSave() {
