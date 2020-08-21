@@ -177,6 +177,24 @@ function Calculate() {
     };
   }, [closePanel]);
 
+  // Initialize the contamination map to the first available one
+  const [contamMapInitialized, setContamMapInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (contamMapInitialized) return;
+
+    setContamMapInitialized(true);
+
+    // exit early since there is no need to set the contamination map
+    if (contaminationMap) return;
+
+    // set the contamination map to the first available one
+    const newContamMap = layers.find(
+      (layer) => layer.layerType === 'Contamination Map',
+    );
+    if (!newContamMap) return;
+    setContaminationMap(newContamMap);
+  }, [contaminationMap, setContaminationMap, contamMapInitialized, layers]);
+
   // input states
   const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
   const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
@@ -876,7 +894,6 @@ function Calculate() {
                       inputId="contamination-map-select-input"
                       css={fullWidthSelectStyles}
                       styles={reactSelectStyles}
-                      isClearable={true}
                       value={contaminationMap}
                       onChange={(ev) => setContaminationMap(ev as LayerType)}
                       options={layers.filter(

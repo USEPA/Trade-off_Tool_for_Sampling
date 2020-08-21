@@ -826,7 +826,11 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
-    if (graphics.length > 0) mapView.goTo(graphics);
+
+    // zoom to the layer unless it is a contamination map
+    if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
+      mapView.goTo(graphics);
+    }
 
     setUploadStatus('success');
   }, [
@@ -1158,6 +1162,23 @@ function FilePanel() {
                         your analysis (e.g., building footprints, landmarks,
                         etc.). This layer will be added to the map and can be
                         accessed from the Legend panel.
+                      </p>
+                      <p css={sectionParagraph}>
+                        <MessageBox
+                          severity="warning"
+                          title="Image Format Limitations"
+                          message={
+                            <p css={layerInfo}>
+                              Image format limitations exist for viewing imagery
+                              on the web. Specifically, imagery must first be be
+                              cached and shared as a tiled map service in ArcGIS
+                              Online. Users must properly "pre-process" and
+                              format underlying images for display within TOTS
+                              outside of TOTS using standard Esri desktop-based
+                              tools (e.g., ArcGIS Pro).
+                            </p>
+                          }
+                        />
                       </p>
                     </React.Fragment>
                   )}

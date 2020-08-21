@@ -589,6 +589,7 @@ export function getSketchableLayers(
   return layers.filter(
     (layer) =>
       (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+      edits &&
       edits.findIndex(
         (editsLayer) =>
           editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,

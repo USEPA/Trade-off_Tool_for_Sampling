@@ -49,6 +49,14 @@ const gloablStyles = css`
   .tots {
     /* revert back to 16px font-size on our application code itself */
     font-size: 1rem;
+
+    input {
+      &:disabled {
+        color: #999;
+        background-color: #f2f2f2;
+        border-color: #fff;
+      }
+    }
   }
 
   .sr-only {
