@@ -888,6 +888,8 @@ function useEditsLayerStorage() {
         const groupLayer = new GroupLayer({
           id: editsLayer.layerId,
           title: editsLayer.scenarioName,
+          visible: editsLayer.visible,
+          listMode: editsLayer.listMode,
         });
 
         // create the layers and add them to the group layer

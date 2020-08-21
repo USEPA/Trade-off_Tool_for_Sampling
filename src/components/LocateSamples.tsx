@@ -1229,7 +1229,53 @@ function LocateSamples() {
                 inputId="scenario-select-input"
                 css={layerSelectStyles}
                 value={selectedScenario}
-                onChange={(ev) => setSelectedScenario(ev as ScenarioEditsType)}
+                onChange={(ev) => {
+                  const newScenario = ev as ScenarioEditsType;
+                  setSelectedScenario(newScenario);
+
+                  // update the visiblity of layers
+                  layers.forEach((layer) => {
+                    if (layer.parentLayer) {
+                      layer.parentLayer.visible =
+                        layer.parentLayer.id === newScenario.layerId
+                          ? true
+                          : false;
+                      return;
+                    }
+
+                    if (
+                      layer.layerType === 'Samples' ||
+                      layer.layerType === 'VSP'
+                    ) {
+                      layer.sketchLayer.visible = false;
+                    }
+                  });
+
+                  setEdits((edits) => ({
+                    count: edits.count + 1,
+                    edits: edits.edits.map((edit) => {
+                      let visible = edit.visible;
+
+                      if (edit.type === 'scenario') {
+                        visible =
+                          edit.layerId === newScenario.layerId ? true : false;
+                      }
+                      if (edit.type === 'layer') {
+                        if (
+                          edit.layerType === 'Samples' ||
+                          edit.layerType === 'VSP'
+                        ) {
+                          visible = false;
+                        }
+                      }
+
+                      return {
+                        ...edit,
+                        visible,
+                      };
+                    }),
+                  }));
+                }}
                 options={scenarios}
               />
               {addScenarioVisible && (
@@ -1552,7 +1598,40 @@ function LocateSamples() {
                 inputId="sampling-layer-select-input"
                 css={layerSelectStyles}
                 value={sketchLayer}
-                onChange={(ev) => setSketchLayer(ev as LayerType)}
+                onChange={(ev) => {
+                  const newLayer = ev as LayerType;
+
+                  // set visibility
+                  let visibilityChange = false;
+                  if (sketchLayer && !sketchLayer.parentLayer) {
+                    sketchLayer.sketchLayer.visible = false;
+                    visibilityChange = true;
+                  }
+                  if (!newLayer.parentLayer) {
+                    newLayer.sketchLayer.visible = true;
+                    visibilityChange = true;
+                  }
+                  if (visibilityChange) {
+                    setEdits((edits) => ({
+                      count: edits.count + 1,
+                      edits: edits.edits.map((edit) => {
+                        if (edit.type === 'scenario') return edit;
+
+                        let visible = edit.visible;
+                        if (edit.layerId === sketchLayer?.layerId)
+                          visible = false;
+                        if (edit.layerId === newLayer.layerId) visible = true;
+
+                        return {
+                          ...edit,
+                          visible,
+                        };
+                      }),
+                    }));
+                  }
+
+                  setSketchLayer(newLayer);
+                }}
                 options={sampleLayers}
               />
               {addLayerVisible && (
