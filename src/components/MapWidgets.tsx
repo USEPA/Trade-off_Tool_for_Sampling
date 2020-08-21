@@ -378,6 +378,7 @@ function MapWidgets({ mapView }: Props) {
     setSketchLayer,
     aoiSketchLayer,
     setAoiSketchLayer,
+    selectedScenario,
     layers,
     setLayers,
     map,
@@ -385,6 +386,7 @@ function MapWidgets({ mapView }: Props) {
   } = React.useContext(SketchContext);
   const {
     Collection,
+    Handles,
     Home,
     Locate,
     PopupTemplate,
@@ -1013,69 +1015,43 @@ function MapWidgets({ mapView }: Props) {
     handle: __esri.Handle | null;
   };
 
-  const [nextHighlight, setNextHighlight] = React.useState<HighlightType>({
-    graphics: [],
-    handle: null,
-  });
+  const [handles] = React.useState(new Handles());
   React.useEffect(() => {
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
+    if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
       return;
     }
+
+    const group = 'highlights-group';
+    handles.remove(group);
+
+    // find the group layer
+    const groupLayer = map.findLayerById(
+      selectedScenario.layerId,
+    ) as __esri.GroupLayer;
 
     // Get any graphics that have a contam value
-    const highlightGraphics: __esri.Graphic[] = [];
     if (trainingMode) {
-      sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-        if (graphic.attributes.CONTAMVAL) {
-          highlightGraphics.push(graphic);
-        }
+      groupLayer.layers.forEach((layer) => {
+        if (layer.type !== 'graphics') return;
+
+        const highlightGraphics: __esri.Graphic[] = [];
+        const tempLayer = layer as __esri.GraphicsLayer;
+        tempLayer.graphics.forEach((graphic) => {
+          if (graphic.attributes.CONTAMVAL) {
+            highlightGraphics.push(graphic);
+          }
+        });
+
+        // Highlight the graphics with a contam value
+        if (highlightGraphics.length === 0) return;
+
+        mapView.whenLayerView(tempLayer).then((layerView) => {
+          const handle = layerView.highlight(highlightGraphics);
+          handles.add(handle, group);
+        });
       });
     }
-
-    // Highlight the graphics with a contam value
-    if (highlightGraphics.length > 0) {
-      mapView.whenLayerView(sketchLayer.sketchLayer).then((layerView) => {
-        const handle = layerView.highlight(highlightGraphics);
-        setNextHighlight({ graphics: highlightGraphics, handle });
-      });
-    } else {
-      setNextHighlight({ graphics: [], handle: null });
-    }
-  }, [edits, sketchLayer, mapView, trainingMode]);
-
-  // Remove any old highlights if the highlighted graphics list changed
-  const [highlight, setHighlight] = React.useState<HighlightType>({
-    graphics: [],
-    handle: null,
-  });
-  React.useEffect(() => {
-    // exit if the highlightGraphics list is the same
-    if (
-      JSON.stringify(nextHighlight.graphics) ===
-      JSON.stringify(highlight.graphics)
-    ) {
-      return;
-    }
-
-    // remove old highlights
-    if (highlight.handle) {
-      highlight.handle.remove();
-    }
-
-    setHighlight(nextHighlight);
-  }, [highlight, nextHighlight]);
-
-  // Clear the highlight states if the sketchLayer is cleared.
-  React.useEffect(() => {
-    if (!sketchLayer?.sketchLayer) {
-      const highlight: HighlightType = { graphics: [], handle: null };
-      setHighlight(highlight);
-      setNextHighlight(highlight);
-    }
-  }, [sketchLayer]);
+  }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
 
   return null;
 }

@@ -49,13 +49,14 @@ type ContaminationResultsType = {
 // Gets all of the graphics of a group layer associated with the provided layerId
 function getGraphics(map: __esri.Map, layerId: string) {
   const graphics: __esri.Graphic[] = [];
+  let groupLayer: __esri.GroupLayer | null = null;
 
   // find the group layer
   const tempGroupLayer = map.layers.find((layer) => layer.id === layerId);
 
   // get the graphics
   if (tempGroupLayer) {
-    const groupLayer = tempGroupLayer as __esri.GroupLayer;
+    groupLayer = tempGroupLayer as __esri.GroupLayer;
     groupLayer.layers.forEach((layer) => {
       if (layer.type !== 'graphics') return;
 
@@ -64,7 +65,7 @@ function getGraphics(map: __esri.Map, layerId: string) {
     });
   }
 
-  return graphics;
+  return { groupLayer, graphics };
 }
 
 // --- styles (Calculate) ---
@@ -233,7 +234,7 @@ function Calculate() {
       return;
     }
 
-    const graphics = getGraphics(map, selectedScenario.layerId);
+    const { graphics } = getGraphics(map, selectedScenario.layerId);
 
     // set the no graphics status
     if (graphics.length === 0) {
@@ -373,8 +374,11 @@ function Calculate() {
       ],
     });
 
-    const sketchedGraphics = getGraphics(map, selectedScenario.layerId);
-    if (sketchedGraphics.length === 0) {
+    const { groupLayer, graphics: sketchedGraphics } = getGraphics(
+      map,
+      selectedScenario.layerId,
+    );
+    if (sketchedGraphics.length === 0 || !groupLayer) {
       // display the no-graphics warning
       setContaminationResults({
         status: 'no-graphics',
@@ -601,38 +605,50 @@ function Calculate() {
               const popupTemplate = new PopupTemplate(
                 getPopupTemplate(sketchLayer.layerType, true),
               );
-              const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-              // update the contam value attribute of the graphics
-              layer.graphics.forEach((graphic) => {
-                const resFeature = resFeatures.find(
-                  (feature: any) =>
-                    graphic.attributes.PERMANENT_IDENTIFIER ===
-                    feature.attributes.PERMANENT_IDENTIFIER,
+
+              // loop through the layers and update the contam values
+              groupLayer.layers.forEach((graphicsLayer) => {
+                if (graphicsLayer.type !== 'graphics') return;
+
+                const tempLayer = graphicsLayer as __esri.GraphicsLayer;
+                // update the contam value attribute of the graphics
+                tempLayer.graphics.forEach((graphic) => {
+                  const resFeature = resFeatures.find(
+                    (feature: any) =>
+                      graphic.attributes.PERMANENT_IDENTIFIER ===
+                      feature.attributes.PERMANENT_IDENTIFIER,
+                  );
+
+                  // if the graphic was not found in the response, set contam value to null,
+                  // otherwise use the contam value value found in the response.
+                  let contamValue = null;
+                  let contamType = graphic.attributes.CONTAMTYPE;
+                  let contamUnit = graphic.attributes.CONTAMUNIT;
+                  if (resFeature) {
+                    contamValue = resFeature.attributes.CONTAMVAL;
+                    contamType = resFeature.attributes.CONTAMTYPE;
+                    contamUnit = resFeature.attributes.CONTAMUNIT;
+                  }
+                  graphic.attributes.CONTAMVAL = contamValue;
+                  graphic.attributes.CONTAMTYPE = contamType;
+                  graphic.attributes.CONTAMUNIT = contamUnit;
+                  graphic.popupTemplate = popupTemplate;
+                });
+
+                // find the layer
+                const layer = layers.find(
+                  (layer) => layer.layerId === graphicsLayer.id,
                 );
+                if (!layer) return;
 
-                // if the graphic was not found in the response, set contam value to null,
-                // otherwise use the contam value value found in the response.
-                let contamValue = null;
-                let contamType = graphic.attributes.CONTAMTYPE;
-                let contamUnit = graphic.attributes.CONTAMUNIT;
-                if (resFeature) {
-                  contamValue = resFeature.attributes.CONTAMVAL;
-                  contamType = resFeature.attributes.CONTAMTYPE;
-                  contamUnit = resFeature.attributes.CONTAMUNIT;
-                }
-                graphic.attributes.CONTAMVAL = contamValue;
-                graphic.attributes.CONTAMTYPE = contamType;
-                graphic.attributes.CONTAMUNIT = contamUnit;
-                graphic.popupTemplate = popupTemplate;
-              });
-
-              // update the graphics of the sketch layer
-              editsCopy = updateLayerEdits({
-                edits: editsCopy,
-                layer: sketchLayer,
-                type: 'update',
-                changes: layer.graphics,
-                hasContaminationRan: true,
+                // update the graphics of the sketch layer
+                editsCopy = updateLayerEdits({
+                  edits: editsCopy,
+                  layer: layer,
+                  type: 'update',
+                  changes: tempLayer.graphics,
+                  hasContaminationRan: true,
+                });
               });
 
               setContaminationResults({
