@@ -10,7 +10,7 @@ import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
-import { findLayerInEdits } from 'utils/sketchUtils';
+import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
 // types
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
@@ -166,8 +166,11 @@ function Toolbar() {
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
+    selectedScenario,
+    setSelectedScenario,
     urlLayers,
     setUrlLayers,
+    sketchLayer,
     setSketchLayer,
     setAoiSketchLayer,
     polygonSymbol,
@@ -507,13 +510,15 @@ function Toolbar() {
       layerToRemove.type === 'graphics' ||
       layerToRemove.type === 'group'
     ) {
-      // graphics layers are always put in edits
-      setEdits({
+      const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
           (layer) => layer.layerId !== layerToRemove.id,
         ),
-      });
+      };
+
+      // graphics layers are always put in edits
+      setEdits(newEdits);
 
       // find the layer
       let totsLayerToRemove: ScenarioEditsType | LayerEditsType | null = null;
@@ -528,12 +533,14 @@ function Toolbar() {
       // menus and sketch utility
       const layerType = totsLayerToRemove?.layerType;
       if (layerType === 'Samples' || layerType === 'VSP') {
-        const newSampleLayer = layers.find(
-          (layer) =>
-            layer.layerId !== layerToRemove.id &&
-            (layer.layerType === 'Samples' || layer.layerType === 'VSP'),
+        const { nextScenario, nextLayer } = getNextScenarioLayer(
+          newEdits,
+          layers,
+          null,
+          null,
         );
-        setSketchLayer(newSampleLayer ? newSampleLayer : null);
+        if (nextScenario) setSelectedScenario(nextScenario);
+        if (nextLayer) setSketchLayer(nextLayer);
       }
       if (layerType === 'Area of Interest') {
         const newAoiLayer = layers.find(
@@ -598,6 +605,9 @@ function Toolbar() {
     setReferenceLayers,
     urlLayers,
     setUrlLayers,
+    selectedScenario,
+    setSelectedScenario,
+    sketchLayer,
     setSketchLayer,
     setAoiSketchLayer,
     setContaminationMap,

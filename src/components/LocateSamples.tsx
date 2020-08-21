@@ -38,7 +38,9 @@ import {
   findLayerInEdits,
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
+  getNextScenarioLayer,
   getPopupTemplate,
+  getScenarios,
   getSketchableLayers,
   updateLayerEdits,
   updatePolygonSymbol,
@@ -54,13 +56,6 @@ type ShapeTypeSelect = {
 };
 
 type EditType = 'create' | 'edit' | 'clone' | 'view';
-
-// Gets a list of scenarios from the provided edits list
-function getScenarios(edits: EditsType) {
-  return edits.edits.filter(
-    (item) => item.type === 'scenario',
-  ) as ScenarioEditsType[];
-}
 
 // gets an array of layers that can be used with the aoi sketch widget.
 function getSketchableAoiLayers(layers: LayerType[]) {
@@ -421,34 +416,18 @@ function LocateSamples() {
 
     setSketchLayerInitialized(true);
 
-    // determine which scenario to get layers for and
-    // select a scenario if necessary
-    const scenarios = getScenarios(edits);
-    let layerEdits = edits.edits;
-    if (selectedScenario) {
-      // get the layers for the selected scenario
-      layerEdits = selectedScenario.layers;
-    }
-    if (!selectedScenario && scenarios.length > 0) {
-      // select the first availble scenario and get it's layers
-      setSelectedScenario(scenarios[0]);
-      layerEdits = scenarios[0].layers;
-    }
+    const { nextScenario, nextLayer, defaultLayerIndex } = getNextScenarioLayer(
+      edits,
+      layers,
+      selectedScenario,
+      sketchLayer,
+    );
 
-    // get the first layer that can be used for sketching and return
-    const sketchableLayers = getSketchableLayers(layers, layerEdits);
-    if (!sketchLayer && sketchableLayers.length > 0) {
-      // select the first availble sample layer. This will be
-      // an unlinked layer if there is no selected scenario or
-      // the selected scenario has no layers
-      setSketchLayer(sketchableLayers[0]);
-    }
+    if (nextScenario) setSelectedScenario(nextScenario);
+    if (nextLayer) setSketchLayer(nextLayer);
 
     // check if the default sketch layer has been added already or not
-    const defaultIndex = sketchableLayers.findIndex(
-      (layer) => layer.name === 'Default Sample Layer',
-    );
-    if (defaultIndex > -1) return;
+    if (defaultLayerIndex > -1) return;
 
     // no sketchable layers were available, create one
     const tempSketchLayer = createSampleLayer(GraphicsLayer);
@@ -459,7 +438,7 @@ function LocateSamples() {
     });
 
     // if the sketch layer wasn't set above, set it now
-    if (!sketchLayer && sketchableLayers.length === 0) {
+    if (!sketchLayer && !nextLayer) {
       setSketchLayer(tempSketchLayer);
     }
   }, [

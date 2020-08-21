@@ -595,3 +595,65 @@ export function getSketchableLayers(
       ) > -1,
   ) as LayerType[];
 }
+
+/**
+ * Searches the edits storage variable to find all available
+ * scenarios.
+ *
+ * @param edits The edits context variable to search through.
+ */
+export function getScenarios(edits: EditsType) {
+  return edits.edits.filter(
+    (item) => item.type === 'scenario',
+  ) as ScenarioEditsType[];
+}
+
+/**
+ *
+ * @param edits Edits to search through for scenarios.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param selectedScenario
+ * @param sketchLayer
+ */
+export function getNextScenarioLayer(
+  edits: EditsType,
+  layers: LayerType[],
+  selectedScenario: ScenarioEditsType | null,
+  sketchLayer: LayerType | null,
+) {
+  let nextScenario: ScenarioEditsType | null = null;
+  let nextLayer: LayerType | null = null;
+
+  // determine which scenario to get layers for and
+  // select a scenario if necessary
+  const scenarios = getScenarios(edits);
+  let layerEdits = edits.edits;
+  if (selectedScenario) {
+    // get the layers for the selected scenario
+    layerEdits = selectedScenario.layers;
+  }
+  if (!selectedScenario && scenarios.length > 0) {
+    // select the first availble scenario and get it's layers
+    nextScenario = scenarios[0];
+    layerEdits = scenarios[0].layers;
+  }
+
+  // get the first layer that can be used for sketching and return
+  const sketchableLayers = getSketchableLayers(layers, layerEdits);
+  if (!sketchLayer && sketchableLayers.length > 0) {
+    // select the first availble sample layer. This will be
+    // an unlinked layer if there is no selected scenario or
+    // the selected scenario has no layers
+    nextLayer = sketchableLayers[0];
+  }
+
+  const defaultLayerIndex = sketchableLayers.findIndex(
+    (layer) => layer.name === 'Default Sample Layer',
+  );
+
+  return {
+    nextScenario,
+    nextLayer,
+    defaultLayerIndex,
+  };
+}

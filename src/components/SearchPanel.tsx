@@ -19,6 +19,7 @@ import {
 import {
   deepCopyObject,
   getPopupTemplate,
+  getNextScenarioLayer,
   getSimplePopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -713,6 +714,7 @@ function ResultCard({ result }: ResultCardProps) {
     portalLayers,
     setPortalLayers,
     setReferenceLayers,
+    setSelectedScenario,
     setSketchLayer,
     setUserDefinedOptions,
     setUserDefinedAttributes,
@@ -1155,8 +1157,16 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
-      // TODO Update this to work with scenarios/layers
-      setSketchLayer(newSketchLayer);
+      // select the next scenario and active sampling layer
+      const { nextScenario, nextLayer } = getNextScenarioLayer(
+        edits,
+        layers,
+        null,
+        null,
+      );
+      if (nextScenario) setSelectedScenario(nextScenario);
+      if (nextLayer) setSketchLayer(nextLayer);
+
       map.removeMany(mapLayersToRemove);
 
       // set the state
