@@ -47,7 +47,6 @@ import {
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
-import { reactSelectStyles } from 'styles';
 import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
@@ -56,11 +55,6 @@ type ShapeTypeSelect = {
 };
 
 type EditType = 'create' | 'edit' | 'clone' | 'view';
-
-// gets an array of layers that can be used with the aoi sketch widget.
-function getSketchableAoiLayers(layers: LayerType[]) {
-  return layers.filter((layer) => layer.layerType === 'Area of Interest');
-}
 
 /**
  * Determines if the desired name has already been used. If it has
@@ -169,11 +163,6 @@ const textStyles = css`
   word-break: break-word;
 `;
 
-const centerTextStyles = css`
-  margin-top: 10px;
-  text-align: center;
-`;
-
 const sketchAoiButtonStyles = css`
   background-color: white;
   color: black;
@@ -236,11 +225,6 @@ const fullWidthSelectStyles = css`
   width: 100%;
   margin-right: 10px;
   margin-bottom: 10px;
-`;
-
-const inlineSelectStyles = css`
-  width: 100%;
-  margin-right: 10px;
 `;
 
 const inputStyles = css`
@@ -361,12 +345,7 @@ type GenerateRandomType = {
 
 function LocateSamples() {
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    setGoTo,
-    setGoToOptions,
-    trainingMode,
-    setTrainingMode,
-  } = React.useContext(NavigationContext);
+  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
   const {
     autoZoom,
     setAutoZoom,
@@ -456,23 +435,8 @@ function LocateSamples() {
   ]);
 
   // Initializes the aoi layer for performance reasons
-  const [aoiLayerInitialized, setAoiLayerInitialized] = React.useState(false);
   React.useEffect(() => {
-    if (!map || !layersInitialized || aoiLayerInitialized) return;
-
-    // get the first layer that can be used for aoi sketching and return
-    const sketchableLayers = getSketchableAoiLayers(layers);
-    if (!aoiSketchLayer && sketchableLayers.length > 0) {
-      setAoiSketchLayer(sketchableLayers[0]);
-    }
-
-    setAoiLayerInitialized(true);
-
-    // check if the default sketch layer has been added already or not
-    const defaultIndex = sketchableLayers.findIndex(
-      (layer) => layer.name === 'Sketched Area of Interest',
-    );
-    if (defaultIndex > -1) return;
+    if (!map || !layersInitialized || aoiSketchLayer) return;
 
     const newAoiSketchLayer = getDefaultAreaOfInterestLayer(GraphicsLayer);
 
@@ -482,18 +446,14 @@ function LocateSamples() {
     });
 
     // set the active sketch layer
-    if (!aoiSketchLayer && sketchableLayers.length === 0) {
-      setAoiSketchLayer(newAoiSketchLayer);
-    }
+    setAoiSketchLayer(newAoiSketchLayer);
   }, [
     GraphicsLayer,
     map,
-    layersInitialized,
-    layers,
-    setLayers,
-    aoiLayerInitialized,
     aoiSketchLayer,
     setAoiSketchLayer,
+    layersInitialized,
+    setLayers,
   ]);
 
   const [numberRandomSamples, setNumberRandomSamples] = React.useState('33');
@@ -547,6 +507,21 @@ function LocateSamples() {
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
   function sketchAoiButtonClick() {
     if (!map || !aoiSketchVM || !aoiSketchLayer) return;
+
+    if (aoiSketchLayer.sketchLayer.type === 'graphics') {
+      // remove the graphics from the generate random mask
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: aoiSketchLayer,
+        type: 'delete',
+        changes: aoiSketchLayer.sketchLayer.graphics,
+      });
+
+      aoiSketchLayer.sketchLayer.removeAll();
+
+      // update the edits state
+      setEdits(editsCopy);
+    }
 
     // put the sketch layer on the map, if it isn't there already
     const layerIndex = map.layers.findIndex(
@@ -706,12 +681,27 @@ function LocateSamples() {
               collection.addMany(graphicsToAdd);
               sketchLayer.sketchLayer.graphics.addMany(collection);
 
-              const editsCopy = updateLayerEdits({
+              let editsCopy = updateLayerEdits({
                 edits,
                 layer: sketchLayer,
                 type: 'add',
                 changes: collection,
               });
+
+              // remove the graphics from the generate random mask
+              if (
+                aoiSketchLayer &&
+                aoiSketchLayer.sketchLayer.type === 'graphics'
+              ) {
+                editsCopy = updateLayerEdits({
+                  edits: editsCopy,
+                  layer: aoiSketchLayer,
+                  type: 'delete',
+                  changes: aoiSketchLayer.sketchLayer.graphics,
+                });
+
+                aoiSketchLayer.sketchLayer.removeAll();
+              }
 
               // update the edits state
               setEdits(editsCopy);
@@ -730,6 +720,13 @@ function LocateSamples() {
               status: 'success',
               data: graphicsToAdd,
             });
+
+            if (
+              aoiSketchLayer &&
+              aoiSketchLayer.sketchLayer.type === 'graphics'
+            ) {
+              aoiSketchLayer.sketchLayer.removeAll();
+            }
           })
           .catch((err) => {
             console.error(err);
@@ -1777,48 +1774,33 @@ function LocateSamples() {
                     onChange={(ev) => setSampleType(ev as SampleSelectType)}
                     options={SampleSelectOptions}
                   />
-                  <label htmlFor="aoi-mask-select-input">
-                    Area of Interest Mask
-                  </label>
-                  <div css={inlineMenuStyles}>
-                    <Select
-                      id="aoi-mask-select"
-                      inputId="aoi-mask-select-input"
-                      css={inlineSelectStyles}
-                      styles={reactSelectStyles}
-                      isClearable={true}
-                      value={aoiSketchLayer}
-                      onChange={(ev) => setAoiSketchLayer(ev as LayerType)}
-                      options={layers.filter(
-                        (layer) => layer.layerType === 'Area of Interest',
-                      )}
-                    />
-                    <button
-                      css={addButtonStyles}
-                      onClick={(ev) => {
-                        setGoTo('addData');
-                        setGoToOptions({
-                          from: 'file',
-                          layerType: 'Area of Interest',
-                        });
-                      }}
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div css={centerTextStyles}>
-                    <em>OR</em>
-                  </div>
                   <button
                     id="aoi"
-                    title="Draw Area of Interest Mask"
+                    title="Draw Sampling Mask"
                     className="sketch-button"
-                    onClick={sketchAoiButtonClick}
+                    onClick={() => {
+                      if (!aoiSketchLayer) return;
+                      if (
+                        aoiSketchLayer.sketchLayer.type === 'graphics' &&
+                        aoiSketchLayer.sketchLayer.graphics.length === 0
+                      ) {
+                        sketchAoiButtonClick();
+                        return;
+                      }
+
+                      setOptions({
+                        title: 'Would you like to continue?',
+                        ariaLabel: 'Would you like to continue?',
+                        description:
+                          'There is already a sample mask on the map. If you continue, the existing sample mask will be deleted.',
+                        onContinue: sketchAoiButtonClick,
+                      });
+                    }}
                     css={sketchAoiButtonStyles}
                   >
                     <span css={sketchAoiTextStyles}>
                       <i className="fas fa-draw-polygon" />{' '}
-                      <span>Draw Area of Interest Mask</span>
+                      <span>Draw Sampling Mask</span>
                     </span>
                   </button>
                   {generateRandomResponse.status === 'success' &&
