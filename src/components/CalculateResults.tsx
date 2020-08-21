@@ -107,10 +107,38 @@ function CalculateResults() {
   ] = React.useState<__esri.Screenshot | null>(null);
   React.useEffect(() => {
     if (screenshotInitialized) return;
-    if (!mapView || !selectedScenario || downloadStatus !== 'fetching') return;
+    if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
+      return;
 
     // save the current extent
     const initialExtent = mapView.extent;
+
+    const originalVisiblity: { [key: string]: boolean } = {};
+    // store current visiblity settings
+    map.layers.forEach((layer) => {
+      originalVisiblity[layer.id] = layer.visible;
+    });
+
+    // adjust the visiblity
+    layers.forEach((layer) => {
+      if (layer.parentLayer) {
+        layer.parentLayer.visible =
+          layer.parentLayer.id === selectedScenario.layerId ? true : false;
+        return;
+      }
+
+      if (
+        layer.layerType === 'Contamination Map' &&
+        contaminationMap &&
+        layer.layerId === contaminationMap.layerId
+      ) {
+        // This layer matches the selected contamination map.
+        // Do nothing, so the visibility is whatever the user has selected
+        return;
+      }
+
+      layer.sketchLayer.visible = false;
+    });
 
     // get the sample layers for the selected scenario
     const sampleLayers = layers.filter(
@@ -121,8 +149,7 @@ function CalculateResults() {
     // zoom to the graphics for the active layers
     const zoomGraphics = getGraphicsArray([
       ...sampleLayers,
-      aoiSketchLayer,
-      contaminationMap,
+      contaminationMap?.visible ? contaminationMap : null,
     ]);
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics, { animate: false }).then(() => {
@@ -136,6 +163,11 @@ function CalculateResults() {
 
               // zoom back to the initial extent
               mapView.goTo(initialExtent, { animate: false });
+
+              // set the visiblity back
+              map.layers.forEach((layer) => {
+                layer.visible = originalVisiblity[layer.id];
+              });
             })
             .catch((err) => {
               console.error(err);
@@ -143,8 +175,13 @@ function CalculateResults() {
 
               // zoom back to the initial extent
               mapView.goTo(initialExtent, { animate: false });
+
+              // set the visiblity back
+              map.layers.forEach((layer) => {
+                layer.visible = originalVisiblity[layer.id];
+              });
             });
-        }, 1500);
+        }, 3000);
       });
     }
 
@@ -154,6 +191,7 @@ function CalculateResults() {
     contaminationMap,
     downloadStatus,
     layers,
+    map,
     mapView,
     screenshotInitialized,
     selectedScenario,

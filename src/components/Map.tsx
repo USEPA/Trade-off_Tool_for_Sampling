@@ -86,11 +86,31 @@ function Map({ height }: Props) {
         const imageryTypes = ['imagery', 'tile', 'vector-tile'];
         let type = 'other';
 
-        if (layer.type === 'graphics') {
+        let groupType = '';
+        if (layer.type === 'group') {
+          const groupLayer = layer as __esri.GroupLayer;
+          groupLayer.layers.forEach((layer, index) => {
+            if (groupType === 'combo') return;
+
+            if (index === 0) {
+              groupType = layer.type;
+              return;
+            }
+
+            if (groupType !== layer.type) {
+              groupType = 'combo';
+            }
+          });
+        }
+
+        if (layer.type === 'graphics' || groupType === 'graphics') {
           type = 'graphics';
-        } else if (layer.type === 'feature') {
+        } else if (layer.type === 'feature' || groupType === 'feature') {
           type = 'feature';
-        } else if (imageryTypes.includes(type)) {
+        } else if (
+          imageryTypes.includes(type) ||
+          imageryTypes.includes(groupType)
+        ) {
           type = 'imagery';
         }
 
