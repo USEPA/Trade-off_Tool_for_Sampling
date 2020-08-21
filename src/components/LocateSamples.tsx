@@ -1214,7 +1214,24 @@ function LocateSamples() {
                     id="aoi"
                     title="Draw Sampling Mask"
                     className="sketch-button"
-                    onClick={sketchAoiButtonClick}
+                    onClick={() => {
+                      if (!aoiSketchLayer) return;
+                      if (
+                        aoiSketchLayer.sketchLayer.type === 'graphics' &&
+                        aoiSketchLayer.sketchLayer.graphics.length === 0
+                      ) {
+                        sketchAoiButtonClick();
+                        return;
+                      }
+
+                      setOptions({
+                        title: 'Would you like to continue?',
+                        ariaLabel: 'Would you like to continue?',
+                        description:
+                          'There is already a sample mask on the map. If you continue, the existing sample mask will be deleted.',
+                        onContinue: sketchAoiButtonClick,
+                      });
+                    }}
                     css={sketchAoiButtonStyles}
                   >
                     <span css={sketchAoiTextStyles}>
