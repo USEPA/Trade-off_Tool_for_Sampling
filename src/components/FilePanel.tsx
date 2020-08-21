@@ -1162,6 +1162,23 @@ function FilePanel() {
                         etc.). This layer will be added to the map and can be
                         accessed from the Legend panel.
                       </p>
+                      <p css={sectionParagraph}>
+                        <MessageBox
+                          severity="warning"
+                          title="Image Format Limitations"
+                          message={
+                            <p css={layerInfo}>
+                              Image format limitations exist for viewing imagery
+                              on the web. Specifically, imagery must first be be
+                              cached and shared as a tiled map service in ArcGIS
+                              Online. Users must properly "pre-process" and
+                              format underlying images for display within TOTS
+                              outside of TOTS using standard Esri desktop-based
+                              tools (e.g., ArcGIS Pro).
+                            </p>
+                          }
+                        />
+                      </p>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Area of Interest' && (
