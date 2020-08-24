@@ -9,6 +9,10 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
+// utils
+import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
+// types
+import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
 import { colors } from 'styles';
 
@@ -139,6 +143,7 @@ const graphicsIconStyles = css`
 function Toolbar() {
   const {
     BasemapGallery,
+    Collection,
     IdentityManager,
     LayerList,
     Legend,
@@ -161,8 +166,11 @@ function Toolbar() {
     setPortalLayers,
     referenceLayers,
     setReferenceLayers,
+    selectedScenario,
+    setSelectedScenario,
     urlLayers,
     setUrlLayers,
+    sketchLayer,
     setSketchLayer,
     polygonSymbol,
   } = React.useContext(SketchContext);
@@ -242,15 +250,6 @@ function Toolbar() {
       listItemCreatedFunction: function (event) {
         const item = event.item;
 
-        // item is a sub layer, just add the legend
-        if (item.parent) {
-          item.panel = {
-            content: 'legend',
-            open: true,
-          };
-          return;
-        }
-
         // create the slider
         const sliderContainer = document.createElement('div');
         const slider: any = new Slider({
@@ -271,6 +270,66 @@ function Toolbar() {
 
         const container = document.createElement('div');
         container.append(slider.domNode);
+
+        // item is a sub layer, just add the legend
+        if (item.parent) {
+          if (item.layer.type === 'graphics') {
+            const legendContainer = document.createElement('div');
+            const content = (
+              <div className="esri-legend esri-widget--panel esri-widget">
+                <div className="esri-legend__layer">
+                  <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+                    <div className="esri-legend__layer-body">
+                      <div className="esri-legend__layer-row">
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
+                          <div className="esri-legend__symbol">
+                            <div css={graphicsIconStyles}>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="22"
+                                height="22"
+                              >
+                                <defs></defs>
+                                <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
+                                  <path
+                                    fill={`rgba(${polygonSymbol.color.toString()})`}
+                                    fillRule="evenodd"
+                                    stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
+                                    strokeWidth={polygonSymbol.outline.width}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeDasharray="none"
+                                    strokeMiterlimit="4"
+                                    d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
+                                  />
+                                </g>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+            ReactDOM.render(content, legendContainer);
+            container.append(legendContainer);
+
+            item.panel = {
+              content: container,
+              className: 'esri-icon-layer-list',
+              open: true,
+            };
+          } else {
+            item.panel = {
+              content: 'legend',
+              open: true,
+            };
+          }
+          return;
+        }
 
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
@@ -373,6 +432,7 @@ function Toolbar() {
     // add the delete layer button action
     layerList.on('trigger-action', (event) => {
       const id = event.action.id;
+      const tempLayer = event.item.layer as any;
 
       if (id === 'zoom-layer') {
         if (event.item.layer.type === 'graphics') {
@@ -381,14 +441,27 @@ function Toolbar() {
           return;
         }
         if (event.item.layer.type === 'group') {
-          const groupLayer = event.item.layer as __esri.GroupLayer;
-          let fullExtent: __esri.Extent | null = null;
-          groupLayer.layers.forEach((layer) => {
-            if (!fullExtent) fullExtent = layer.fullExtent;
-            else fullExtent.union(layer.fullExtent);
-          });
+          if (tempLayer.portalItem) {
+            const groupLayer = event.item.layer as __esri.GroupLayer;
+            let fullExtent: __esri.Extent | null = null;
+            groupLayer.layers.forEach((layer) => {
+              if (!fullExtent) fullExtent = layer.fullExtent;
+              else fullExtent.union(layer.fullExtent);
+            });
 
-          if (fullExtent) mapView.goTo(fullExtent);
+            if (fullExtent) mapView.goTo(fullExtent);
+          } else {
+            const groupLayer = event.item.layer as __esri.GroupLayer;
+            const graphics = new Collection<__esri.Graphic>();
+            groupLayer.layers.forEach((layer) => {
+              if (layer.type !== 'graphics') return;
+
+              const tempLayer = layer as __esri.GraphicsLayer;
+              graphics.addMany(tempLayer.graphics);
+            });
+
+            if (graphics.length > 0) mapView.goTo(graphics);
+          }
           return;
         }
 
@@ -402,7 +475,15 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [LayerList, Legend, Slider, mapView, legendInitialized, polygonSymbol]);
+  }, [
+    Collection,
+    LayerList,
+    Legend,
+    Slider,
+    mapView,
+    legendInitialized,
+    polygonSymbol,
+  ]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -417,30 +498,48 @@ function Toolbar() {
     const tempLayerToRemove = layerToRemove as any;
 
     // remove the layer from the session variable
-    if (layerToRemove.type === 'graphics') {
-      // graphics layers are always put in edits
-      setEdits({
+    if (tempLayerToRemove.portalItem && tempLayerToRemove.portalItem.id) {
+      // this one was added via search panel, remove it from portalLayers
+      setPortalLayers(
+        portalLayers.filter(
+          (portalLayer) => portalLayer.id !== tempLayerToRemove.portalItem.id,
+        ),
+      );
+    } else if (
+      layerToRemove.type === 'graphics' ||
+      layerToRemove.type === 'group'
+    ) {
+      const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
           (layer) => layer.layerId !== layerToRemove.id,
         ),
-      });
+      };
+
+      // graphics layers are always put in edits
+      setEdits(newEdits);
 
       // find the layer
-      const totsLayerToRemove = layers.find(
-        (layer) => layer.layerId === layerToRemove.id,
+      let totsLayerToRemove: ScenarioEditsType | LayerEditsType | null = null;
+      const { editsScenario, editsLayer } = findLayerInEdits(
+        edits.edits,
+        layerToRemove.id,
       );
+      if (editsLayer) totsLayerToRemove = editsLayer;
+      if (editsScenario) totsLayerToRemove = editsScenario;
 
       // depending on the layer type, auto select the next available for the select
       // menus and sketch utility
       const layerType = totsLayerToRemove?.layerType;
       if (layerType === 'Samples' || layerType === 'VSP') {
-        const newSampleLayer = layers.find(
-          (layer) =>
-            layer.layerId !== layerToRemove.id &&
-            (layer.layerType === 'Samples' || layer.layerType === 'VSP'),
+        const { nextScenario, nextLayer } = getNextScenarioLayer(
+          newEdits,
+          layers,
+          null,
+          null,
         );
-        setSketchLayer(newSampleLayer ? newSampleLayer : null);
+        if (nextScenario) setSelectedScenario(nextScenario);
+        if (nextLayer) setSketchLayer(nextLayer);
       }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
@@ -461,20 +560,10 @@ function Toolbar() {
       if (totsLayerToRemove?.addedFrom === 'tots') {
         setPortalLayers(
           portalLayers.filter(
-            (portalLayer) => portalLayer.id !== totsLayerToRemove.portalId,
+            (portalLayer) => portalLayer.id !== totsLayerToRemove?.portalId,
           ),
         );
       }
-    } else if (
-      tempLayerToRemove.portalItem &&
-      tempLayerToRemove.portalItem.id
-    ) {
-      // this one was added via search panel, remove it from portalLayers
-      setPortalLayers(
-        portalLayers.filter(
-          (portalLayer) => portalLayer.id !== tempLayerToRemove.portalItem.id,
-        ),
-      );
     } else {
       // first attempt to remove from url layers
       const newUrlLayers = urlLayers.filter(
@@ -507,6 +596,9 @@ function Toolbar() {
     setReferenceLayers,
     urlLayers,
     setUrlLayers,
+    selectedScenario,
+    setSelectedScenario,
+    sketchLayer,
     setSketchLayer,
     setContaminationMap,
   ]);

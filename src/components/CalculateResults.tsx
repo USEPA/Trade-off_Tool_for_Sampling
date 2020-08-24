@@ -84,9 +84,11 @@ function CalculateResults() {
     contaminationMap, //
   } = React.useContext(CalculateContext);
   const {
+    aoiSketchLayer,
+    layers,
+    map,
     mapView,
-    sketchLayer,
-    aoiSketchLayer, //
+    selectedScenario,
   } = React.useContext(SketchContext);
 
   const [
@@ -105,16 +107,49 @@ function CalculateResults() {
   ] = React.useState<__esri.Screenshot | null>(null);
   React.useEffect(() => {
     if (screenshotInitialized) return;
-    if (!mapView || downloadStatus !== 'fetching') return;
+    if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
+      return;
 
     // save the current extent
     const initialExtent = mapView.extent;
 
+    const originalVisiblity: { [key: string]: boolean } = {};
+    // store current visiblity settings
+    map.layers.forEach((layer) => {
+      originalVisiblity[layer.id] = layer.visible;
+    });
+
+    // adjust the visiblity
+    layers.forEach((layer) => {
+      if (layer.parentLayer) {
+        layer.parentLayer.visible =
+          layer.parentLayer.id === selectedScenario.layerId ? true : false;
+        return;
+      }
+
+      if (
+        layer.layerType === 'Contamination Map' &&
+        contaminationMap &&
+        layer.layerId === contaminationMap.layerId
+      ) {
+        // This layer matches the selected contamination map.
+        // Do nothing, so the visibility is whatever the user has selected
+        return;
+      }
+
+      layer.sketchLayer.visible = false;
+    });
+
+    // get the sample layers for the selected scenario
+    const sampleLayers = layers.filter(
+      (layer) =>
+        layer.parentLayer && layer.parentLayer.id === selectedScenario.layerId,
+    );
+
     // zoom to the graphics for the active layers
     const zoomGraphics = getGraphicsArray([
-      sketchLayer,
-      aoiSketchLayer,
-      contaminationMap,
+      ...sampleLayers,
+      contaminationMap?.visible ? contaminationMap : null,
     ]);
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics, { animate: false }).then(() => {
@@ -128,6 +163,11 @@ function CalculateResults() {
 
               // zoom back to the initial extent
               mapView.goTo(initialExtent, { animate: false });
+
+              // set the visiblity back
+              map.layers.forEach((layer) => {
+                layer.visible = originalVisiblity[layer.id];
+              });
             })
             .catch((err) => {
               console.error(err);
@@ -135,19 +175,26 @@ function CalculateResults() {
 
               // zoom back to the initial extent
               mapView.goTo(initialExtent, { animate: false });
+
+              // set the visiblity back
+              map.layers.forEach((layer) => {
+                layer.visible = originalVisiblity[layer.id];
+              });
             });
-        }, 1500);
+        }, 3000);
       });
     }
 
     setScreenshotInitialized(true);
   }, [
-    mapView,
-    sketchLayer,
     aoiSketchLayer,
     contaminationMap,
     downloadStatus,
+    layers,
+    map,
+    mapView,
     screenshotInitialized,
+    selectedScenario,
   ]);
 
   // convert the screenshot to base64
@@ -188,7 +235,7 @@ function CalculateResults() {
   // export the excel doc
   React.useEffect(() => {
     if (
-      !sketchLayer ||
+      !selectedScenario ||
       downloadStatus !== 'fetching' ||
       !base64Screenshot ||
       calculateResults.status !== 'success' ||
@@ -231,7 +278,10 @@ function CalculateResults() {
     workbook
       .writeToBuffer()
       .then((buffer: any) => {
-        saveAs(new Blob([buffer]), `tots_${sketchLayer?.scenarioName}.xlsx`);
+        saveAs(
+          new Blob([buffer]),
+          `tots_${selectedScenario?.scenarioName}.xlsx`,
+        );
         setDownloadStatus('success');
       })
       .catch((err: any) => {
@@ -243,7 +293,7 @@ function CalculateResults() {
 
     function addSummarySheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || !calculateResults.data) return;
+      if (!selectedScenario || !calculateResults.data) return;
 
       // add the sheet
       const summarySheet = workbook.addWorksheet('Summary');
@@ -263,12 +313,12 @@ function CalculateResults() {
         .style(sheetTitleStyle);
       summarySheet.cell(2, 1).string('Version: 1.0');
       summarySheet.cell(4, 1).string('Plan Name').style(underlinedLabelStyle);
-      summarySheet.cell(4, 2).string(sketchLayer.scenarioName);
+      summarySheet.cell(4, 2).string(selectedScenario.scenarioName);
       summarySheet
         .cell(5, 1)
         .string('Plan Description')
         .style(underlinedLabelStyle);
-      summarySheet.cell(5, 2).string(sketchLayer.scenarioDescription);
+      summarySheet.cell(5, 2).string(selectedScenario.scenarioDescription);
 
       // col 1 & 2
       summarySheet
@@ -693,7 +743,16 @@ function CalculateResults() {
 
     function addSampleSheet() {
       // only here to satisfy typescript
-      if (!sketchLayer || sketchLayer.sketchLayer.type !== 'graphics') return;
+      if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
+        return;
+      }
+
+      // get the group layer for the scenario
+      const scenarioGroupLayer = map.layers.find(
+        (layer) =>
+          layer.type === 'group' && layer.id === selectedScenario.layerId,
+      ) as __esri.GroupLayer;
+      if (!scenarioGroupLayer) return;
 
       // add the sheet
       const samplesSheet = workbook.addWorksheet('Sample Details');
@@ -720,35 +779,46 @@ function CalculateResults() {
 
       // add in the rows
       let currentRow = 4;
-      sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-        const {
-          PERMANENT_IDENTIFIER,
-          TYPE,
-          CONTAMVAL,
-          CONTAMUNIT,
-          Notes,
-        } = graphic.attributes;
+      scenarioGroupLayer.layers.forEach((layer) => {
+        if (layer.type !== 'graphics') return;
 
-        if (PERMANENT_IDENTIFIER) {
-          samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
-        }
-        if (TYPE) {
-          samplesSheet.cell(currentRow, 2).string(TYPE);
-        }
-        if (CONTAMVAL) {
-          samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
-        }
-        if (CONTAMUNIT) {
-          samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
-        }
-        if (Notes) {
-          samplesSheet.cell(currentRow, 5).string(Notes);
-        }
+        const graphicsLayer = layer as __esri.GraphicsLayer;
+        graphicsLayer.graphics.forEach((graphic) => {
+          const {
+            PERMANENT_IDENTIFIER,
+            TYPE,
+            CONTAMVAL,
+            CONTAMUNIT,
+            Notes,
+          } = graphic.attributes;
 
-        currentRow += 1;
+          if (PERMANENT_IDENTIFIER) {
+            samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
+          }
+          if (TYPE) {
+            samplesSheet.cell(currentRow, 2).string(TYPE);
+          }
+          if (CONTAMVAL) {
+            samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
+          }
+          if (CONTAMUNIT) {
+            samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
+          }
+          if (Notes) {
+            samplesSheet.cell(currentRow, 5).string(Notes);
+          }
+
+          currentRow += 1;
+        });
       });
     }
-  }, [sketchLayer, base64Screenshot, downloadStatus, calculateResults]);
+  }, [
+    base64Screenshot,
+    calculateResults,
+    downloadStatus,
+    map,
+    selectedScenario,
+  ]);
 
   return (
     <div css={panelContainer}>
@@ -756,10 +826,16 @@ function CalculateResults() {
       {calculateResults.status === 'failure' && (
         <p>An error occurred while calculating. Please try again.</p>
       )}
+      {calculateResults.status === 'no-scenario' && (
+        <p>
+          No plan has been selected. Please go to the Create Plan tab, select a
+          plan and try again.
+        </p>
+      )}
       {calculateResults.status === 'no-layer' && (
         <p>
-          No sample layer has been selected. Please go to the Create Plan tab,
-          select a layer and try again.
+          The selected plan has no layers. Please go to the Create Plan tab, add
+          one or more layers to the plan, and try again.
         </p>
       )}
       {calculateResults.status === 'no-graphics' && (
@@ -772,10 +848,13 @@ function CalculateResults() {
         <React.Fragment>
           <div>
             <h3>Summary</h3>
-            <LabelValue label="Plan Name" value={sketchLayer?.scenarioName} />
+            <LabelValue
+              label="Plan Name"
+              value={selectedScenario?.scenarioName}
+            />
             <LabelValue
               label="Plan Description"
-              value={sketchLayer?.scenarioDescription}
+              value={selectedScenario?.scenarioDescription}
             />
             <br />
 

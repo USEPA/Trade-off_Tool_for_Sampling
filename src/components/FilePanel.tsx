@@ -796,21 +796,22 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      uuid: generateUUID(),
       layerId: graphicsLayer.id,
       portalId: '',
       value: layerName,
       name: file.file.name,
       label: layerName,
       layerType: layerType.value,
-      scenarioName: '',
-      scenarioDescription: '',
       editType: 'add',
       visible,
       listMode,
+      sort: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      parentLayer: null,
     };
 
     // make a copy of the edits context variable

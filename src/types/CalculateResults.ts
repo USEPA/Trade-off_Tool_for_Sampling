@@ -37,6 +37,7 @@ export type CalculateResultsType = {
     | 'none'
     | 'no-graphics'
     | 'no-layer'
+    | 'no-scenario'
     | 'fetching'
     | 'success'
     | 'failure';

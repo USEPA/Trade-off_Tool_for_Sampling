@@ -17,14 +17,16 @@ import {
   getFeatureLayers,
 } from 'utils/arcGisRestUtils';
 import {
+  deepCopyObject,
   getPopupTemplate,
+  getNextScenarioLayer,
   getSimplePopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { escapeForLucene } from 'utils/utils';
 // types
 import { LayerType } from 'types/Layer';
-import { EditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType } from 'types/Edits';
 import {
   Attributes,
   sampleAttributes,
@@ -35,6 +37,10 @@ import {
   notLoggedInMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
+
+type LayerGraphics = {
+  [key: string]: __esri.Graphic[];
+};
 
 // --- styles (SearchPanel) ---
 const searchContainerStyles = css`
@@ -691,6 +697,7 @@ function ResultCard({ result }: ResultCardProps) {
     Field,
     Graphic,
     GraphicsLayer,
+    GroupLayer,
     Layer,
     PopupTemplate,
     PortalItem,
@@ -707,6 +714,7 @@ function ResultCard({ result }: ResultCardProps) {
     portalLayers,
     setPortalLayers,
     setReferenceLayers,
+    setSelectedScenario,
     setSketchLayer,
     setUserDefinedOptions,
     setUserDefinedAttributes,
@@ -770,16 +778,17 @@ function ResultCard({ result }: ResultCardProps) {
             );
 
             // define items used for updating states
-            let editsCopy: EditsType | null = edits;
+            let editsCopy: EditsType = deepCopyObject(edits);
             const mapLayersToAdd: __esri.Layer[] = [];
             const layersToAdd: LayerType[] = [];
             const refLayersToAdd: any[] = [];
+            const zoomToGraphics: __esri.Graphic[] = [];
 
             // create the layers to be added to the map
             for (let i = 0; i < responses.length; ) {
               const layerDetails = responses[i];
               const layerFeatures = responses[i + 1];
-              const layerName = layerDetails.name;
+              const scenarioName = layerDetails.name;
 
               // figure out if this layer is a sample layer or not
               let isSampleLayer = false;
@@ -794,7 +803,7 @@ function ResultCard({ result }: ResultCardProps) {
               // add sample layers as graphics layers
               if (isSampleLayer || isVspLayer) {
                 // get the graphics from the layer
-                const graphics: __esri.Graphic[] = [];
+                const graphics: LayerGraphics = {};
                 const newAttributes: Attributes = {};
                 const newUserSampleTypes: SampleSelectType[] = [];
                 layerFeatures.features.forEach((feature: any) => {
@@ -847,11 +856,21 @@ function ResultCard({ result }: ResultCardProps) {
                       UPDATEDDATE: null,
                       USERNAME: null,
                       ORGANIZATION: null,
-                      ELEVATIONSERIES: null,
+                      DECISIONUNITUUID: null,
+                      DECISIONUNIT: null,
+                      DECISIONUNITSORT: null,
                     };
                   }
 
-                  graphics.push(graphic);
+                  zoomToGraphics.push(graphic);
+
+                  // add the graphic to the correct layer uuid
+                  const decisionUuid = graphic.attributes.DECISIONUNITUUID;
+                  if (graphics.hasOwnProperty(decisionUuid)) {
+                    graphics[decisionUuid].push(graphic);
+                  } else {
+                    graphics[decisionUuid] = [graphic];
+                  }
                 });
 
                 if (newUserSampleTypes.length > 0) {
@@ -873,41 +892,88 @@ function ResultCard({ result }: ResultCardProps) {
                   });
                 }
 
-                // build the graphics layer
-                const graphicsLayer = new GraphicsLayer({
-                  graphics,
-                  title: layerName,
+                // need to build the scenario and group layer here
+                const groupLayer = new GroupLayer({
+                  title: scenarioName,
                 });
 
-                const layerToAdd: LayerType = {
+                const newScenario: ScenarioEditsType = {
+                  type: 'scenario',
                   id: layerDetails.id,
-                  layerId: graphicsLayer.id,
+                  layerId: groupLayer.id,
                   portalId: result.id,
-                  value: layerName,
-                  name: layerName,
-                  label: layerName,
+                  name: scenarioName,
+                  label: scenarioName,
+                  value: groupLayer.id,
                   layerType: isVspLayer ? 'VSP' : 'Samples',
-                  scenarioName: layerName,
-                  scenarioDescription: layerDetails.description,
+                  addedFrom: 'tots',
+                  hasContaminationRan: false,
+                  status: 'published',
                   editType: 'add',
                   visible: true,
                   listMode: 'show',
-                  geometryType: layerDetails.geometryType,
-                  addedFrom: 'tots',
-                  status: 'published',
-                  sketchLayer: graphicsLayer,
+                  scenarioName: scenarioName,
+                  scenarioDescription: layerDetails.description,
+                  layers: [],
                 };
-                layersToAdd.push(layerToAdd);
 
                 // make a copy of the edits context variable
-                editsCopy = updateLayerEdits({
-                  edits: editsCopy,
-                  layer: layerToAdd,
-                  type: 'arcgis',
-                  changes: graphicsLayer.graphics,
-                });
+                editsCopy = {
+                  count: editsCopy.count + 1,
+                  edits: [...editsCopy.edits, newScenario],
+                };
 
-                mapLayersToAdd.push(graphicsLayer);
+                // loop through the graphics uuids and add the necessary
+                // layers to the scenario along with the graphics
+                const keys = Object.keys(graphics);
+                for (let j = 0; j < keys.length; j++) {
+                  const uuid = keys[j];
+                  const graphicsList = graphics[uuid];
+                  const firstAttributes = graphicsList[0].attributes;
+                  const layerName = firstAttributes.DECISIONUNIT
+                    ? firstAttributes.DECISIONUNIT
+                    : scenarioName;
+
+                  // build the graphics layer
+                  const graphicsLayer = new GraphicsLayer({
+                    graphics: graphicsList,
+                    title: layerName,
+                  });
+                  groupLayer.add(graphicsLayer);
+
+                  // build the layer
+                  const layerToAdd: LayerType = {
+                    id: layerDetails.id,
+                    uuid: firstAttributes.DECISIONUNITUUID,
+                    layerId: graphicsLayer.id,
+                    portalId: result.id,
+                    value: layerName,
+                    name: layerName,
+                    label: layerName,
+                    layerType: isVspLayer ? 'VSP' : 'Samples',
+                    editType: 'add',
+                    visible: true,
+                    listMode: 'show',
+                    sort: firstAttributes.DECISIONUNITSORT,
+                    geometryType: layerDetails.geometryType,
+                    addedFrom: 'tots',
+                    status: 'published',
+                    sketchLayer: graphicsLayer,
+                    parentLayer: groupLayer,
+                  };
+                  layersToAdd.push(layerToAdd);
+
+                  // make a copy of the edits context variable
+                  editsCopy = updateLayerEdits({
+                    edits: editsCopy,
+                    scenario: newScenario,
+                    layer: layerToAdd,
+                    type: 'arcgis',
+                    changes: graphicsLayer.graphics,
+                  });
+                }
+
+                mapLayersToAdd.push(groupLayer); // replace with group layer
               } else {
                 // add non-sample layers as feature layers
                 const fields: __esri.Field[] = [];
@@ -967,6 +1033,11 @@ function ResultCard({ result }: ResultCardProps) {
 
             // add all of the layers to the map
             map.addMany(mapLayersToAdd);
+
+            // zoom to the graphics layer
+            if (zoomToGraphics.length > 0 && mapView) {
+              mapView.goTo(zoomToGraphics);
+            }
 
             // set the state for session storage
             setEdits(editsCopy);
@@ -1062,9 +1133,18 @@ function ResultCard({ result }: ResultCardProps) {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
       let newSketchLayer: LayerType | null = null;
+      const parentLayerIds: string[] = [];
       layers.forEach((layer) => {
         if (layer.portalId === result.id) {
-          mapLayersToRemove.push(layer.sketchLayer);
+          if (!layer.parentLayer) {
+            mapLayersToRemove.push(layer.sketchLayer);
+            return;
+          }
+
+          if (parentLayerIds.includes(layer.parentLayer.id)) return;
+
+          mapLayersToRemove.push(layer.parentLayer);
+          parentLayerIds.push(layer.parentLayer.id);
         } else {
           if (
             !newSketchLayer &&
@@ -1074,7 +1154,17 @@ function ResultCard({ result }: ResultCardProps) {
           }
         }
       });
-      setSketchLayer(newSketchLayer);
+
+      // select the next scenario and active sampling layer
+      const { nextScenario, nextLayer } = getNextScenarioLayer(
+        edits,
+        layers,
+        null,
+        null,
+      );
+      if (nextScenario) setSelectedScenario(nextScenario);
+      if (nextLayer) setSketchLayer(nextLayer);
+
       map.removeMany(mapLayersToRemove);
 
       // set the state

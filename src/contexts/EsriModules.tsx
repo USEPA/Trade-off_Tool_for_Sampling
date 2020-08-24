@@ -12,6 +12,7 @@ type EsriConstructors = [
   typeof import('esri/Map'),
   typeof import('esri/Viewpoint'),
   typeof import('esri/core/Collection'),
+  typeof import('esri/core/Handles'),
   typeof import('esri/core/watchUtils'),
   typeof import('esri/geometry/Extent'),
   typeof import('esri/geometry/geometryEngine'),
@@ -27,6 +28,7 @@ type EsriConstructors = [
   typeof import('esri/layers/FeatureLayer'),
   typeof import('esri/layers/GeoRSSLayer'),
   typeof import('esri/layers/GraphicsLayer'),
+  typeof import('esri/layers/GroupLayer'),
   typeof import('esri/layers/KMLLayer'),
   typeof import('esri/layers/Layer'),
   typeof import('esri/layers/WMSLayer'),
@@ -58,42 +60,44 @@ type State = {
   EsriMap: EsriConstructors[2];
   Viewpoint: EsriConstructors[3];
   Collection: EsriConstructors[4];
-  watchUtils: EsriConstructors[5];
-  Extent: EsriConstructors[6];
-  geometryEngine: EsriConstructors[7];
-  Point: EsriConstructors[8];
-  Polygon: EsriConstructors[9];
-  projection: EsriConstructors[10];
-  SpatialReference: EsriConstructors[11];
-  geometryJsonUtils: EsriConstructors[12];
-  webMercatorUtils: EsriConstructors[13];
-  IdentityManager: EsriConstructors[14];
-  OAuthInfo: EsriConstructors[15];
-  CSVLayer: EsriConstructors[16];
-  FeatureLayer: EsriConstructors[17];
-  GeoRSSLayer: EsriConstructors[18];
-  GraphicsLayer: EsriConstructors[19];
-  KMLLayer: EsriConstructors[20];
-  Layer: EsriConstructors[21];
-  WMSLayer: EsriConstructors[22];
-  WMTSLayer: EsriConstructors[23];
-  Field: EsriConstructors[24];
-  PopupTemplate: EsriConstructors[25];
-  Portal: EsriConstructors[26];
-  PortalItem: EsriConstructors[27];
-  rendererJsonUtils: EsriConstructors[28];
-  Geoprocessor: EsriConstructors[29];
-  FeatureSet: EsriConstructors[30];
-  MapView: EsriConstructors[31];
-  BasemapGallery: EsriConstructors[32];
-  PortalBasemapsSource: EsriConstructors[33];
-  Home: EsriConstructors[34];
-  LayerList: EsriConstructors[35];
-  Legend: EsriConstructors[36];
-  Locate: EsriConstructors[37];
-  Search: EsriConstructors[38];
-  Slider: EsriConstructors[39];
-  SketchViewModel: EsriConstructors[40];
+  Handles: EsriConstructors[5];
+  watchUtils: EsriConstructors[6];
+  Extent: EsriConstructors[7];
+  geometryEngine: EsriConstructors[8];
+  Point: EsriConstructors[9];
+  Polygon: EsriConstructors[10];
+  projection: EsriConstructors[11];
+  SpatialReference: EsriConstructors[12];
+  geometryJsonUtils: EsriConstructors[13];
+  webMercatorUtils: EsriConstructors[14];
+  IdentityManager: EsriConstructors[15];
+  OAuthInfo: EsriConstructors[16];
+  CSVLayer: EsriConstructors[17];
+  FeatureLayer: EsriConstructors[18];
+  GeoRSSLayer: EsriConstructors[19];
+  GraphicsLayer: EsriConstructors[20];
+  GroupLayer: EsriConstructors[21];
+  KMLLayer: EsriConstructors[22];
+  Layer: EsriConstructors[23];
+  WMSLayer: EsriConstructors[24];
+  WMTSLayer: EsriConstructors[25];
+  Field: EsriConstructors[26];
+  PopupTemplate: EsriConstructors[27];
+  Portal: EsriConstructors[28];
+  PortalItem: EsriConstructors[29];
+  rendererJsonUtils: EsriConstructors[30];
+  Geoprocessor: EsriConstructors[31];
+  FeatureSet: EsriConstructors[32];
+  MapView: EsriConstructors[33];
+  BasemapGallery: EsriConstructors[34];
+  PortalBasemapsSource: EsriConstructors[35];
+  Home: EsriConstructors[36];
+  LayerList: EsriConstructors[37];
+  Legend: EsriConstructors[38];
+  Locate: EsriConstructors[39];
+  Search: EsriConstructors[40];
+  Slider: EsriConstructors[41];
+  SketchViewModel: EsriConstructors[42];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -107,6 +111,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/Map',
         'esri/Viewpoint',
         'esri/core/Collection',
+        'esri/core/Handles',
         'esri/core/watchUtils',
         'esri/geometry/Extent',
         'esri/geometry/geometryEngine',
@@ -122,6 +127,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/layers/FeatureLayer',
         'esri/layers/GeoRSSLayer',
         'esri/layers/GraphicsLayer',
+        'esri/layers/GroupLayer',
         'esri/layers/KMLLayer',
         'esri/layers/Layer',
         'esri/layers/WMSLayer',
@@ -155,6 +161,7 @@ function EsriModulesProvider({ children }: Props) {
         EsriMap,
         Viewpoint,
         Collection,
+        Handles,
         watchUtils,
         Extent,
         geometryEngine,
@@ -170,6 +177,7 @@ function EsriModulesProvider({ children }: Props) {
         FeatureLayer,
         GeoRSSLayer,
         GraphicsLayer,
+        GroupLayer,
         KMLLayer,
         Layer,
         WMSLayer,
@@ -198,6 +206,7 @@ function EsriModulesProvider({ children }: Props) {
           EsriMap,
           Viewpoint,
           Collection,
+          Handles,
           watchUtils,
           Extent,
           geometryEngine,
@@ -213,6 +222,7 @@ function EsriModulesProvider({ children }: Props) {
           FeatureLayer,
           GeoRSSLayer,
           GraphicsLayer,
+          GroupLayer,
           KMLLayer,
           Layer,
           WMSLayer,

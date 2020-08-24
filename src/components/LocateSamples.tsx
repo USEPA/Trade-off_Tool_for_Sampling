@@ -5,7 +5,7 @@ import { jsx, css } from '@emotion/core';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
-import EditLayerMetaData from 'components/EditLayerMetaData';
+import { EditScenario, EditLayer } from 'components/EditLayerMetaData';
 import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
 // contexts
@@ -15,7 +15,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
-import { EditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
 import {
   sampleAttributes,
@@ -34,10 +34,14 @@ import {
 // utils
 import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
+  createSampleLayer,
+  findLayerInEdits,
   getCurrentDateTime,
   getDefaultAreaOfInterestLayer,
-  getDefaultSampleLayer,
+  getNextScenarioLayer,
   getPopupTemplate,
+  getScenarios,
+  getSketchableLayers,
   updateLayerEdits,
   updatePolygonSymbol,
 } from 'utils/sketchUtils';
@@ -51,13 +55,6 @@ type ShapeTypeSelect = {
 };
 
 type EditType = 'create' | 'edit' | 'clone' | 'view';
-
-// gets an array of layers that can be used with the sketch widget.
-function getSketchableLayers(layers: LayerType[]) {
-  return layers.filter(
-    (layer) => layer.layerType === 'Samples' || layer.layerType === 'VSP',
-  );
-}
 
 /**
  * Determines if the desired name has already been used. If it has
@@ -360,6 +357,8 @@ function LocateSamples() {
     map,
     polygonSymbol,
     setPolygonSymbol,
+    selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     setSketchLayer,
     aoiSketchLayer,
@@ -394,22 +393,23 @@ function LocateSamples() {
   React.useEffect(() => {
     if (!map || !layersInitialized || sketchLayerInitialized) return;
 
-    // get the first layer that can be used for sketching and return
-    const sketchableLayers = getSketchableLayers(layers);
-    if (!sketchLayer && sketchableLayers.length > 0) {
-      setSketchLayer(sketchableLayers[0]);
-    }
-
     setSketchLayerInitialized(true);
 
-    // check if the default sketch layer has been added already or not
-    const defaultIndex = sketchableLayers.findIndex(
-      (layer) => layer.name === 'Default Sample Layer',
+    const { nextScenario, nextLayer, defaultLayerIndex } = getNextScenarioLayer(
+      edits,
+      layers,
+      selectedScenario,
+      sketchLayer,
     );
-    if (defaultIndex > -1) return;
+
+    if (nextScenario) setSelectedScenario(nextScenario);
+    if (nextLayer) setSketchLayer(nextLayer);
+
+    // check if the default sketch layer has been added already or not
+    if (defaultLayerIndex > -1) return;
 
     // no sketchable layers were available, create one
-    const tempSketchLayer = getDefaultSampleLayer(GraphicsLayer);
+    const tempSketchLayer = createSampleLayer(GraphicsLayer);
 
     // add the sketch layer to the map
     setLayers((layers) => {
@@ -417,15 +417,18 @@ function LocateSamples() {
     });
 
     // if the sketch layer wasn't set above, set it now
-    if (!sketchLayer && sketchableLayers.length === 0) {
+    if (!sketchLayer && !nextLayer) {
       setSketchLayer(tempSketchLayer);
     }
   }, [
     GraphicsLayer,
-    map,
+    edits,
     layersInitialized,
     layers,
     setLayers,
+    map,
+    selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     setSketchLayer,
     sketchLayerInitialized,
@@ -463,11 +466,14 @@ function LocateSamples() {
   function sketchButtonClick(label: string) {
     if (!sketchVM || !map || !sketchLayer) return;
 
-    // put the sketch layer on the map, if it isn't there already
+    // put the sketch layer on the map, if it isn't there already and
+    // is not part of a group layer
     const layerIndex = map.layers.findIndex(
       (layer) => layer.id === sketchLayer.layerId,
     );
-    if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
+    if (layerIndex === -1 && !sketchLayer.parentLayer) {
+      map.add(sketchLayer.sketchLayer);
+    }
 
     // save changes from other sketchVM and disable to prevent
     // interference
@@ -1003,6 +1009,65 @@ function LocateSamples() {
     return editedGraphics;
   }
 
+  // Changes the selected layer if the scenario is changed. The first
+  // available layer in the scenario will be chosen. If the scenario
+  // has no layers, then the first availble unlinked layer is chosen.
+  React.useEffect(() => {
+    if (!selectedScenario) return;
+    if (
+      sketchLayer &&
+      (!sketchLayer.parentLayer ||
+        sketchLayer.parentLayer.id === selectedScenario.layerId)
+    ) {
+      return;
+    }
+
+    // select the first layer within the selected scenario
+    if (selectedScenario.layers.length > 0) {
+      const newSketchLayer = layers.find(
+        (layer) => layer.layerId === selectedScenario.layers[0].layerId,
+      );
+      if (newSketchLayer) {
+        setSketchLayer(newSketchLayer);
+        return;
+      }
+    }
+
+    // select the first unlinked layer
+    const newSketchLayer = layers.find(
+      (layer) =>
+        (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+        !layer.parentLayer,
+    );
+    if (newSketchLayer) setSketchLayer(newSketchLayer);
+    else setSketchLayer(null);
+  }, [layers, selectedScenario, sketchLayer, setSketchLayer]);
+
+  // scenario and layer edit UI visibility controls
+  const [addScenarioVisible, setAddScenarioVisible] = React.useState(false);
+  const [editScenarioVisible, setEditScenarioVisible] = React.useState(false);
+  const [addLayerVisible, setAddLayerVisible] = React.useState(false);
+  const [editLayerVisible, setEditLayerVisible] = React.useState(false);
+
+  // get a list of scenarios from edits
+  const scenarios = getScenarios(edits);
+
+  // build the list of layers to be displayed in the sample layer dropdown
+  const sampleLayers: { label: string; options: LayerType[] }[] = [];
+  if (selectedScenario && selectedScenario.layers.length > 0) {
+    // get layers for the selected scenario
+    sampleLayers.push({
+      label: selectedScenario.label,
+      options: getSketchableLayers(layers, selectedScenario.layers),
+    });
+  }
+
+  // get unlinked layers
+  sampleLayers.push({
+    label: 'Unlinked Layers',
+    options: getSketchableLayers(layers, edits.edits),
+  });
+
   return (
     <div css={panelContainer}>
       <div>
@@ -1065,19 +1130,518 @@ function LocateSamples() {
             feature layer name if published to your ArcGIS Online account in the{' '}
             <strong>Publish Plan</strong> step.
           </p>
-          <label htmlFor="sampling-layer-select-input">
-            Specify Sampling Layer
-          </label>
-          <Select
-            id="sampling-layer-select"
-            inputId="sampling-layer-select-input"
-            css={layerSelectStyles}
-            value={sketchLayer}
-            onChange={(ev) => setSketchLayer(ev as LayerType)}
-            options={getSketchableLayers(layers)}
-          />
 
-          <EditLayerMetaData />
+          {scenarios.length === 0 ? (
+            <EditScenario />
+          ) : (
+            <React.Fragment>
+              <div css={iconButtonContainerStyles}>
+                <label htmlFor="scenario-select-input">Specify Plan</label>
+                <div>
+                  {selectedScenario && (
+                    <React.Fragment>
+                      <button
+                        css={iconButtonStyles}
+                        title="Delete Plan"
+                        onClick={() => {
+                          // remove all of the child layers
+                          setLayers((layers) => {
+                            return layers.filter(
+                              (layer) =>
+                                selectedScenario.layers.findIndex(
+                                  (scenarioLayer) =>
+                                    scenarioLayer.layerId === layer.layerId,
+                                ) === -1,
+                            );
+                          });
+
+                          // remove the scenario from edits
+                          const newEdits: EditsType = {
+                            count: edits.count + 1,
+                            edits: edits.edits.filter(
+                              (item) =>
+                                item.layerId !== selectedScenario.layerId,
+                            ),
+                          };
+                          setEdits(newEdits);
+
+                          // select the next available scenario
+                          const scenarios = getScenarios(newEdits);
+                          setSelectedScenario(
+                            scenarios.length > 0 ? scenarios[0] : null,
+                          );
+
+                          if (!map) return;
+
+                          // remove the scenario from the map
+                          const mapLayer = map.layers.find(
+                            (layer) => layer.id === selectedScenario.layerId,
+                          );
+                          map.remove(mapLayer);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Plan</span>
+                      </button>
+                      <button
+                        css={iconButtonStyles}
+                        title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                        onClick={() => {
+                          setAddScenarioVisible(false);
+                          setEditScenarioVisible(!editScenarioVisible);
+                        }}
+                      >
+                        <i
+                          className={
+                            editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                          }
+                        />
+                        <span className="sr-only">
+                          {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                        </span>
+                      </button>
+                    </React.Fragment>
+                  )}
+                  <button
+                    css={iconButtonStyles}
+                    title={addScenarioVisible ? 'Cancel' : 'Add Plan'}
+                    onClick={() => {
+                      setEditScenarioVisible(false);
+                      setAddScenarioVisible(!addScenarioVisible);
+                    }}
+                  >
+                    <i
+                      className={
+                        addScenarioVisible ? 'fas fa-times' : 'fas fa-plus'
+                      }
+                    />
+                    <span className="sr-only">
+                      {addScenarioVisible ? 'Cancel' : 'Add Plan'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <Select
+                id="scenario-select-input"
+                inputId="scenario-select-input"
+                css={layerSelectStyles}
+                value={selectedScenario}
+                onChange={(ev) => {
+                  const newScenario = ev as ScenarioEditsType;
+                  setSelectedScenario(newScenario);
+
+                  // update the visiblity of layers
+                  layers.forEach((layer) => {
+                    if (layer.parentLayer) {
+                      layer.parentLayer.visible =
+                        layer.parentLayer.id === newScenario.layerId
+                          ? true
+                          : false;
+                      return;
+                    }
+
+                    if (
+                      layer.layerType === 'Samples' ||
+                      layer.layerType === 'VSP'
+                    ) {
+                      layer.sketchLayer.visible = false;
+                    }
+                  });
+
+                  setEdits((edits) => ({
+                    count: edits.count + 1,
+                    edits: edits.edits.map((edit) => {
+                      let visible = edit.visible;
+
+                      if (edit.type === 'scenario') {
+                        visible =
+                          edit.layerId === newScenario.layerId ? true : false;
+                      }
+                      if (edit.type === 'layer') {
+                        if (
+                          edit.layerType === 'Samples' ||
+                          edit.layerType === 'VSP'
+                        ) {
+                          visible = false;
+                        }
+                      }
+
+                      return {
+                        ...edit,
+                        visible,
+                      };
+                    }),
+                  }));
+                }}
+                options={scenarios}
+              />
+              {addScenarioVisible && (
+                <EditScenario onSave={() => setAddScenarioVisible(false)} />
+              )}
+              {editScenarioVisible && (
+                <EditScenario
+                  initialScenario={selectedScenario}
+                  onSave={() => setEditScenarioVisible(false)}
+                />
+              )}
+            </React.Fragment>
+          )}
+
+          {selectedScenario && (
+            <React.Fragment>
+              <div css={iconButtonContainerStyles}>
+                <label htmlFor="sampling-layer-select-input">
+                  Active Sampling Layer
+                </label>
+                <div>
+                  {sketchLayer && (
+                    <React.Fragment>
+                      <button
+                        css={iconButtonStyles}
+                        title="Delete Layer"
+                        onClick={() => {
+                          // remove the layer from layers
+                          setLayers((layers) => {
+                            return layers.filter(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                          });
+
+                          const parentLayer = sketchLayer.parentLayer;
+                          if (parentLayer) {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              const index = edits.edits.findIndex(
+                                (edit) => edit.layerId === parentLayer.id,
+                              );
+
+                              const editedScenario = edits.edits[
+                                index
+                              ] as ScenarioEditsType;
+                              editedScenario.layers = editedScenario.layers.filter(
+                                (layer) =>
+                                  layer.layerId !== sketchLayer.layerId,
+                              );
+
+                              return {
+                                count: edits.count + 1,
+                                edits: [
+                                  ...edits.edits.slice(0, index),
+                                  editedScenario,
+                                  ...edits.edits.slice(index + 1),
+                                ],
+                              };
+                            });
+                          } else {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              return {
+                                count: edits.count + 1,
+                                edits: edits.edits.filter(
+                                  (item) =>
+                                    item.layerId !== sketchLayer.layerId,
+                                ),
+                              };
+                            });
+                          }
+
+                          // select the next available layer
+                          let newSketchLayerIndex: number = -1;
+
+                          // check in the selected scenario first, then in the root of edits
+                          if (selectedScenario) {
+                            const index = selectedScenario.layers.findIndex(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId ===
+                                  selectedScenario.layers[index].layerId,
+                              );
+                            }
+                          }
+                          if (newSketchLayerIndex === -1) {
+                            const index = edits.edits.findIndex(
+                              (layer) =>
+                                layer.type === 'layer' &&
+                                layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId === edits.edits[index].layerId,
+                              );
+                            }
+                          }
+
+                          setSketchLayer(
+                            newSketchLayerIndex > -1
+                              ? layers[newSketchLayerIndex]
+                              : null,
+                          );
+
+                          // remove the scenario from the map
+                          const parent = parentLayer
+                            ? parentLayer
+                            : map
+                            ? map
+                            : null;
+                          if (parent) parent.remove(sketchLayer.sketchLayer);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Layer</span>
+                      </button>
+                      {sketchLayer.parentLayer ? (
+                        <button
+                          css={iconButtonStyles}
+                          title="Unlink Layer"
+                          onClick={() => {
+                            if (!map) return;
+
+                            // update edits (move the layer to the root)
+                            setEdits((edits) => {
+                              const {
+                                scenarioIndex,
+                                layerIndex,
+                                editsScenario,
+                                editsLayer,
+                              } = findLayerInEdits(
+                                edits.edits,
+                                sketchLayer.layerId,
+                              );
+
+                              if (editsScenario) {
+                                editsScenario.layers = [
+                                  ...editsScenario.layers.slice(0, layerIndex),
+                                  ...editsScenario.layers.slice(layerIndex + 1),
+                                ];
+
+                                return {
+                                  count: edits.count + 1,
+                                  edits: [
+                                    ...edits.edits.slice(0, scenarioIndex),
+                                    editsScenario,
+                                    ...edits.edits.slice(scenarioIndex + 1),
+                                    editsLayer,
+                                  ],
+                                };
+                              }
+
+                              return {
+                                count: edits.count + 1,
+                                edits: [...edits.edits, editsLayer],
+                              };
+                            });
+
+                            // remove the layer from the parent group layer and add to map
+                            sketchLayer.parentLayer?.remove(
+                              sketchLayer.sketchLayer,
+                            );
+                            map.add(sketchLayer.sketchLayer);
+
+                            // update layers (clear parent layer)
+                            setLayers((layers) => {
+                              const layerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId === sketchLayer.layerId,
+                              );
+
+                              if (layerIndex === -1) return layers;
+
+                              const layer = layers[layerIndex];
+                              layer.parentLayer = null;
+
+                              return [
+                                ...layers.slice(0, layerIndex),
+                                layer,
+                                ...layers.slice(layerIndex + 1),
+                              ];
+                            });
+
+                            // update sketchLayer (clear parent layer)
+                            setSketchLayer((sketchLayer) => {
+                              if (!sketchLayer) return sketchLayer;
+
+                              return {
+                                ...sketchLayer,
+                                parentLayer: null,
+                              };
+                            });
+
+                            // update the selected scenario
+                            setSelectedScenario((selectedScenario) => {
+                              if (!selectedScenario) return selectedScenario;
+
+                              return {
+                                ...selectedScenario,
+                                layers: selectedScenario.layers.filter(
+                                  (layer) =>
+                                    layer.layerId !== sketchLayer.layerId,
+                                ),
+                              };
+                            });
+                          }}
+                        >
+                          <i className="fas fa-unlink" />
+                          <span className="sr-only">Unlink Layer</span>
+                        </button>
+                      ) : (
+                        <button
+                          css={iconButtonStyles}
+                          title="Link Layer"
+                          onClick={() => {
+                            if (!map || !selectedScenario) return;
+
+                            // update edits (move the layer to the selected scenario)
+                            const editsCopy = updateLayerEdits({
+                              edits,
+                              scenario: selectedScenario,
+                              layer: sketchLayer,
+                              type: 'move',
+                            });
+                            setEdits(editsCopy);
+
+                            // find the new parent layer
+                            const groupLayer = map.layers.find(
+                              (layer) => layer.id === selectedScenario.layerId,
+                            ) as __esri.GroupLayer;
+                            if (!groupLayer) return;
+
+                            // add the layer to the parent group layer
+                            groupLayer.add(sketchLayer.sketchLayer);
+
+                            // update layers (set parent layer)
+                            setLayers((layers) => {
+                              const layerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId === sketchLayer.layerId,
+                              );
+
+                              if (layerIndex === -1) return layers;
+
+                              const layer = layers[layerIndex];
+                              layer.parentLayer = groupLayer;
+
+                              return [
+                                ...layers.slice(0, layerIndex),
+                                layer,
+                                ...layers.slice(layerIndex + 1),
+                              ];
+                            });
+
+                            // update sketchLayer (clear parent layer)
+                            setSketchLayer((sketchLayer) => {
+                              if (!sketchLayer) return sketchLayer;
+
+                              return {
+                                ...sketchLayer,
+                                parentLayer: groupLayer,
+                              };
+                            });
+
+                            // update the selectedScenario to keep the active layer dropdown
+                            // synced up
+                            const scenario = editsCopy.edits.find(
+                              (edit) =>
+                                edit.type === 'scenario' &&
+                                edit.layerId === selectedScenario.layerId,
+                            );
+                            if (scenario)
+                              setSelectedScenario(
+                                scenario as ScenarioEditsType,
+                              );
+                          }}
+                        >
+                          <i className="fas fa-link" />
+                          <span className="sr-only">Link Layer</span>
+                        </button>
+                      )}
+                      <button
+                        css={iconButtonStyles}
+                        title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
+                        onClick={() => setEditLayerVisible(!editLayerVisible)}
+                      >
+                        <i
+                          className={
+                            editLayerVisible ? 'fas fa-times' : 'fas fa-edit'
+                          }
+                        />
+                        <span className="sr-only">
+                          {editLayerVisible ? 'Cancel' : 'Edit Layer'}
+                        </span>
+                      </button>
+                    </React.Fragment>
+                  )}
+                  <button
+                    css={iconButtonStyles}
+                    title={addLayerVisible ? 'Cancel' : 'Add Layer'}
+                    onClick={() => setAddLayerVisible(!addLayerVisible)}
+                  >
+                    <i
+                      className={
+                        addLayerVisible ? 'fas fa-times' : 'fas fa-plus'
+                      }
+                    />
+                    <span className="sr-only">
+                      {addLayerVisible ? 'Cancel' : 'Add Layer'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <Select
+                id="sampling-layer-select"
+                inputId="sampling-layer-select-input"
+                css={layerSelectStyles}
+                value={sketchLayer}
+                onChange={(ev) => {
+                  const newLayer = ev as LayerType;
+
+                  // set visibility
+                  let visibilityChange = false;
+                  if (sketchLayer && !sketchLayer.parentLayer) {
+                    sketchLayer.sketchLayer.visible = false;
+                    visibilityChange = true;
+                  }
+                  if (!newLayer.parentLayer) {
+                    newLayer.sketchLayer.visible = true;
+                    visibilityChange = true;
+                  }
+                  if (visibilityChange) {
+                    setEdits((edits) => ({
+                      count: edits.count + 1,
+                      edits: edits.edits.map((edit) => {
+                        if (edit.type === 'scenario') return edit;
+
+                        let visible = edit.visible;
+                        if (edit.layerId === sketchLayer?.layerId)
+                          visible = false;
+                        if (edit.layerId === newLayer.layerId) visible = true;
+
+                        return {
+                          ...edit,
+                          visible,
+                        };
+                      }),
+                    }));
+                  }
+
+                  setSketchLayer(newLayer);
+                }}
+                options={sampleLayers}
+              />
+              {addLayerVisible && (
+                <EditLayer onSave={() => setAddLayerVisible(false)} />
+              )}
+              {editLayerVisible && (
+                <EditLayer
+                  initialLayer={sketchLayer}
+                  onSave={() => setEditLayerVisible(false)}
+                />
+              )}
+            </React.Fragment>
+          )}
         </div>
         <div css={sectionContainerWidthOnly}>
           <p>
@@ -1755,7 +2319,9 @@ function LocateSamples() {
                               UPDATEDDATE: null,
                               USERNAME: null,
                               ORGANIZATION: null,
-                              ELEVATIONSERIES: null,
+                              DECISIONUNITUUID: null,
+                              DECISIONUNIT: null,
+                              DECISIONUNITSORT: null,
                             };
 
                             // add/update the sample's attributes
