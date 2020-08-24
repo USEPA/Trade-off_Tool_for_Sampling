@@ -616,8 +616,6 @@ function Calculate() {
               type: 'properties',
             });
 
-            // TODO - Need to figure out how to pass the multiple layrs to the
-            //    contamination hits gp service
             // save the data to state, use an empty array if there is no data
             if (resFeatures.length > 0) {
               const popupTemplate = new PopupTemplate(

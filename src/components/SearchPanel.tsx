@@ -1129,8 +1129,6 @@ function ResultCard({ result }: ResultCardProps) {
   function removeTotsLayer() {
     if (!map) return;
 
-    // TODO need to update this to handle multi layer
-
     setLayers((layers) => {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
