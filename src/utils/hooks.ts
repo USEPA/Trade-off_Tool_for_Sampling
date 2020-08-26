@@ -572,8 +572,8 @@ export function useCalculatePlan() {
 
     // calculate lab throughput
     const totalLabHours = numLabs * numLabHours;
-    const labThroughput = totals.tta / totalLabHours;
-    const totalLabTime = totals.tta < 1 ? 1 : totals.tta;
+    let labThroughput = totals.tta / totalLabHours;
+    labThroughput = labThroughput < 1 ? 1 : labThroughput;
 
     // calculate total cost and time
     const totalCost =
@@ -583,7 +583,7 @@ export function useCalculatePlan() {
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
     // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
     let totalTime = 0;
-    if (totalLabTime < timeCompleteSampling) {
+    if (labThroughput < timeCompleteSampling) {
       totalTime = timeCompleteSampling;
     } else {
       totalTime = labThroughput + 1;
@@ -616,7 +616,7 @@ export function useCalculatePlan() {
       'Time to Prepare Kits': totals.ttpk,
       'Time to Collect': totals.ttc,
       'Material Cost': totals.mcps,
-      'Time to Analyze': totalLabTime,
+      'Time to Analyze': totals.tta,
       'Analysis Labor Cost': totals.alc,
       'Analysis Material Cost': totals.amc,
       'Waste Volume': totals.wvps,
