@@ -1170,12 +1170,11 @@ function FilePanel() {
                           message={
                             <p css={layerInfo}>
                               Image format limitations exist for viewing imagery
-                              on the web. Specifically, imagery must first be be
-                              cached and shared as a tiled map service in ArcGIS
-                              Online. Users must properly "pre-process" and
-                              format underlying images for display within TOTS
-                              outside of TOTS using standard Esri desktop-based
-                              tools (e.g., ArcGIS Pro).
+                              on the web. You must properly "pre-process" and
+                              format imagery using standard Esri desktop-based
+                              tools (e.g., ArcGIS Pro) and then cache and share
+                              the imagery as a tiled map service in ArcGIS
+                              Online for display within TOTS.
                             </p>
                           }
                         />
