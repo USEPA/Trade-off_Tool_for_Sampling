@@ -94,6 +94,7 @@ export function useStartOver() {
     setUrlLayers,
     setReferenceLayers,
     setPortalLayers,
+    setSelectedScenario,
     setSketchLayer,
     setAoiSketchLayer,
     setUserDefinedAttributes,
@@ -101,6 +102,7 @@ export function useStartOver() {
   } = React.useContext(SketchContext);
 
   function startOver() {
+    setSelectedScenario(null);
     setSketchLayer(null);
     setAoiSketchLayer(null);
 
