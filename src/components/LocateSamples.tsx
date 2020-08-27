@@ -646,12 +646,6 @@ function LocateSamples() {
                 return;
               }
 
-              // put the sketch layer on the map, if it isn't there already
-              const layerIndex = map.layers.findIndex(
-                (layer) => layer.id === sketchLayer.layerId,
-              );
-              if (layerIndex === -1) map.add(sketchLayer.sketchLayer);
-
               // get the results from the response
               const results = res.results[0].value;
 
