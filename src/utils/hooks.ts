@@ -1346,7 +1346,7 @@ function useContaminationMapStorage() {
   }, [contaminationMap, localContaminationLayerInitialized, setOptions]);
 }
 
-// Uses browser storage for holding the currently selected area of interest layer.
+// Uses browser storage for holding the currently selected sampling mask layer.
 function useGenerateRandomMaskStorage() {
   const key = 'tots_generate_random_mask_layer';
   const { setOptions } = React.useContext(DialogContext);
@@ -1356,7 +1356,7 @@ function useGenerateRandomMaskStorage() {
     setAoiSketchLayer, //
   } = React.useContext(SketchContext);
 
-  // Retreives the selected area of interest from browser storage
+  // Retreives the selected sampling mask from browser storage
   // when the app loads
   const [
     localAoiLayerInitialized,
@@ -1373,7 +1373,7 @@ function useGenerateRandomMaskStorage() {
     setAoiSketchLayer(getLayerById(layers, layerId));
   }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
 
-  // Saves the selected area of interest to browser storage whenever it changes
+  // Saves the selected sampling mask to browser storage whenever it changes
   React.useEffect(() => {
     if (!localAoiLayerInitialized) return;
 

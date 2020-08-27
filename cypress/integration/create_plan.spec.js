@@ -28,8 +28,8 @@ describe('Create Plan Drop Down Contents', function () {
     cy.get(sampleSelectId).contains(layerName);
   });
 
-  it('drop down has sketched area of interest layer and legend does not', function () {
-    const layerName = 'Sketched Area of Interest';
+  it('drop down has sketched sampling mask layer and legend does not', function () {
+    const layerName = 'Sketched Sampling Mask';
 
     // check the legend contents
     cy.get(legendId).contains(layerName).should('not.exist');
@@ -58,8 +58,8 @@ describe('Create Plan Drop Down Contents', function () {
     cy.get(legendId).contains(layerName);
   });
 
-  it('drop down has sketched area of interest layer and legend does after placing a sample', function () {
-    const layerName = 'Sketched Area of Interest';
+  it('drop down has sketched sampling mask layer and legend does after placing a sample', function () {
+    const layerName = 'Sketched Sampling Mask';
 
     // check the legend contents and close
     cy.get(legendId).contains(layerName).should('not.exist');

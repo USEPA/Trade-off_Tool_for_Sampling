@@ -5,7 +5,8 @@ export type LayerTypeName =
   | 'Samples'
   | 'Reference Layer'
   | 'Area of Interest'
-  | 'VSP';
+  | 'VSP'
+  | 'Sampling Mask';
 
 export type LayerSelectType = {
   value: LayerTypeName;
