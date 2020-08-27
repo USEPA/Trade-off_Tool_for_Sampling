@@ -266,7 +266,8 @@ function FeatureTool({
   });
 
   // get the sketch layer id
-  const activeLayerId = tempSketchVM?.activeComponent?.graphics?.[0]?.layer?.id;
+  const activeLayer = tempSketchVM?.activeComponent?.graphics?.[0]?.layer;
+  const activeLayerId = activeLayer?.id;
 
   return (
     <div css={containerStyles}>
@@ -288,68 +289,74 @@ function FeatureTool({
             <label>Type: </label>
             {type}
           </div>
-          <div css={inputContainerStyles}>
-            <label htmlFor="layer-change-select-input">Layer:</label>
-            <Select
-              id="layer-change-select"
-              inputId="layer-change-select-input"
-              value={selectedLayer}
-              onChange={(ev) => setSelectedLayer(ev as LayerType)}
-              options={layerOptions}
-            />
-          </div>
-          <div>
-            <label htmlFor="graphic-note">Note: </label>
-            <br />
-            <textarea
-              id="graphic-note"
-              css={noteStyles}
-              value={note}
-              onChange={(ev) => setNote(ev.target.value)}
-            />
-          </div>
-          <div css={saveButtonContainerStyles}>
-            <button
-              css={saveButtonStyles(saveStatus)}
-              disabled={
-                note === graphicNote && activeLayerId === selectedLayer?.layerId
-              }
-              onClick={(ev) => {
-                // Workaround for activeComponent not existing on the SketchViewModel type.
-                const tempSketchVM = sketchVM as any;
-
-                // set the notes
-                if (tempSketchVM.activeComponent?.graphics) {
-                  const firstGraphic = tempSketchVM.activeComponent.graphics[0];
-                  firstGraphic.attributes['Notes'] = note;
-                  setGraphicNote(note);
-
-                  // move the graphic if it is on a different layer
-                  if (activeLayerId !== selectedLayer?.layerId) {
-                    onClick(ev, 'Move', selectedLayer);
-                  } else {
-                    onClick(ev, 'Save');
+          {activeLayer?.title !== 'Sketched Sampling Mask' && (
+            <React.Fragment>
+              <div css={inputContainerStyles}>
+                <label htmlFor="layer-change-select-input">Layer:</label>
+                <Select
+                  id="layer-change-select"
+                  inputId="layer-change-select-input"
+                  value={selectedLayer}
+                  onChange={(ev) => setSelectedLayer(ev as LayerType)}
+                  options={layerOptions}
+                />
+              </div>
+              <div>
+                <label htmlFor="graphic-note">Note: </label>
+                <br />
+                <textarea
+                  id="graphic-note"
+                  css={noteStyles}
+                  value={note}
+                  onChange={(ev) => setNote(ev.target.value)}
+                />
+              </div>
+              <div css={saveButtonContainerStyles}>
+                <button
+                  css={saveButtonStyles(saveStatus)}
+                  disabled={
+                    note === graphicNote &&
+                    activeLayerId === selectedLayer?.layerId
                   }
+                  onClick={(ev) => {
+                    // Workaround for activeComponent not existing on the SketchViewModel type.
+                    const tempSketchVM = sketchVM as any;
 
-                  setSaveStatus('success');
-                } else {
-                  setSaveStatus('failure');
-                }
-              }}
-            >
-              {saveStatus === 'none' && 'Save'}
-              {saveStatus === 'success' && (
-                <React.Fragment>
-                  <i className="fas fa-check" /> Saved
-                </React.Fragment>
-              )}
-              {saveStatus === 'failure' && (
-                <React.Fragment>
-                  <i className="fas fa-exclamation-triangle" /> Error
-                </React.Fragment>
-              )}
-            </button>
-          </div>
+                    // set the notes
+                    if (tempSketchVM.activeComponent?.graphics) {
+                      const firstGraphic =
+                        tempSketchVM.activeComponent.graphics[0];
+                      firstGraphic.attributes['Notes'] = note;
+                      setGraphicNote(note);
+
+                      // move the graphic if it is on a different layer
+                      if (activeLayerId !== selectedLayer?.layerId) {
+                        onClick(ev, 'Move', selectedLayer);
+                      } else {
+                        onClick(ev, 'Save');
+                      }
+
+                      setSaveStatus('success');
+                    } else {
+                      setSaveStatus('failure');
+                    }
+                  }}
+                >
+                  {saveStatus === 'none' && 'Save'}
+                  {saveStatus === 'success' && (
+                    <React.Fragment>
+                      <i className="fas fa-check" /> Saved
+                    </React.Fragment>
+                  )}
+                  {saveStatus === 'failure' && (
+                    <React.Fragment>
+                      <i className="fas fa-exclamation-triangle" /> Error
+                    </React.Fragment>
+                  )}
+                </button>
+              </div>
+            </React.Fragment>
+          )}
         </React.Fragment>
       )}
     </div>
@@ -541,8 +548,8 @@ function MapWidgets({ mapView }: Props) {
           // get the predefined attributes using the id of the clicked button
           const uuid = generateUUID();
           let layerType: LayerTypeName = 'Samples';
-          if (id === 'aoi') {
-            layerType = 'Area of Interest';
+          if (id === 'sampling-mask') {
+            layerType = 'Sampling Mask';
             graphic.attributes = {
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
@@ -669,7 +676,7 @@ function MapWidgets({ mapView }: Props) {
     setSketchEventsInitialized,
   ]);
 
-  // Setup the sketch view model events for the Area of Interest (AOI) sketchVM
+  // Setup the sketch view model events for the Sampling Mask sketchVM
   const [aoiSketchVMActive, setAoiSketchVMActive] = React.useState(false);
   const [
     aoiSketchEventsInitialized,

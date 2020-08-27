@@ -1051,7 +1051,7 @@ function FilePanel() {
       {!layerType ? (
         <React.Fragment>
           <p css={sectionParagraph}>Locate the file you want to import.</p>
-          <p css={sectionParagraph}>
+          <div css={sectionParagraph}>
             <MessageBox
               severity="warning"
               title="Requirements for uploading files:"
@@ -1076,7 +1076,7 @@ function FilePanel() {
                 </React.Fragment>
               }
             />
-          </p>
+          </div>
         </React.Fragment>
       ) : (
         <React.Fragment>
@@ -1120,7 +1120,7 @@ function FilePanel() {
                         the <strong>Calculate Resources</strong> step and then
                         view the comparison against your sampling plan.
                       </p>
-                      <p css={sectionParagraph}>
+                      <div css={sectionParagraph}>
                         <MessageBox
                           severity="warning"
                           title="The Contamination Map layer must include the following attributes to be uploaded:"
@@ -1140,7 +1140,7 @@ function FilePanel() {
                             </React.Fragment>
                           }
                         />
-                      </p>
+                      </div>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Samples' && (
@@ -1163,7 +1163,7 @@ function FilePanel() {
                         etc.). This layer will be added to the map and can be
                         accessed from the Legend panel.
                       </p>
-                      <p css={sectionParagraph}>
+                      <div css={sectionParagraph}>
                         <MessageBox
                           severity="warning"
                           title="Image Format Limitations"
@@ -1178,7 +1178,7 @@ function FilePanel() {
                             </p>
                           }
                         />
-                      </p>
+                      </div>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Area of Interest' && (

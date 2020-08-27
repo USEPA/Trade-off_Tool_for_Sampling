@@ -37,7 +37,7 @@ import {
   createSampleLayer,
   findLayerInEdits,
   getCurrentDateTime,
-  getDefaultAreaOfInterestLayer,
+  getDefaultSamplingMaskLayer,
   getNextScenarioLayer,
   getPopupTemplate,
   getScenarios,
@@ -438,7 +438,7 @@ function LocateSamples() {
   React.useEffect(() => {
     if (!map || !layersInitialized || aoiSketchLayer) return;
 
-    const newAoiSketchLayer = getDefaultAreaOfInterestLayer(GraphicsLayer);
+    const newAoiSketchLayer = getDefaultSamplingMaskLayer(GraphicsLayer);
 
     // add the layer to the map
     setLayers((layers) => {
@@ -549,7 +549,7 @@ function LocateSamples() {
     }
 
     // make the style of the button active
-    const elem = document.getElementById('aoi');
+    const elem = document.getElementById('sampling-mask');
     if (elem) elem.classList.add('sketch-button-selected');
   }
 
@@ -1775,7 +1775,7 @@ function LocateSamples() {
                     options={SampleSelectOptions}
                   />
                   <button
-                    id="aoi"
+                    id="sampling-mask"
                     title="Draw Sampling Mask"
                     className="sketch-button"
                     onClick={() => {

@@ -344,16 +344,24 @@ export function getPopupTemplate(
   type: LayerTypeName,
   includeContaminationFields: boolean = false,
 ) {
+  if (type === 'Sampling Mask') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
+        },
+      ],
+    };
+  }
   if (type === 'Area of Interest') {
     return {
       title: '',
       content: [
         {
           type: 'fields',
-          fieldInfos: [
-            { fieldName: 'TYPE', label: 'Type' },
-            { fieldName: 'Notes', label: 'Notes' },
-          ],
+          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
         },
       ],
     };
@@ -518,16 +526,16 @@ export function createSampleLayer(
 }
 
 /**
- * Builds the default area of interest layer.
+ * Builds the default sampling mask layer.
  *
  * @param GraphicsLayer The esri graphics layer constructor object
- * @returns LayerType The default area of interest layer
+ * @returns LayerType The default sampling mask layer
  */
-export function getDefaultAreaOfInterestLayer(
+export function getDefaultSamplingMaskLayer(
   GraphicsLayer: __esri.GraphicsLayerConstructor,
 ) {
   const graphicsLayer = new GraphicsLayer({
-    title: 'Sketched Area of Interest',
+    title: 'Sketched Sampling Mask',
     listMode: 'hide',
   });
 
@@ -537,9 +545,9 @@ export function getDefaultAreaOfInterestLayer(
     layerId: graphicsLayer.id,
     portalId: '',
     value: 'sketchAoi',
-    name: 'Sketched Area of Interest',
-    label: 'Sketched Area of Interest',
-    layerType: 'Area of Interest',
+    name: 'Sketched Sampling Mask',
+    label: 'Sketched Sampling Mask',
+    layerType: 'Sampling Mask',
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
