@@ -553,7 +553,6 @@ function MapWidgets({ mapView }: Props) {
             graphic.attributes = {
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
-              Notes: '',
               TYPE: layerType,
             };
           } else {
