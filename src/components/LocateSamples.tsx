@@ -123,6 +123,10 @@ const panelContainer = css`
   flex-direction: column;
   justify-content: space-between;
   min-height: 100%;
+
+  .sketch-button-selected {
+    background-color: #f0f0f0;
+  }
 `;
 
 const sectionContainer = css`
@@ -140,10 +144,6 @@ const layerSelectStyles = css`
 const sketchButtonContainerStyles = css`
   margin-left: 1px;
   margin-top: 1px;
-
-  .sketch-button-selected {
-    background-color: #f0f0f0;
-  }
 `;
 
 const sketchButtonStyles = css`
@@ -501,8 +501,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (aoiSketchVM) {
-      aoiSketchVM.complete();
-      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+      aoiSketchVM.cancel();
     }
 
     // determine whether the sketch button draws points or polygons
@@ -554,8 +553,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (sketchVM) {
-      sketchVM.complete();
-      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+      sketchVM.cancel();
     }
 
     // activate the sketch tool
