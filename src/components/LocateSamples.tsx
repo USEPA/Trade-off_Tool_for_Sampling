@@ -56,6 +56,8 @@ type ShapeTypeSelect = {
 
 type EditType = 'create' | 'edit' | 'clone' | 'view';
 
+const sketchSelectedClass = 'sketch-button-selected';
+
 /**
  * Determines if the desired name has already been used. If it has
  * it appends in index to the end (i.e. '<desiredName> (2)').
@@ -92,6 +94,27 @@ function convertArrayToRgbColor(color: number[]) {
     b: color[2],
     a: color.length > 3 ? color[3] : 1,
   } as RGBColor;
+}
+
+function activateSketchButton(id: string) {
+  const sketchButtons = document.getElementsByClassName('sketch-button');
+  for (let i = 0; i < sketchButtons.length; i++) {
+    const sketchButton = sketchButtons[i];
+
+    // make the button active if the id matches the provided id
+    if (sketchButton.id === id) {
+      // make the style of the button active
+      if (!sketchButton.classList.contains(sketchSelectedClass)) {
+        sketchButton.classList.add(sketchSelectedClass);
+      }
+      continue;
+    }
+
+    // remove the selected class from all other buttons
+    if (sketchButton.classList.contains(sketchSelectedClass)) {
+      sketchButton.classList.remove(sketchSelectedClass);
+    }
+  }
 }
 
 // --- styles (SketchButton) ---
@@ -498,8 +521,7 @@ function LocateSamples() {
     sketchVM.create(shapeType);
 
     // make the style of the button active
-    const elem = document.getElementById(label);
-    if (elem) elem.classList.add('sketch-button-selected');
+    activateSketchButton(label);
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -549,8 +571,7 @@ function LocateSamples() {
     }
 
     // make the style of the button active
-    const elem = document.getElementById('sampling-mask');
-    if (elem) elem.classList.add('sketch-button-selected');
+    activateSketchButton('sampling-mask');
   }
 
   // Handle a user generating random samples
