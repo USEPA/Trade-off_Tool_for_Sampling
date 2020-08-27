@@ -631,6 +631,10 @@ function LocateSamples() {
             Number_of_Samples: numSamples,
             Sample_Type: sampleType.value,
             Area_of_Interest_Mask: featureSet.toJSON(),
+            // TODO - Need to fix this, as it probably is not correct
+            // Sample_Type_Parameters: {
+            //   ...sampleAttributes[sampleType.value],
+            // },
           };
           const request = geoprocessorFetch({
             Geoprocessor,
@@ -1785,7 +1789,7 @@ function LocateSamples() {
                     css={fullWidthSelectStyles}
                     value={sampleType}
                     onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                    options={SampleSelectOptions}
+                    options={allSampleOptions}
                   />
                   <button
                     id="sampling-mask"

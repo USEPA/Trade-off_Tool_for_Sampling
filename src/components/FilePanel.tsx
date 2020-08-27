@@ -236,6 +236,8 @@ function FilePanel() {
     setReferenceLayers,
     polygonSymbol,
     getGpMaxRecordCount,
+    userDefinedOptions,
+    userDefinedAttributes,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -275,6 +277,31 @@ function FilePanel() {
 
     setGoToOptions(null);
   }, [goToOptions, setGoToOptions]);
+
+  // Keep the allSampleOptions array up to date
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
+  React.useEffect(() => {
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    SampleSelectOptions.forEach((option) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -522,6 +549,10 @@ function FilePanel() {
           return;
         }
 
+        // this should never happen, but if sample type wasn't selected
+        // exit early
+        if (!sampleType) return;
+
         const features: __esri.Graphic[] = [];
         let layerDefinition: any;
         res.featureCollection.layers.forEach((layer: any) => {
@@ -570,7 +601,11 @@ function FilePanel() {
               const params = {
                 f: 'json',
                 Input_VSP: inputVspSet,
-                Sample_Type: sampleType && sampleType.value,
+                Sample_Type: sampleType.value,
+                // TODO - Need to fix this, as it probably is not correct
+                // Sample_Type_Parameters: {
+                //   ...sampleAttributes[sampleType.value],
+                // },
               };
               const request = geoprocessorFetch({
                 Geoprocessor,
@@ -1092,7 +1127,7 @@ function FilePanel() {
                   setSampleType(ev as SampleSelectType);
                   setUploadStatus('');
                 }}
-                options={SampleSelectOptions}
+                options={allSampleOptions}
               />
               <p css={sectionParagraph}>
                 Add an externally-generated Visual Sample Plan (VSP) layer to
