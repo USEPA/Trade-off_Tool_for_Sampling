@@ -1238,6 +1238,7 @@ function LocateSamples() {
                 id="scenario-select-input"
                 inputId="scenario-select-input"
                 css={layerSelectStyles}
+                isDisabled={addScenarioVisible || editScenarioVisible}
                 value={selectedScenario}
                 onChange={(ev) => {
                   const newScenario = ev as ScenarioEditsType;
@@ -1300,7 +1301,7 @@ function LocateSamples() {
             </React.Fragment>
           )}
 
-          {selectedScenario && (
+          {selectedScenario && !addScenarioVisible && !editScenarioVisible && (
             <React.Fragment>
               <div css={iconButtonContainerStyles}>
                 <label htmlFor="sampling-layer-select-input">
@@ -1574,7 +1575,10 @@ function LocateSamples() {
                       <button
                         css={iconButtonStyles}
                         title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
-                        onClick={() => setEditLayerVisible(!editLayerVisible)}
+                        onClick={() => {
+                          setAddLayerVisible(false);
+                          setEditLayerVisible(!editLayerVisible);
+                        }}
                       >
                         <i
                           className={
@@ -1590,7 +1594,10 @@ function LocateSamples() {
                   <button
                     css={iconButtonStyles}
                     title={addLayerVisible ? 'Cancel' : 'Add Layer'}
-                    onClick={() => setAddLayerVisible(!addLayerVisible)}
+                    onClick={() => {
+                      setEditLayerVisible(false);
+                      setAddLayerVisible(!addLayerVisible);
+                    }}
                   >
                     <i
                       className={
@@ -1607,6 +1614,7 @@ function LocateSamples() {
                 id="sampling-layer-select"
                 inputId="sampling-layer-select-input"
                 css={layerSelectStyles}
+                isDisabled={addLayerVisible || editLayerVisible}
                 value={sketchLayer}
                 onChange={(ev) => {
                   const newLayer = ev as LayerType;
