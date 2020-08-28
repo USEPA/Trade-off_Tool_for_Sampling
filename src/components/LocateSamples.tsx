@@ -614,6 +614,7 @@ function LocateSamples() {
           features: graphics,
         });
 
+        // get the sample type definition (can be established or custom)
         const sampleTypeFeatureSet = {
           displayFieldName: '',
           geometryType: 'esriGeometryPolygon',
@@ -646,7 +647,6 @@ function LocateSamples() {
             Number_of_Samples: numSamples,
             Sample_Type: sampleType.value,
             Area_of_Interest_Mask: featureSet.toJSON(),
-            // TODO - Need to fix this, as it probably is not correct
             Sample_Type_Parameters: sampleTypeFeatureSet,
           };
           const request = geoprocessorFetch({

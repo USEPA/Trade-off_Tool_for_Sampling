@@ -25,6 +25,7 @@ import { chunkArray } from 'utils/utils';
 // types
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
+import { defaultLayerProps } from 'config/layerProps';
 import { totsGPServer } from 'config/webService';
 import {
   sampleAttributes,
@@ -574,6 +575,21 @@ function FilePanel() {
           fields.push(Field.fromJSON(field));
         });
 
+        // get the sample type definition (can be established or custom)
+        const sampleTypeFeatureSet = {
+          displayFieldName: '',
+          geometryType: 'esriGeometryPolygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: defaultLayerProps.fields,
+          features: [
+            {
+              attributes: sampleAttributes[sampleType.value],
+            },
+          ],
+        };
+
         getGpMaxRecordCount()
           .then((maxRecordCount) => {
             const chunkedFeatures: __esri.Graphic[][] = chunkArray(
@@ -602,10 +618,7 @@ function FilePanel() {
                 f: 'json',
                 Input_VSP: inputVspSet,
                 Sample_Type: sampleType.value,
-                // TODO - Need to fix this, as it probably is not correct
-                // Sample_Type_Parameters: {
-                //   ...sampleAttributes[sampleType.value],
-                // },
+                Sample_Type_Parameters: sampleTypeFeatureSet,
               };
               const request = geoprocessorFetch({
                 Geoprocessor,
