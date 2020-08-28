@@ -18,6 +18,7 @@
     "WVPS" : "Waste Volume per Sample",
     "WWPS" : "Waste Weight per Sample",
     "SA" : "Sampling Surface Area",
+    "AA" : "Actual Surface Area",
     "Notes" : "Notes",
     "ALC" : "Analysis Labor Cost",
     "AMC" : "Analysis Material Cost",
@@ -28,7 +29,10 @@
     "UPDATEDDATE" : "Updated Date",
     "USERNAME" : "Username",
     "ORGANIZATION" : "Organization",
-    "ELEVATIONSERIES" : "Elevation Series"
+    "SURFACEAREAUNIT": "Surface Area Unit",
+    "DECISIONUNITUUID": "Decision Unit UUID",
+    "DECISIONUNIT": "Decision Unit",
+    "DECISIONUNITSORT": "Decision Unit Sort"
   },
   "geometryType" : "esriGeometryPolygon",
   "spatialReference" : {
@@ -123,6 +127,11 @@
       "alias" : "Sampling Surface Area"
     },
     {
+      "name" : "AA",
+      "type" : "esriFieldTypeDouble",
+      "alias" : "Actual Surface Area"
+    },
+    {
       "name" : "Notes",
       "type" : "esriFieldTypeString",
       "alias" : "Notes",
@@ -181,10 +190,26 @@
       "length" : 255
     },
     {
-      "name" : "ELEVATIONSERIES",
+      "name" : "SURFACEAREAUNIT",
       "type" : "esriFieldTypeString",
-      "alias" : "Elevation Series",
+      "alias" : "Surface Area Unit",
+      "length" : 16
+    },
+    {
+      "name" : "DECISIONUNITUUID",
+      "type" : "esriFieldTypeGUID",
+      "alias" : "Decision Unit UUID"
+    },
+    {
+      "name" : "DECISIONUNIT",
+      "type" : "esriFieldTypeString",
+      "alias" : "Decision Unit",
       "length" : 255
+    },
+    {
+      "name" : "DECISIONUNITSORT",
+      "type" : "esriFieldTypeInteger",
+      "alias" : "Decision Unit Sort"
     }
   ],
   "features" : [
@@ -207,6 +232,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -217,7 +243,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -265,6 +294,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -275,7 +305,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -323,6 +356,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -333,7 +367,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -381,6 +418,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -391,7 +429,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -439,6 +480,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -449,7 +491,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -497,6 +542,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -507,7 +553,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -555,6 +604,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -565,7 +615,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -613,6 +666,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -623,7 +677,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -671,6 +728,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -681,7 +739,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -729,6 +790,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -739,7 +801,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -787,6 +852,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -797,7 +863,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -845,6 +914,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -855,7 +925,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -903,6 +976,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -913,7 +987,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -961,6 +1038,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -971,7 +1049,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1019,6 +1100,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1029,7 +1111,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1077,6 +1162,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1087,7 +1173,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1135,6 +1224,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1145,7 +1235,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1193,6 +1286,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1203,7 +1297,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1251,6 +1348,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1261,7 +1359,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1309,6 +1410,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1319,7 +1421,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1367,6 +1472,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1377,7 +1483,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1425,6 +1534,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1435,7 +1545,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1483,6 +1596,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1493,7 +1607,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1541,6 +1658,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1551,7 +1669,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
@@ -1599,6 +1720,7 @@
         "WVPS" : 5,
         "WWPS" : 28.5,
         "SA" : 28800,
+        "AA" : null,
         "Notes" : null,
         "ALC" : 151,
         "AMC" : 200,
@@ -1609,7 +1731,10 @@
         "UPDATEDDATE" : null,
         "USERNAME" : null,
         "ORGANIZATION" : null,
-        "ELEVATIONSERIES" : null
+        "SURFACEAREAUNIT": null,
+        "DECISIONUNITUUID": null,
+        "DECISIONUNIT": null,
+        "DECISIONUNITSORT": null
       },
       "geometry" : {
         "rings" : [
