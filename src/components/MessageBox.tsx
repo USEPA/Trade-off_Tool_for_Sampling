@@ -1,5 +1,6 @@
 /** @jsx jsx */
 
+import React from 'react';
 import { jsx, css } from '@emotion/core';
 
 // --- components (MessageBox) ---
@@ -72,8 +73,12 @@ function MessageBox({ title, message, severity }: Props) {
         <i className={iconClass} />
       </div>
       <div css={textContainerStyles}>
-        <strong>{title}</strong>
-        <br />
+        {title && (
+          <React.Fragment>
+            <strong>{title}</strong>
+            <br />
+          </React.Fragment>
+        )}
         <span css={messageTextStyles}>{message}</span>
       </div>
     </div>

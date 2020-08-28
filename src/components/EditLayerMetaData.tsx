@@ -7,6 +7,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
+import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable } from 'utils/arcGisRestUtils';
@@ -250,7 +251,7 @@ function EditScenario({
         }
         css={inputStyles}
         maxLength={250}
-        placeholder="Published Layer Name"
+        placeholder="Enter Plan Name"
         value={scenarioName}
         onChange={(ev) => {
           setScenarioName(ev.target.value);
@@ -265,7 +266,7 @@ function EditScenario({
         }
         css={inputStyles}
         maxLength={2048}
-        placeholder="Layer description (2048 characters)"
+        placeholder="Enter Plan Description (2048 characters)"
         value={scenarioDescription}
         onChange={(ev) => {
           setScenarioDescription(ev.target.value);
@@ -312,6 +313,24 @@ function EditScenario({
   );
 }
 
+const LinkButtonStyles = css`
+  display: inline;
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  font-size: 87.5%;
+  text-decoration: underline;
+  color: #0071bc;
+  background-color: transparent;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+    color: #4c2c92;
+  }
+`;
+
 // --- components (EditLayer) ---
 type EditLayerProps = {
   initialLayer?: LayerType | null;
@@ -327,6 +346,7 @@ function EditLayer({
   onSave,
 }: EditLayerProps) {
   const { GraphicsLayer } = useEsriModulesContext();
+  const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -479,12 +499,28 @@ function EditLayer({
         ev.preventDefault();
       }}
     >
+      <p>
+        Enter the name for a new empty sample layer and click save or use the{' '}
+        <button
+          css={LinkButtonStyles}
+          onClick={(ev) => {
+            setGoTo('addData');
+            setGoToOptions({
+              from: 'file',
+              layerType: 'Samples',
+            });
+          }}
+        >
+          Add Data tools
+        </button>{' '}
+        to import an existing sample layer.
+      </p>
       <label htmlFor="layer-name-input">Layer Name</label>
       <input
         id="layer-name-input"
         css={inputStyles}
         maxLength={250}
-        placeholder="Published Layer Name"
+        placeholder="Enter Layer Name"
         value={layerName}
         onChange={(ev) => {
           setLayerName(ev.target.value);
