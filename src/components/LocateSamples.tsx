@@ -1681,807 +1681,845 @@ function LocateSamples() {
             </React.Fragment>
           )}
         </div>
-        <div css={sectionContainerWidthOnly}>
-          <p>
-            In the panels below, add targeted and/ or multiple samples to the
-            plan.
-          </p>
-        </div>
-        <AccordionList>
-          <AccordionItem
-            title={'Add Targeted Samples'}
-            initiallyExpanded={true}
-          >
-            <div css={sectionContainer}>
-              <div css={colorSettingContainerStyles}>
-                <h3>Symbology Settings</h3>
-                <div css={inlineMenuStyles}>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Fill</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(polygonSymbol.color)}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          color: [color.r, color.g, color.b, alpha],
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
 
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Outline</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(
-                        polygonSymbol.outline.color,
-                      )}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          outline: {
-                            ...polygonSymbol.outline,
-                            color: [color.r, color.g, color.b, alpha],
-                          },
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3>Established Sample Types</h3>
-                <div css={sketchButtonContainerStyles}>
-                  {SampleSelectOptions.map((option, index) => {
-                    const sampleType = option.value;
-                    const shapeType = sampleAttributes[sampleType].ShapeType;
-                    const edited = userDefinedAttributes.attributes.hasOwnProperty(
-                      sampleType,
-                    );
-                    return (
-                      <SketchButton
-                        key={index}
-                        label={edited ? `${sampleType} (edited)` : sampleType}
-                        iconClass={
-                          shapeType === 'point'
-                            ? 'fas fa-pen-fancy'
-                            : 'fas fa-draw-polygon'
-                        }
-                        onClick={() => sketchButtonClick(sampleType)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-              {userDefinedOptions.length > 0 && (
-                <div>
-                  <br />
-                  <h3>Custom Sample Types</h3>
-                  <div css={sketchButtonContainerStyles}>
-                    {userDefinedOptions.map((option, index) => {
-                      if (option.isPredefined) return null;
-
-                      const sampleType = option.value;
-                      const shapeType = sampleAttributes[sampleType].ShapeType;
-                      return (
-                        <SketchButton
-                          key={index}
-                          label={sampleType}
-                          iconClass={
-                            shapeType === 'point'
-                              ? 'fas fa-pen-fancy'
-                              : 'fas fa-draw-polygon'
-                          }
-                          onClick={() => sketchButtonClick(sampleType)}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+        {selectedScenario && (
+          <React.Fragment>
+            <div css={sectionContainerWidthOnly}>
+              <p>
+                In the panels below, add targeted and/ or multiple samples to
+                the plan.
+              </p>
             </div>
-          </AccordionItem>
-          <AccordionItem title={'Add Multiple Random Samples'}>
-            <div css={sectionContainer}>
-              {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
-              {sketchLayer?.layerType !== 'VSP' && (
-                <React.Fragment>
-                  <label htmlFor="number-of-samples-input">
-                    Number of Samples
-                  </label>
-                  <input
-                    id="number-of-samples-input"
-                    css={inputStyles}
-                    value={numberRandomSamples}
-                    onChange={(ev) => setNumberRandomSamples(ev.target.value)}
-                  />
-                  <label htmlFor="sample-type-select-input">Sample Type</label>
-                  <Select
-                    id="sample-type-select"
-                    inputId="sample-type-select-input"
-                    css={fullWidthSelectStyles}
-                    value={sampleType}
-                    onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                    options={allSampleOptions}
-                  />
-                  <button
-                    id="sampling-mask"
-                    title="Draw Sampling Mask"
-                    className="sketch-button"
-                    onClick={() => {
-                      if (!aoiSketchLayer) return;
-                      if (
-                        aoiSketchLayer.sketchLayer.type === 'graphics' &&
-                        aoiSketchLayer.sketchLayer.graphics.length === 0
-                      ) {
-                        sketchAoiButtonClick();
-                        return;
-                      }
+            <AccordionList>
+              <AccordionItem
+                title={'Add Targeted Samples'}
+                initiallyExpanded={true}
+              >
+                <div css={sectionContainer}>
+                  <div css={colorSettingContainerStyles}>
+                    <h3>Symbology Settings</h3>
+                    <div css={inlineMenuStyles}>
+                      <div css={colorContainerStyles}>
+                        <span css={colorLabelStyles}>Fill</span>
+                        <ColorPicker
+                          color={convertArrayToRgbColor(polygonSymbol.color)}
+                          onChange={(color: RGBColor) => {
+                            const alpha = color.a ? color.a : 1;
+                            const newPolygonSymbol: PolygonSymbol = {
+                              ...polygonSymbol,
+                              color: [color.r, color.g, color.b, alpha],
+                            };
+                            setPolygonSymbol(newPolygonSymbol);
 
-                      setOptions({
-                        title: 'Would you like to continue?',
-                        ariaLabel: 'Would you like to continue?',
-                        description:
-                          'There is already a sample mask on the map. If you continue, the existing sample mask will be deleted.',
-                        onContinue: sketchAoiButtonClick,
-                      });
-                    }}
-                    css={sketchAoiButtonStyles}
-                  >
-                    <span css={sketchAoiTextStyles}>
-                      <i className="fas fa-draw-polygon" />{' '}
-                      <span>Draw Sampling Mask</span>
-                    </span>
-                  </button>
-                  {generateRandomResponse.status === 'success' &&
-                    sketchLayer &&
-                    generateRandomSuccessMessage(
-                      generateRandomResponse.data.length,
-                      sketchLayer.label,
-                    )}
-                  {generateRandomResponse.status === 'failure' &&
-                    webServiceErrorMessage}
-                  {generateRandomResponse.status === 'exceededTransferLimit' &&
-                    generateRandomExceededTransferLimitMessage}
-                  {numberRandomSamples &&
-                    aoiSketchLayer?.sketchLayer.type === 'graphics' &&
-                    aoiSketchLayer.sketchLayer.graphics.length > 0 && (
-                      <button css={submitButtonStyles} onClick={randomSamples}>
-                        {generateRandomResponse.status !== 'fetching' &&
-                          'Submit'}
-                        {generateRandomResponse.status === 'fetching' && (
-                          <React.Fragment>
-                            <i className="fas fa-spinner fa-pulse" />
-                            &nbsp;&nbsp;Loading...
-                          </React.Fragment>
-                        )}
-                      </button>
-                    )}
-                </React.Fragment>
-              )}
-            </div>
-          </AccordionItem>
-          <AccordionItem title={'Create Custom Sample Types'}>
-            <div css={sectionContainer}>
-              <div css={iconButtonContainerStyles}>
-                <label htmlFor="sample-type-select-input">Sample Type</label>
-                <div>
-                  {userDefinedSampleType && (
-                    <React.Fragment>
-                      {!editingStatus && !userDefinedSampleType.isPredefined && (
-                        <button
-                          css={iconButtonStyles}
-                          title="Delete Sample Type"
-                          onClick={() => {
-                            const sampleTypeName = userDefinedSampleType.value;
-
-                            setOptions({
-                              title: 'Would you like to continue?',
-                              ariaLabel: 'Would you like to continue?',
-                              description:
-                                'This operation will delete the sample type and any associated samples.',
-                              onContinue: () => {
-                                setUserDefinedOptions(
-                                  userDefinedOptions.filter(
-                                    (option) => option.value !== sampleTypeName,
-                                  ),
-                                );
-                                setUserDefinedAttributes((userDefined) => {
-                                  delete userDefined.attributes[sampleTypeName];
-                                  userDefined.editCount += 1;
-                                  return userDefined;
-                                });
-
-                                // Update the attributes of the graphics on the map on edits
-                                let editsCopy: EditsType = edits;
-                                layers.forEach((layer) => {
-                                  if (
-                                    !['Samples', 'VSP'].includes(
-                                      layer.layerType,
-                                    ) ||
-                                    layer.sketchLayer.type !== 'graphics'
-                                  ) {
-                                    return;
-                                  }
-
-                                  const graphicsToRemove: __esri.Graphic[] = [];
-                                  layer.sketchLayer.graphics.forEach(
-                                    (graphic) => {
-                                      if (
-                                        graphic.attributes.TYPE ===
-                                        sampleTypeName
-                                      ) {
-                                        graphicsToRemove.push(graphic);
-                                      }
-                                    },
-                                  );
-                                  layer.sketchLayer.removeMany(
-                                    graphicsToRemove,
-                                  );
-
-                                  if (graphicsToRemove.length > 0) {
-                                    const collection = new Collection<
-                                      __esri.Graphic
-                                    >();
-                                    collection.addMany(graphicsToRemove);
-                                    editsCopy = updateLayerEdits({
-                                      edits: editsCopy,
-                                      layer,
-                                      type: 'delete',
-                                      changes: collection,
-                                    });
-                                  }
-                                });
-
-                                setEdits(editsCopy);
-
-                                // TODO: Add code for deleteing the user defined type
-                                //       from ArcGIS Online.
-
-                                setUserDefinedSampleType(null);
-                              },
-                            });
+                            // update all of the symbols
+                            updatePolygonSymbol(layers, newPolygonSymbol);
                           }}
-                        >
-                          <i className="fas fa-trash-alt" />
-                          <span className="sr-only">Delete Sample Type</span>
-                        </button>
+                        />
+                      </div>
+                      <div css={colorContainerStyles}>
+                        <span css={colorLabelStyles}>Outline</span>
+                        <ColorPicker
+                          color={convertArrayToRgbColor(
+                            polygonSymbol.outline.color,
+                          )}
+                          onChange={(color: RGBColor) => {
+                            const alpha = color.a ? color.a : 1;
+                            const newPolygonSymbol: PolygonSymbol = {
+                              ...polygonSymbol,
+                              outline: {
+                                ...polygonSymbol.outline,
+                                color: [color.r, color.g, color.b, alpha],
+                              },
+                            };
+                            setPolygonSymbol(newPolygonSymbol);
+
+                            // update all of the symbols
+                            updatePolygonSymbol(layers, newPolygonSymbol);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h3>Established Sample Types</h3>
+                    <div css={sketchButtonContainerStyles}>
+                      {SampleSelectOptions.map((option, index) => {
+                        const sampleType = option.value;
+                        const shapeType =
+                          sampleAttributes[sampleType].ShapeType;
+                        const edited = userDefinedAttributes.attributes.hasOwnProperty(
+                          sampleType,
+                        );
+                        return (
+                          <SketchButton
+                            key={index}
+                            label={
+                              edited ? `${sampleType} (edited)` : sampleType
+                            }
+                            iconClass={
+                              shapeType === 'point'
+                                ? 'fas fa-pen-fancy'
+                                : 'fas fa-draw-polygon'
+                            }
+                            onClick={() => sketchButtonClick(sampleType)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {userDefinedOptions.length > 0 && (
+                    <div>
+                      <br />
+                      <h3>Custom Sample Types</h3>
+                      <div css={sketchButtonContainerStyles}>
+                        {userDefinedOptions.map((option, index) => {
+                          if (option.isPredefined) return null;
+
+                          const sampleType = option.value;
+                          const shapeType =
+                            sampleAttributes[sampleType].ShapeType;
+                          return (
+                            <SketchButton
+                              key={index}
+                              label={sampleType}
+                              iconClass={
+                                shapeType === 'point'
+                                  ? 'fas fa-pen-fancy'
+                                  : 'fas fa-draw-polygon'
+                              }
+                              onClick={() => sketchButtonClick(sampleType)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </AccordionItem>
+              <AccordionItem title={'Add Multiple Random Samples'}>
+                <div css={sectionContainer}>
+                  {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
+                  {sketchLayer?.layerType !== 'VSP' && (
+                    <React.Fragment>
+                      <label htmlFor="number-of-samples-input">
+                        Number of Samples
+                      </label>
+                      <input
+                        id="number-of-samples-input"
+                        css={inputStyles}
+                        value={numberRandomSamples}
+                        onChange={(ev) =>
+                          setNumberRandomSamples(ev.target.value)
+                        }
+                      />
+                      <label htmlFor="sample-type-select-input">
+                        Sample Type
+                      </label>
+                      <Select
+                        id="sample-type-select"
+                        inputId="sample-type-select-input"
+                        css={fullWidthSelectStyles}
+                        value={sampleType}
+                        onChange={(ev) => setSampleType(ev as SampleSelectType)}
+                        options={allSampleOptions}
+                      />
+                      <button
+                        id="sampling-mask"
+                        title="Draw Sampling Mask"
+                        className="sketch-button"
+                        onClick={() => {
+                          if (!aoiSketchLayer) return;
+                          if (
+                            aoiSketchLayer.sketchLayer.type === 'graphics' &&
+                            aoiSketchLayer.sketchLayer.graphics.length === 0
+                          ) {
+                            sketchAoiButtonClick();
+                            return;
+                          }
+
+                          setOptions({
+                            title: 'Would you like to continue?',
+                            ariaLabel: 'Would you like to continue?',
+                            description:
+                              'There is already a sample mask on the map. If you continue, the existing sample mask will be deleted.',
+                            onContinue: sketchAoiButtonClick,
+                          });
+                        }}
+                        css={sketchAoiButtonStyles}
+                      >
+                        <span css={sketchAoiTextStyles}>
+                          <i className="fas fa-draw-polygon" />{' '}
+                          <span>Draw Sampling Mask</span>
+                        </span>
+                      </button>
+                      {generateRandomResponse.status === 'success' &&
+                        sketchLayer &&
+                        generateRandomSuccessMessage(
+                          generateRandomResponse.data.length,
+                          sketchLayer.label,
+                        )}
+                      {generateRandomResponse.status === 'failure' &&
+                        webServiceErrorMessage}
+                      {generateRandomResponse.status ===
+                        'exceededTransferLimit' &&
+                        generateRandomExceededTransferLimitMessage}
+                      {numberRandomSamples &&
+                        aoiSketchLayer?.sketchLayer.type === 'graphics' &&
+                        aoiSketchLayer.sketchLayer.graphics.length > 0 && (
+                          <button
+                            css={submitButtonStyles}
+                            onClick={randomSamples}
+                          >
+                            {generateRandomResponse.status !== 'fetching' &&
+                              'Submit'}
+                            {generateRandomResponse.status === 'fetching' && (
+                              <React.Fragment>
+                                <i className="fas fa-spinner fa-pulse" />
+                                &nbsp;&nbsp;Loading...
+                              </React.Fragment>
+                            )}
+                          </button>
+                        )}
+                    </React.Fragment>
+                  )}
+                </div>
+              </AccordionItem>
+              <AccordionItem title={'Create Custom Sample Types'}>
+                <div css={sectionContainer}>
+                  <div css={iconButtonContainerStyles}>
+                    <label htmlFor="sample-type-select-input">
+                      Sample Type
+                    </label>
+                    <div>
+                      {userDefinedSampleType && (
+                        <React.Fragment>
+                          {!editingStatus &&
+                            !userDefinedSampleType.isPredefined && (
+                              <button
+                                css={iconButtonStyles}
+                                title="Delete Sample Type"
+                                onClick={() => {
+                                  const sampleTypeName =
+                                    userDefinedSampleType.value;
+
+                                  setOptions({
+                                    title: 'Would you like to continue?',
+                                    ariaLabel: 'Would you like to continue?',
+                                    description:
+                                      'This operation will delete the sample type and any associated samples.',
+                                    onContinue: () => {
+                                      setUserDefinedOptions(
+                                        userDefinedOptions.filter(
+                                          (option) =>
+                                            option.value !== sampleTypeName,
+                                        ),
+                                      );
+                                      setUserDefinedAttributes(
+                                        (userDefined) => {
+                                          delete userDefined.attributes[
+                                            sampleTypeName
+                                          ];
+                                          userDefined.editCount += 1;
+                                          return userDefined;
+                                        },
+                                      );
+
+                                      // Update the attributes of the graphics on the map on edits
+                                      let editsCopy: EditsType = edits;
+                                      layers.forEach((layer) => {
+                                        if (
+                                          !['Samples', 'VSP'].includes(
+                                            layer.layerType,
+                                          ) ||
+                                          layer.sketchLayer.type !== 'graphics'
+                                        ) {
+                                          return;
+                                        }
+
+                                        const graphicsToRemove: __esri.Graphic[] = [];
+                                        layer.sketchLayer.graphics.forEach(
+                                          (graphic) => {
+                                            if (
+                                              graphic.attributes.TYPE ===
+                                              sampleTypeName
+                                            ) {
+                                              graphicsToRemove.push(graphic);
+                                            }
+                                          },
+                                        );
+                                        layer.sketchLayer.removeMany(
+                                          graphicsToRemove,
+                                        );
+
+                                        if (graphicsToRemove.length > 0) {
+                                          const collection = new Collection<
+                                            __esri.Graphic
+                                          >();
+                                          collection.addMany(graphicsToRemove);
+                                          editsCopy = updateLayerEdits({
+                                            edits: editsCopy,
+                                            layer,
+                                            type: 'delete',
+                                            changes: collection,
+                                          });
+                                        }
+                                      });
+
+                                      setEdits(editsCopy);
+
+                                      // TODO: Add code for deleteing the user defined type
+                                      //       from ArcGIS Online.
+
+                                      setUserDefinedSampleType(null);
+                                    },
+                                  });
+                                }}
+                              >
+                                <i className="fas fa-trash-alt" />
+                                <span className="sr-only">
+                                  Delete Sample Type
+                                </span>
+                              </button>
+                            )}
+                          <button
+                            css={iconButtonStyles}
+                            title={
+                              editingStatus === 'clone'
+                                ? 'Cancel'
+                                : 'Clone Sample Type'
+                            }
+                            onClick={(ev) => {
+                              if (editingStatus === 'clone') {
+                                setEditingStatus(null);
+                                return;
+                              }
+
+                              setSampleTypeInputs('clone');
+                            }}
+                          >
+                            <i
+                              className={
+                                editingStatus === 'clone'
+                                  ? 'fas fa-times'
+                                  : 'fas fa-clone'
+                              }
+                            />
+                            <span className="sr-only">
+                              {editingStatus === 'clone'
+                                ? 'Cancel'
+                                : 'Clone Sample Type'}
+                            </span>
+                          </button>
+                          {userDefinedSampleType.isPredefined ? (
+                            <button
+                              css={iconButtonStyles}
+                              title={
+                                editingStatus === 'view'
+                                  ? 'Hide'
+                                  : 'View Sample Type'
+                              }
+                              onClick={(ev) => {
+                                if (editingStatus === 'view') {
+                                  setEditingStatus(null);
+                                  return;
+                                }
+
+                                setSampleTypeInputs('view');
+                              }}
+                            >
+                              <i
+                                className={
+                                  editingStatus === 'view'
+                                    ? 'fas fa-times'
+                                    : 'fas fa-eye'
+                                }
+                              />
+                              <span className="sr-only">
+                                {editingStatus === 'view'
+                                  ? 'Hide'
+                                  : 'View Sample Type'}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              css={iconButtonStyles}
+                              title={
+                                editingStatus === 'edit'
+                                  ? 'Cancel'
+                                  : 'Edit Sample Type'
+                              }
+                              onClick={(ev) => {
+                                if (editingStatus === 'edit') {
+                                  setEditingStatus(null);
+                                  return;
+                                }
+
+                                setSampleTypeInputs('edit');
+                              }}
+                            >
+                              <i
+                                className={
+                                  editingStatus === 'edit'
+                                    ? 'fas fa-times'
+                                    : 'fas fa-edit'
+                                }
+                              />
+                              <span className="sr-only">
+                                {editingStatus === 'edit'
+                                  ? 'Cancel'
+                                  : 'Edit Sample Type'}
+                              </span>
+                            </button>
+                          )}
+                        </React.Fragment>
                       )}
                       <button
                         css={iconButtonStyles}
                         title={
-                          editingStatus === 'clone'
+                          editingStatus === 'create'
                             ? 'Cancel'
-                            : 'Clone Sample Type'
+                            : 'Create Sample Type'
                         }
                         onClick={(ev) => {
-                          if (editingStatus === 'clone') {
+                          if (editingStatus === 'create') {
                             setEditingStatus(null);
                             return;
                           }
 
-                          setSampleTypeInputs('clone');
+                          setSampleTypeInputs('create');
                         }}
                       >
                         <i
                           className={
-                            editingStatus === 'clone'
+                            editingStatus === 'create'
                               ? 'fas fa-times'
-                              : 'fas fa-clone'
+                              : 'fas fa-plus'
                           }
                         />
                         <span className="sr-only">
-                          {editingStatus === 'clone'
+                          {editingStatus === 'create'
                             ? 'Cancel'
-                            : 'Clone Sample Type'}
+                            : 'Create Sample Type'}
                         </span>
                       </button>
-                      {userDefinedSampleType.isPredefined ? (
-                        <button
-                          css={iconButtonStyles}
-                          title={
-                            editingStatus === 'view'
-                              ? 'Hide'
-                              : 'View Sample Type'
-                          }
-                          onClick={(ev) => {
-                            if (editingStatus === 'view') {
-                              setEditingStatus(null);
-                              return;
-                            }
-
-                            setSampleTypeInputs('view');
-                          }}
-                        >
-                          <i
-                            className={
-                              editingStatus === 'view'
-                                ? 'fas fa-times'
-                                : 'fas fa-eye'
-                            }
-                          />
-                          <span className="sr-only">
-                            {editingStatus === 'view'
-                              ? 'Hide'
-                              : 'View Sample Type'}
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          css={iconButtonStyles}
-                          title={
-                            editingStatus === 'edit'
-                              ? 'Cancel'
-                              : 'Edit Sample Type'
-                          }
-                          onClick={(ev) => {
-                            if (editingStatus === 'edit') {
-                              setEditingStatus(null);
-                              return;
-                            }
-
-                            setSampleTypeInputs('edit');
-                          }}
-                        >
-                          <i
-                            className={
-                              editingStatus === 'edit'
-                                ? 'fas fa-times'
-                                : 'fas fa-edit'
-                            }
-                          />
-                          <span className="sr-only">
-                            {editingStatus === 'edit'
-                              ? 'Cancel'
-                              : 'Edit Sample Type'}
-                          </span>
-                        </button>
-                      )}
-                    </React.Fragment>
-                  )}
-                  <button
-                    css={iconButtonStyles}
-                    title={
-                      editingStatus === 'create'
-                        ? 'Cancel'
-                        : 'Create Sample Type'
-                    }
-                    onClick={(ev) => {
-                      if (editingStatus === 'create') {
-                        setEditingStatus(null);
-                        return;
-                      }
-
-                      setSampleTypeInputs('create');
-                    }}
-                  >
-                    <i
-                      className={
-                        editingStatus === 'create'
-                          ? 'fas fa-times'
-                          : 'fas fa-plus'
-                      }
-                    />
-                    <span className="sr-only">
-                      {editingStatus === 'create'
-                        ? 'Cancel'
-                        : 'Create Sample Type'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <Select
-                id="sample-type-select"
-                inputId="sample-type-select-input"
-                css={fullWidthSelectStyles}
-                isDisabled={editingStatus ? true : false}
-                value={userDefinedSampleType}
-                onChange={(ev) =>
-                  setUserDefinedSampleType(ev as SampleSelectType)
-                }
-                options={allSampleOptions}
-              />
-              {editingStatus && (
-                <div>
-                  <div>
-                    <label htmlFor="sample-type-name-input">
-                      Sample Type Name
-                    </label>
-                    <input
-                      id="sample-type-name-input"
-                      disabled={
-                        editingStatus === 'view' ||
-                        (editingStatus === 'edit' &&
-                          userDefinedSampleType?.isPredefined)
-                      }
-                      css={inputStyles}
-                      value={sampleTypeName}
-                      onChange={(ev) => setSampleTypeName(ev.target.value)}
-                    />
-                    <label htmlFor="sa-input">
-                      Reference Surface Area <em>(sq inch)</em>
-                    </label>
-                    <input
-                      id="sa-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={sa ? sa : ''}
-                      onChange={(ev) => setSa(ev.target.value)}
-                    />
-                    <label htmlFor="shape-type-select-input">Shape Type</label>
-                    <Select
-                      id="shape-type-select"
-                      inputId="shape-type-select-input"
-                      css={fullWidthSelectStyles}
-                      value={shapeType}
-                      isDisabled={editingStatus === 'view'}
-                      onChange={(ev) => setShapeType(ev as ShapeTypeSelect)}
-                      options={[
-                        { value: 'point', label: 'Point' },
-                        { value: 'polygon', label: 'Polygon' },
-                      ]}
-                    />
-                    {shapeType?.value === 'point' && (
-                      <div css={widthAreaCheckContainerStyles}>
-                        <div css={inlineMenuStyles}>
-                          <div css={widthInputContainerStyles}>
-                            <label htmlFor="shape-width-input">
-                              Shape Width
-                            </label>
-                            <input
-                              id="shape-width-input"
-                              disabled={editingStatus === 'view'}
-                              css={widthInputStyles}
-                              value={width ? width : ''}
-                              onChange={(ev) => setWidth(ev.target.value)}
-                            />
-                          </div>
-                          <button
-                            css={checkAreaButtonStyles}
-                            onClick={(ev) => {
-                              // Create a point in Washington DC
-                              const geometry = new Point({
-                                spatialReference: { wkid: 3857 },
-                                latitude: 38.9072,
-                                longitude: -77.0369,
-                              });
-                              const testPoint = new Graphic({ geometry });
-
-                              createBuffer(testPoint, Number(width));
-                              const area = calculateArea(testPoint);
-
-                              let areaStr = '';
-                              if (typeof area === 'number') {
-                                areaStr = String(Math.round(area * 10) / 10);
-                              } else {
-                                areaStr = area;
-                              }
-
-                              setAreaTest(areaStr);
-                            }}
-                          >
-                            Check Area
-                          </button>
-                        </div>
-
-                        {areaTest && (
-                          <span>Approximate Area: {areaTest} sq in</span>
-                        )}
-                      </div>
-                    )}
-                    <label htmlFor="ttpk-input">
-                      Time to Prepare Kits <em>(person hrs/sample)</em>
-                    </label>
-                    <input
-                      id="ttpk-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={ttpk ? ttpk : ''}
-                      onChange={(ev) => setTtpk(ev.target.value)}
-                    />
-                    <label htmlFor="ttc-input">
-                      Time to Collect <em>(person hrs/sample)</em>
-                    </label>
-                    <input
-                      id="ttc-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={ttc ? ttc : ''}
-                      onChange={(ev) => setTtc(ev.target.value)}
-                    />
-                    <label htmlFor="tta-input">
-                      Time to Analyze <em>(person hrs/sample)</em>
-                    </label>
-                    <input
-                      id="tta-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={tta ? tta : ''}
-                      onChange={(ev) => setTta(ev.target.value)}
-                    />
-                    <label htmlFor="ttps-input">
-                      Total Time per Sample <em>(person hrs/sample)</em>
-                    </label>
-                    <input
-                      id="ttps-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={ttps ? ttps : ''}
-                      onChange={(ev) => setTtps(ev.target.value)}
-                    />
-                    <label htmlFor="lod_p-input">
-                      Limit of Detection (CFU) Porous{' '}
-                      <em>(only used for reference)</em>
-                    </label>
-                    <input
-                      id="lod_p-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={lodp ? lodp : ''}
-                      onChange={(ev) => setLodp(ev.target.value)}
-                    />
-                    <label htmlFor="lod_non-input">
-                      Limit of Detection (CFU) Nonporous{' '}
-                      <em>(only used for reference)</em>
-                    </label>
-                    <input
-                      id="lod_non-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={lodnon ? lodnon : ''}
-                      onChange={(ev) => setLodnon(ev.target.value)}
-                    />
-                    <label htmlFor="mcps-input">
-                      Material Cost <em>($/sample)</em>
-                    </label>
-                    <input
-                      id="mcps-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={mcps ? mcps : ''}
-                      onChange={(ev) => setMcps(ev.target.value)}
-                    />
-                    <label htmlFor="tcps-input">
-                      Total Cost per Sample <em>(Labor + Material + Waste)</em>
-                    </label>
-                    <input
-                      id="tcps-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={tcps ? tcps : ''}
-                      onChange={(ev) => setTcps(ev.target.value)}
-                    />
-                    <label htmlFor="wvps-input">
-                      Waste Volume <em>(L/sample)</em>
-                    </label>
-                    <input
-                      id="wvps-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={wvps ? wvps : ''}
-                      onChange={(ev) => setWvps(ev.target.value)}
-                    />
-                    <label htmlFor="wwps-input">
-                      Waste Weight <em>(lbs/sample)</em>
-                    </label>
-                    <input
-                      id="wwps-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={wwps ? wwps : ''}
-                      onChange={(ev) => setWwps(ev.target.value)}
-                    />
-                    <label htmlFor="alc-input">
-                      Analysis Labor Cost <em>($)</em>
-                    </label>
-                    <input
-                      id="alc-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={alc ? alc : ''}
-                      onChange={(ev) => setAlc(ev.target.value)}
-                    />
-                    <label htmlFor="amc-input">
-                      Analysis Material Cost <em>($)</em>
-                    </label>
-                    <input
-                      id="amc-input"
-                      disabled={editingStatus === 'view'}
-                      css={inputStyles}
-                      value={amc ? amc : ''}
-                      onChange={(ev) => setAmc(ev.target.value)}
-                    />
+                    </div>
                   </div>
-                  {validationMessage &&
-                    userDefinedValidationMessage(validationMessage)}
-                  <div css={inlineMenuStyles}>
-                    {editingStatus !== 'view' && (
-                      <button
-                        css={addButtonStyles}
-                        onClick={(ev) => {
-                          const isValid = validateEdits();
-                          const predefinedEdited =
-                            editingStatus === 'edit' &&
-                            userDefinedSampleType?.isPredefined;
-                          if (isValid && sampleTypeName && shapeType) {
-                            let newSampleType = {
-                              value: sampleTypeName,
-                              label: sampleTypeName,
-                              isPredefined: false,
-                            };
-                            if (predefinedEdited && userDefinedSampleType) {
-                              newSampleType = {
-                                value: userDefinedSampleType.value,
-                                label: `${userDefinedSampleType?.value} (edited)`,
-                                isPredefined:
-                                  userDefinedSampleType.isPredefined,
-                              };
-                            }
+                  <Select
+                    id="sample-type-select"
+                    inputId="sample-type-select-input"
+                    css={fullWidthSelectStyles}
+                    isDisabled={editingStatus ? true : false}
+                    value={userDefinedSampleType}
+                    onChange={(ev) =>
+                      setUserDefinedSampleType(ev as SampleSelectType)
+                    }
+                    options={allSampleOptions}
+                  />
+                  {editingStatus && (
+                    <div>
+                      <div>
+                        <label htmlFor="sample-type-name-input">
+                          Sample Type Name
+                        </label>
+                        <input
+                          id="sample-type-name-input"
+                          disabled={
+                            editingStatus === 'view' ||
+                            (editingStatus === 'edit' &&
+                              userDefinedSampleType?.isPredefined)
+                          }
+                          css={inputStyles}
+                          value={sampleTypeName}
+                          onChange={(ev) => setSampleTypeName(ev.target.value)}
+                        />
+                        <label htmlFor="sa-input">
+                          Reference Surface Area <em>(sq inch)</em>
+                        </label>
+                        <input
+                          id="sa-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={sa ? sa : ''}
+                          onChange={(ev) => setSa(ev.target.value)}
+                        />
+                        <label htmlFor="shape-type-select-input">
+                          Shape Type
+                        </label>
+                        <Select
+                          id="shape-type-select"
+                          inputId="shape-type-select-input"
+                          css={fullWidthSelectStyles}
+                          value={shapeType}
+                          isDisabled={editingStatus === 'view'}
+                          onChange={(ev) => setShapeType(ev as ShapeTypeSelect)}
+                          options={[
+                            { value: 'point', label: 'Point' },
+                            { value: 'polygon', label: 'Polygon' },
+                          ]}
+                        />
+                        {shapeType?.value === 'point' && (
+                          <div css={widthAreaCheckContainerStyles}>
+                            <div css={inlineMenuStyles}>
+                              <div css={widthInputContainerStyles}>
+                                <label htmlFor="shape-width-input">
+                                  Shape Width
+                                </label>
+                                <input
+                                  id="shape-width-input"
+                                  disabled={editingStatus === 'view'}
+                                  css={widthInputStyles}
+                                  value={width ? width : ''}
+                                  onChange={(ev) => setWidth(ev.target.value)}
+                                />
+                              </div>
+                              <button
+                                css={checkAreaButtonStyles}
+                                onClick={(ev) => {
+                                  // Create a point in Washington DC
+                                  const geometry = new Point({
+                                    spatialReference: { wkid: 3857 },
+                                    latitude: 38.9072,
+                                    longitude: -77.0369,
+                                  });
+                                  const testPoint = new Graphic({ geometry });
 
-                            // update the sample attributes
-                            const newAttributes = {
-                              OBJECTID: '-1',
-                              PERMANENT_IDENTIFIER: null,
-                              GLOBALID: null,
-                              TYPE: sampleTypeName,
-                              ShapeType: shapeType.value,
-                              Width: Number(width),
-                              TTPK: ttpk ? Number(ttpk) : null,
-                              TTC: ttc ? Number(ttc) : null,
-                              TTA: tta ? Number(tta) : null,
-                              TTPS: ttps ? Number(ttps) : null,
-                              LOD_P: lodp ? Number(lodp) : null,
-                              LOD_NON: lodnon ? Number(lodnon) : null,
-                              MCPS: mcps ? Number(mcps) : null,
-                              TCPS: tcps ? Number(tcps) : null,
-                              WVPS: wvps ? Number(wvps) : null,
-                              WWPS: wwps ? Number(wwps) : null,
-                              SA: sa ? Number(sa) : null,
-                              AA: null,
-                              ALC: alc ? Number(alc) : null,
-                              AMC: amc ? Number(amc) : null,
-                              Notes: '',
-                              CONTAMTYPE: null,
-                              CONTAMVAL: null,
-                              CONTAMUNIT: null,
-                              CREATEDDATE: null,
-                              UPDATEDDATE: null,
-                              USERNAME: null,
-                              ORGANIZATION: null,
-                              DECISIONUNITUUID: null,
-                              DECISIONUNIT: null,
-                              DECISIONUNITSORT: null,
-                            };
+                                  createBuffer(testPoint, Number(width));
+                                  const area = calculateArea(testPoint);
 
-                            // add/update the sample's attributes
-                            sampleAttributes[sampleTypeName] = newAttributes;
-                            setUserDefinedAttributes((item) => {
-                              item.attributes[sampleTypeName] = newAttributes;
-
-                              // if the sampleTypeName changed, remove the attributes tied to the old name
-                              if (
-                                didSampleTypeNameChange() &&
-                                userDefinedSampleType
-                              ) {
-                                delete item.attributes[
-                                  userDefinedSampleType.value
-                                ];
-                              }
-
-                              return {
-                                editCount: item.editCount + 1,
-                                attributes: item.attributes,
-                              };
-                            });
-
-                            // add the new option to the dropdown if it doesn't exist
-                            const hasSample =
-                              userDefinedOptions.findIndex(
-                                (option) => option.value === sampleTypeName,
-                              ) > -1;
-                            if (
-                              !hasSample &&
-                              userDefinedSampleType &&
-                              (editingStatus !== 'edit' ||
-                                (editingStatus === 'edit' &&
-                                  !userDefinedSampleType.isPredefined))
-                            ) {
-                              setUserDefinedOptions((options) => {
-                                if (!didSampleTypeNameChange()) {
-                                  return [...options, newSampleType];
-                                }
-
-                                const newOptions: SampleSelectType[] = [];
-                                options.forEach((option) => {
-                                  // if the sampleTypeName changed, replace the option tied to the old name with the new one
-                                  if (
-                                    didSampleTypeNameChange() &&
-                                    option.value === userDefinedSampleType.value
-                                  ) {
-                                    newOptions.push(newSampleType);
-                                    return;
+                                  let areaStr = '';
+                                  if (typeof area === 'number') {
+                                    areaStr = String(
+                                      Math.round(area * 10) / 10,
+                                    );
+                                  } else {
+                                    areaStr = area;
                                   }
 
-                                  newOptions.push(option);
-                                });
+                                  setAreaTest(areaStr);
+                                }}
+                              >
+                                Check Area
+                              </button>
+                            </div>
 
-                                return newOptions;
-                              });
-                            }
-
-                            if (
-                              editingStatus === 'edit' &&
-                              userDefinedSampleType
-                            ) {
-                              const oldType = userDefinedSampleType.value;
-
-                              // Update the attributes of the graphics on the map on edits
-                              let editsCopy: EditsType = edits;
-                              layers.forEach((layer) => {
-                                if (
-                                  !['Samples', 'VSP'].includes(
-                                    layer.layerType,
-                                  ) ||
-                                  layer.sketchLayer.type !== 'graphics'
-                                ) {
-                                  return;
+                            {areaTest && (
+                              <span>Approximate Area: {areaTest} sq in</span>
+                            )}
+                          </div>
+                        )}
+                        <label htmlFor="ttpk-input">
+                          Time to Prepare Kits <em>(person hrs/sample)</em>
+                        </label>
+                        <input
+                          id="ttpk-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={ttpk ? ttpk : ''}
+                          onChange={(ev) => setTtpk(ev.target.value)}
+                        />
+                        <label htmlFor="ttc-input">
+                          Time to Collect <em>(person hrs/sample)</em>
+                        </label>
+                        <input
+                          id="ttc-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={ttc ? ttc : ''}
+                          onChange={(ev) => setTtc(ev.target.value)}
+                        />
+                        <label htmlFor="tta-input">
+                          Time to Analyze <em>(person hrs/sample)</em>
+                        </label>
+                        <input
+                          id="tta-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={tta ? tta : ''}
+                          onChange={(ev) => setTta(ev.target.value)}
+                        />
+                        <label htmlFor="ttps-input">
+                          Total Time per Sample <em>(person hrs/sample)</em>
+                        </label>
+                        <input
+                          id="ttps-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={ttps ? ttps : ''}
+                          onChange={(ev) => setTtps(ev.target.value)}
+                        />
+                        <label htmlFor="lod_p-input">
+                          Limit of Detection (CFU) Porous{' '}
+                          <em>(only used for reference)</em>
+                        </label>
+                        <input
+                          id="lod_p-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={lodp ? lodp : ''}
+                          onChange={(ev) => setLodp(ev.target.value)}
+                        />
+                        <label htmlFor="lod_non-input">
+                          Limit of Detection (CFU) Nonporous{' '}
+                          <em>(only used for reference)</em>
+                        </label>
+                        <input
+                          id="lod_non-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={lodnon ? lodnon : ''}
+                          onChange={(ev) => setLodnon(ev.target.value)}
+                        />
+                        <label htmlFor="mcps-input">
+                          Material Cost <em>($/sample)</em>
+                        </label>
+                        <input
+                          id="mcps-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={mcps ? mcps : ''}
+                          onChange={(ev) => setMcps(ev.target.value)}
+                        />
+                        <label htmlFor="tcps-input">
+                          Total Cost per Sample{' '}
+                          <em>(Labor + Material + Waste)</em>
+                        </label>
+                        <input
+                          id="tcps-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={tcps ? tcps : ''}
+                          onChange={(ev) => setTcps(ev.target.value)}
+                        />
+                        <label htmlFor="wvps-input">
+                          Waste Volume <em>(L/sample)</em>
+                        </label>
+                        <input
+                          id="wvps-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={wvps ? wvps : ''}
+                          onChange={(ev) => setWvps(ev.target.value)}
+                        />
+                        <label htmlFor="wwps-input">
+                          Waste Weight <em>(lbs/sample)</em>
+                        </label>
+                        <input
+                          id="wwps-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={wwps ? wwps : ''}
+                          onChange={(ev) => setWwps(ev.target.value)}
+                        />
+                        <label htmlFor="alc-input">
+                          Analysis Labor Cost <em>($)</em>
+                        </label>
+                        <input
+                          id="alc-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={alc ? alc : ''}
+                          onChange={(ev) => setAlc(ev.target.value)}
+                        />
+                        <label htmlFor="amc-input">
+                          Analysis Material Cost <em>($)</em>
+                        </label>
+                        <input
+                          id="amc-input"
+                          disabled={editingStatus === 'view'}
+                          css={inputStyles}
+                          value={amc ? amc : ''}
+                          onChange={(ev) => setAmc(ev.target.value)}
+                        />
+                      </div>
+                      {validationMessage &&
+                        userDefinedValidationMessage(validationMessage)}
+                      <div css={inlineMenuStyles}>
+                        {editingStatus !== 'view' && (
+                          <button
+                            css={addButtonStyles}
+                            onClick={(ev) => {
+                              const isValid = validateEdits();
+                              const predefinedEdited =
+                                editingStatus === 'edit' &&
+                                userDefinedSampleType?.isPredefined;
+                              if (isValid && sampleTypeName && shapeType) {
+                                let newSampleType = {
+                                  value: sampleTypeName,
+                                  label: sampleTypeName,
+                                  isPredefined: false,
+                                };
+                                if (predefinedEdited && userDefinedSampleType) {
+                                  newSampleType = {
+                                    value: userDefinedSampleType.value,
+                                    label: `${userDefinedSampleType?.value} (edited)`,
+                                    isPredefined:
+                                      userDefinedSampleType.isPredefined,
+                                  };
                                 }
 
-                                const editedGraphics = updateAttributes({
-                                  graphics: layer.sketchLayer.graphics.toArray(),
-                                  newAttributes,
-                                  oldType,
+                                // update the sample attributes
+                                const newAttributes = {
+                                  OBJECTID: '-1',
+                                  PERMANENT_IDENTIFIER: null,
+                                  GLOBALID: null,
+                                  TYPE: sampleTypeName,
+                                  ShapeType: shapeType.value,
+                                  Width: Number(width),
+                                  TTPK: ttpk ? Number(ttpk) : null,
+                                  TTC: ttc ? Number(ttc) : null,
+                                  TTA: tta ? Number(tta) : null,
+                                  TTPS: ttps ? Number(ttps) : null,
+                                  LOD_P: lodp ? Number(lodp) : null,
+                                  LOD_NON: lodnon ? Number(lodnon) : null,
+                                  MCPS: mcps ? Number(mcps) : null,
+                                  TCPS: tcps ? Number(tcps) : null,
+                                  WVPS: wvps ? Number(wvps) : null,
+                                  WWPS: wwps ? Number(wwps) : null,
+                                  SA: sa ? Number(sa) : null,
+                                  AA: null,
+                                  ALC: alc ? Number(alc) : null,
+                                  AMC: amc ? Number(amc) : null,
+                                  Notes: '',
+                                  CONTAMTYPE: null,
+                                  CONTAMVAL: null,
+                                  CONTAMUNIT: null,
+                                  CREATEDDATE: null,
+                                  UPDATEDDATE: null,
+                                  USERNAME: null,
+                                  ORGANIZATION: null,
+                                  DECISIONUNITUUID: null,
+                                  DECISIONUNIT: null,
+                                  DECISIONUNITSORT: null,
+                                };
+
+                                // add/update the sample's attributes
+                                sampleAttributes[
+                                  sampleTypeName
+                                ] = newAttributes;
+                                setUserDefinedAttributes((item) => {
+                                  item.attributes[
+                                    sampleTypeName
+                                  ] = newAttributes;
+
+                                  // if the sampleTypeName changed, remove the attributes tied to the old name
+                                  if (
+                                    didSampleTypeNameChange() &&
+                                    userDefinedSampleType
+                                  ) {
+                                    delete item.attributes[
+                                      userDefinedSampleType.value
+                                    ];
+                                  }
+
+                                  return {
+                                    editCount: item.editCount + 1,
+                                    attributes: item.attributes,
+                                  };
                                 });
 
-                                if (editedGraphics.length > 0) {
-                                  const collection = new Collection<
-                                    __esri.Graphic
-                                  >();
-                                  collection.addMany(editedGraphics);
-                                  editsCopy = updateLayerEdits({
-                                    edits: editsCopy,
-                                    layer,
-                                    type: 'update',
-                                    changes: collection,
+                                // add the new option to the dropdown if it doesn't exist
+                                const hasSample =
+                                  userDefinedOptions.findIndex(
+                                    (option) => option.value === sampleTypeName,
+                                  ) > -1;
+                                if (
+                                  !hasSample &&
+                                  userDefinedSampleType &&
+                                  (editingStatus !== 'edit' ||
+                                    (editingStatus === 'edit' &&
+                                      !userDefinedSampleType.isPredefined))
+                                ) {
+                                  setUserDefinedOptions((options) => {
+                                    if (!didSampleTypeNameChange()) {
+                                      return [...options, newSampleType];
+                                    }
+
+                                    const newOptions: SampleSelectType[] = [];
+                                    options.forEach((option) => {
+                                      // if the sampleTypeName changed, replace the option tied to the old name with the new one
+                                      if (
+                                        didSampleTypeNameChange() &&
+                                        option.value ===
+                                          userDefinedSampleType.value
+                                      ) {
+                                        newOptions.push(newSampleType);
+                                        return;
+                                      }
+
+                                      newOptions.push(option);
+                                    });
+
+                                    return newOptions;
                                   });
                                 }
-                              });
 
-                              setEdits(editsCopy);
-                            }
+                                if (
+                                  editingStatus === 'edit' &&
+                                  userDefinedSampleType
+                                ) {
+                                  const oldType = userDefinedSampleType.value;
 
-                            // select the new sample type
-                            setUserDefinedSampleType(newSampleType);
+                                  // Update the attributes of the graphics on the map on edits
+                                  let editsCopy: EditsType = edits;
+                                  layers.forEach((layer) => {
+                                    if (
+                                      !['Samples', 'VSP'].includes(
+                                        layer.layerType,
+                                      ) ||
+                                      layer.sketchLayer.type !== 'graphics'
+                                    ) {
+                                      return;
+                                    }
 
+                                    const editedGraphics = updateAttributes({
+                                      graphics: layer.sketchLayer.graphics.toArray(),
+                                      newAttributes,
+                                      oldType,
+                                    });
+
+                                    if (editedGraphics.length > 0) {
+                                      const collection = new Collection<
+                                        __esri.Graphic
+                                      >();
+                                      collection.addMany(editedGraphics);
+                                      editsCopy = updateLayerEdits({
+                                        edits: editsCopy,
+                                        layer,
+                                        type: 'update',
+                                        changes: collection,
+                                      });
+                                    }
+                                  });
+
+                                  setEdits(editsCopy);
+                                }
+
+                                // select the new sample type
+                                setUserDefinedSampleType(newSampleType);
+
+                                setEditingStatus(null);
+                              }
+                            }}
+                          >
+                            Save
+                          </button>
+                        )}
+                        <button
+                          css={addButtonStyles}
+                          onClick={(ev) => {
                             setEditingStatus(null);
-                          }
-                        }}
-                      >
-                        Save
-                      </button>
-                    )}
-                    <button
-                      css={addButtonStyles}
-                      onClick={(ev) => {
-                        setEditingStatus(null);
-                      }}
-                    >
-                      {editingStatus === 'view' ? 'Hide' : 'Cancel'}
-                    </button>
-                  </div>
+                          }}
+                        >
+                          {editingStatus === 'view' ? 'Hide' : 'Cancel'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </AccordionItem>
-        </AccordionList>
+              </AccordionItem>
+            </AccordionList>
+          </React.Fragment>
+        )}
       </div>
       <div css={sectionContainer}>
         <NavigationButton goToPanel="calculate" />
