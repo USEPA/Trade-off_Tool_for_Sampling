@@ -441,9 +441,7 @@ export function useCalculatePlan() {
         graphic.setAttribute('AC', areaCount);
 
         // TODO: Remove this console log. It is only for debugging area calculations.
-        console.log(
-          `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
-        );
+        console.log(`SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}`);
 
         // multiply all of the attributes by the area
         const {

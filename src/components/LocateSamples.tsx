@@ -17,6 +17,7 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
+import { defaultLayerProps } from 'config/layerProps';
 import {
   sampleAttributes,
   SampleSelectOptions,
@@ -613,6 +614,20 @@ function LocateSamples() {
           features: graphics,
         });
 
+        const sampleTypeFeatureSet = {
+          displayFieldName: '',
+          geometryType: 'esriGeometryPolygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: defaultLayerProps.fields,
+          features: [
+            {
+              attributes: sampleAttributes[sampleType.value],
+            },
+          ],
+        };
+
         // determine the number of service calls needed to satisfy the request
         const intNumberRandomSamples = parseInt(numberRandomSamples);
         const iterations = Math.ceil(intNumberRandomSamples / maxRecordCount);
@@ -632,9 +647,7 @@ function LocateSamples() {
             Sample_Type: sampleType.value,
             Area_of_Interest_Mask: featureSet.toJSON(),
             // TODO - Need to fix this, as it probably is not correct
-            // Sample_Type_Parameters: {
-            //   ...sampleAttributes[sampleType.value],
-            // },
+            Sample_Type_Parameters: sampleTypeFeatureSet,
           };
           const request = geoprocessorFetch({
             Geoprocessor,
@@ -2325,7 +2338,6 @@ function LocateSamples() {
                               WWPS: wwps ? Number(wwps) : null,
                               SA: sa ? Number(sa) : null,
                               AA: null,
-                              OAA: null, // TODO: Delete this before release - original AA for debug
                               ALC: alc ? Number(alc) : null,
                               AMC: amc ? Number(amc) : null,
                               Notes: '',

@@ -737,14 +737,11 @@ function FilePanel() {
         const timestamp = getCurrentDateTime();
         let uuid = generateUUID();
         if (layerType.value === 'Samples') {
-          const { AA, TYPE } = graphic.attributes;
+          const { TYPE } = graphic.attributes;
           if (!sampleAttributes.hasOwnProperty(TYPE)) {
             unknownSampleTypes = true;
           } else {
             graphic.attributes = { ...sampleAttributes[TYPE] };
-
-            // TODO: Remove this item. It is only for debugging area calculations.
-            graphic.attributes['OAA'] = AA;
 
             graphic.attributes['AA'] = null;
             graphic.attributes['AC'] = null;
@@ -754,9 +751,7 @@ function FilePanel() {
           }
         }
         if (layerType.value === 'VSP') {
-          const { AA, CREATEDDATE } = graphic.attributes;
-          // TODO: Remove this item. It is only for debugging area calculations.
-          graphic.attributes['OAA'] = AA;
+          const { CREATEDDATE } = graphic.attributes;
 
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;

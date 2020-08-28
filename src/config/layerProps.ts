@@ -100,6 +100,17 @@ export const defaultLayerProps = {
       defaultValue: null,
     },
     {
+      name: 'AA',
+      type: 'esriFieldTypeDouble',
+      actualType: 'double',
+      alias: 'AA',
+      sqlType: 'sqlTypeDouble',
+      nullable: true,
+      editable: true,
+      domain: null,
+      defaultValue: null,
+    },
+    {
       name: 'TTPK',
       type: 'esriFieldTypeDouble',
       actualType: 'double',
