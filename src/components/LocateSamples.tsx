@@ -8,6 +8,7 @@ import ColorPicker from 'components/ColorPicker';
 import { EditScenario, EditLayer } from 'components/EditLayerMetaData';
 import Select from 'components/Select';
 import NavigationButton from 'components/NavigationButton';
+import MessageBox from 'components/MessageBox';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { DialogContext } from 'contexts/Dialog';
@@ -49,7 +50,6 @@ import {
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { RGBColor } from 'react-color';
-import MessageBox from './MessageBox';
 
 type ShapeTypeSelect = {
   value: string;
@@ -1168,8 +1168,8 @@ function LocateSamples() {
           </p>
           <MessageBox
             severity="warning"
-            title="NOTE"
-            message="Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
+            title=""
+            message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
           />
           {selectedScenario && (
             <p>
