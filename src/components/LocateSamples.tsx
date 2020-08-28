@@ -49,6 +49,7 @@ import {
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { RGBColor } from 'react-color';
+import MessageBox from './MessageBox';
 
 type ShapeTypeSelect = {
   value: string;
@@ -1155,11 +1156,28 @@ function LocateSamples() {
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
           <p>
-            Specify a sampling layer for your project and enter a scenario name
-            and description for the plan. The scenario name will become the
-            feature layer name if published to your ArcGIS Online account in the{' '}
-            <strong>Publish Plan</strong> step.
+            Create a sampling plan with one or more layers. Layers can represent
+            unique areas of interest or decision units that are differentiated
+            by the user-defined descriptions (e.g., Floor 1, East Stairwell,
+            Team 1, etc.). Enter a plan name and description and click Save.
           </p>
+          <MessageBox
+            severity="warning"
+            title="NOTE"
+            message="Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
+          />
+          {selectedScenario && (
+            <p>
+              An empty sample layer is loaded by default. Use the{' '}
+              <strong>Active Sampling Layer</strong> controls to link, add,
+              modify, and/or delete the sampling layer associated with the
+              active plan. You may associate multiple layers with a plan by
+              selecting sampling layers from the menu and clicking the link
+              icon. The menu will display linked layers and indicate other
+              layers available for linking. Use the “unlink” control to remove a
+              layer from a plan.
+            </p>
+          )}
 
           {scenarios.length === 0 ? (
             <EditScenario />
