@@ -528,8 +528,20 @@ function LocateSamples() {
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
   // dropdown this will create an AOI layer. This also sets the sketchVM to use the
   // selected AOI and triggers a React useEffect to allow the user to sketch on the map.
+  const [
+    generateRandomResponse,
+    setGenerateRandomResponse, //
+  ] = React.useState<GenerateRandomType>({
+    status: 'none',
+    data: [],
+  });
   function sketchAoiButtonClick() {
     if (!map || !aoiSketchVM || !aoiSketchLayer) return;
+
+    setGenerateRandomResponse({
+      status: 'none',
+      data: [],
+    });
 
     if (aoiSketchLayer.sketchLayer.type === 'graphics') {
       // remove the graphics from the generate random mask
@@ -575,13 +587,6 @@ function LocateSamples() {
   }
 
   // Handle a user generating random samples
-  const [
-    generateRandomResponse,
-    setGenerateRandomResponse, //
-  ] = React.useState<GenerateRandomType>({
-    status: 'none',
-    data: [],
-  });
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount) return;
 
@@ -1168,14 +1173,13 @@ function LocateSamples() {
           />
           {selectedScenario && (
             <p>
-              An empty sample layer is loaded by default. Use the{' '}
-              <strong>Active Sampling Layer</strong> controls to link, add,
-              modify, and/or delete the sampling layer associated with the
-              active plan. You may associate multiple layers with a plan by
-              selecting sampling layers from the menu and clicking the link
-              icon. The menu will display linked layers and indicate other
-              layers available for linking. Use the “unlink” control to remove a
-              layer from a plan.
+              An empty sample layer is loaded by default. Use the "Active
+              Sampling Layer" controls to link, add, modify, and/or delete the
+              sampling layer associated with the active plan. You may associate
+              multiple layers with a plan by selecting sampling layers from the
+              menu and clicking the link icon. The menu will display linked
+              layers and indicate other layers available for linking. Use the
+              “unlink” control to remove a layer from a plan.
             </p>
           )}
 
@@ -1707,6 +1711,50 @@ function LocateSamples() {
                 In the panels below, add targeted and/ or multiple samples to
                 the plan.
               </p>
+              <div css={colorSettingContainerStyles}>
+                <h3>Symbology Settings</h3>
+                <div css={inlineMenuStyles}>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Fill</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(polygonSymbol.color)}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          color: [color.r, color.g, color.b, alpha],
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                  <div css={colorContainerStyles}>
+                    <span css={colorLabelStyles}>Outline</span>
+                    <ColorPicker
+                      color={convertArrayToRgbColor(
+                        polygonSymbol.outline.color,
+                      )}
+                      onChange={(color: RGBColor) => {
+                        const alpha = color.a ? color.a : 1;
+                        const newPolygonSymbol: PolygonSymbol = {
+                          ...polygonSymbol,
+                          outline: {
+                            ...polygonSymbol.outline,
+                            color: [color.r, color.g, color.b, alpha],
+                          },
+                        };
+                        setPolygonSymbol(newPolygonSymbol);
+
+                        // update all of the symbols
+                        updatePolygonSymbol(layers, newPolygonSymbol);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
             <AccordionList>
               <AccordionItem
@@ -1714,50 +1762,14 @@ function LocateSamples() {
                 initiallyExpanded={true}
               >
                 <div css={sectionContainer}>
-                  <div css={colorSettingContainerStyles}>
-                    <h3>Symbology Settings</h3>
-                    <div css={inlineMenuStyles}>
-                      <div css={colorContainerStyles}>
-                        <span css={colorLabelStyles}>Fill</span>
-                        <ColorPicker
-                          color={convertArrayToRgbColor(polygonSymbol.color)}
-                          onChange={(color: RGBColor) => {
-                            const alpha = color.a ? color.a : 1;
-                            const newPolygonSymbol: PolygonSymbol = {
-                              ...polygonSymbol,
-                              color: [color.r, color.g, color.b, alpha],
-                            };
-                            setPolygonSymbol(newPolygonSymbol);
-
-                            // update all of the symbols
-                            updatePolygonSymbol(layers, newPolygonSymbol);
-                          }}
-                        />
-                      </div>
-                      <div css={colorContainerStyles}>
-                        <span css={colorLabelStyles}>Outline</span>
-                        <ColorPicker
-                          color={convertArrayToRgbColor(
-                            polygonSymbol.outline.color,
-                          )}
-                          onChange={(color: RGBColor) => {
-                            const alpha = color.a ? color.a : 1;
-                            const newPolygonSymbol: PolygonSymbol = {
-                              ...polygonSymbol,
-                              outline: {
-                                ...polygonSymbol.outline,
-                                color: [color.r, color.g, color.b, alpha],
-                              },
-                            };
-                            setPolygonSymbol(newPolygonSymbol);
-
-                            // update all of the symbols
-                            updatePolygonSymbol(layers, newPolygonSymbol);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <p>
+                    Click on a sample type to enable TOTS drawing mode. Click on
+                    the map layer to draw a sample point. Optionally, add any
+                    relevant notes. Click Save. Repeat these steps to continue
+                    adding targeted samples. Use the "Add Multiple Random
+                    Samples" feature below to add more than one sample point at
+                    a time.
+                  </p>
                   <div>
                     <h3>Established Sample Types</h3>
                     <div css={sketchButtonContainerStyles}>
@@ -1819,28 +1831,12 @@ function LocateSamples() {
                   {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
                   {sketchLayer?.layerType !== 'VSP' && (
                     <React.Fragment>
-                      <label htmlFor="number-of-samples-input">
-                        Number of Samples
-                      </label>
-                      <input
-                        id="number-of-samples-input"
-                        css={inputStyles}
-                        value={numberRandomSamples}
-                        onChange={(ev) =>
-                          setNumberRandomSamples(ev.target.value)
-                        }
-                      />
-                      <label htmlFor="sample-type-select-input">
-                        Sample Type
-                      </label>
-                      <Select
-                        id="sample-type-select"
-                        inputId="sample-type-select-input"
-                        css={fullWidthSelectStyles}
-                        value={sampleType}
-                        onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                        options={allSampleOptions}
-                      />
+                      <p>
+                        Click “Draw Sampling Mask” to draw a boundary on your
+                        map within which to place samples. Select a Sample Type
+                        from the menu and specify the number of samples to add.
+                        Click Submit to add samples.
+                      </p>
                       <button
                         id="sampling-mask"
                         title="Draw Sampling Mask"
@@ -1870,6 +1866,29 @@ function LocateSamples() {
                           <span>Draw Sampling Mask</span>
                         </span>
                       </button>
+                      <br />
+                      <label htmlFor="sample-type-select-input">
+                        Sample Type
+                      </label>
+                      <Select
+                        id="sample-type-select"
+                        inputId="sample-type-select-input"
+                        css={fullWidthSelectStyles}
+                        value={sampleType}
+                        onChange={(ev) => setSampleType(ev as SampleSelectType)}
+                        options={allSampleOptions}
+                      />
+                      <label htmlFor="number-of-samples-input">
+                        Number of Samples
+                      </label>
+                      <input
+                        id="number-of-samples-input"
+                        css={inputStyles}
+                        value={numberRandomSamples}
+                        onChange={(ev) =>
+                          setNumberRandomSamples(ev.target.value)
+                        }
+                      />
                       {generateRandomResponse.status === 'success' &&
                         sketchLayer &&
                         generateRandomSuccessMessage(
@@ -1904,6 +1923,14 @@ function LocateSamples() {
               </AccordionItem>
               <AccordionItem title={'Create Custom Sample Types'}>
                 <div css={sectionContainer}>
+                  <p>
+                    Choose an existing sample type from the menu or click + to
+                    add a new sample type from scratch. You have the option
+                    clone or view an existing sample type. Populate or edit the
+                    parameter fields and click Save. Once you have saved a
+                    custom sample type you can edit and/or delete the parameters
+                    using additional controls now available to you.
+                  </p>
                   <div css={iconButtonContainerStyles}>
                     <label htmlFor="sample-type-select-input">
                       Sample Type
@@ -2049,7 +2076,7 @@ function LocateSamples() {
                                 className={
                                   editingStatus === 'view'
                                     ? 'fas fa-times'
-                                    : 'fas fa-eye'
+                                    : 'fas fa-file-alt'
                                 }
                               />
                               <span className="sr-only">

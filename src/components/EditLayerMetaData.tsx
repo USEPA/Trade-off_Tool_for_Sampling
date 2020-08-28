@@ -250,7 +250,7 @@ function EditScenario({
         }
         css={inputStyles}
         maxLength={250}
-        placeholder="Published Layer Name"
+        placeholder="Enter Plan Name"
         value={scenarioName}
         onChange={(ev) => {
           setScenarioName(ev.target.value);
@@ -265,7 +265,7 @@ function EditScenario({
         }
         css={inputStyles}
         maxLength={2048}
-        placeholder="Layer description (2048 characters)"
+        placeholder="Enter Plan Description (2048 characters)"
         value={scenarioDescription}
         onChange={(ev) => {
           setScenarioDescription(ev.target.value);
@@ -484,7 +484,7 @@ function EditLayer({
         id="layer-name-input"
         css={inputStyles}
         maxLength={250}
-        placeholder="Published Layer Name"
+        placeholder="Enter Layer Name"
         value={layerName}
         onChange={(ev) => {
           setLayerName(ev.target.value);
