@@ -845,7 +845,6 @@ function ResultCard({ result }: ResultCardProps) {
                       WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
                       SA: attributes.SA ? Number(attributes.SA) : null,
                       AA: null,
-                      OAA: null, // TODO: Delete this before release - original AA for debug
                       ALC: attributes.ALC ? Number(attributes.ALC) : null,
                       AMC: attributes.AMC ? Number(attributes.AMC) : null,
                       Notes: '',

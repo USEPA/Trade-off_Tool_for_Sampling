@@ -17,6 +17,7 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
+import { defaultLayerProps } from 'config/layerProps';
 import {
   sampleAttributes,
   SampleSelectOptions,
@@ -613,6 +614,21 @@ function LocateSamples() {
           features: graphics,
         });
 
+        // get the sample type definition (can be established or custom)
+        const sampleTypeFeatureSet = {
+          displayFieldName: '',
+          geometryType: 'esriGeometryPolygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: defaultLayerProps.fields,
+          features: [
+            {
+              attributes: sampleAttributes[sampleType.value],
+            },
+          ],
+        };
+
         // determine the number of service calls needed to satisfy the request
         const intNumberRandomSamples = parseInt(numberRandomSamples);
         const iterations = Math.ceil(intNumberRandomSamples / maxRecordCount);
@@ -631,6 +647,7 @@ function LocateSamples() {
             Number_of_Samples: numSamples,
             Sample_Type: sampleType.value,
             Area_of_Interest_Mask: featureSet.toJSON(),
+            Sample_Type_Parameters: sampleTypeFeatureSet,
           };
           const request = geoprocessorFetch({
             Geoprocessor,
@@ -1793,7 +1810,7 @@ function LocateSamples() {
                     css={fullWidthSelectStyles}
                     value={sampleType}
                     onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                    options={SampleSelectOptions}
+                    options={allSampleOptions}
                   />
                   <button
                     id="sampling-mask"
@@ -2329,7 +2346,6 @@ function LocateSamples() {
                               WWPS: wwps ? Number(wwps) : null,
                               SA: sa ? Number(sa) : null,
                               AA: null,
-                              OAA: null, // TODO: Delete this before release - original AA for debug
                               ALC: alc ? Number(alc) : null,
                               AMC: amc ? Number(amc) : null,
                               Notes: '',

@@ -25,6 +25,7 @@ import { chunkArray } from 'utils/utils';
 // types
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
+import { defaultLayerProps } from 'config/layerProps';
 import { totsGPServer } from 'config/webService';
 import {
   sampleAttributes,
@@ -236,6 +237,8 @@ function FilePanel() {
     setReferenceLayers,
     polygonSymbol,
     getGpMaxRecordCount,
+    userDefinedOptions,
+    userDefinedAttributes,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -275,6 +278,31 @@ function FilePanel() {
 
     setGoToOptions(null);
   }, [goToOptions, setGoToOptions]);
+
+  // Keep the allSampleOptions array up to date
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
+  React.useEffect(() => {
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    SampleSelectOptions.forEach((option) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -522,6 +550,10 @@ function FilePanel() {
           return;
         }
 
+        // this should never happen, but if sample type wasn't selected
+        // exit early
+        if (!sampleType) return;
+
         const features: __esri.Graphic[] = [];
         let layerDefinition: any;
         res.featureCollection.layers.forEach((layer: any) => {
@@ -542,6 +574,21 @@ function FilePanel() {
           // Using Field.fromJSON to convert the Rest fields to the ArcGIS JS fields
           fields.push(Field.fromJSON(field));
         });
+
+        // get the sample type definition (can be established or custom)
+        const sampleTypeFeatureSet = {
+          displayFieldName: '',
+          geometryType: 'esriGeometryPolygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: defaultLayerProps.fields,
+          features: [
+            {
+              attributes: sampleAttributes[sampleType.value],
+            },
+          ],
+        };
 
         getGpMaxRecordCount()
           .then((maxRecordCount) => {
@@ -570,7 +617,8 @@ function FilePanel() {
               const params = {
                 f: 'json',
                 Input_VSP: inputVspSet,
-                Sample_Type: sampleType && sampleType.value,
+                Sample_Type: sampleType.value,
+                Sample_Type_Parameters: sampleTypeFeatureSet,
               };
               const request = geoprocessorFetch({
                 Geoprocessor,
@@ -702,14 +750,11 @@ function FilePanel() {
         const timestamp = getCurrentDateTime();
         let uuid = generateUUID();
         if (layerType.value === 'Samples') {
-          const { AA, TYPE } = graphic.attributes;
+          const { TYPE } = graphic.attributes;
           if (!sampleAttributes.hasOwnProperty(TYPE)) {
             unknownSampleTypes = true;
           } else {
             graphic.attributes = { ...sampleAttributes[TYPE] };
-
-            // TODO: Remove this item. It is only for debugging area calculations.
-            graphic.attributes['OAA'] = AA;
 
             graphic.attributes['AA'] = null;
             graphic.attributes['AC'] = null;
@@ -719,9 +764,7 @@ function FilePanel() {
           }
         }
         if (layerType.value === 'VSP') {
-          const { AA, CREATEDDATE } = graphic.attributes;
-          // TODO: Remove this item. It is only for debugging area calculations.
-          graphic.attributes['OAA'] = AA;
+          const { CREATEDDATE } = graphic.attributes;
 
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
@@ -1092,7 +1135,7 @@ function FilePanel() {
                   setSampleType(ev as SampleSelectType);
                   setUploadStatus('');
                 }}
-                options={SampleSelectOptions}
+                options={allSampleOptions}
               />
               <p css={sectionParagraph}>
                 Add an externally-generated Visual Sample Plan (VSP) layer to

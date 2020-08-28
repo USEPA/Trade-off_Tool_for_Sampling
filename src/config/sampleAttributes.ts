@@ -17,7 +17,6 @@ export type Attributes = {
     Width: number;
     SA: number | null;
     AA: number | null;
-    OAA: number | null; // TODO: Delete this before release - original AA for debug
     TTPK: number | null;
     TTC: number | null;
     TTA: number | null;
@@ -59,7 +58,6 @@ export const sampleAttributes: Attributes = {
     Width: 10,
     SA: 100,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.12,
     TTC: 0.09,
     TTA: 0.7,
@@ -93,7 +91,6 @@ export const sampleAttributes: Attributes = {
     Width: 12.2794,
     SA: 144,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.18,
     TTC: 0.15,
     TTA: 0.8,
@@ -127,7 +124,6 @@ export const sampleAttributes: Attributes = {
     Width: 169.9664,
     SA: 28800,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.33,
     TTC: 0.13,
     TTA: 0.8,
@@ -161,7 +157,6 @@ export const sampleAttributes: Attributes = {
     Width: 379.80360065,
     SA: 144000,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.33,
     TTC: 0.3,
     TTA: 0.7,
@@ -195,7 +190,6 @@ export const sampleAttributes: Attributes = {
     Width: 109.7886,
     SA: 12000,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.33,
     TTC: 0.6,
     TTA: 0.5,
@@ -229,7 +223,6 @@ export const sampleAttributes: Attributes = {
     Width: 2,
     SA: 4,
     AA: null,
-    OAA: null, // TODO: Delete this before release - original AA for debug
     TTPK: 0.12,
     TTC: 0.07,
     TTA: 0.7,
