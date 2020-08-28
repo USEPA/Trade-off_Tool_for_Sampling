@@ -5,7 +5,7 @@ import { LayerType } from 'types/Layer';
 import { defaultLayerProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
-import { escapeForLucene } from 'utils/utils';
+import { chunkArray, escapeForLucene } from 'utils/utils';
 
 type ServiceMetaDataType = {
   name: string;
@@ -245,6 +245,7 @@ export function createFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
   layers: LayerType[],
+  serviceMetaData: ServiceMetaDataType,
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -277,8 +278,8 @@ export function createFeatureLayers(
 
       layersParams.push({
         ...defaultLayerProps,
-        name: layer.scenarioName,
-        description: layer.scenarioDescription,
+        name: serviceMetaData.name,
+        description: serviceMetaData.description,
         extent: graphicsExtent,
 
         // add a custom type for determining which layers in a feature service
@@ -380,17 +381,61 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
-    const data = {
+    const query = {
       f: 'json',
       token: tempPortal.credential.token,
       where: '0=0',
-      outFields: '*',
-      returnGeometry: true,
+      returnIdsOnly: true,
+      returnGeometry: false,
     };
 
-    fetchPost(`${serviceUrl}/query`, data)
-      .then((res) => {
-        resolve(res);
+    fetchPost(`${serviceUrl}/query`, query)
+      .then((objectIds: any) => {
+        if (!objectIds) {
+          resolve({ features: [] });
+          return;
+        }
+
+        // Break the data up into chunks of 1000 or the max record count
+        const chunkedObjectIds = chunkArray(objectIds.objectIds, 1000);
+
+        // request data with each chunk of objectIds
+        const requests: Promise<any>[] = [];
+
+        // fire off the requests for the features with geometry
+        chunkedObjectIds.forEach((chunk: Array<string>) => {
+          const data = {
+            f: 'json',
+            token: tempPortal.credential.token,
+            where: `OBJECTID in (${chunk.join(',')})`,
+            outFields: '*',
+            returnGeometry: true,
+          };
+          const request = fetchPost(`${serviceUrl}/query`, data);
+          requests.push(request);
+        });
+
+        // When all of the requests are complete, combine them and
+        // return the result.
+        Promise.all(requests)
+          .then((responses) => {
+            let result: any = {};
+            responses.forEach((res, index) => {
+              // first iteration just copy the entire response
+              if (index === 0) {
+                result = res;
+                return;
+              }
+
+              // subsequent iterations only append the features
+              res.features.forEach((feature: any) => {
+                result.features.push(feature);
+              });
+            });
+
+            resolve(result);
+          })
+          .catch((err) => reject(err));
       })
       .catch((err) => reject(err));
   });
@@ -409,12 +454,10 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 export function applyEdits({
   portal,
   serviceUrl,
-  layers,
   edits,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
-  layers: LayerType[];
   edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
@@ -464,10 +507,12 @@ export function publish({
   portal,
   layers,
   edits,
+  serviceMetaData,
 }: {
   portal: __esri.Portal;
   layers: LayerType[];
   edits: LayerEditsType[];
+  serviceMetaData: ServiceMetaDataType;
 }) {
   return new Promise((resolve, reject) => {
     if (layers.length === 0) {
@@ -475,28 +520,22 @@ export function publish({
       return;
     }
 
-    const serviceLayer = layers[0];
-    const serviceMetaData: ServiceMetaDataType = {
-      name: serviceLayer.scenarioName,
-      description: serviceLayer.scenarioDescription,
-    };
-
     getFeatureService(portal, serviceMetaData)
       .then((service: any) => {
         const serviceUrl: string = service.portalService.url;
         // create the layers
-        createFeatureLayers(portal, serviceUrl, layers)
+        createFeatureLayers(portal, serviceUrl, layers, serviceMetaData)
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
               const layerEdits = edits.find(
                 (layerEdit) =>
-                  layerEdit.id === -1 && layerEdit.scenarioName === layer.name,
+                  layerEdit.id === -1 && serviceMetaData.name === layer.name,
               );
 
               const mapLayer = layers.find(
                 (mapLayer) =>
-                  mapLayer.id === -1 && mapLayer.scenarioName === layer.name,
+                  mapLayer.id === -1 && layerEdits?.layerId === layer.layerId,
               );
 
               if (layerEdits) layerEdits.id = layer.id;
@@ -504,7 +543,7 @@ export function publish({
             });
 
             // publish the edits
-            applyEdits({ portal, serviceUrl, layers, edits })
+            applyEdits({ portal, serviceUrl, edits })
               .then((res) => resolve(res))
               .catch((err) => reject(err));
           })

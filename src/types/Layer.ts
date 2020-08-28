@@ -5,7 +5,8 @@ export type LayerTypeName =
   | 'Samples'
   | 'Reference Layer'
   | 'Area of Interest'
-  | 'VSP';
+  | 'VSP'
+  | 'Sampling Mask';
 
 export type LayerSelectType = {
   value: LayerTypeName;
@@ -18,20 +19,22 @@ export type PublishStatus = 'added' | 'edited' | 'published';
 
 export type LayerType = {
   id: number;
+  uuid: string;
   layerId: string;
   portalId: string;
   value: string;
   name: string;
   label: string;
   layerType: LayerTypeName;
-  scenarioName: string;
-  scenarioDescription: string;
   editType: EditType;
-  defaultVisibility: boolean;
+  visible: boolean;
+  listMode: 'hide' | 'hide-children' | 'show';
+  sort: number;
   geometryType: string;
   addedFrom: AddedFrom;
   status: PublishStatus;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+  parentLayer: __esri.GroupLayer | null;
 };
 
 export type PortalLayerType = {

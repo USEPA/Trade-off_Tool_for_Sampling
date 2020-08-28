@@ -25,14 +25,13 @@ import { chunkArray } from 'utils/utils';
 // types
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
+import { defaultLayerProps } from 'config/layerProps';
 import { totsGPServer } from 'config/webService';
 import {
   sampleAttributes,
   SampleSelectOptions,
   SampleSelectType,
-  SampleType,
 } from 'config/sampleAttributes';
-import { polygonSymbol } from 'config/symbols';
 import {
   attributeOverwriteWarning,
   fileReadErrorMessage,
@@ -236,7 +235,10 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
+    polygonSymbol,
     getGpMaxRecordCount,
+    userDefinedOptions,
+    userDefinedAttributes,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -276,6 +278,31 @@ function FilePanel() {
 
     setGoToOptions(null);
   }, [goToOptions, setGoToOptions]);
+
+  // Keep the allSampleOptions array up to date
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
+  React.useEffect(() => {
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    SampleSelectOptions.forEach((option) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -523,6 +550,10 @@ function FilePanel() {
           return;
         }
 
+        // this should never happen, but if sample type wasn't selected
+        // exit early
+        if (!sampleType) return;
+
         const features: __esri.Graphic[] = [];
         let layerDefinition: any;
         res.featureCollection.layers.forEach((layer: any) => {
@@ -543,6 +574,21 @@ function FilePanel() {
           // Using Field.fromJSON to convert the Rest fields to the ArcGIS JS fields
           fields.push(Field.fromJSON(field));
         });
+
+        // get the sample type definition (can be established or custom)
+        const sampleTypeFeatureSet = {
+          displayFieldName: '',
+          geometryType: 'esriGeometryPolygon',
+          spatialReference: {
+            wkid: 3857,
+          },
+          fields: defaultLayerProps.fields,
+          features: [
+            {
+              attributes: sampleAttributes[sampleType.value],
+            },
+          ],
+        };
 
         getGpMaxRecordCount()
           .then((maxRecordCount) => {
@@ -571,7 +617,8 @@ function FilePanel() {
               const params = {
                 f: 'json',
                 Input_VSP: inputVspSet,
-                Sample_Type: sampleType && sampleType.value,
+                Sample_Type: sampleType.value,
+                Sample_Type_Parameters: sampleTypeFeatureSet,
               };
               const request = geoprocessorFetch({
                 Geoprocessor,
@@ -703,14 +750,11 @@ function FilePanel() {
         const timestamp = getCurrentDateTime();
         let uuid = generateUUID();
         if (layerType.value === 'Samples') {
-          const { AA, TYPE } = graphic.attributes;
+          const { TYPE } = graphic.attributes;
           if (!sampleAttributes.hasOwnProperty(TYPE)) {
             unknownSampleTypes = true;
           } else {
-            graphic.attributes = { ...sampleAttributes[TYPE as SampleType] };
-
-            // TODO: Remove this item. It is only for debugging area calculations.
-            graphic.attributes['OAA'] = AA;
+            graphic.attributes = { ...sampleAttributes[TYPE] };
 
             graphic.attributes['AA'] = null;
             graphic.attributes['AC'] = null;
@@ -720,9 +764,7 @@ function FilePanel() {
           }
         }
         if (layerType.value === 'VSP') {
-          const { AA, CREATEDDATE } = graphic.attributes;
-          // TODO: Remove this item. It is only for debugging area calculations.
-          graphic.attributes['OAA'] = AA;
+          const { CREATEDDATE } = graphic.attributes;
 
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
@@ -784,28 +826,35 @@ function FilePanel() {
 
     const layerName = getLayerName(layers, file.file.name);
     setNewLayerName(layerName);
+
+    const visible = layerType.value === 'Contamination Map' ? false : true;
+    const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
     const graphicsLayer = new GraphicsLayer({
       graphics,
       title: layerName,
+      visible,
+      listMode,
     });
 
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      uuid: generateUUID(),
       layerId: graphicsLayer.id,
       portalId: '',
       value: layerName,
       name: file.file.name,
       label: layerName,
       layerType: layerType.value,
-      scenarioName: '',
-      scenarioDescription: '',
       editType: 'add',
-      defaultVisibility: true,
+      visible,
+      listMode,
+      sort: 0,
       geometryType: 'esriGeometryPolygon',
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      parentLayer: null,
     };
 
     // make a copy of the edits context variable
@@ -820,7 +869,11 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
-    if (graphics.length > 0) mapView.goTo(graphics);
+
+    // zoom to the layer unless it is a contamination map
+    if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
+      mapView.goTo(graphics);
+    }
 
     setUploadStatus('success');
   }, [
@@ -841,6 +894,7 @@ function FilePanel() {
     file,
     map,
     mapView,
+    polygonSymbol,
     layers,
     setLayers,
     trainingMode,
@@ -1040,7 +1094,7 @@ function FilePanel() {
       {!layerType ? (
         <React.Fragment>
           <p css={sectionParagraph}>Locate the file you want to import.</p>
-          <p css={sectionParagraph}>
+          <div css={sectionParagraph}>
             <MessageBox
               severity="warning"
               title="Requirements for uploading files:"
@@ -1065,7 +1119,7 @@ function FilePanel() {
                 </React.Fragment>
               }
             />
-          </p>
+          </div>
         </React.Fragment>
       ) : (
         <React.Fragment>
@@ -1081,7 +1135,7 @@ function FilePanel() {
                   setSampleType(ev as SampleSelectType);
                   setUploadStatus('');
                 }}
-                options={SampleSelectOptions}
+                options={allSampleOptions}
               />
               <p css={sectionParagraph}>
                 Add an externally-generated Visual Sample Plan (VSP) layer to
@@ -1109,27 +1163,27 @@ function FilePanel() {
                         the <strong>Calculate Resources</strong> step and then
                         view the comparison against your sampling plan.
                       </p>
-                      <p css={sectionParagraph}>
+                      <div css={sectionParagraph}>
                         <MessageBox
                           severity="warning"
                           title="The Contamination Map layer must include the following attributes to be uploaded:"
                           message={
                             <React.Fragment>
                               <p css={layerInfo}>
-                                <strong>CONTAM_TYPE</strong> (domain values:
+                                <strong>CONTAMTYPE</strong> (domain values:
                                 chemical, radiological, biological)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_VALUE</strong> (integer value)
+                                <strong>CONTAMVAL</strong> (integer value)
                               </p>
                               <p css={layerInfo}>
-                                <strong>CONTAM_UNIT</strong> (domain values:
-                                cfu, others TBD)
+                                <strong>CONTAMUNIT</strong> (domain values: cfu,
+                                others TBD)
                               </p>
                             </React.Fragment>
                           }
                         />
-                      </p>
+                      </div>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Samples' && (
@@ -1152,6 +1206,22 @@ function FilePanel() {
                         etc.). This layer will be added to the map and can be
                         accessed from the Legend panel.
                       </p>
+                      <div css={sectionParagraph}>
+                        <MessageBox
+                          severity="warning"
+                          title="Image Format Limitations"
+                          message={
+                            <p css={layerInfo}>
+                              Image format limitations exist for viewing imagery
+                              on the web. You must properly "pre-process" and
+                              format imagery using standard Esri desktop-based
+                              tools (e.g., ArcGIS Pro) and then cache and share
+                              the imagery as a tiled map service in ArcGIS
+                              Online for display within TOTS.
+                            </p>
+                          }
+                        />
+                      </div>
                     </React.Fragment>
                   )}
                   {layerType.value === 'Area of Interest' && (

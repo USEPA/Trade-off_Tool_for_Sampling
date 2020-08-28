@@ -1,7 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 // types
-import { EditsType, EditType, LayerEditsType } from 'types/Edits';
+import {
+  EditsType,
+  EditType,
+  LayerEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -22,16 +28,52 @@ export function deepCopyObject(obj: any) {
  * @returns the layer that was found in the edits object
  */
 export function findLayerInEdits(
-  edits: LayerEditsType[],
-  layerToFind: LayerType,
+  edits: (ScenarioEditsType | LayerEditsType)[],
+  layerId: string,
 ) {
   // find the layer in the edits using it's id and name
-  const index = edits.findIndex(
-    (layer) => layer.layerId === layerToFind.layerId,
-  );
-  const layer = edits[index];
+  let scenarioIndex = -1;
+  let layerIndex = -1;
+  edits.forEach((edit, scenarioIdx) => {
+    if (edit.type === 'layer' && edit.layerId === layerId) {
+      // the desired item is a layer
+      layerIndex = scenarioIdx;
+    } else if (edit.type === 'scenario' && edit.layerId === layerId) {
+      // the desired item is a scenario
+      scenarioIndex = scenarioIdx;
+    } else if (edit.type === 'scenario') {
+      // search for the layer in scenarios
+      edit.layers.forEach((layer, layerIdx) => {
+        if (layer.layerId === layerId) {
+          scenarioIndex = scenarioIdx;
+          layerIndex = layerIdx;
+        }
+      });
+    }
+  });
 
-  return layer;
+  // get the scenario if the index was found
+  let editsScenario: ScenarioEditsType | null = null;
+  if (scenarioIndex > -1) {
+    editsScenario = edits[scenarioIndex] as ScenarioEditsType;
+  }
+
+  // get the layer if the index was found
+  let editsLayer: LayerEditsType | null = null;
+  if (editsScenario && layerIndex > -1) {
+    // the layer is nested in a scenario
+    editsLayer = editsScenario.layers[layerIndex];
+  } else {
+    // the layer is unlinked and at the root
+    editsLayer = edits[layerIndex] as LayerEditsType;
+  }
+
+  return {
+    scenarioIndex,
+    layerIndex,
+    editsScenario,
+    editsLayer,
+  };
 }
 
 /**
@@ -45,23 +87,26 @@ export function createLayerEditTemplate(
   editType: EditType,
 ) {
   return {
+    type: 'layer',
     id: layerToEdit.id,
+    uuid: layerToEdit.uuid,
     layerId: layerToEdit.sketchLayer.id,
     portalId: layerToEdit.portalId,
     name: layerToEdit.name,
     label: layerToEdit.label,
     layerType: layerToEdit.layerType,
     hasContaminationRan: false,
-    scenarioName: layerToEdit.scenarioName,
-    scenarioDescription: layerToEdit.scenarioDescription,
     addedFrom: layerToEdit.addedFrom,
     status: layerToEdit.status,
     editType,
+    visible: layerToEdit.visible,
+    listMode: layerToEdit.listMode,
+    sort: layerToEdit.sort,
     adds: [],
     updates: [],
     deletes: [],
     published: [],
-  };
+  } as LayerEditsType;
 }
 
 /**
@@ -80,7 +125,7 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
   // currently we only have polygons
   // in the future we may need to add code to handle different geometry types
   return {
-    attributes: graphic.attributes ? graphic.attributes : {},
+    attributes: graphic.attributes ? { ...graphic.attributes } : {},
     geometry: geometry,
   };
 }
@@ -89,18 +134,22 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
  * Updates the edits object with the provided changes.
  *
  * @param edits The edits object to save the changes to.
+ * @param scenario Used for adding a layer to a scenario.
  * @param layer The layer the changes pertain to
  * @param type The type of update being performed (add, update, delete, arcgis, or properties)
  * @param changes An object representing the changes being saved
+ * @param hasContaminationRan Keeps track of whether or not contamination has ran for this layer
  */
 export function updateLayerEdits({
   edits,
+  scenario,
   layer,
   type,
   changes,
   hasContaminationRan = false,
 }: {
   edits: EditsType;
+  scenario?: ScenarioEditsType | null;
   layer: LayerType;
   type: EditType;
   changes?: __esri.Collection<__esri.Graphic>;
@@ -110,34 +159,63 @@ export function updateLayerEdits({
   const editsCopy = deepCopyObject(edits) as EditsType;
 
   // find the layer's edit structure
-  let layerToEdit = findLayerInEdits(editsCopy.edits, layer);
+  let { editsScenario, editsLayer } = findLayerInEdits(
+    editsCopy.edits,
+    layer.layerId,
+  );
+  if (scenario) {
+    // find the provided scenario
+    editsScenario = findLayerInEdits(editsCopy.edits, scenario.layerId)
+      .editsScenario;
+  }
 
   // if it was not found create the edit template for this layer and
   // add it to the copy of edits
-  if (!layerToEdit) {
-    layerToEdit = createLayerEditTemplate(layer, type);
-    editsCopy.edits.push(layerToEdit);
+  if (!editsLayer) {
+    editsLayer = createLayerEditTemplate(layer, type);
+
+    // add the layer to a scenario if a scenario was found,
+    // otherwise add the layer to the root of edits.
+    if (editsScenario) {
+      editsScenario.layers.push(editsLayer);
+    } else {
+      editsCopy.edits.push(editsLayer);
+    }
+  } else if (scenario && editsScenario && type === 'move') {
+    editsScenario.layers.push(editsLayer);
+    editsCopy.edits = editsCopy.edits.filter(
+      (edit) => edit.layerId !== editsLayer.layerId,
+    );
   } else {
     // handle property changes
-    layerToEdit.scenarioName = layer.scenarioName;
-    layerToEdit.scenarioDescription = layer.scenarioDescription;
+    if (editsScenario) {
+      editsScenario.visible = layer.visible;
+      editsScenario.listMode = layer.listMode;
+      if (editsScenario.status === 'published') editsScenario.status = 'edited';
+    }
+
+    editsLayer.visible = layer.visible;
+    editsLayer.listMode = layer.listMode;
+    editsLayer.name = layer.name;
+    editsLayer.label = layer.name;
 
     // if the status is published, set the status to edited to allow re-publishing
     if (layer.status === 'published') layer.status = 'edited';
-    if (layerToEdit.status === 'published') layerToEdit.status = 'edited';
+    if (editsLayer.status === 'published') editsLayer.status = 'edited';
   }
 
-  layerToEdit.editType = type;
+  editsLayer.editType = type;
 
   // set the hasContaminationRan value (default is false)
-  layerToEdit.hasContaminationRan = hasContaminationRan;
+  if (editsScenario) editsScenario.hasContaminationRan = hasContaminationRan;
+  editsLayer.hasContaminationRan = hasContaminationRan;
 
   if (changes) {
     // Add new graphics
     if (type === 'add') {
       changes.forEach((change) => {
         const formattedChange = convertToSimpleGraphic(change);
-        layerToEdit.adds.push(formattedChange);
+        editsLayer.adds.push(formattedChange);
       });
     }
 
@@ -145,7 +223,7 @@ export function updateLayerEdits({
     if (type === 'arcgis') {
       changes.forEach((change) => {
         const formattedChange = convertToSimpleGraphic(change);
-        layerToEdit.published.push(formattedChange);
+        editsLayer.published.push(formattedChange);
       });
     }
 
@@ -156,7 +234,7 @@ export function updateLayerEdits({
         if (!change?.attributes?.PERMANENT_IDENTIFIER) return;
 
         // attempt to find the graphic in edits.adds
-        const addChangeIndex = layerToEdit.adds.findIndex(
+        const addChangeIndex = editsLayer.adds.findIndex(
           (graphic) =>
             graphic.attributes.PERMANENT_IDENTIFIER ===
             change.attributes.PERMANENT_IDENTIFIER,
@@ -164,13 +242,13 @@ export function updateLayerEdits({
         if (addChangeIndex > -1) {
           // Update the added item  and exit
           const formattedChange = convertToSimpleGraphic(change);
-          layerToEdit.adds[addChangeIndex] = formattedChange;
+          editsLayer.adds[addChangeIndex] = formattedChange;
 
           return; // essentially a break on the forEach loop
         }
 
         // attempt to find the graphic in edits
-        const existingChangeIndex = layerToEdit.updates.findIndex(
+        const existingChangeIndex = editsLayer.updates.findIndex(
           (graphic) =>
             graphic.attributes.PERMANENT_IDENTIFIER ===
             change.attributes.PERMANENT_IDENTIFIER,
@@ -179,9 +257,9 @@ export function updateLayerEdits({
         // update the existing change, otherwise add the change to the updates
         const formattedChange = convertToSimpleGraphic(change);
         if (existingChangeIndex > -1) {
-          layerToEdit.updates[existingChangeIndex] = formattedChange;
+          editsLayer.updates[existingChangeIndex] = formattedChange;
         } else {
-          layerToEdit.updates.push(formattedChange);
+          editsLayer.updates.push(formattedChange);
         }
       });
     }
@@ -192,14 +270,14 @@ export function updateLayerEdits({
       // adds array, since it hasn't been published yet
       changes.forEach((change) => {
         // attempt to find this id in adds
-        const addChangeIndex = layerToEdit.adds.findIndex(
+        const addChangeIndex = editsLayer.adds.findIndex(
           (graphic) =>
             graphic.attributes.PERMANENT_IDENTIFIER ===
             change.attributes.PERMANENT_IDENTIFIER,
         );
         if (addChangeIndex > -1) {
           // remove from adds and don't add to deletes
-          layerToEdit.adds = layerToEdit.adds.filter(
+          editsLayer.adds = editsLayer.adds.filter(
             (graphic) =>
               graphic.attributes.PERMANENT_IDENTIFIER !==
               change.attributes.PERMANENT_IDENTIFIER,
@@ -210,16 +288,17 @@ export function updateLayerEdits({
 
         // if the objectid is in the update list, remove it
         // attempt to find the graphic in edits
-        layerToEdit.updates = layerToEdit.updates.filter(
+        editsLayer.updates = editsLayer.updates.filter(
           (graphic) =>
             graphic.attributes.PERMANENT_IDENTIFIER !==
             change.attributes.PERMANENT_IDENTIFIER,
         );
 
         // add the objectids to delete to the deletes array
-        layerToEdit.deletes.push({
+        editsLayer.deletes.push({
           PERMANENT_IDENTIFIER: change.attributes.PERMANENT_IDENTIFIER,
           GLOBALID: change.attributes.GLOBALID,
+          DECISIONUNITUUID: '',
         });
       });
     }
@@ -265,16 +344,24 @@ export function getPopupTemplate(
   type: LayerTypeName,
   includeContaminationFields: boolean = false,
 ) {
+  if (type === 'Sampling Mask') {
+    return {
+      title: '',
+      content: [
+        {
+          type: 'fields',
+          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
+        },
+      ],
+    };
+  }
   if (type === 'Area of Interest') {
     return {
       title: '',
       content: [
         {
           type: 'fields',
-          fieldInfos: [
-            { fieldName: 'TYPE', label: 'Type' },
-            { fieldName: 'Notes', label: 'Notes' },
-          ],
+          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
         },
       ],
     };
@@ -406,60 +493,177 @@ export function getCurrentDateTime() {
  * Builds the default sample layer.
  *
  * @param GraphicsLayer The esri graphics layer constructor object
+ * @param name The name of the new layer
+ * @param parentLayer (optional) The parent layer of the new layer
  * @returns LayerType The default sample layer
  */
-export function getDefaultSampleLayer(
+export function createSampleLayer(
   GraphicsLayer: __esri.GraphicsLayerConstructor,
+  name: string = 'Default Sample Layer',
+  parentLayer: __esri.GroupLayer | null = null,
 ) {
-  const graphicsLayer = new GraphicsLayer({ title: 'Default Sample Layer' });
+  const graphicsLayer = new GraphicsLayer({ title: name });
 
   return {
     id: -1,
+    uuid: generateUUID(),
     layerId: graphicsLayer.id,
     portalId: '',
-    value: 'sketchLayer',
-    name: 'Default Sample Layer',
-    label: 'Default Sample Layer',
+    value: graphicsLayer.id,
+    name,
+    label: name,
     layerType: 'Samples',
-    scenarioName: '',
-    scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'show',
+    sort: 0,
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    parentLayer,
   } as LayerType;
 }
 
 /**
- * Builds the default area of interest layer.
+ * Builds the default sampling mask layer.
  *
  * @param GraphicsLayer The esri graphics layer constructor object
- * @returns LayerType The default area of interest layer
+ * @returns LayerType The default sampling mask layer
  */
-export function getDefaultAreaOfInterestLayer(
+export function getDefaultSamplingMaskLayer(
   GraphicsLayer: __esri.GraphicsLayerConstructor,
 ) {
   const graphicsLayer = new GraphicsLayer({
-    title: 'Sketched Area of Interest',
+    title: 'Sketched Sampling Mask',
+    listMode: 'hide',
   });
 
   return {
     id: -1,
+    uuid: '',
     layerId: graphicsLayer.id,
     portalId: '',
     value: 'sketchAoi',
-    name: 'Sketched Area of Interest',
-    label: 'Sketched Area of Interest',
-    layerType: 'Area of Interest',
+    name: 'Sketched Sampling Mask',
+    label: 'Sketched Sampling Mask',
+    layerType: 'Sampling Mask',
     scenarioName: '',
     scenarioDescription: '',
     editType: 'add',
-    defaultVisibility: true,
+    visible: true,
+    listMode: 'hide',
+    sort: 0,
     geometryType: 'esriGeometryPolygon',
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    parentLayer: null,
   } as LayerType;
+}
+
+/**
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided polygonSymbol.
+ *
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param polygonSymbol - The new polygon symbol.
+ */
+export function updatePolygonSymbol(
+  layers: LayerType[],
+  polygonSymbol: PolygonSymbol,
+) {
+  layers.forEach((layer) => {
+    if (layer.sketchLayer.type !== 'graphics') return;
+
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'polygon') return;
+      graphic.symbol = polygonSymbol as any;
+    });
+  });
+}
+
+/**
+ * Gets an array of layers, included in the provided edits parameter,
+ * that can be used with the sketch widget. The search will look in
+ * child layers of scenarios as well.
+ *
+ * @param layers - The layers to search in.
+ * @param edits - The edits to search in.
+ */
+export function getSketchableLayers(
+  layers: LayerType[],
+  edits: (ScenarioEditsType | LayerEditsType)[],
+) {
+  return layers.filter(
+    (layer) =>
+      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+      edits &&
+      edits.findIndex(
+        (editsLayer) =>
+          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
+      ) > -1,
+  ) as LayerType[];
+}
+
+/**
+ * Searches the edits storage variable to find all available
+ * scenarios.
+ *
+ * @param edits The edits context variable to search through.
+ */
+export function getScenarios(edits: EditsType) {
+  return edits.edits.filter(
+    (item) => item.type === 'scenario',
+  ) as ScenarioEditsType[];
+}
+
+/**
+ *
+ * @param edits Edits to search through for scenarios.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param selectedScenario
+ * @param sketchLayer
+ */
+export function getNextScenarioLayer(
+  edits: EditsType,
+  layers: LayerType[],
+  selectedScenario: ScenarioEditsType | null,
+  sketchLayer: LayerType | null,
+) {
+  let nextScenario: ScenarioEditsType | null = null;
+  let nextLayer: LayerType | null = null;
+
+  // determine which scenario to get layers for and
+  // select a scenario if necessary
+  const scenarios = getScenarios(edits);
+  let layerEdits = edits.edits;
+  if (selectedScenario) {
+    // get the layers for the selected scenario
+    layerEdits = selectedScenario.layers;
+  }
+  if (!selectedScenario && scenarios.length > 0) {
+    // select the first availble scenario and get it's layers
+    nextScenario = scenarios[0];
+    layerEdits = scenarios[0].layers;
+  }
+
+  // get the first layer that can be used for sketching and return
+  const sketchableLayers = getSketchableLayers(layers, layerEdits);
+  if (!sketchLayer && sketchableLayers.length > 0) {
+    // select the first availble sample layer. This will be
+    // an unlinked layer if there is no selected scenario or
+    // the selected scenario has no layers
+    nextLayer = sketchableLayers[0];
+  }
+
+  const defaultLayerIndex = sketchableLayers.findIndex(
+    (layer) => layer.name === 'Default Sample Layer',
+  );
+
+  return {
+    nextScenario,
+    nextLayer,
+    defaultLayerIndex,
+  };
 }

@@ -12,14 +12,23 @@ import {
   CalculateResultsType,
   CalculateResultsDataType,
 } from 'types/CalculateResults';
-import { EditsType, FeatureEditsType } from 'types/Edits';
+import {
+  EditsType,
+  FeatureEditsType,
+  LayerEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
-import { polygonSymbol } from 'config/symbols';
 // utils
 import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
+import {
+  UserDefinedAttributes,
+  SampleSelectType,
+  sampleAttributes,
+} from 'config/sampleAttributes';
 
 // Saves data to session storage
 export async function writeToStorage(
@@ -85,11 +94,15 @@ export function useStartOver() {
     setUrlLayers,
     setReferenceLayers,
     setPortalLayers,
+    setSelectedScenario,
     setSketchLayer,
     setAoiSketchLayer,
+    setUserDefinedAttributes,
+    setUserDefinedOptions,
   } = React.useContext(SketchContext);
 
   function startOver() {
+    setSelectedScenario(null);
     setSketchLayer(null);
     setAoiSketchLayer(null);
 
@@ -102,6 +115,8 @@ export function useStartOver() {
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
+    setUserDefinedAttributes({ editCount: 0, attributes: {} });
+    setUserDefinedOptions([]);
 
     // clear navigation
     setCurrentPanel(null);
@@ -152,10 +167,13 @@ export function useStartOver() {
   };
 }
 
-// Runs sampling plan calculations whenever the
-// samples change or the variables on the calculate tab
-// change.
-export function useCalculatePlan() {
+// Provides geometry engine related tools
+//    calculateArea    - Function for calculating the area of the provided graphic.
+//    createBuffer     - Function for creating a square around the center point of
+//                       the provided graphic with the provided width.
+//    loadedProjection - The esri projection library. Mainly used to test if the
+//                       library is ready for use.
+export function useGeometryTools() {
   const {
     geometryEngine,
     Polygon,
@@ -163,18 +181,6 @@ export function useCalculatePlan() {
     SpatialReference,
     webMercatorUtils,
   } = useEsriModulesContext();
-  const { edits, sketchLayer } = React.useContext(SketchContext);
-  const {
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  } = React.useContext(CalculateContext);
 
   // Load the esri projection module. This needs
   // to happen before the projection module will work.
@@ -188,25 +194,140 @@ export function useCalculatePlan() {
     });
   });
 
+  // Calculates the area of the provided graphic using a
+  // spatial reference system based on where the sample is located.
+  const calculateArea = React.useCallback(
+    (graphic: __esri.Graphic) => {
+      if (!loadedProjection) return 'ERROR - Projection library not loaded';
+
+      // convert the geometry to WGS84 for geometryEngine
+      // Cast the geometry as a Polygon to avoid typescript errors on
+      // accessing the centroid.
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      ) as __esri.Polygon;
+
+      // get the spatial reference from the centroid
+      const { latitude, longitude } = wgsGeometry.centroid;
+      const base_wkid = latitude > 0 ? 32600 : 32700;
+      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+      const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+      // project the geometry
+      const projectedGeometry = loadedProjection.project(
+        wgsGeometry,
+        spatialReference,
+      ) as __esri.Polygon;
+
+      // calulate the area
+      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
+      return areaSI;
+    },
+    [geometryEngine, loadedProjection, SpatialReference, webMercatorUtils],
+  );
+
+  // Creates a square buffer around the center of the provided graphic,
+  // where the width of the sqaure is the provided width.
+  const createBuffer = React.useCallback(
+    (graphic: __esri.Graphic, width: number) => {
+      // create the graphic
+      let geometry;
+      let center: __esri.Point | null = null;
+      if (graphic.geometry.type === 'point') {
+        geometry = graphic.geometry as __esri.Point;
+        center = geometry;
+      }
+      if (graphic.geometry.type === 'polygon') {
+        geometry = graphic.geometry as __esri.Polygon;
+        center = geometry.centroid as __esri.Point;
+      }
+
+      if (!center) return;
+
+      // create a circular buffer around the center point
+      const halfWidth = width / 2;
+      const ptBuff = geometryEngine.geodesicBuffer(
+        center,
+        halfWidth,
+        109009,
+      ) as __esri.Polygon;
+
+      // use the extent to make the buffer a square
+      graphic.geometry = new Polygon({
+        spatialReference: center.spatialReference,
+        centroid: center,
+        rings: [
+          [
+            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymax],
+            [ptBuff.extent.xmax, ptBuff.extent.ymax],
+            [ptBuff.extent.xmax, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+          ],
+        ],
+      });
+    },
+    [geometryEngine, Polygon],
+  );
+
+  return { calculateArea, createBuffer, loadedProjection };
+}
+
+// Runs sampling plan calculations whenever the
+// samples change or the variables on the calculate tab
+// change.
+export function useCalculatePlan() {
+  const {
+    geometryEngine,
+    Polygon,
+    SpatialReference,
+    webMercatorUtils,
+  } = useEsriModulesContext();
+  const { edits, layers, selectedScenario } = React.useContext(SketchContext);
+  const {
+    numLabs,
+    numLabHours,
+    numSamplingHours,
+    numSamplingPersonnel,
+    numSamplingShifts,
+    numSamplingTeams,
+    samplingLaborCost,
+    surfaceArea,
+    setCalculateResults,
+  } = React.useContext(CalculateContext);
+
+  const { calculateArea, loadedProjection } = useGeometryTools();
+
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
   const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
   React.useEffect(() => {
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics' ||
-      sketchLayer.sketchLayer.graphics.length === 0
-    ) {
+    // Get the number of graphics for the selected scenario
+    let numGraphics = 0;
+    if (selectedScenario && selectedScenario.layers.length > 0) {
+      layers.forEach((layer) => {
+        if (layer.parentLayer?.id !== selectedScenario.layerId) return;
+        if (layer.sketchLayer.type !== 'graphics') return;
+
+        numGraphics += layer.sketchLayer.graphics.length;
+      });
+    }
+
+    // exit early
+    if (!selectedScenario || numGraphics === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       setCalcGraphics([]);
       return;
     }
-    if (sketchLayer.editType === 'properties') return;
+    if (selectedScenario.editType === 'properties') return;
 
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer.editType === 'properties') return;
+    const { editsScenario } = findLayerInEdits(
+      edits.edits,
+      selectedScenario.layerId,
+    );
+    if (!editsScenario || editsScenario.editType === 'properties') return;
 
     setCalculateResults((calculateResults: CalculateResultsType) => {
       return {
@@ -217,7 +338,8 @@ export function useCalculatePlan() {
     });
   }, [
     edits,
-    sketchLayer,
+    layers,
+    selectedScenario,
     numLabs,
     numLabHours,
     numSamplingHours,
@@ -251,14 +373,22 @@ export function useCalculatePlan() {
   React.useEffect(() => {
     // exit early checks
     if (!loadedProjection) return;
-    if (!sketchLayer?.sketchLayer || edits.count === 0) return;
-    if (sketchLayer.sketchLayer.type !== 'graphics') return;
+    if (
+      !selectedScenario ||
+      selectedScenario.layers.length === 0 ||
+      edits.count === 0
+    ) {
+      return;
+    }
 
     // to improve performance, do not perform calculations if
     // only the scenario name/description changed
-    if (sketchLayer.editType === 'properties') return;
-    const layer = findLayerInEdits(edits.edits, sketchLayer);
-    if (layer?.editType === 'properties') return;
+    if (selectedScenario.editType === 'properties') return;
+    const { editsScenario } = findLayerInEdits(
+      edits.edits,
+      selectedScenario.layerId,
+    );
+    if (!editsScenario || editsScenario.editType === 'properties') return;
 
     let ttpk = 0;
     let ttc = 0;
@@ -275,116 +405,105 @@ export function useCalculatePlan() {
     let amc = 0;
     let ac = 0;
 
-    // caluclate the area for graphics
+    // caluclate the area for graphics for the selected scenario
     let totalAreaSquereFeet = 0;
     const calcGraphics: __esri.Graphic[] = [];
-    sketchLayer.sketchLayer.graphics.forEach((graphic) => {
-      const calcGraphic = graphic.clone();
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-      ) as __esri.Polygon;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry.centroid;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Polygon;
-
-      // calulate the area
-      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-
-      // convert area to square inches
-      const areaSF = areaSI * 0.00694444;
-      totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
-
-      // Get the number of reference surface areas that are in the actual area.
-      // This is to prevent users from cheating the system by drawing larger shapes
-      // then the reference surface area and it only getting counted as "1" sample.
-      const { SA } = calcGraphic.attributes;
-      let areaCount = 1;
-      if (areaSI >= SA) {
-        areaCount = Math.round(areaSI / SA);
+    layers.forEach((layer) => {
+      if (
+        layer.parentLayer?.id !== selectedScenario.layerId ||
+        layer.sketchLayer.type !== 'graphics'
+      ) {
+        return;
       }
 
-      // set the AA on the original graphic, so it is visible in the popup
-      graphic.setAttribute('AA', Math.round(areaSI));
-      graphic.setAttribute('AC', areaCount);
+      layer.sketchLayer.graphics.forEach((graphic) => {
+        const calcGraphic = graphic.clone();
 
-      // TODO: Remove this console log. It is only for debugging area calculations.
-      console.log(
-        `SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}, OriginalAA: ${calcGraphic.attributes.OAA}`,
-      );
+        // calculate the area using the custom hook
+        const areaSI = calculateArea(graphic);
+        if (typeof areaSI !== 'number') return;
 
-      // multiply all of the attributes by the area
-      const {
-        TTPK,
-        TTC,
-        TTA,
-        TTPS,
-        LOD_P,
-        LOD_NON,
-        MCPS,
-        TCPS,
-        WVPS,
-        WWPS,
-        ALC,
-        AMC,
-      } = calcGraphic.attributes;
+        // convert area to square feet
+        const areaSF = areaSI * 0.00694444;
+        totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
 
-      if (TTPK) {
-        ttpk = ttpk + Number(TTPK) * areaCount;
-      }
-      if (TTC) {
-        ttc = ttc + Number(TTC) * areaCount;
-      }
-      if (TTA) {
-        tta = tta + Number(TTA) * areaCount;
-      }
-      if (TTPS) {
-        ttps = ttps + Number(TTPS) * areaCount;
-      }
-      if (LOD_P) {
-        lod_p = lod_p + Number(LOD_P);
-      }
-      if (LOD_NON) {
-        lod_non = lod_non + Number(LOD_NON);
-      }
-      if (MCPS) {
-        mcps = mcps + Number(MCPS) * areaCount;
-      }
-      if (TCPS) {
-        tcps = tcps + Number(TCPS) * areaCount;
-      }
-      if (WVPS) {
-        wvps = wvps + Number(WVPS) * areaCount;
-      }
-      if (WWPS) {
-        wwps = wwps + Number(WWPS) * areaCount;
-      }
-      if (SA) {
-        sa = sa + Number(SA);
-      }
-      if (ALC) {
-        alc = alc + Number(ALC) * areaCount;
-      }
-      if (AMC) {
-        amc = amc + Number(AMC) * areaCount;
-      }
-      if (areaCount) {
-        ac = ac + Number(areaCount);
-      }
+        // Get the number of reference surface areas that are in the actual area.
+        // This is to prevent users from cheating the system by drawing larger shapes
+        // then the reference surface area and it only getting counted as "1" sample.
+        const { SA } = calcGraphic.attributes;
+        let areaCount = 1;
+        if (areaSI >= SA) {
+          areaCount = Math.round(areaSI / SA);
+        }
 
-      calcGraphics.push(calcGraphic);
+        // set the AA on the original graphic, so it is visible in the popup
+        graphic.setAttribute('AA', Math.round(areaSI));
+        graphic.setAttribute('AC', areaCount);
+
+        // TODO: Remove this console log. It is only for debugging area calculations.
+        console.log(`SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}`);
+
+        // multiply all of the attributes by the area
+        const {
+          TTPK,
+          TTC,
+          TTA,
+          TTPS,
+          LOD_P,
+          LOD_NON,
+          MCPS,
+          TCPS,
+          WVPS,
+          WWPS,
+          ALC,
+          AMC,
+        } = calcGraphic.attributes;
+
+        if (TTPK) {
+          ttpk = ttpk + Number(TTPK) * areaCount;
+        }
+        if (TTC) {
+          ttc = ttc + Number(TTC) * areaCount;
+        }
+        if (TTA) {
+          tta = tta + Number(TTA) * areaCount;
+        }
+        if (TTPS) {
+          ttps = ttps + Number(TTPS) * areaCount;
+        }
+        if (LOD_P) {
+          lod_p = lod_p + Number(LOD_P);
+        }
+        if (LOD_NON) {
+          lod_non = lod_non + Number(LOD_NON);
+        }
+        if (MCPS) {
+          mcps = mcps + Number(MCPS) * areaCount;
+        }
+        if (TCPS) {
+          tcps = tcps + Number(TCPS) * areaCount;
+        }
+        if (WVPS) {
+          wvps = wvps + Number(WVPS) * areaCount;
+        }
+        if (WWPS) {
+          wwps = wwps + Number(WWPS) * areaCount;
+        }
+        if (SA) {
+          sa = sa + Number(SA);
+        }
+        if (ALC) {
+          alc = alc + Number(ALC) * areaCount;
+        }
+        if (AMC) {
+          amc = amc + Number(AMC) * areaCount;
+        }
+        if (areaCount) {
+          ac = ac + Number(areaCount);
+        }
+
+        calcGraphics.push(calcGraphic);
+      });
     });
 
     setTotals({
@@ -415,7 +534,9 @@ export function useCalculatePlan() {
 
     // TOTS items
     edits,
-    sketchLayer,
+    layers,
+    selectedScenario,
+    calculateArea,
   ]);
 
   // perform non-geospatial calculations
@@ -451,8 +572,8 @@ export function useCalculatePlan() {
 
     // calculate lab throughput
     const totalLabHours = numLabs * numLabHours;
-    const labThroughput = totals.tta / totalLabHours;
-    const totalLabTime = totals.tta < 1 ? 1 : totals.tta;
+    let labThroughput = totals.tta / totalLabHours;
+    labThroughput = labThroughput < 1 ? 1 : labThroughput;
 
     // calculate total cost and time
     const totalCost =
@@ -462,7 +583,7 @@ export function useCalculatePlan() {
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
     // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
     let totalTime = 0;
-    if (totalLabTime < timeCompleteSampling) {
+    if (labThroughput < timeCompleteSampling) {
       totalTime = timeCompleteSampling;
     } else {
       totalTime = labThroughput + 1;
@@ -495,7 +616,7 @@ export function useCalculatePlan() {
       'Time to Prepare Kits': totals.ttpk,
       'Time to Collect': totals.ttc,
       'Material Cost': totals.mcps,
-      'Time to Analyze': totalLabTime,
+      'Time to Analyze': totals.tta,
       'Analysis Labor Cost': totals.alc,
       'Analysis Material Cost': totals.amc,
       'Waste Volume': totals.wvps,
@@ -550,6 +671,48 @@ export function useCalculatePlan() {
 ////////////////// Browser storage related hooks //////////////////
 ///////////////////////////////////////////////////////////////////
 
+// Uses browser storage for holding graphics color.
+function useGraphicColor() {
+  const key = 'tots_polygon_symbol';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    polygonSymbol,
+    setPolygonSymbol,
+    setSymbolsInitialized,
+  } = React.useContext(SketchContext);
+
+  // Retreives training mode data from browser storage when the app loads
+  const [localPolygonInitialized, setLocalPolygonInitialized] = React.useState(
+    false,
+  );
+  React.useEffect(() => {
+    if (localPolygonInitialized) return;
+
+    setLocalPolygonInitialized(true);
+
+    const polygonStr = readFromStorage(key);
+    if (!polygonStr) {
+      // if no key in browser storage, leave as default and say initialized
+      setSymbolsInitialized(true);
+      return;
+    }
+
+    const polygon = JSON.parse(polygonStr);
+
+    // validate the polygon
+    setPolygonSymbol(polygon);
+    setSymbolsInitialized(true);
+  }, [localPolygonInitialized, setPolygonSymbol, setSymbolsInitialized]);
+
+  React.useEffect(() => {
+    if (!localPolygonInitialized) return;
+
+    const polygonObj = polygonSymbol as object;
+    writeToStorage(key, polygonObj, setOptions);
+  }, [polygonSymbol, localPolygonInitialized, setOptions]);
+}
+
 // Uses browser storage for holding the training mode selection.
 function useTrainingModeStorage() {
   const key = 'tots_training_mode';
@@ -585,7 +748,12 @@ function useTrainingModeStorage() {
 function useEditsLayerStorage() {
   const key = 'tots_edits';
   const { setOptions } = React.useContext(DialogContext);
-  const { Graphic, GraphicsLayer, Polygon } = useEsriModulesContext();
+  const {
+    Graphic,
+    GraphicsLayer,
+    GroupLayer,
+    Polygon,
+  } = useEsriModulesContext();
   const {
     edits,
     setEdits,
@@ -594,11 +762,20 @@ function useEditsLayerStorage() {
     layers,
     setLayers,
     map,
+    polygonSymbol,
+    symbolsInitialized,
   } = React.useContext(SketchContext);
 
   // Retreives edit data from browser storage when the app loads
   React.useEffect(() => {
-    if (!map || !setEdits || !setLayers || layersInitialized) return;
+    if (
+      !map ||
+      !setEdits ||
+      !setLayers ||
+      !symbolsInitialized ||
+      layersInitialized
+    )
+      return;
 
     const editsStr = readFromStorage(key);
     if (!editsStr) {
@@ -613,12 +790,16 @@ function useEditsLayerStorage() {
     });
     setEdits(edits);
 
-    const newLayers: LayerType[] = [];
-    const graphicsLayers: __esri.GraphicsLayer[] = [];
-    edits.edits.forEach((editsLayer) => {
+    function createLayer(
+      editsLayer: LayerEditsType,
+      newLayers: LayerType[],
+      parentLayer: __esri.GroupLayer | null = null,
+    ) {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.label,
         id: editsLayer.layerId,
+        visible: editsLayer.visible,
+        listMode: editsLayer.listMode,
       });
 
       const popupTemplate = getPopupTemplate(
@@ -658,7 +839,7 @@ function useEditsLayerStorage() {
       displayedFeatures.forEach((graphic) => {
         features.push(
           new Graphic({
-            attributes: graphic.attributes,
+            attributes: { ...graphic.attributes },
             symbol: polygonSymbol,
             geometry: new Polygon({
               spatialReference: {
@@ -671,25 +852,55 @@ function useEditsLayerStorage() {
         );
       });
       sketchLayer.addMany(features);
-      graphicsLayers.push(sketchLayer);
 
       newLayers.push({
         id: editsLayer.id,
+        uuid: editsLayer.uuid,
         layerId: editsLayer.layerId,
         portalId: editsLayer.portalId,
         value: editsLayer.label,
         name: editsLayer.name,
         label: editsLayer.label,
         layerType: editsLayer.layerType,
-        scenarioName: editsLayer.scenarioName,
-        scenarioDescription: editsLayer.scenarioDescription,
         editType: 'add',
         addedFrom: editsLayer.addedFrom,
         status: editsLayer.status,
-        defaultVisibility: true,
+        visible: editsLayer.visible,
+        listMode: editsLayer.listMode,
+        sort: editsLayer.sort,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
+        parentLayer,
       });
+
+      return sketchLayer;
+    }
+
+    const newLayers: LayerType[] = [];
+    const graphicsLayers: (__esri.GraphicsLayer | __esri.GroupLayer)[] = [];
+    edits.edits.forEach((editsLayer) => {
+      // add layer edits directly
+      if (editsLayer.type === 'layer') {
+        graphicsLayers.push(createLayer(editsLayer, newLayers));
+      }
+      // scenarios need to be added to a group layer first
+      if (editsLayer.type === 'scenario') {
+        const groupLayer = new GroupLayer({
+          id: editsLayer.layerId,
+          title: editsLayer.scenarioName,
+          visible: editsLayer.visible,
+          listMode: editsLayer.listMode,
+        });
+
+        // create the layers and add them to the group layer
+        const scenarioLayers: __esri.GraphicsLayer[] = [];
+        editsLayer.layers.forEach((layer) => {
+          scenarioLayers.push(createLayer(layer, newLayers, groupLayer));
+        });
+        groupLayer.addMany(scenarioLayers);
+
+        graphicsLayers.push(groupLayer);
+      }
     });
 
     if (newLayers.length > 0) {
@@ -701,6 +912,7 @@ function useEditsLayerStorage() {
   }, [
     Graphic,
     GraphicsLayer,
+    GroupLayer,
     Polygon,
     setEdits,
     setLayers,
@@ -708,6 +920,8 @@ function useEditsLayerStorage() {
     layersInitialized,
     setLayersInitialized,
     map,
+    polygonSymbol,
+    symbolsInitialized,
   ]);
 
   // Saves the edits to browser storage everytime they change
@@ -1034,11 +1248,17 @@ function useHomeWidgetStorage() {
 // Uses browser storage for holding the currently selected sample layer.
 function useSamplesLayerStorage() {
   const key = 'tots_selected_sample_layer';
+  const key2 = 'tots_selected_scenario';
 
   const { setOptions } = React.useContext(DialogContext);
-  const { layers, sketchLayer, setSketchLayer } = React.useContext(
-    SketchContext,
-  );
+  const {
+    edits,
+    layers,
+    selectedScenario,
+    setSelectedScenario,
+    sketchLayer,
+    setSketchLayer,
+  } = React.useContext(SketchContext);
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
@@ -1051,11 +1271,25 @@ function useSamplesLayerStorage() {
 
     setLocalSampleLayerInitialized(true);
 
+    // set the selected scenario first
+    const scenarioId = readFromStorage(key2);
+    const scenario = edits.edits.find(
+      (item) => item.type === 'scenario' && item.layerId === scenarioId,
+    );
+    if (scenario) setSelectedScenario(scenario as ScenarioEditsType);
+
+    // then set the layer
     const layerId = readFromStorage(key);
     if (!layerId) return;
 
     setSketchLayer(getLayerById(layers, layerId));
-  }, [layers, setSketchLayer, localSampleLayerInitialized]);
+  }, [
+    edits,
+    layers,
+    setSelectedScenario,
+    setSketchLayer,
+    localSampleLayerInitialized,
+  ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
   React.useEffect(() => {
@@ -1064,6 +1298,14 @@ function useSamplesLayerStorage() {
     const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
     writeToStorage(key, data, setOptions);
   }, [sketchLayer, localSampleLayerInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleLayerInitialized) return;
+
+    const data = selectedScenario?.layerId ? selectedScenario.layerId : '';
+    writeToStorage(key2, data, setOptions);
+  }, [selectedScenario, localSampleLayerInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected contamination map layer.
@@ -1102,9 +1344,9 @@ function useContaminationMapStorage() {
   }, [contaminationMap, localContaminationLayerInitialized, setOptions]);
 }
 
-// Uses browser storage for holding the currently selected area of interest layer.
-function useAreaOfInterestStorage() {
-  const key = 'tots_selected_area_of_interest_layer';
+// Uses browser storage for holding the currently selected sampling mask layer.
+function useGenerateRandomMaskStorage() {
+  const key = 'tots_generate_random_mask_layer';
   const { setOptions } = React.useContext(DialogContext);
   const { layers } = React.useContext(SketchContext);
   const {
@@ -1112,7 +1354,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer, //
   } = React.useContext(SketchContext);
 
-  // Retreives the selected area of interest from browser storage
+  // Retreives the selected sampling mask from browser storage
   // when the app loads
   const [
     localAoiLayerInitialized,
@@ -1129,7 +1371,7 @@ function useAreaOfInterestStorage() {
     setAoiSketchLayer(getLayerById(layers, layerId));
   }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
 
-  // Saves the selected area of interest to browser storage whenever it changes
+  // Saves the selected sampling mask to browser storage whenever it changes
   React.useEffect(() => {
     if (!localAoiLayerInitialized) return;
 
@@ -1369,9 +1611,85 @@ function useBasemapStorage() {
   ]);
 }
 
+// Uses browser storage for holding the url layers that have been added.
+function useUserDefinedSampleOptionsStorage() {
+  const key = 'tots_user_defined_sample_options';
+  const { setOptions } = React.useContext(DialogContext);
+  const { userDefinedOptions, setUserDefinedOptions } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives url layers from browser storage when the app loads
+  const [
+    localUserDefinedSamplesInitialized,
+    setLocalUserDefinedSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!setUserDefinedOptions || localUserDefinedSamplesInitialized) return;
+
+    setLocalUserDefinedSamplesInitialized(true);
+    const userDefinedSamplesStr = readFromStorage(key);
+    if (!userDefinedSamplesStr) return;
+
+    const userDefinedSamples: SampleSelectType[] = JSON.parse(
+      userDefinedSamplesStr,
+    );
+
+    setUserDefinedOptions(userDefinedSamples);
+  }, [localUserDefinedSamplesInitialized, setUserDefinedOptions]);
+
+  // Saves the url layers to browser storage everytime they change
+  React.useEffect(() => {
+    if (!localUserDefinedSamplesInitialized) return;
+    writeToStorage(key, userDefinedOptions, setOptions);
+  }, [userDefinedOptions, localUserDefinedSamplesInitialized, setOptions]);
+}
+
+// Uses browser storage for holding the url layers that have been added.
+function useUserDefinedSampleAttributesStorage() {
+  const key = 'tots_user_defined_sample_attributes';
+  const { setOptions } = React.useContext(DialogContext);
+  const { userDefinedAttributes, setUserDefinedAttributes } = React.useContext(
+    SketchContext,
+  );
+
+  // Retreives url layers from browser storage when the app loads
+  const [
+    localUserDefinedSamplesInitialized,
+    setLocalUserDefinedSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (!setUserDefinedAttributes || localUserDefinedSamplesInitialized) return;
+
+    setLocalUserDefinedSamplesInitialized(true);
+    const userDefinedAttributesStr = readFromStorage(key);
+    if (!userDefinedAttributesStr) return;
+
+    // parse the storage value
+    const userDefinedAttributesObj: UserDefinedAttributes = JSON.parse(
+      userDefinedAttributesStr,
+    );
+
+    // add the user defined attributes to the global attributes
+    Object.keys(userDefinedAttributesObj.attributes).forEach((key) => {
+      sampleAttributes[key] = userDefinedAttributesObj.attributes[key];
+    });
+
+    // set the state
+    setUserDefinedAttributes(userDefinedAttributesObj);
+  }, [localUserDefinedSamplesInitialized, setUserDefinedAttributes]);
+
+  // Saves the url layers to browser storage everytime they change
+  React.useEffect(() => {
+    if (!localUserDefinedSamplesInitialized) return;
+    writeToStorage(key, userDefinedAttributes, setOptions);
+  }, [userDefinedAttributes, localUserDefinedSamplesInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
+  useGraphicColor();
   useEditsLayerStorage();
   useReferenceLayerStorage();
   useUrlLayerStorage();
@@ -1380,8 +1698,10 @@ export function useSessionStorage() {
   useHomeWidgetStorage();
   useSamplesLayerStorage();
   useContaminationMapStorage();
-  useAreaOfInterestStorage();
+  useGenerateRandomMaskStorage();
   useCalculateSettingsStorage();
   useCurrentTabSettings();
   useBasemapStorage();
+  useUserDefinedSampleOptionsStorage();
+  useUserDefinedSampleAttributesStorage();
 }

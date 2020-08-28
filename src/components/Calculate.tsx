@@ -46,6 +46,28 @@ type ContaminationResultsType = {
   data: any[] | null;
 };
 
+// Gets all of the graphics of a group layer associated with the provided layerId
+function getGraphics(map: __esri.Map, layerId: string) {
+  const graphics: __esri.Graphic[] = [];
+  let groupLayer: __esri.GroupLayer | null = null;
+
+  // find the group layer
+  const tempGroupLayer = map.layers.find((layer) => layer.id === layerId);
+
+  // get the graphics
+  if (tempGroupLayer) {
+    groupLayer = tempGroupLayer as __esri.GroupLayer;
+    groupLayer.layers.forEach((layer) => {
+      if (layer.type !== 'graphics') return;
+
+      const graphicsLayer = layer as __esri.GraphicsLayer;
+      graphics.push(...graphicsLayer.graphics.toArray());
+    });
+  }
+
+  return { groupLayer, graphics };
+}
+
 // --- styles (Calculate) ---
 const inputStyles = css`
   width: 100%;
@@ -108,7 +130,10 @@ function Calculate() {
     edits,
     setEdits,
     layers,
+    setLayers,
+    map,
     sketchLayer,
+    selectedScenario,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
@@ -152,6 +177,24 @@ function Calculate() {
     };
   }, [closePanel]);
 
+  // Initialize the contamination map to the first available one
+  const [contamMapInitialized, setContamMapInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (contamMapInitialized) return;
+
+    setContamMapInitialized(true);
+
+    // exit early since there is no need to set the contamination map
+    if (contaminationMap) return;
+
+    // set the contamination map to the first available one
+    const newContamMap = layers.find(
+      (layer) => layer.layerType === 'Contamination Map',
+    );
+    if (!newContamMap) return;
+    setContaminationMap(newContamMap);
+  }, [contaminationMap, setContaminationMap, contamMapInitialized, layers]);
+
   // input states
   const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
   const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
@@ -191,17 +234,28 @@ function Calculate() {
 
   // updates context to run the calculations
   function runCalculation() {
+    if (!map) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
+    if (selectedScenario.layers.length === 0) {
       setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
+    const { graphics } = getGraphics(map, selectedScenario.layerId);
+
     // set the no graphics status
-    if (sketchLayer.sketchLayer.graphics.length === 0) {
+    if (graphics.length === 0) {
       setCalculateResults({
         status: 'no-graphics',
         panelOpen: true,
@@ -252,12 +306,21 @@ function Calculate() {
   // map.
   function runContaminationCalculation() {
     if (!getGpMaxRecordCount) return;
+    if (!map || !sketchLayer?.sketchLayer) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
-      setContaminationResults({ status: 'no-layer', data: null });
+    if (selectedScenario.layers.length === 0) {
+      setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
@@ -329,9 +392,11 @@ function Calculate() {
       ],
     });
 
-    const sketchedGraphics: __esri.Graphic[] = [];
-    sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
-    if (sketchedGraphics.length === 0) {
+    const { groupLayer, graphics: sketchedGraphics } = getGraphics(
+      map,
+      selectedScenario.layerId,
+    );
+    if (sketchedGraphics.length === 0 || !groupLayer) {
       // display the no-graphics warning
       setContaminationResults({
         status: 'no-graphics',
@@ -515,46 +580,92 @@ function Calculate() {
               }
             }
 
+            // make the contamination map visible in the legend
+            contaminationMap.listMode = 'show';
+            contaminationMap.sketchLayer.listMode = 'show';
+            setContaminationMap((layer) => {
+              return {
+                ...layer,
+                listMode: 'show',
+              } as LayerType;
+            });
+
+            // find the layer being edited
+            const index = layers.findIndex(
+              (layer) => layer.layerId === contaminationMap.layerId,
+            );
+
+            // update the layers context
+            if (index > -1) {
+              setLayers((layers) => {
+                return [
+                  ...layers.slice(0, index),
+                  {
+                    ...contaminationMap,
+                    listMode: 'show',
+                  },
+                  ...layers.slice(index + 1),
+                ];
+              });
+            }
+
+            // make a copy of the edits context variable
+            let editsCopy = updateLayerEdits({
+              edits,
+              layer: contaminationMap,
+              type: 'properties',
+            });
+
             // save the data to state, use an empty array if there is no data
             if (resFeatures.length > 0) {
               const popupTemplate = new PopupTemplate(
                 getPopupTemplate(sketchLayer.layerType, true),
               );
-              const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-              // update the contam value attribute of the graphics
-              layer.graphics.forEach((graphic) => {
-                const resFeature = resFeatures.find(
-                  (feature: any) =>
-                    graphic.attributes.PERMANENT_IDENTIFIER ===
-                    feature.attributes.PERMANENT_IDENTIFIER,
+
+              // loop through the layers and update the contam values
+              groupLayer.layers.forEach((graphicsLayer) => {
+                if (graphicsLayer.type !== 'graphics') return;
+
+                const tempLayer = graphicsLayer as __esri.GraphicsLayer;
+                // update the contam value attribute of the graphics
+                tempLayer.graphics.forEach((graphic) => {
+                  const resFeature = resFeatures.find(
+                    (feature: any) =>
+                      graphic.attributes.PERMANENT_IDENTIFIER ===
+                      feature.attributes.PERMANENT_IDENTIFIER,
+                  );
+
+                  // if the graphic was not found in the response, set contam value to null,
+                  // otherwise use the contam value value found in the response.
+                  let contamValue = null;
+                  let contamType = graphic.attributes.CONTAMTYPE;
+                  let contamUnit = graphic.attributes.CONTAMUNIT;
+                  if (resFeature) {
+                    contamValue = resFeature.attributes.CONTAMVAL;
+                    contamType = resFeature.attributes.CONTAMTYPE;
+                    contamUnit = resFeature.attributes.CONTAMUNIT;
+                  }
+                  graphic.attributes.CONTAMVAL = contamValue;
+                  graphic.attributes.CONTAMTYPE = contamType;
+                  graphic.attributes.CONTAMUNIT = contamUnit;
+                  graphic.popupTemplate = popupTemplate;
+                });
+
+                // find the layer
+                const layer = layers.find(
+                  (layer) => layer.layerId === graphicsLayer.id,
                 );
+                if (!layer) return;
 
-                // if the graphic was not found in the response, set contam value to null,
-                // otherwise use the contam value value found in the response.
-                let contamValue = null;
-                let contamType = graphic.attributes.CONTAMTYPE;
-                let contamUnit = graphic.attributes.CONTAMUNIT;
-                if (resFeature) {
-                  contamValue = resFeature.attributes.CONTAMVAL;
-                  contamType = resFeature.attributes.CONTAMTYPE;
-                  contamUnit = resFeature.attributes.CONTAMUNIT;
-                }
-                graphic.attributes.CONTAMVAL = contamValue;
-                graphic.attributes.CONTAMTYPE = contamType;
-                graphic.attributes.CONTAMUNIT = contamUnit;
-                graphic.popupTemplate = popupTemplate;
+                // update the graphics of the sketch layer
+                editsCopy = updateLayerEdits({
+                  edits: editsCopy,
+                  layer: layer,
+                  type: 'update',
+                  changes: tempLayer.graphics,
+                  hasContaminationRan: true,
+                });
               });
-
-              // make a copy of the edits context variable
-              const editsCopy = updateLayerEdits({
-                edits,
-                layer: sketchLayer,
-                type: 'update',
-                changes: layer.graphics,
-                hasContaminationRan: true,
-              });
-
-              setEdits(editsCopy);
 
               setContaminationResults({
                 status: 'success',
@@ -566,6 +677,8 @@ function Calculate() {
                 data: [],
               });
             }
+
+            setEdits(editsCopy);
           })
           .catch((err) => {
             console.error(err);
@@ -614,17 +727,13 @@ function Calculate() {
             Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
-            <strong>Layer Name: </strong>
-            {sketchLayer?.label}
+            <strong>Plan Name: </strong>
+            {selectedScenario?.scenarioName}
           </p>
           <p css={layerInfo}>
-            <strong>Scenario Name: </strong>
-            {sketchLayer?.scenarioName}
-          </p>
-          <p css={layerInfo}>
-            <strong>Scenario Description: </strong>
+            <strong>Plan Description: </strong>
             <ShowLessMore
-              text={sketchLayer?.scenarioDescription}
+              text={selectedScenario?.scenarioDescription}
               charLimit={20}
             />
           </p>
@@ -783,7 +892,6 @@ function Calculate() {
                       inputId="contamination-map-select-input"
                       css={fullWidthSelectStyles}
                       styles={reactSelectStyles}
-                      isClearable={true}
                       value={contaminationMap}
                       onChange={(ev) => setContaminationMap(ev as LayerType)}
                       options={layers.filter(
@@ -819,7 +927,8 @@ function Calculate() {
                     'no-contamination-graphics' &&
                     noContaminationGraphicsMessage}
                   {contaminationResults.status === 'success' &&
-                    contaminationResults?.data?.length &&
+                    contaminationResults?.data &&
+                    contaminationResults.data.length > -1 &&
                     contaminationHitsSuccessMessage(
                       contaminationResults.data.length,
                     )}

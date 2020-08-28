@@ -2,13 +2,41 @@ import { AddedFrom, LayerTypeName, PublishStatus } from 'types/Layer';
 
 export type EditsType = {
   count: number;
-  edits: LayerEditsType[];
+  edits: (ScenarioEditsType | LayerEditsType)[];
 };
 
-export type EditType = 'add' | 'update' | 'delete' | 'arcgis' | 'properties';
+export type EditType =
+  | 'add'
+  | 'update'
+  | 'delete'
+  | 'arcgis'
+  | 'properties'
+  | 'move';
+
+export type ScenarioEditsType = {
+  type: 'scenario';
+  id: number; // scenario layer id
+  layerId: string; // id from esri group layer
+  portalId: string; // id from portal layer
+  name: string; // layer/scenario name
+  label: string; // layer/scenario label
+  value: string; // layer/scenario value for React-Select
+  layerType: LayerTypeName; // type of tots layer (sample, contamination, etc.)
+  addedFrom: AddedFrom; // how the layer was added (file, url, etc.)
+  hasContaminationRan: boolean; // says whether or not contamination hits has been ran
+  status: PublishStatus; // publish status
+  editType: EditType; // edit type
+  visible: boolean; // layer visibility on map
+  listMode: 'hide' | 'hide-children' | 'show'; // layer visiblity in legend widget
+  scenarioName: string; // user defined scenario name
+  scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
+  layers: LayerEditsType[];
+};
 
 export type LayerEditsType = {
+  type: 'layer';
   id: number; // layer id
+  uuid: string; // unique id for the layer
   layerId: string; // id from esri layer
   portalId: string; // id from portal layer
   name: string; // layer name
@@ -18,8 +46,9 @@ export type LayerEditsType = {
   hasContaminationRan: boolean; // says whether or not contamination hits has been ran
   status: PublishStatus; // publish status
   editType: EditType; // edit type
-  scenarioName: string; // user defined scenario name
-  scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
+  visible: boolean; // layer visibility on map
+  listMode: 'hide' | 'hide-children' | 'show'; // layer visiblity in legend widget
+  sort: number; // sort order for this layer
   adds: FeatureEditsType[]; // features to add
   updates: FeatureEditsType[]; // features to update
   deletes: DeleteFeatureType[]; // features to delete
@@ -34,4 +63,5 @@ export type FeatureEditsType = {
 export type DeleteFeatureType = {
   PERMANENT_IDENTIFIER: string;
   GLOBALID: string;
+  DECISIONUNITUUID: string;
 };
