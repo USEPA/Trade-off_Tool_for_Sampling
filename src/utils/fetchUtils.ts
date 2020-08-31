@@ -112,22 +112,17 @@ export function geoprocessorFetch({
   Geoprocessor,
   url,
   inputParameters,
-  useProxy = false,
   outSpatialReference = { wkid: 3857 },
 }: {
   Geoprocessor: __esri.GeoprocessorConstructor;
   url: string;
   inputParameters: any;
-  useProxy: boolean;
   outSpatialReference?: any;
 }): Promise<any> {
   return new Promise<any>((resolve, reject) => {
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
-      requestOptions: {
-        useProxy: useProxy,
-      },
     });
 
     geoprocessor

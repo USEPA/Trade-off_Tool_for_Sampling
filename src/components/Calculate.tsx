@@ -549,7 +549,6 @@ function Calculate() {
             Geoprocessor,
             url: `${totsGPServer}/Contamination Results`,
             inputParameters: params,
-            useProxy: true,
           });
           requests.push(request);
         });
