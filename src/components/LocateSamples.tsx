@@ -590,9 +590,10 @@ function LocateSamples() {
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount) return;
 
+    setGenerateRandomResponse({ status: 'fetching', data: [] });
+
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
-        setGenerateRandomResponse({ status: 'fetching', data: [] });
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
           graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
