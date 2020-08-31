@@ -709,7 +709,7 @@ function Calculate() {
     <div css={panelContainer}>
       <div>
         <div css={sectionContainer}>
-          <h2>Calculate</h2>
+          <h2>Calculate Resources</h2>
           <p>
             Default resource constraints are provided to estimate the cost and
             time required to implement the designed plan. You can change the
