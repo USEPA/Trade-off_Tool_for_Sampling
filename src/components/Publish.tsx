@@ -611,7 +611,7 @@ function Publish() {
 
   return (
     <div css={panelContainer}>
-      <h2>Publish</h2>
+      <h2>Publish Plan</h2>
       <div css={sectionContainer}>
         <p>
           Publish the created plan to ArcGIS Online. A hosted feature layer is

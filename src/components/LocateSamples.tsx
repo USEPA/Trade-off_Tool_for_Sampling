@@ -590,9 +590,10 @@ function LocateSamples() {
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount) return;
 
+    setGenerateRandomResponse({ status: 'fetching', data: [] });
+
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
-        setGenerateRandomResponse({ status: 'fetching', data: [] });
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
           graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
@@ -659,7 +660,6 @@ function LocateSamples() {
             Geoprocessor,
             url: `${totsGPServer}/Generate%20Random`,
             inputParameters: props,
-            useProxy: true,
           });
           requests.push(request);
 
@@ -1160,18 +1160,7 @@ function LocateSamples() {
         </div>
         <div css={lineSeparatorStyles} />
         <div css={sectionContainer}>
-          <p>
-            Create a sampling plan with one or more layers. Layers can represent
-            unique areas of interest or decision units that are differentiated
-            by the user-defined descriptions (e.g., Floor 1, East Stairwell,
-            Team 1, etc.). Enter a plan name and description and click Save.
-          </p>
-          <MessageBox
-            severity="warning"
-            title=""
-            message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
-          />
-          {selectedScenario && (
+          {selectedScenario ? (
             <p>
               An empty sample layer is loaded by default. Use the "Active
               Sampling Layer" controls to link, add, modify, and/or delete the
@@ -1181,7 +1170,21 @@ function LocateSamples() {
               layers and indicate other layers available for linking. Use the
               “unlink” control to remove a layer from a plan.
             </p>
+          ) : (
+            <p>
+              Create a sampling plan with one or more layers. Layers can
+              represent unique areas of interest or decision units that are
+              differentiated by the user-defined descriptions (e.g., Floor 1,
+              East Stairwell, Team 1, etc.). Enter a plan name and description
+              and click Save.
+            </p>
           )}
+
+          <MessageBox
+            severity="warning"
+            title=""
+            message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
+          />
 
           {scenarios.length === 0 ? (
             <EditScenario />
