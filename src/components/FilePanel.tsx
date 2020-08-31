@@ -624,7 +624,6 @@ function FilePanel() {
                 Geoprocessor,
                 url: `${totsGPServer}/VSP%20Import`,
                 inputParameters: params,
-                useProxy: true,
               });
               requests.push(request);
             });
