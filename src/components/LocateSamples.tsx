@@ -1171,20 +1171,21 @@ function LocateSamples() {
               “unlink” control to remove a layer from a plan.
             </p>
           ) : (
-            <p>
-              Create a sampling plan with one or more layers. Layers can
-              represent unique areas of interest or decision units that are
-              differentiated by the user-defined descriptions (e.g., Floor 1,
-              East Stairwell, Team 1, etc.). Enter a plan name and description
-              and click Save.
-            </p>
+            <React.Fragment>
+              <p>
+                Create a sampling plan with one or more layers. Layers can
+                represent unique areas of interest or decision units that are
+                differentiated by the user-defined descriptions (e.g., Floor 1,
+                East Stairwell, Team 1, etc.). Enter a plan name and description
+                and click Save.
+              </p>
+              <MessageBox
+                severity="warning"
+                title=""
+                message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
+              />
+            </React.Fragment>
           )}
-
-          <MessageBox
-            severity="warning"
-            title=""
-            message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
-          />
 
           {scenarios.length === 0 ? (
             <EditScenario />
@@ -2382,6 +2383,14 @@ function LocateSamples() {
                       {validationMessage &&
                         userDefinedValidationMessage(validationMessage)}
                       <div css={inlineMenuStyles}>
+                        <button
+                          css={addButtonStyles}
+                          onClick={(ev) => {
+                            setEditingStatus(null);
+                          }}
+                        >
+                          {editingStatus === 'view' ? 'Hide' : 'Cancel'}
+                        </button>
                         {editingStatus !== 'view' && (
                           <button
                             css={addButtonStyles}
@@ -2552,14 +2561,6 @@ function LocateSamples() {
                             Save
                           </button>
                         )}
-                        <button
-                          css={addButtonStyles}
-                          onClick={(ev) => {
-                            setEditingStatus(null);
-                          }}
-                        >
-                          {editingStatus === 'view' ? 'Hide' : 'Cancel'}
-                        </button>
                       </div>
                     </div>
                   )}
