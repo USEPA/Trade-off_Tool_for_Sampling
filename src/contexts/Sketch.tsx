@@ -123,7 +123,7 @@ export function SketchProvider({ children }: Props) {
       }
 
       // get the max record count from the gp server
-      fetchCheck(`${totsGPServer}?f=json`)
+      fetchCheck(`${totsGPServer}?f=json`, true)
         .then((res: any) => {
           const maxRecordCount = res.maximumRecords;
           setGpMaxRecordCount(maxRecordCount);
