@@ -535,7 +535,9 @@ function MapWidgets({ mapView }: Props) {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
-          deactivateButtons();
+          if (id === 'sampling-mask') {
+            deactivateButtons();
+          }
 
           if (!id) {
             // workaround for an error that said "target" does not exist on
@@ -577,8 +579,13 @@ function MapWidgets({ mapView }: Props) {
           }
 
           // save the graphic
-          sketchViewModel.update(graphic);
+          sketchViewModel.complete();
           sketchEventSetter(event);
+
+          if (id !== 'sampling-mask') {
+            // start next graphic
+            sketchViewModel.create(graphic.attributes.ShapeType);
+          }
 
           // re-enable layer popups
           if (map) {
@@ -619,8 +626,9 @@ function MapWidgets({ mapView }: Props) {
 
         let hasPredefinedBoxes = false;
         event.graphics.forEach((graphic) => {
-          if (graphic.attributes.ShapeType === 'point')
+          if (graphic.attributes?.ShapeType === 'point') {
             hasPredefinedBoxes = true;
+          }
         });
 
         // prevent scale and reshape changes on the predefined graphics
@@ -636,7 +644,9 @@ function MapWidgets({ mapView }: Props) {
         let selectedGraphicsIds: Array<string> = [];
         if (event.graphics) {
           event.graphics.forEach((graphic) => {
-            selectedGraphicsIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
+            if (graphic.attributes?.PERMANENT_IDENTIFIER) {
+              selectedGraphicsIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
+            }
           });
         }
         setSelectedGraphicsIds(selectedGraphicsIds);
