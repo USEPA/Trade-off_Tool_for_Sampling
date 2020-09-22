@@ -918,7 +918,10 @@ function LocateSamples() {
       isValid = false;
       messageParts.push('User Defined types must have a sample type name.');
     }
-    if (sampleAttributes.hasOwnProperty(sampleTypeName)) {
+    if (
+      sampleAttributes.hasOwnProperty(sampleTypeName) &&
+      editingStatus !== 'edit'
+    ) {
       isValid = false;
       messageParts.push(
         `The "${sampleTypeName}" name is already in use. Please rename the sample type and try again.`,
