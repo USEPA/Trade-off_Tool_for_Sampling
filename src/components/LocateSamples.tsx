@@ -920,7 +920,10 @@ function LocateSamples() {
     }
     if (
       sampleAttributes.hasOwnProperty(sampleTypeName) &&
-      editingStatus !== 'edit'
+      (editingStatus !== 'edit' ||
+        (editingStatus === 'edit' &&
+          userDefinedSampleType &&
+          userDefinedSampleType.value !== sampleTypeName))
     ) {
       isValid = false;
       messageParts.push(
