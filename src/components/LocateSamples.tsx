@@ -934,17 +934,9 @@ function LocateSamples() {
       isValid = false;
       messageParts.push('Time to Analyze needs a numeric value.');
     }
-    if (!isNumberValid(ttps)) {
-      isValid = false;
-      messageParts.push('Total Time per Sample needs a numeric value.');
-    }
     if (!isNumberValid(mcps)) {
       isValid = false;
       messageParts.push('Material Cost needs a numeric value.');
-    }
-    if (!isNumberValid(tcps)) {
-      isValid = false;
-      messageParts.push('Total Cost per Sample needs a numeric value.');
     }
     if (!isNumberValid(wvps)) {
       isValid = false;
