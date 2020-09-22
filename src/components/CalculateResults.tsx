@@ -969,7 +969,7 @@ function CalculateResults() {
               value={calculateResults.data['Time to Collect']}
             />
             <LabelValue
-              label="Material Cost"
+              label="Material Cost ($)"
               value={calculateResults.data['Material Cost']}
             />
             <LabelValue

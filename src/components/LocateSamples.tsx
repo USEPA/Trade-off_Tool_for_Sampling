@@ -2215,7 +2215,7 @@ function LocateSamples() {
                             <div css={inlineMenuStyles}>
                               <div css={widthInputContainerStyles}>
                                 <label htmlFor="shape-width-input">
-                                  Shape Width
+                                  Shape Width (inches)
                                 </label>
                                 <input
                                   id="shape-width-input"
