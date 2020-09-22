@@ -99,6 +99,7 @@ function convertArrayToRgbColor(color: number[]) {
 }
 
 function activateSketchButton(id: string) {
+  let wasSet = false;
   const sketchButtons = document.getElementsByClassName('sketch-button');
   for (let i = 0; i < sketchButtons.length; i++) {
     const sketchButton = sketchButtons[i];
@@ -108,6 +109,12 @@ function activateSketchButton(id: string) {
       // make the style of the button active
       if (!sketchButton.classList.contains(sketchSelectedClass)) {
         sketchButton.classList.add(sketchSelectedClass);
+        wasSet = true;
+      } else {
+        // toggle the button off
+        sketchButton.classList.remove(sketchSelectedClass);
+        const activeElm = document?.activeElement as any;
+        activeElm?.blur();
       }
       continue;
     }
@@ -117,6 +124,8 @@ function activateSketchButton(id: string) {
       sketchButton.classList.remove(sketchSelectedClass);
     }
   }
+
+  return wasSet;
 }
 
 // --- styles (SketchButton) ---
@@ -518,11 +527,15 @@ function LocateSamples() {
       });
     }
 
-    // let the user draw/place the shape
-    sketchVM.create(shapeType);
-
     // make the style of the button active
-    activateSketchButton(label);
+    const wasSet = activateSketchButton(label);
+
+    if (wasSet) {
+      // let the user draw/place the shape
+      sketchVM.create(shapeType);
+    } else {
+      sketchVM.cancel();
+    }
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
