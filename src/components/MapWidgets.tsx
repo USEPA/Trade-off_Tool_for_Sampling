@@ -131,6 +131,8 @@ const noteStyles = css`
 const saveButtonContainerStyles = css`
   display: flex;
   justify-content: flex-end;
+  height: 40.47px;
+  align-items: center;
 `;
 
 const inputContainerStyles = css`
@@ -151,6 +153,10 @@ const saveButtonStyles = (status: SaveStatusType) => {
     ${backgroundColor}
   `;
 };
+
+const saveMessageStyles = css`
+  color: ${colors.green()};
+`;
 
 // --- components (FeatureTool) ---
 type FeatureToolProps = {
@@ -244,7 +250,7 @@ function FeatureTool({
 
   // Resets the save status if the user changes the note
   React.useEffect(() => {
-    if (graphicNote !== note && saveStatus !== 'none') setSaveStatus('none');
+    if (graphicNote !== note && saveStatus === 'success') setSaveStatus('none');
   }, [graphicNote, note, saveStatus]);
 
   if (!sketchVM || selectedGraphicsIds.length === 0) return null;
@@ -302,7 +308,10 @@ function FeatureTool({
                   id="layer-change-select"
                   inputId="layer-change-select-input"
                   value={selectedLayer}
-                  onChange={(ev) => setSelectedLayer(ev as LayerType)}
+                  onChange={(ev) => {
+                    setSaveStatus('none');
+                    setSelectedLayer(ev as LayerType);
+                  }}
                   options={layerOptions}
                 />
               </div>
@@ -313,52 +322,54 @@ function FeatureTool({
                   id="graphic-note"
                   css={noteStyles}
                   value={note}
-                  onChange={(ev) => setNote(ev.target.value)}
+                  onChange={(ev) => {
+                    setSaveStatus('none');
+                    setNote(ev.target.value);
+                  }}
                 />
               </div>
               <div css={saveButtonContainerStyles}>
-                <button
-                  css={saveButtonStyles(saveStatus)}
-                  disabled={
-                    note === graphicNote &&
-                    activeLayerId === selectedLayer?.layerId
-                  }
-                  onClick={(ev) => {
-                    // Workaround for activeComponent not existing on the SketchViewModel type.
-                    const tempSketchVM = sketchVM as any;
+                {(graphicNote !== note ||
+                  activeLayerId !== selectedLayer?.layerId) && (
+                  <button
+                    css={saveButtonStyles(saveStatus)}
+                    onClick={(ev) => {
+                      // Workaround for activeComponent not existing on the SketchViewModel type.
+                      const tempSketchVM = sketchVM as any;
 
-                    // set the notes
-                    if (tempSketchVM.activeComponent?.graphics) {
-                      const firstGraphic =
-                        tempSketchVM.activeComponent.graphics[0];
-                      firstGraphic.attributes['Notes'] = note;
-                      setGraphicNote(note);
+                      // set the notes
+                      if (tempSketchVM.activeComponent?.graphics) {
+                        const firstGraphic =
+                          tempSketchVM.activeComponent.graphics[0];
+                        firstGraphic.attributes['Notes'] = note;
+                        setGraphicNote(note);
 
-                      // move the graphic if it is on a different layer
-                      if (activeLayerId !== selectedLayer?.layerId) {
-                        onClick(ev, 'Move', selectedLayer);
+                        // move the graphic if it is on a different layer
+                        if (activeLayerId !== selectedLayer?.layerId) {
+                          onClick(ev, 'Move', selectedLayer);
+                        } else {
+                          onClick(ev, 'Save');
+                        }
+
+                        setSaveStatus('success');
                       } else {
-                        onClick(ev, 'Save');
+                        setSaveStatus('failure');
                       }
-
-                      setSaveStatus('success');
-                    } else {
-                      setSaveStatus('failure');
-                    }
-                  }}
-                >
-                  {saveStatus === 'none' && 'Save'}
-                  {saveStatus === 'success' && (
-                    <React.Fragment>
-                      <i className="fas fa-check" /> Saved
-                    </React.Fragment>
-                  )}
-                  {saveStatus === 'failure' && (
-                    <React.Fragment>
-                      <i className="fas fa-exclamation-triangle" /> Error
-                    </React.Fragment>
-                  )}
-                </button>
+                    }}
+                  >
+                    {saveStatus === 'none' && 'Save'}
+                    {saveStatus === 'failure' && (
+                      <React.Fragment>
+                        <i className="fas fa-exclamation-triangle" /> Error
+                      </React.Fragment>
+                    )}
+                  </button>
+                )}
+                {saveStatus === 'success' && (
+                  <div css={saveMessageStyles}>
+                    <i className="fas fa-check" /> Saved Successfully
+                  </div>
+                )}
               </div>
             </React.Fragment>
           )}
@@ -654,7 +665,9 @@ function MapWidgets({ mapView }: Props) {
             }
           });
         }
-        setSelectedGraphicsIds(selectedGraphicsIds);
+        setSelectedGraphicsIds(
+          event.state === 'complete' ? [] : selectedGraphicsIds,
+        );
         setter(isActive);
       });
 
