@@ -201,6 +201,11 @@ function FeatureTool({
     }
   }, [graphicNote, note, saveStatus, sketchVM, selectedGraphicsIds]);
 
+  // Reset the note, in the textbox, when the user selects a different sample.
+  React.useEffect(() => {
+    setNote(graphicNote);
+  }, [selectedGraphicsIds, graphicNote]);
+
   // Resets the layerInitialized state when the graphic selection changes
   const [layerInitialized, setLayerInitialized] = React.useState(false);
   React.useEffect(() => {
