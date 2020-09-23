@@ -207,17 +207,23 @@ export function useGeometryTools() {
         graphic.geometry,
       ) as __esri.Polygon;
 
+      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+
       // get the spatial reference from the centroid
       const { latitude, longitude } = wgsGeometry.centroid;
       const base_wkid = latitude > 0 ? 32600 : 32700;
       const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
       const spatialReference = new SpatialReference({ wkid: out_wkid });
 
+      if (!spatialReference) return 'ERROR - Spatial Reference is null';
+
       // project the geometry
       const projectedGeometry = loadedProjection.project(
         wgsGeometry,
         spatialReference,
       ) as __esri.Polygon;
+
+      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
 
       // calulate the area
       const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
@@ -422,6 +428,7 @@ export function useCalculatePlan() {
         // calculate the area using the custom hook
         const areaSI = calculateArea(graphic);
         if (typeof areaSI !== 'number') return;
+        else console.error(areaSI);
 
         // convert area to square feet
         const areaSF = areaSI * 0.00694444;
@@ -439,9 +446,6 @@ export function useCalculatePlan() {
         // set the AA on the original graphic, so it is visible in the popup
         graphic.setAttribute('AA', Math.round(areaSI));
         graphic.setAttribute('AC', areaCount);
-
-        // TODO: Remove this console log. It is only for debugging area calculations.
-        console.log(`SA: ${SA}, AA: ${areaSI}, areaCount: ${areaCount}`);
 
         // multiply all of the attributes by the area
         const {
