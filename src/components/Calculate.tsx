@@ -142,21 +142,30 @@ function Calculate() {
     calculateResults,
     setCalculateResults,
     numLabs,
-    setNumLabs,
     numLabHours,
-    setNumLabHours,
     numSamplingHours,
-    setNumSamplingHours,
     numSamplingPersonnel,
-    setNumSamplingPersonnel,
     numSamplingShifts,
-    setNumSamplingShifts,
     numSamplingTeams,
-    setNumSamplingTeams,
     samplingLaborCost,
-    setSamplingLaborCost,
     surfaceArea,
-    setSurfaceArea,
+    inputNumLabs,
+    setInputNumLabs,
+    inputNumLabHours,
+    setInputNumLabHours,
+    inputNumSamplingHours,
+    setInputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    setInputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    setInputNumSamplingShifts,
+    inputNumSamplingTeams,
+    setInputNumSamplingTeams,
+    inputSamplingLaborCost,
+    setInputSamplingLaborCost,
+    inputSurfaceArea,
+    setInputSurfaceArea,
+    setUpdateContextValues,
   } = React.useContext(CalculateContext);
 
   // callback for closing the results panel when leaving this tab
@@ -194,43 +203,6 @@ function Calculate() {
     if (!newContamMap) return;
     setContaminationMap(newContamMap);
   }, [contaminationMap, setContaminationMap, contamMapInitialized, layers]);
-
-  // input states
-  const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
-  const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
-  const [inputSurfaceArea, setInputSurfaceArea] = React.useState(surfaceArea);
-  const [
-    inputNumSamplingHours,
-    setInputNumSamplingHours, //
-  ] = React.useState(numSamplingHours);
-  const [
-    inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
-  ] = React.useState(numSamplingPersonnel);
-  const [
-    inputNumSamplingShifts,
-    setInputNumSamplingShifts, //
-  ] = React.useState(numSamplingShifts);
-  const [
-    inputNumSamplingTeams,
-    setInputNumSamplingTeams, //
-  ] = React.useState(numSamplingTeams);
-  const [
-    inputSamplingLaborCost,
-    setInputSamplingLaborCost, //
-  ] = React.useState(samplingLaborCost);
-
-  // updates the calculate context with the user input values
-  function updateContextValues() {
-    setNumLabs(inputNumLabs);
-    setNumLabHours(inputNumLabHours);
-    setNumSamplingHours(inputNumSamplingHours);
-    setNumSamplingPersonnel(inputNumSamplingPersonnel);
-    setNumSamplingShifts(inputNumSamplingShifts);
-    setNumSamplingTeams(inputNumSamplingTeams);
-    setSamplingLaborCost(inputSamplingLaborCost);
-    setSurfaceArea(inputSurfaceArea);
-  }
 
   // updates context to run the calculations
   function runCalculation() {
@@ -271,6 +243,7 @@ function Calculate() {
       numLabs === inputNumLabs &&
       numLabHours === inputNumLabHours &&
       numSamplingHours === inputNumSamplingHours &&
+      numSamplingShifts === inputNumSamplingShifts &&
       numSamplingPersonnel === inputNumSamplingPersonnel &&
       numSamplingTeams === inputNumSamplingTeams &&
       samplingLaborCost === inputSamplingLaborCost &&
@@ -294,7 +267,7 @@ function Calculate() {
 
     // open the panel and update context to run calculations
     setCalculateResults({ status: 'fetching', panelOpen: true, data: null });
-    updateContextValues();
+    setUpdateContextValues(true);
   }
 
   const [
@@ -558,7 +531,7 @@ function Calculate() {
             console.log('GPServer contamination responses: ', responses);
 
             // perform calculations to update talley in nav bar
-            updateContextValues();
+            setUpdateContextValues(true);
 
             const resFeatures: any[] = [];
             for (let i = 0; i < responses.length; i++) {
@@ -683,7 +656,7 @@ function Calculate() {
             console.error(err);
 
             // perform calculations to update talley in nav bar
-            updateContextValues();
+            setUpdateContextValues(true);
 
             setContaminationResults({
               status: 'failure',
@@ -695,7 +668,7 @@ function Calculate() {
         console.error(err);
 
         // perform calculations to update talley in nav bar
-        updateContextValues();
+        setUpdateContextValues(true);
 
         setContaminationResults({
           status: 'failure',
@@ -703,6 +676,14 @@ function Calculate() {
         });
       });
   }
+
+  // Run calculations when the user exits this tab, by updating
+  // the context values.
+  React.useEffect(() => {
+    return function cleanup() {
+      setUpdateContextValues(true);
+    };
+  }, [setUpdateContextValues]);
 
   return (
     <div css={panelContainer}>
