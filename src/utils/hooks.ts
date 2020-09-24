@@ -427,8 +427,9 @@ export function useCalculatePlan() {
 
         // calculate the area using the custom hook
         const areaSI = calculateArea(graphic);
-        if (typeof areaSI !== 'number') return;
-        else console.error(areaSI);
+        if (typeof areaSI !== 'number') {
+          return;
+        }
 
         // convert area to square feet
         const areaSF = areaSI * 0.00694444;
@@ -1389,22 +1390,30 @@ function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
   const { setOptions } = React.useContext(DialogContext);
   const {
-    numLabs,
     setNumLabs,
-    numLabHours,
     setNumLabHours,
-    numSamplingHours,
     setNumSamplingHours,
-    numSamplingPersonnel,
     setNumSamplingPersonnel,
-    numSamplingShifts,
     setNumSamplingShifts,
-    numSamplingTeams,
     setNumSamplingTeams,
-    samplingLaborCost,
     setSamplingLaborCost,
-    surfaceArea,
     setSurfaceArea,
+    inputNumLabs,
+    setInputNumLabs,
+    inputNumLabHours,
+    setInputNumLabHours,
+    inputNumSamplingHours,
+    setInputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    setInputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    setInputNumSamplingShifts,
+    inputNumSamplingTeams,
+    setInputNumSamplingTeams,
+    inputSamplingLaborCost,
+    setInputSamplingLaborCost,
+    inputSurfaceArea,
+    setInputSurfaceArea,
   } = React.useContext(CalculateContext);
 
   type CalculateSettingsType = {
@@ -1437,6 +1446,14 @@ function useCalculateSettingsStorage() {
     setNumSamplingTeams(settings.numSamplingTeams);
     setSamplingLaborCost(settings.samplingLaborCost);
     setSurfaceArea(settings.surfaceArea);
+    setInputNumLabs(settings.numLabs);
+    setInputNumLabHours(settings.numLabHours);
+    setInputNumSamplingHours(settings.numSamplingHours);
+    setInputNumSamplingPersonnel(settings.numSamplingPersonnel);
+    setInputNumSamplingShifts(settings.numSamplingShifts);
+    setInputNumSamplingTeams(settings.numSamplingTeams);
+    setInputSamplingLaborCost(settings.samplingLaborCost);
+    setInputSurfaceArea(settings.surfaceArea);
   }, [
     setNumLabs,
     setNumLabHours,
@@ -1446,32 +1463,40 @@ function useCalculateSettingsStorage() {
     setNumSamplingTeams,
     setSamplingLaborCost,
     setSurfaceArea,
+    setInputNumLabs,
+    setInputNumLabHours,
+    setInputNumSamplingHours,
+    setInputNumSamplingPersonnel,
+    setInputNumSamplingShifts,
+    setInputNumSamplingTeams,
+    setInputSamplingLaborCost,
+    setInputSurfaceArea,
     settingsInitialized,
   ]);
 
   // Saves the calculate settings to browser storage
   React.useEffect(() => {
     const settings: CalculateSettingsType = {
-      numLabs,
-      numLabHours,
-      numSamplingHours,
-      numSamplingPersonnel,
-      numSamplingShifts,
-      numSamplingTeams,
-      samplingLaborCost,
-      surfaceArea,
+      numLabs: inputNumLabs,
+      numLabHours: inputNumLabHours,
+      numSamplingHours: inputNumSamplingHours,
+      numSamplingPersonnel: inputNumSamplingPersonnel,
+      numSamplingShifts: inputNumSamplingShifts,
+      numSamplingTeams: inputNumSamplingTeams,
+      samplingLaborCost: inputSamplingLaborCost,
+      surfaceArea: inputSurfaceArea,
     };
 
     writeToStorage(key, settings, setOptions);
   }, [
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
+    inputNumLabs,
+    inputNumLabHours,
+    inputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    inputNumSamplingTeams,
+    inputSamplingLaborCost,
+    inputSurfaceArea,
     setOptions,
   ]);
 }
