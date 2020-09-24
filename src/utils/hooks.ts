@@ -578,7 +578,6 @@ export function useCalculatePlan() {
     // calculate lab throughput
     const totalLabHours = numLabs * numLabHours;
     let labThroughput = totals.tta / totalLabHours;
-    labThroughput = labThroughput < 1 ? 1 : labThroughput;
 
     // calculate total cost and time
     const totalCost =
@@ -588,7 +587,7 @@ export function useCalculatePlan() {
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
     // The one day accounts for the time samples get collected and shipped to the lab on day one of the sampling response.
     let totalTime = 0;
-    if (labThroughput < timeCompleteSampling) {
+    if (labThroughput + 1 < timeCompleteSampling) {
       totalTime = timeCompleteSampling;
     } else {
       totalTime = labThroughput + 1;
@@ -598,8 +597,7 @@ export function useCalculatePlan() {
     let limitingFactor: CalculateResultsDataType['Limiting Time Factor'] = '';
     if (timeCompleteSampling > labThroughput) {
       limitingFactor = 'Sampling';
-    }
-    if (timeCompleteSampling < labThroughput) {
+    } else {
       limitingFactor = 'Analysis';
     }
 
