@@ -136,7 +136,11 @@ const panelContainer = css`
   min-height: 100%;
 
   .sketch-button-selected {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
+  }
+
+  .sketch-button-selected > div {
+    border: 2px solid #01bde3;
   }
 `;
 
@@ -176,7 +180,7 @@ const sketchButtonStyles = css`
 
   &:hover,
   &:focus {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
     cursor: pointer;
   }
 `;
@@ -204,7 +208,7 @@ const sketchAoiButtonStyles = css`
 
   &:hover,
   &:focus {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
     cursor: pointer;
   }
 `;
@@ -279,21 +283,42 @@ const submitButtonStyles = css`
   margin-top: 10px;
 `;
 
+const sampleCountStyles = css`
+  font-size: 26px;
+  color: #00bde3;
+`;
+
 // --- components (SketchButton) ---
 type SketchButtonProps = {
   label: string;
   iconClass: string;
+  layers: LayerType[];
   onClick: () => void;
 };
 
-function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
+function SketchButton({
+  label,
+  iconClass,
+  layers,
+  onClick,
+}: SketchButtonProps) {
   // put an ellipses on the end if the text is to long
-  const displayLabel = label.length > 38 ? `${label.substr(0, 38)}...` : label;
+  const displayLabel = label.length > 30 ? `${label.substr(0, 30)}...` : label;
+  let count = 0;
+
+  layers.forEach((layer) => {
+    if (layer.layerType !== 'Samples' && layer.layerType !== 'VSP') return;
+    if (layer.sketchLayer.type === 'feature') return;
+
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.attributes.TYPE === label) count += 1;
+    });
+  });
 
   return (
     <button
       id={label}
-      title={`Draw a ${label}`}
+      title={`Draw a ${label}: ${count}`}
       className="sketch-button"
       onClick={() => onClick()}
       css={sketchButtonStyles}
@@ -303,6 +328,12 @@ function SketchButton({ label, iconClass, onClick }: SketchButtonProps) {
           <i className={iconClass} />
           <br />
           {displayLabel}
+          {count > 0 && (
+            <React.Fragment>
+              <br />
+              <span css={sampleCountStyles}>{count}</span>
+            </React.Fragment>
+          )}
         </div>
       </div>
     </button>
@@ -1804,6 +1835,7 @@ function LocateSamples() {
                         return (
                           <SketchButton
                             key={index}
+                            layers={layers}
                             label={
                               edited ? `${sampleType} (edited)` : sampleType
                             }
@@ -1833,6 +1865,7 @@ function LocateSamples() {
                             <SketchButton
                               key={index}
                               label={sampleType}
+                              layers={layers}
                               iconClass={
                                 shapeType === 'point'
                                   ? 'fas fa-pen-fancy'
