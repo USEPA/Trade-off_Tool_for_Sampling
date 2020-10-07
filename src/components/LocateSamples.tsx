@@ -136,7 +136,11 @@ const panelContainer = css`
   min-height: 100%;
 
   .sketch-button-selected {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
+  }
+
+  .sketch-button-selected > div {
+    border: 2px solid #01bde3;
   }
 `;
 
@@ -176,7 +180,7 @@ const sketchButtonStyles = css`
 
   &:hover,
   &:focus {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
     cursor: pointer;
   }
 `;
@@ -204,7 +208,7 @@ const sketchAoiButtonStyles = css`
 
   &:hover,
   &:focus {
-    background-color: #f0f0f0;
+    background-color: #e7f6f8;
     cursor: pointer;
   }
 `;
