@@ -11,7 +11,11 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable } from 'utils/arcGisRestUtils';
-import { createSampleLayer, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  createLayerEditTemplate,
+  createSampleLayer,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 // types
 import { LayerType } from 'types/Layer';
 // config
@@ -21,7 +25,7 @@ import {
 } from 'config/errorMessages';
 // styles
 import { colors } from 'styles';
-import { ScenarioEditsType } from 'types/Edits';
+import { LayerEditsType, ScenarioEditsType } from 'types/Edits';
 
 export type SaveStatusType =
   | 'none'
@@ -67,23 +71,30 @@ type Props = {
   initialScenario?: ScenarioEditsType | null;
   buttonText?: string;
   initialStatus?: SaveStatusType;
-  onSave?: () => void;
+  addDefaultSampleLayer?: boolean;
+  onSave?: (selectedScenario?: ScenarioEditsType) => void;
 };
 
 function EditScenario({
   initialScenario = null,
   buttonText = 'Save',
   initialStatus = 'none',
+  addDefaultSampleLayer = false,
   onSave,
 }: Props) {
   const {
     portal,
     signedIn, //
   } = React.useContext(AuthenticationContext);
-  const { GroupLayer } = useEsriModulesContext();
-  const { edits, setEdits, map, setSelectedScenario } = React.useContext(
-    SketchContext,
-  );
+  const { GraphicsLayer, GroupLayer } = useEsriModulesContext();
+  const {
+    edits,
+    setEdits,
+    map,
+    setLayers,
+    setSelectedScenario,
+    setSketchLayer,
+  } = React.useContext(SketchContext);
 
   // focus on the first input
   React.useEffect(() => {
@@ -94,13 +105,6 @@ function EditScenario({
     saveStatus,
     setSaveStatus, //
   ] = React.useState<SaveStatusType>(initialStatus);
-
-  // Runs the callback for setting the parent's state.
-  React.useEffect(() => {
-    if (!onSave || saveStatus !== 'success') return;
-
-    onSave();
-  }, [onSave, saveStatus]);
 
   const [scenarioName, setScenarioName] = React.useState(
     initialScenario ? initialScenario.scenarioName : '',
@@ -169,6 +173,18 @@ function EditScenario({
         title: scenarioName,
       });
 
+      const layers: LayerEditsType[] = [];
+      let tempSketchLayer: LayerType | null = null;
+      if (addDefaultSampleLayer) {
+        // no sketchable layers were available, create one
+        tempSketchLayer = createSampleLayer(
+          GraphicsLayer,
+          undefined,
+          groupLayer,
+        );
+        layers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+      }
+
       // create the scenario to be added to edits
       const newScenario: ScenarioEditsType = {
         type: 'scenario',
@@ -187,25 +203,43 @@ function EditScenario({
         listMode: 'show',
         scenarioName: scenarioName,
         scenarioDescription: scenarioDescription,
-        layers: [],
+        layers,
       };
 
       // make a copy of the edits context variable
       setEdits((edits) => {
         return {
           count: edits.count + 1,
-          edits: [...edits.edits, newScenario],
+          edits: addDefaultSampleLayer
+            ? [newScenario]
+            : [...edits.edits, newScenario],
         };
       });
 
       // select the new scenario
       setSelectedScenario(newScenario);
 
+      if (addDefaultSampleLayer && tempSketchLayer) {
+        groupLayer.add(tempSketchLayer.sketchLayer);
+
+        // update layers (set parent layer)
+        setLayers((layers) => {
+          if (!tempSketchLayer) return layers;
+
+          return [...layers, tempSketchLayer];
+        });
+
+        // update sketchLayer (clear parent layer)
+        setSketchLayer(tempSketchLayer);
+      }
+
       // add the scenario group layer to the map
       map.add(groupLayer);
     }
 
     setSaveStatus('success');
+
+    if (onSave) onSave();
   }
 
   // Handles saving of the layer's scenario name and description fields.

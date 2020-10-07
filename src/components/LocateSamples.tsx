@@ -36,7 +36,6 @@ import {
 // utils
 import { useGeometryTools, useStartOver } from 'utils/hooks';
 import {
-  createSampleLayer,
   findLayerInEdits,
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
@@ -460,7 +459,7 @@ function LocateSamples() {
 
     setSketchLayerInitialized(true);
 
-    const { nextScenario, nextLayer, defaultLayerIndex } = getNextScenarioLayer(
+    const { nextScenario, nextLayer } = getNextScenarioLayer(
       edits,
       layers,
       selectedScenario,
@@ -469,22 +468,6 @@ function LocateSamples() {
 
     if (nextScenario) setSelectedScenario(nextScenario);
     if (nextLayer) setSketchLayer(nextLayer);
-
-    // check if the default sketch layer has been added already or not
-    if (defaultLayerIndex > -1) return;
-
-    // no sketchable layers were available, create one
-    const tempSketchLayer = createSampleLayer(GraphicsLayer);
-
-    // add the sketch layer to the map
-    setLayers((layers) => {
-      return [...layers, tempSketchLayer];
-    });
-
-    // if the sketch layer wasn't set above, set it now
-    if (!sketchLayer && !nextLayer) {
-      setSketchLayer(tempSketchLayer);
-    }
   }, [
     GraphicsLayer,
     edits,
@@ -1236,7 +1219,7 @@ function LocateSamples() {
           )}
 
           {scenarios.length === 0 ? (
-            <EditScenario />
+            <EditScenario addDefaultSampleLayer={true} />
           ) : (
             <React.Fragment>
               <div css={iconButtonContainerStyles}>
