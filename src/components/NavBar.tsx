@@ -315,22 +315,31 @@ function NavBar({ height }: Props) {
     setGettingStartedOpen,
     latestStepIndex,
     setLatestStepIndex,
+    panelExpanded,
+    setPanelExpanded,
+    resultsExpanded,
+    setResultsExpanded,
   } = React.useContext(NavigationContext);
 
-  const [expanded, setExpanded] = React.useState(false);
   const toggleExpand = React.useCallback(
     (panel: PanelType, panelIndex: number) => {
       if (panel === currentPanel) {
-        setExpanded(false);
+        setPanelExpanded(false);
         setCurrentPanel(null);
       } else {
-        setExpanded(true);
+        setPanelExpanded(true);
         setCurrentPanel(panel);
       }
 
       if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
     },
-    [currentPanel, setCurrentPanel, latestStepIndex, setLatestStepIndex],
+    [
+      currentPanel,
+      setCurrentPanel,
+      latestStepIndex,
+      setLatestStepIndex,
+      setPanelExpanded,
+    ],
   );
 
   React.useEffect(() => {
@@ -352,16 +361,15 @@ function NavBar({ height }: Props) {
     setGoTo('');
   }, [goTo, setGoTo, toggleExpand]);
 
-  const [resultsExpanded, setResultsExpanded] = React.useState(false);
   React.useEffect(() => {
     if (calculateResults.status !== 'none') {
       setResultsExpanded(true);
     }
-  }, [calculateResults]);
+  }, [calculateResults, setResultsExpanded]);
 
   // determine how far to the right the expand/collapse buttons should be
   let expandLeft = navPanelWidth;
-  if (expanded) {
+  if (panelExpanded) {
     if (
       currentPanel?.value !== 'calculate' ||
       calculateResults.panelOpen === false ||
@@ -454,7 +462,7 @@ function NavBar({ height }: Props) {
             width: panelWidth,
             height,
             left: navPanelWidth,
-            expanded,
+            expanded: panelExpanded,
             zIndex: 2,
           })}
         >
@@ -478,7 +486,9 @@ function NavBar({ height }: Props) {
             css={floatPanelStyles({
               width: resultsPanelWidth,
               height,
-              left: `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
+              left: `calc(${navPanelWidth} + ${
+                panelExpanded ? panelWidth : '0px'
+              })`,
               expanded: resultsExpanded,
               zIndex: 2,
             })}
@@ -498,20 +508,22 @@ function NavBar({ height }: Props) {
             zIndex: 1,
           })}
         >
-          <div css={floatPanelButtonContainer(expanded)}>
+          <div css={floatPanelButtonContainer(panelExpanded)}>
             <div css={floatPanelTableContainer}>
               <div css={floatPanelTableCellContainer}>
                 {currentPanel && (
                   <button
                     css={collapsePanelButton}
-                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${
+                    aria-label={`${panelExpanded ? 'Collapse' : 'Expand'} ${
                       currentPanel.label
                     } Panel`}
-                    onClick={() => setExpanded(!expanded)}
+                    onClick={() => setPanelExpanded(!panelExpanded)}
                   >
                     <i
                       className={
-                        expanded ? 'fas fa-angle-left' : 'fas fa-angle-right'
+                        panelExpanded
+                          ? 'fas fa-angle-left'
+                          : 'fas fa-angle-right'
                       }
                     />
                   </button>

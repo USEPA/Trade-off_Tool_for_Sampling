@@ -14,10 +14,10 @@ import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
-import { CalculateProvider } from 'contexts/Calculate';
+import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
-import { NavigationProvider } from 'contexts/Navigation';
-import { SketchProvider } from 'contexts/Sketch';
+import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
+import { SketchProvider, SketchContext } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
 import { useSessionStorage } from 'utils/hooks';
@@ -27,6 +27,9 @@ import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 import { unsupportedBrowserMessage } from 'config/errorMessages';
 // styles
 import '@reach/dialog/styles.css';
+
+const tablepanelheight = 200;
+const esrifooterheight = 16;
 
 const gloablStyles = css`
   html {
@@ -83,6 +86,7 @@ const appStyles = (offset: number) => css`
 
 const containerStyles = css`
   height: 100%;
+  position: relative;
 `;
 
 const mapPanelStyles = css`
@@ -92,7 +96,97 @@ const mapPanelStyles = css`
   width: calc(100% - ${navPanelWidth});
 `;
 
+const mapHeightStyles = (tableHeight: number) => {
+  return css`
+    height: calc(100% - ${tableHeight}px);
+  `;
+};
+
+const floatPanelStyles = ({
+  width,
+  height,
+  left,
+  expanded,
+  zIndex,
+}: {
+  width: number;
+  height: number;
+  left: string;
+  expanded: boolean;
+  zIndex: number;
+}) => {
+  return css`
+    display: ${expanded ? 'block' : 'none'};
+    z-index: ${zIndex};
+    position: absolute;
+    height: ${height}px;
+    bottom: 0;
+    left: ${left};
+    width: calc(100% - ${width}px);
+    pointer-events: none;
+  `;
+};
+
+const floatButtonPanelStyles = ({
+  width,
+  left,
+  expanded,
+  zIndex,
+}: {
+  width: number;
+  left: string;
+  expanded: boolean;
+  zIndex: number;
+}) => {
+  return css`
+    display: flex;
+    z-index: ${zIndex};
+    position: absolute;
+    height: 32px;
+    bottom: ${(expanded ? tablepanelheight : 0) + esrifooterheight}px;
+    left: ${left};
+    width: calc(100% - ${width}px);
+    pointer-events: none;
+    justify-content: center;
+  `;
+};
+
+const floatPanelContentStyles = (includeOverflow: boolean = true) => {
+  return css`
+    float: left;
+    position: relative;
+    height: 100%;
+    ${includeOverflow ? 'overflow: auto;' : ''}
+    pointer-events: all;
+
+    /* styles to be overridden */
+    width: 100%;
+    color: black;
+    background-color: white;
+  `;
+};
+
+const floatPanelScrollContainerStyles = css`
+  overflow: auto;
+  height: 100%;
+`;
+
+const collapsePanelButton = css`
+  margin: 0;
+  width: 64px;
+  border-radius: 0;
+  background-color: white;
+  color: black;
+  pointer-events: all;
+`;
+
 function App() {
+  const { calculateResults } = React.useContext(CalculateContext);
+  const { currentPanel, panelExpanded, resultsExpanded } = React.useContext(
+    NavigationContext,
+  );
+  const { layers } = React.useContext(SketchContext);
+
   useSessionStorage();
 
   const { height, width } = useWindowSize();
@@ -145,6 +239,27 @@ function App() {
     setOffset(totsRef.current.getBoundingClientRect().top);
   }, [totsRef]);
 
+  // count the number of samples
+  let numSamples = 0;
+  layers.forEach((layer) => {
+    if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
+    if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
+      numSamples += layer.sketchLayer.graphics.length;
+    }
+  });
+
+  // calculate the width of the table
+  const [tablePanelExpanded, setTablePanelExpanded] = React.useState(false);
+  let tablePanelWidth = 150;
+  if (currentPanel && panelExpanded) tablePanelWidth += 325;
+  if (
+    resultsExpanded &&
+    currentPanel?.value === 'calculate' &&
+    calculateResults.panelOpen === true
+  ) {
+    tablePanelWidth += 500;
+  }
+
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
@@ -167,8 +282,62 @@ function App() {
                   </div>
                   <NavBar height={contentHeight - toolbarHeight} />
                   <div css={mapPanelStyles} ref={mapRef}>
-                    {toolbarHeight && <Map height={toolbarHeight} />}
+                    <div
+                      css={mapHeightStyles(
+                        tablePanelExpanded ? tablepanelheight : 0,
+                      )}
+                    >
+                      {toolbarHeight && <Map height={toolbarHeight} />}
+                    </div>
                   </div>
+                  {numSamples > 0 && (
+                    <div
+                      css={floatButtonPanelStyles({
+                        width: tablePanelWidth,
+                        left: `${tablePanelWidth}px`,
+                        expanded: tablePanelExpanded,
+                        zIndex: 1,
+                      })}
+                    >
+                      <button
+                        css={collapsePanelButton}
+                        aria-label={`${
+                          tablePanelExpanded ? 'Collapse' : 'Expand'
+                        } Table Panel`}
+                        onClick={() =>
+                          setTablePanelExpanded(!tablePanelExpanded)
+                        }
+                      >
+                        <i
+                          className={
+                            tablePanelExpanded
+                              ? 'fas fa-chevron-down'
+                              : 'fas fa-chevron-up'
+                          }
+                        />
+                      </button>
+                    </div>
+                  )}
+                  {tablePanelExpanded && (
+                    <div
+                      css={floatPanelStyles({
+                        width: tablePanelWidth,
+                        height: tablepanelheight,
+                        left: `${tablePanelWidth}px`,
+                        expanded: true,
+                        zIndex: 2,
+                      })}
+                    >
+                      <div css={floatPanelContentStyles(false)}>
+                        <div
+                          id="tots-panel-scroll-container"
+                          css={floatPanelScrollContainerStyles}
+                        >
+                          The table should go here.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </React.Fragment>

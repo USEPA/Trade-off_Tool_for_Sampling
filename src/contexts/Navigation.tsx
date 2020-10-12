@@ -18,6 +18,10 @@ type NavigateType = {
   setGoToOptions: React.Dispatch<React.SetStateAction<GoToOptions>>;
   latestStepIndex: number;
   setLatestStepIndex: React.Dispatch<React.SetStateAction<number>>;
+  panelExpanded: boolean;
+  setPanelExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  resultsExpanded: boolean;
+  setResultsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   trainingMode: boolean;
   setTrainingMode: React.Dispatch<React.SetStateAction<boolean>>;
   getTrainingMode: Function;
@@ -34,6 +38,10 @@ export const NavigationContext = React.createContext<NavigateType>({
   setGoToOptions: () => {},
   latestStepIndex: -1,
   setLatestStepIndex: () => {},
+  panelExpanded: false,
+  setPanelExpanded: () => {},
+  resultsExpanded: false,
+  setResultsExpanded: () => {},
   trainingMode: false,
   setTrainingMode: () => {},
   getTrainingMode: () => {},
@@ -50,6 +58,8 @@ export function NavigationProvider({ children }: Props) {
   const [goTo, setGoTo] = React.useState<PanelValueType | ''>('');
   const [goToOptions, setGoToOptions] = React.useState<GoToOptions>(null);
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
+  const [panelExpanded, setPanelExpanded] = React.useState(false);
+  const [resultsExpanded, setResultsExpanded] = React.useState(false);
   const [trainingMode, setTrainingMode] = React.useState(false);
   const [gettingStartedOpen, setGettingStartedOpen] = React.useState(false);
 
@@ -70,6 +80,10 @@ export function NavigationProvider({ children }: Props) {
         setGoToOptions,
         latestStepIndex,
         setLatestStepIndex,
+        panelExpanded,
+        setPanelExpanded,
+        resultsExpanded,
+        setResultsExpanded,
         trainingMode,
         setTrainingMode,
         getTrainingMode: () => {
