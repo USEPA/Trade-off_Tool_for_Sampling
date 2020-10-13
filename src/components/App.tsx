@@ -12,6 +12,7 @@ import Toolbar from 'components/Toolbar';
 import SplashScreen from 'components/SplashScreen';
 import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
+import ReactTable from 'components/ReactTable';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
@@ -25,6 +26,7 @@ import { isIE } from 'utils/utils';
 // config
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 import { unsupportedBrowserMessage } from 'config/errorMessages';
+import { AttributeItems } from 'config/sampleAttributes';
 // styles
 import '@reach/dialog/styles.css';
 
@@ -32,6 +34,7 @@ const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
 var startY = 0;
+const includeUnits = false;
 
 const gloablStyles = css`
   html {
@@ -210,6 +213,11 @@ const tablePanelHeaderStyles = css`
   padding: 0;
 `;
 
+const sampleTableHeaderStyles = css`
+  margin: 0 10px;
+  font-weight: bold;
+`;
+
 function App() {
   const { calculateResults } = React.useContext(CalculateContext);
   const {
@@ -291,11 +299,13 @@ function App() {
   }, [totsRef]);
 
   // count the number of samples
-  let numSamples = 0;
+  const sampleData: AttributeItems[] = [];
   layers.forEach((layer) => {
     if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
     if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
-      numSamples += layer.sketchLayer.graphics.length;
+      layer.sketchLayer.graphics.forEach((sample) => {
+        sampleData.push(sample.attributes);
+      });
     }
   });
 
@@ -341,7 +351,7 @@ function App() {
                       {toolbarHeight && <Map height={toolbarHeight} />}
                     </div>
                   </div>
-                  {numSamples > 0 && (
+                  {sampleData.length > 0 && (
                     <div
                       id="tots-table-button-div"
                       css={floatButtonPanelStyles({
@@ -396,6 +406,9 @@ function App() {
                             const tableDiv = document.getElementById(
                               'tots-table-div',
                             ); // adjust height
+                            const reactTableElm = document.getElementById(
+                              'tots-samples-table',
+                            );
                             const buttonDiv = document.getElementById(
                               'tots-table-button-div',
                             ); // move top
@@ -458,6 +471,12 @@ function App() {
                               buttonDiv.style.bottom = `${
                                 newTableHeight + esrifooterheight
                               }px`;
+
+                              if (reactTableElm) {
+                                reactTableElm.style.height = `${
+                                  newTableHeight - resizerHeight - 30
+                                }px`;
+                              }
                             };
                           }}
                         >
@@ -468,9 +487,135 @@ function App() {
                           css={floatPanelScrollContainerStyles}
                         >
                           <div css={tablePanelHeaderStyles}>
-                            <span>Samples (Count: {numSamples})</span>
+                            <span css={sampleTableHeaderStyles}>
+                              Samples (Count: {sampleData.length})
+                            </span>
                           </div>
-                          The table should go here.
+                          <div>
+                            <ReactTable
+                              id="tots-samples-table"
+                              data={sampleData}
+                              striped={true}
+                              height={tablePanelHeight - resizerHeight - 30}
+                              getColumns={(tableWidth: any) => {
+                                const columnWidth = tableWidth / 17 - 1;
+
+                                return [
+                                  {
+                                    Header: 'Sample Type',
+                                    accessor: 'TYPE',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Time to Prepare Kits ${
+                                      includeUnits ? '(person hrs/sample)' : ''
+                                    }`,
+                                    accessor: 'TTPK',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Time to Collect ${
+                                      includeUnits ? '(person hrs/sample)' : ''
+                                    }`,
+                                    accessor: 'TTC',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Time to Analyze ${
+                                      includeUnits ? '(person hrs/sample)' : ''
+                                    }`,
+                                    accessor: 'TTA',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Total Time per Sample ${
+                                      includeUnits ? '(person hrs/sample)' : ''
+                                    }`,
+                                    accessor: 'TTPS',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Limit of Detection ${
+                                      includeUnits ? '(CFU)' : ''
+                                    } Porous`,
+                                    accessor: 'LOD_P',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Limit of Detection ${
+                                      includeUnits ? '(CFU)' : ''
+                                    } Nonporous`,
+                                    accessor: 'LOD_NON',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Material Cost ${
+                                      includeUnits ? '($/sample)' : ''
+                                    }`,
+                                    accessor: 'MCPS',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Total Cost Per Sample ${
+                                      includeUnits
+                                        ? '(Labor + Material + Waste)'
+                                        : ''
+                                    }`,
+                                    accessor: 'TCPS',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Waste Volume ${
+                                      includeUnits ? '(L/sample)' : ''
+                                    }`,
+                                    accessor: 'WVPS',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Waste Weight ${
+                                      includeUnits ? '(lbs/sample)' : ''
+                                    }`,
+                                    accessor: 'WWPS',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Reference Surface Area ${
+                                      includeUnits ? '(sq inch)' : ''
+                                    }`,
+                                    accessor: 'SA',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: `Actual Surface Area ${
+                                      includeUnits ? '(sq inch)' : ''
+                                    }`,
+                                    accessor: 'AA',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: 'Equivalent TOTS Samples',
+                                    accessor: 'AC',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: 'Notes',
+                                    accessor: 'Notes',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: 'Analysis Labor Cost',
+                                    accessor: 'ALC',
+                                    width: columnWidth,
+                                  },
+                                  {
+                                    Header: 'Analysis Material Cost',
+                                    accessor: 'AMC',
+                                    width: columnWidth,
+                                  },
+                                ];
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
