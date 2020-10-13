@@ -1713,6 +1713,53 @@ function useUserDefinedSampleAttributesStorage() {
   }, [userDefinedAttributes, localUserDefinedSamplesInitialized, setOptions]);
 }
 
+// Uses browser storage for holding the size and expand status of the bottom table.
+function useTablePanelStorage() {
+  const key = 'tots_table_panel';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    tablePanelExpanded,
+    setTablePanelExpanded,
+    tablePanelHeight,
+    setTablePanelHeight,
+  } = React.useContext(NavigationContext);
+
+  // Retreives table info data from browser storage when the app loads
+  const [tablePanelInitialized, setTablePanelInitialized] = React.useState(
+    false,
+  );
+  React.useEffect(() => {
+    if (tablePanelInitialized) return;
+
+    setTablePanelInitialized(true);
+
+    const tablePanelStr = readFromStorage(key);
+    if (!tablePanelStr) {
+      // if no key in browser storage, leave as default and say initialized
+      setTablePanelExpanded(false);
+      setTablePanelHeight(200);
+      return;
+    }
+
+    const tablePanel = JSON.parse(tablePanelStr);
+
+    // save table panel info
+    setTablePanelExpanded(tablePanel.expanded);
+    setTablePanelHeight(tablePanel.height);
+  }, [tablePanelInitialized, setTablePanelExpanded, setTablePanelHeight]);
+
+  React.useEffect(() => {
+    if (!tablePanelInitialized) return;
+
+    const tablePanel: object = {
+      expanded: tablePanelExpanded,
+      height: tablePanelHeight,
+    };
+    writeToStorage(key, tablePanel, setOptions);
+  }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -1731,4 +1778,5 @@ export function useSessionStorage() {
   useBasemapStorage();
   useUserDefinedSampleOptionsStorage();
   useUserDefinedSampleAttributesStorage();
+  useTablePanelStorage();
 }

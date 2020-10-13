@@ -22,6 +22,10 @@ type NavigateType = {
   setPanelExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   resultsExpanded: boolean;
   setResultsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  tablePanelExpanded: boolean;
+  setTablePanelExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  tablePanelHeight: number;
+  setTablePanelHeight: React.Dispatch<React.SetStateAction<number>>;
   trainingMode: boolean;
   setTrainingMode: React.Dispatch<React.SetStateAction<boolean>>;
   getTrainingMode: Function;
@@ -42,6 +46,10 @@ export const NavigationContext = React.createContext<NavigateType>({
   setPanelExpanded: () => {},
   resultsExpanded: false,
   setResultsExpanded: () => {},
+  tablePanelExpanded: false,
+  setTablePanelExpanded: () => {},
+  tablePanelHeight: 200,
+  setTablePanelHeight: () => {},
   trainingMode: false,
   setTrainingMode: () => {},
   getTrainingMode: () => {},
@@ -60,6 +68,8 @@ export function NavigationProvider({ children }: Props) {
   const [latestStepIndex, setLatestStepIndex] = React.useState(-1);
   const [panelExpanded, setPanelExpanded] = React.useState(false);
   const [resultsExpanded, setResultsExpanded] = React.useState(false);
+  const [tablePanelExpanded, setTablePanelExpanded] = React.useState(false);
+  const [tablePanelHeight, setTablePanelHeight] = React.useState(200);
   const [trainingMode, setTrainingMode] = React.useState(false);
   const [gettingStartedOpen, setGettingStartedOpen] = React.useState(false);
 
@@ -84,6 +94,10 @@ export function NavigationProvider({ children }: Props) {
         setPanelExpanded,
         resultsExpanded,
         setResultsExpanded,
+        tablePanelExpanded,
+        setTablePanelExpanded,
+        tablePanelHeight,
+        setTablePanelHeight,
         trainingMode,
         setTrainingMode,
         getTrainingMode: () => {
