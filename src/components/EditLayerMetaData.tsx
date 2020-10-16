@@ -210,9 +210,7 @@ function EditScenario({
       setEdits((edits) => {
         return {
           count: edits.count + 1,
-          edits: addDefaultSampleLayer
-            ? [newScenario]
-            : [...edits.edits, newScenario],
+          edits: [...edits.edits, newScenario],
         };
       });
 
