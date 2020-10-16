@@ -544,18 +544,19 @@ function App() {
                               }}
                               sortBy={[
                                 {
-                                  id: 'DECISIONUNITUUID',
-                                  desc: true,
+                                  id: 'DECISIONUNIT',
+                                  desc: false,
                                 },
                                 {
-                                  id: 'PERMANENT_IDENTIFIER',
-                                  desc: true,
+                                  id: 'TYPE',
+                                  desc: false,
                                 },
                               ]}
                               getColumns={(tableWidth: any) => {
                                 return getSampleTableColumns({
                                   tableWidth,
                                   includeContaminationFields: trainingMode,
+                                  includeUnits: true,
                                 });
                               }}
                             />
