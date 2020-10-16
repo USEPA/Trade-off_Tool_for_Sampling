@@ -688,7 +688,7 @@ export function getSampleTableColumns({
   includeUnits?: boolean;
   useEqualWidth?: boolean;
 }) {
-  const baseColumnWidth = 75;
+  const baseColumnWidth = 100;
   const mediumColumnWidth = 140;
   const largeColumnWidth = 160;
 

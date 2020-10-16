@@ -80,7 +80,7 @@ const tableStyles = (tableWidth: number, height: number) => css`
         border-bottom: 1px solid rgba(0, 0, 0, 0.02);
       }
 
-      .rt-tr.rt-striped.-odd {
+      .rt-tr.rt-striped.-even {
         background-color: rgba(0, 0, 0, 0.03);
       }
 

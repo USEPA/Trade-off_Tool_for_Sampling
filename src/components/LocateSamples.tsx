@@ -979,14 +979,6 @@ function LocateSamples() {
       isValid = false;
       messageParts.push('Material Cost needs a numeric value.');
     }
-    if (!isNumberValid(wvps)) {
-      isValid = false;
-      messageParts.push('Waste Volume needs a numeric value.');
-    }
-    if (!isNumberValid(wwps)) {
-      isValid = false;
-      messageParts.push('Waste Weight needs a numeric value.');
-    }
     if (!isNumberValid(sa, 'greaterThan0')) {
       isValid = false;
       messageParts.push(
