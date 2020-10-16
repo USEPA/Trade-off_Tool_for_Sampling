@@ -584,7 +584,7 @@ function MapWidgets({ mapView }: Props) {
             graphic.attributes = {
               ...sampleAttributes[id],
               DECISIONUNITUUID: layer?.uuid,
-              DECISIONUNIT: layer?.name,
+              DECISIONUNIT: layer?.label,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -999,8 +999,8 @@ function MapWidgets({ mapView }: Props) {
         const graphicsToMove = new Collection<__esri.Graphic>();
         tempSketchVM.activeComponent.graphics.forEach(
           (graphic: __esri.Graphic) => {
-            graphic.attributes.DECISIONUNIT = newLayer.name;
             graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+            graphic.attributes.DECISIONUNIT = newLayer.label;
             graphicsToMove.add(graphic);
           },
         );

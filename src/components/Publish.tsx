@@ -308,7 +308,7 @@ function Publish() {
           attributes: {
             ...item.attributes,
             DECISIONUNITUUID: layer.uuid,
-            DECISIONUNIT: layer.name,
+            DECISIONUNIT: layer.label,
             DECISIONUNITSORT: layer.sort,
           },
         });
@@ -319,7 +319,7 @@ function Publish() {
           attributes: {
             ...item.attributes,
             DECISIONUNITUUID: layer.uuid,
-            DECISIONUNIT: layer.name,
+            DECISIONUNIT: layer.label,
             DECISIONUNITSORT: layer.sort,
           },
         });
