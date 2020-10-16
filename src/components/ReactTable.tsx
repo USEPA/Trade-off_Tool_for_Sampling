@@ -10,6 +10,9 @@ import {
   useBlockLayout,
   useFlexLayout,
   useFilters,
+  useRowSelect,
+  Row,
+  HeaderGroup,
 } from 'react-table';
 
 const inputStyles = css`
@@ -80,6 +83,10 @@ const tableStyles = (tableWidth: number, height: number) => css`
       .rt-tr.rt-striped.-odd {
         background-color: rgba(0, 0, 0, 0.03);
       }
+
+      .rt-tr.rt-selected {
+        background-color: #b4daf5 !important;
+      }
     }
 
     .rt-th,
@@ -144,13 +151,25 @@ const tableStyles = (tableWidth: number, height: number) => css`
 // --- components ---
 type Props = {
   id: string;
-  data: Array<Object>;
+  data: Array<any>;
   getColumns: Function;
   striped?: boolean;
   height: number;
+  initialSelectedRowIds: { [key: number]: boolean };
+  onSelectionChange: Function;
+  sortBy: any;
 };
 
-function ReactTable({ id, data, getColumns, striped = false, height }: Props) {
+function ReactTable({
+  id,
+  data,
+  getColumns,
+  striped = false,
+  height,
+  initialSelectedRowIds,
+  onSelectionChange,
+  sortBy,
+}: Props) {
   // Initializes the column widths based on the table width
   const [tableWidth, setTableWidth] = React.useState(0);
   const columns = React.useMemo(() => {
@@ -175,19 +194,31 @@ function ReactTable({ id, data, getColumns, striped = false, height }: Props) {
     headerGroups,
     rows,
     prepareRow,
+    state: { selectedRowIds },
     totalColumnsWidth,
+  }: {
+    getTableProps: any;
+    getTableBodyProps: any;
+    headerGroups: HeaderGroup<Object>[];
+    rows: Row<Object>[];
+    prepareRow: (row: Row<Object>) => void;
+    selectedFlatRows: any;
+    state: any;
+    totalColumnsWidth: number;
   } = useTable(
     {
       columns,
       data,
       defaultColumn,
+      initialState: { selectedRowIds: initialSelectedRowIds, sortBy } as any,
     },
     useResizeColumns,
     useBlockLayout,
     useFlexLayout,
     useFilters,
     useSortBy,
-  );
+    useRowSelect,
+  ) as any;
 
   // measures the table width
   const measuredTableRef = React.useCallback((node) => {
@@ -210,58 +241,79 @@ function ReactTable({ id, data, getColumns, striped = false, height }: Props) {
               role="row"
               {...headerGroup.getHeaderGroupProps()}
             >
-              {headerGroup.headers.map((column: any) => (
-                <div
-                  className="rt-th"
-                  role="columnheader"
-                  {...column.getHeaderProps(column.getSortByToggleProps())}
-                >
-                  <div>
-                    <div className="rt-col-title">
-                      {column.render('Header')}
-                      <span>
-                        {column.isSorted ? (
-                          column.isSortedDesc ? (
-                            <i className="fas fa-arrow-down" />
+              {headerGroup.headers.map((column: any) => {
+                if (typeof column.show === 'boolean' && !column.show) {
+                  return null;
+                }
+                return (
+                  <div
+                    className="rt-th"
+                    role="columnheader"
+                    {...column.getHeaderProps(column.getSortByToggleProps())}
+                  >
+                    <div>
+                      <div className="rt-col-title">
+                        {column.render('Header')}
+                        <span>
+                          {column.isSorted ? (
+                            column.isSortedDesc ? (
+                              <i className="fas fa-arrow-down" />
+                            ) : (
+                              <i className="fas fa-arrow-up" />
+                            )
                           ) : (
-                            <i className="fas fa-arrow-up" />
-                          )
-                        ) : (
-                          ''
-                        )}
-                      </span>
+                            ''
+                          )}
+                        </span>
+                      </div>
+                      {column.filterable && (
+                        <div className="rt-filter">
+                          {column.render('Filter')}
+                        </div>
+                      )}
                     </div>
-                    {column.filterable && (
-                      <div className="rt-filter">{column.render('Filter')}</div>
+                    {column.canResize && (
+                      <div
+                        {...column.getResizerProps()}
+                        className={`rt-resizer ${
+                          column.isResizing ? 'isResizing' : ''
+                        }`}
+                      />
                     )}
                   </div>
-                  {column.canResize && (
-                    <div
-                      {...column.getResizerProps()}
-                      className={`rt-resizer ${
-                        column.isResizing ? 'isResizing' : ''
-                      }`}
-                    />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>
         <div className="rt-tbody" {...getTableBodyProps()}>
           {rows.map((row, i) => {
+            // cast as any to workaround toggleRowSelected not being on the type
+            const tempRow = row as any;
+
+            const selected = Object.keys(selectedRowIds).includes(row.id);
             const isEven = i % 2 === 0;
             prepareRow(row);
             return (
               <div
                 className={`rt-tr ${striped ? 'rt-striped' : ''} ${
                   isEven ? '-odd' : '-even'
-                }`}
+                } ${selected ? 'rt-selected' : ''}`}
                 role="row"
                 {...row.getRowProps()}
+                onClick={() => {
+                  tempRow.toggleRowSelected(!selected);
+
+                  if (!onSelectionChange) return;
+
+                  onSelectionChange(tempRow);
+                }}
               >
                 {row.cells.map((cell) => {
                   const column: any = cell.column;
+                  if (typeof column.show === 'boolean' && !column.show) {
+                    return null;
+                  }
                   return (
                     <div
                       className="rt-td"

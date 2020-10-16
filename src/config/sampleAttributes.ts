@@ -7,6 +7,11 @@ export type PolygonSymbol = {
   };
 };
 
+export type SelectedSampleType = {
+  PERMANENT_IDENTIFIER: string;
+  DECISIONUNITUUID: string;
+};
+
 export type AttributeItems = {
   OBJECTID: string | null;
   PERMANENT_IDENTIFIER: string | null;

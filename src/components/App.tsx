@@ -229,7 +229,9 @@ function App() {
     tablePanelHeight,
     setTablePanelHeight,
   } = React.useContext(NavigationContext);
-  const { layers } = React.useContext(SketchContext);
+  const { layers, selectedSampleIds, setSelectedSampleIds } = React.useContext(
+    SketchContext,
+  );
 
   useSessionStorage();
 
@@ -319,6 +321,18 @@ function App() {
   ) {
     tablePanelWidth += 500;
   }
+
+  // determine which rows of the table should be selected
+  const initialSelectedRowIds: { [key: number]: boolean } = {};
+  sampleData.forEach((sample, index) => {
+    if (
+      selectedSampleIds.findIndex(
+        (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
+      ) !== -1
+    ) {
+      initialSelectedRowIds[index] = true;
+    }
+  });
 
   return (
     <React.Fragment>
@@ -497,10 +511,67 @@ function App() {
                               data={sampleData}
                               striped={true}
                               height={tablePanelHeight - resizerHeight - 30}
+                              initialSelectedRowIds={initialSelectedRowIds}
+                              onSelectionChange={(row: any) => {
+                                const PERMANENT_IDENTIFIER =
+                                  row.original.PERMANENT_IDENTIFIER;
+                                const DECISIONUNITUUID =
+                                  row.original.DECISIONUNITUUID;
+                                setSelectedSampleIds((selectedSampleIds) => {
+                                  if (
+                                    selectedSampleIds.findIndex(
+                                      (item) =>
+                                        item.PERMANENT_IDENTIFIER ===
+                                        PERMANENT_IDENTIFIER,
+                                    ) !== -1
+                                  ) {
+                                    return selectedSampleIds.filter(
+                                      (item) =>
+                                        item.PERMANENT_IDENTIFIER !==
+                                        PERMANENT_IDENTIFIER,
+                                    );
+                                  }
+
+                                  return [
+                                    // ...selectedSampleIds, // Uncomment this line to allow multiple selections
+                                    {
+                                      PERMANENT_IDENTIFIER,
+                                      DECISIONUNITUUID,
+                                    },
+                                  ];
+                                });
+                              }}
+                              sortBy={[
+                                {
+                                  id: 'DECISIONUNITUUID',
+                                  desc: true,
+                                },
+                                {
+                                  id: 'PERMANENT_IDENTIFIER',
+                                  desc: true,
+                                },
+                              ]}
                               getColumns={(tableWidth: any) => {
-                                const columnWidth = tableWidth / 17 - 1;
+                                const columnWidth = tableWidth / 18 - 1;
 
                                 return [
+                                  {
+                                    Header: 'PERMANENT_IDENTIFIER',
+                                    accessor: 'PERMANENT_IDENTIFIER',
+                                    width: 0,
+                                    show: false,
+                                  },
+                                  {
+                                    Header: 'DECISIONUNITUUID',
+                                    accessor: 'DECISIONUNITUUID',
+                                    width: 0,
+                                    show: false,
+                                  },
+                                  {
+                                    Header: 'Layer',
+                                    accessor: 'DECISIONUNIT',
+                                    width: columnWidth,
+                                  },
                                   {
                                     Header: 'Sample Type',
                                     accessor: 'TYPE',

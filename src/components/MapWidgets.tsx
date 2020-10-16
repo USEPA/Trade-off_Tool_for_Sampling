@@ -393,6 +393,7 @@ function MapWidgets({ mapView }: Props) {
     setEdits,
     homeWidget,
     setHomeWidget,
+    selectedSampleIds,
     sketchVM,
     setSketchVM,
     aoiSketchVM,
@@ -539,6 +540,7 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<Array<string>>([]);
   const setupEvents = React.useCallback(
     (
+      layers: LayerType[],
       sketchViewModel: __esri.SketchViewModel,
       setter: React.Dispatch<React.SetStateAction<boolean>>,
       sketchEventSetter: React.Dispatch<any>,
@@ -563,6 +565,11 @@ function MapWidgets({ mapView }: Props) {
             return;
           }
 
+          // get the layer uuid
+          const layer = layers.find(
+            (layer) => layer.layerId === graphic.layer.id,
+          );
+
           // get the predefined attributes using the id of the clicked button
           const uuid = generateUUID();
           let layerType: LayerTypeName = 'Samples';
@@ -576,6 +583,8 @@ function MapWidgets({ mapView }: Props) {
           } else {
             graphic.attributes = {
               ...sampleAttributes[id],
+              DECISIONUNITUUID: layer?.uuid,
+              DECISIONUNIT: layer?.name,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -693,10 +702,11 @@ function MapWidgets({ mapView }: Props) {
   const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   React.useEffect(() => {
     if (!sketchVM || sketchEventsInitialized) return;
-    setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
+    setupEvents(layers, sketchVM, setSketchVMActive, setUpdateSketchEvent);
 
     setSketchEventsInitialized(true);
   }, [
+    layers,
     sketchVM,
     setupEvents,
     sketchEventsInitialized,
@@ -715,10 +725,16 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<any>(null);
   React.useEffect(() => {
     if (!aoiSketchVM || aoiSketchEventsInitialized) return;
-    setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
+    setupEvents(
+      layers,
+      aoiSketchVM,
+      setAoiSketchVMActive,
+      setAoiUpdateSketchEvent,
+    );
 
     setAoiSketchEventsInitialized(true);
   }, [
+    layers,
     aoiSketchVM,
     setupEvents,
     aoiSketchEventsInitialized,
@@ -981,8 +997,12 @@ function MapWidgets({ mapView }: Props) {
       ) {
         // get items from sketch view model
         const graphicsToMove = new Collection<__esri.Graphic>();
-        graphicsToMove.addMany(
-          tempSketchVM.activeComponent.graphics as __esri.Graphic[],
+        tempSketchVM.activeComponent.graphics.forEach(
+          (graphic: __esri.Graphic) => {
+            graphic.attributes.DECISIONUNIT = newLayer.name;
+            graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+            graphicsToMove.add(graphic);
+          },
         );
         const tempLayer = graphicsToMove.getItemAt(0)
           .layer as __esri.GraphicsLayer;
@@ -1055,7 +1075,7 @@ function MapWidgets({ mapView }: Props) {
       return;
     }
 
-    const group = 'highlights-group';
+    const group = 'contamination-highlights-group';
     handles.remove(group);
 
     // find the group layer
@@ -1086,6 +1106,48 @@ function MapWidgets({ mapView }: Props) {
       });
     }
   }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
+
+  React.useEffect(() => {
+    if (!map) {
+      return;
+    }
+
+    const group = 'highlights-group';
+    handles.remove(group);
+
+    const samples: any = {};
+    selectedSampleIds.forEach((sample) => {
+      if (!samples.hasOwnProperty(sample.DECISIONUNITUUID)) {
+        samples[sample.DECISIONUNITUUID] = [sample.PERMANENT_IDENTIFIER];
+      } else {
+        samples[sample.DECISIONUNITUUID].push(sample.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    Object.keys(samples).forEach((layerUuid) => {
+      // find the layer
+      const sampleUuids = samples[layerUuid];
+      const layer = layers.find((layer) => layer.uuid === layerUuid);
+
+      if (!layer) return;
+
+      const highlightGraphics: __esri.Graphic[] = [];
+      const tempLayer = layer.sketchLayer as __esri.GraphicsLayer;
+      tempLayer.graphics.forEach((graphic) => {
+        if (sampleUuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
+          highlightGraphics.push(graphic);
+        }
+      });
+
+      // Highlight the graphics with a contam value
+      if (highlightGraphics.length === 0) return;
+
+      mapView.whenLayerView(tempLayer).then((layerView) => {
+        const handle = layerView.highlight(highlightGraphics);
+        handles.add(handle, group);
+      });
+    });
+  }, [map, handles, layers, mapView, selectedSampleIds]);
 
   return null;
 }
