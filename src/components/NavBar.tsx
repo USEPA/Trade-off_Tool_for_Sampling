@@ -505,7 +505,7 @@ function NavBar({ height }: Props) {
             height,
             left: expandLeft,
             expanded: true,
-            zIndex: 1,
+            zIndex: 3,
           })}
         >
           <div css={floatPanelButtonContainer(panelExpanded)}>
