@@ -725,6 +725,8 @@ function LocateSamples() {
                     attributes: {
                       ...feature.attributes,
                       CREATEDDATE: timestamp,
+                      DECISIONUNITUUID: sketchLayer.uuid,
+                      DECISIONUNIT: sketchLayer.value,
                     },
                     symbol: polygonSymbol,
                     geometry: new Polygon({
