@@ -12,6 +12,7 @@ import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
   UserDefinedAttributes,
   SampleSelectType,
+  SelectedSampleType,
   PolygonSymbol,
 } from 'config/sampleAttributes';
 
@@ -48,6 +49,10 @@ type SketchType = {
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
   setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
+  selectedSampleIds: SelectedSampleType[];
+  setSelectedSampleIds: React.Dispatch<
+    React.SetStateAction<SelectedSampleType[]>
+  >;
   selectedScenario: ScenarioEditsType | null;
   setSelectedScenario: React.Dispatch<
     React.SetStateAction<ScenarioEditsType | null>
@@ -101,6 +106,8 @@ export const SketchContext = React.createContext<SketchType>({
   setReferenceLayers: () => {},
   urlLayers: [],
   setUrlLayers: () => {},
+  selectedSampleIds: [],
+  setSelectedSampleIds: () => {},
   selectedScenario: null,
   setSelectedScenario: () => {},
   sketchLayer: null,
@@ -152,6 +159,9 @@ export function SketchProvider({ children }: Props) {
   const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
+  const [selectedSampleIds, setSelectedSampleIds] = React.useState<
+    SelectedSampleType[]
+  >([]);
   const [
     selectedScenario,
     setSelectedScenario, //
@@ -220,6 +230,8 @@ export function SketchProvider({ children }: Props) {
         setReferenceLayers,
         urlLayers,
         setUrlLayers,
+        selectedSampleIds,
+        setSelectedSampleIds,
         selectedScenario,
         setSelectedScenario,
         sketchLayer,

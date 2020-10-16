@@ -210,9 +210,7 @@ function EditScenario({
       setEdits((edits) => {
         return {
           count: edits.count + 1,
-          edits: addDefaultSampleLayer
-            ? [newScenario]
-            : [...edits.edits, newScenario],
+          edits: [...edits.edits, newScenario],
         };
       });
 
@@ -398,7 +396,7 @@ function EditLayer({
   ] = React.useState<SaveStatusType>(initialStatus);
 
   const [layerName, setLayerName] = React.useState(
-    initialLayer ? initialLayer.name : '',
+    initialLayer ? initialLayer.label : '',
   );
 
   // focus on the first input
@@ -458,12 +456,18 @@ function EditLayer({
         ];
       });
 
-      // update the layer in edits
+      // update the layer in edits and the decisionunit attribute for each graphic
+      const sketchLayerGraphics = initialLayer.sketchLayer as __esri.GraphicsLayer;
+      const graphics = sketchLayerGraphics.graphics;
+      graphics.forEach((graphic) => {
+        graphic.attributes.DECISIONUNIT = layerName;
+      });
       const editsCopy = updateLayerEdits({
         edits,
         scenario: selectedScenario,
         layer: { ...initialLayer, name: layerName, label: layerName },
-        type: 'properties',
+        type: 'update',
+        changes: graphics,
       });
       setEdits(editsCopy);
     } else {

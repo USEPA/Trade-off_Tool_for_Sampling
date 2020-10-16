@@ -393,6 +393,7 @@ function MapWidgets({ mapView }: Props) {
     setEdits,
     homeWidget,
     setHomeWidget,
+    selectedSampleIds,
     sketchVM,
     setSketchVM,
     aoiSketchVM,
@@ -576,6 +577,8 @@ function MapWidgets({ mapView }: Props) {
           } else {
             graphic.attributes = {
               ...sampleAttributes[id],
+              DECISIONUNITUUID: graphic.layer.id,
+              DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -981,8 +984,12 @@ function MapWidgets({ mapView }: Props) {
       ) {
         // get items from sketch view model
         const graphicsToMove = new Collection<__esri.Graphic>();
-        graphicsToMove.addMany(
-          tempSketchVM.activeComponent.graphics as __esri.Graphic[],
+        tempSketchVM.activeComponent.graphics.forEach(
+          (graphic: __esri.Graphic) => {
+            graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+            graphic.attributes.DECISIONUNIT = newLayer.label;
+            graphicsToMove.add(graphic);
+          },
         );
         const tempLayer = graphicsToMove.getItemAt(0)
           .layer as __esri.GraphicsLayer;
@@ -1055,7 +1062,7 @@ function MapWidgets({ mapView }: Props) {
       return;
     }
 
-    const group = 'highlights-group';
+    const group = 'contamination-highlights-group';
     handles.remove(group);
 
     // find the group layer
@@ -1064,7 +1071,7 @@ function MapWidgets({ mapView }: Props) {
     ) as __esri.GroupLayer;
 
     // Get any graphics that have a contam value
-    if (trainingMode) {
+    if (trainingMode && groupLayer) {
       groupLayer.layers.forEach((layer) => {
         if (layer.type !== 'graphics') return;
 
@@ -1086,6 +1093,48 @@ function MapWidgets({ mapView }: Props) {
       });
     }
   }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
+
+  React.useEffect(() => {
+    if (!map) {
+      return;
+    }
+
+    const group = 'highlights-group';
+    handles.remove(group);
+
+    const samples: any = {};
+    selectedSampleIds.forEach((sample) => {
+      if (!samples.hasOwnProperty(sample.DECISIONUNITUUID)) {
+        samples[sample.DECISIONUNITUUID] = [sample.PERMANENT_IDENTIFIER];
+      } else {
+        samples[sample.DECISIONUNITUUID].push(sample.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    Object.keys(samples).forEach((layerUuid) => {
+      // find the layer
+      const sampleUuids = samples[layerUuid];
+      const layer = layers.find((layer) => layer.uuid === layerUuid);
+
+      if (!layer) return;
+
+      const highlightGraphics: __esri.Graphic[] = [];
+      const tempLayer = layer.sketchLayer as __esri.GraphicsLayer;
+      tempLayer.graphics.forEach((graphic) => {
+        if (sampleUuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
+          highlightGraphics.push(graphic);
+        }
+      });
+
+      // Highlight the graphics with a contam value
+      if (highlightGraphics.length === 0) return;
+
+      mapView.whenLayerView(tempLayer).then((layerView) => {
+        const handle = layerView.highlight(highlightGraphics);
+        handles.add(handle, group);
+      });
+    });
+  }, [map, handles, layers, mapView, selectedSampleIds]);
 
   return null;
 }

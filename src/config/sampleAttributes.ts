@@ -7,40 +7,47 @@ export type PolygonSymbol = {
   };
 };
 
+export type SelectedSampleType = {
+  PERMANENT_IDENTIFIER: string;
+  DECISIONUNITUUID: string;
+};
+
+export type AttributeItems = {
+  OBJECTID: string | null;
+  PERMANENT_IDENTIFIER: string | null;
+  GLOBALID: string | null;
+  TYPE: string;
+  ShapeType: string;
+  Width: number;
+  SA: number | null;
+  AA: number | null;
+  TTPK: number | null;
+  TTC: number | null;
+  TTA: number | null;
+  TTPS: number | null;
+  LOD_P: number | null;
+  LOD_NON: number | null;
+  MCPS: number | null;
+  TCPS: number | null;
+  WVPS: number | null;
+  WWPS: number | null;
+  ALC: number | null;
+  AMC: number | null;
+  Notes: string | null;
+  CONTAMTYPE: string | null;
+  CONTAMVAL: number | null;
+  CONTAMUNIT: string | null;
+  CREATEDDATE: string | null;
+  UPDATEDDATE: null;
+  USERNAME: string | null;
+  ORGANIZATION: string | null;
+  DECISIONUNITUUID: string | null;
+  DECISIONUNIT: string | null;
+  DECISIONUNITSORT: number | null;
+};
+
 export type Attributes = {
-  [key: string]: {
-    OBJECTID: string | null;
-    PERMANENT_IDENTIFIER: string | null;
-    GLOBALID: string | null;
-    TYPE: string;
-    ShapeType: string;
-    Width: number;
-    SA: number | null;
-    AA: number | null;
-    TTPK: number | null;
-    TTC: number | null;
-    TTA: number | null;
-    TTPS: number | null;
-    LOD_P: number | null;
-    LOD_NON: number | null;
-    MCPS: number | null;
-    TCPS: number | null;
-    WVPS: number | null;
-    WWPS: number | null;
-    ALC: number | null;
-    AMC: number | null;
-    Notes: string | null;
-    CONTAMTYPE: string | null;
-    CONTAMVAL: number | null;
-    CONTAMUNIT: string | null;
-    CREATEDDATE: string | null;
-    UPDATEDDATE: null;
-    USERNAME: string | null;
-    ORGANIZATION: string | null;
-    DECISIONUNITUUID: string | null;
-    DECISIONUNIT: string | null;
-    DECISIONUNITSORT: number | null;
-  };
+  [key: string]: AttributeItems;
 };
 
 export type UserDefinedAttributes = {

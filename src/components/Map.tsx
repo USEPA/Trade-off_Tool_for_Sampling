@@ -3,6 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import MapMouseEvents from 'components/MapMouseEvents';
 import MapWidgets from 'components/MapWidgets';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -158,7 +159,12 @@ function Map({ height }: Props) {
 
   return (
     <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
-      {mapView && <MapWidgets mapView={mapView} />}
+      {mapView && (
+        <React.Fragment>
+          <MapWidgets mapView={mapView} />
+          <MapMouseEvents mapView={mapView} />
+        </React.Fragment>
+      )}
     </div>
   );
 }

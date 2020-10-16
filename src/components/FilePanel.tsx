@@ -720,6 +720,40 @@ function FilePanel() {
     setFeaturesAdded(true);
 
     const popupTemplate = getPopupTemplate(layerType.value, trainingMode);
+    const layerName = getLayerName(layers, file.file.name);
+    setNewLayerName(layerName);
+
+    const visible = layerType.value === 'Contamination Map' ? false : true;
+    const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
+    const layerUuid = generateUUID();
+    const graphicsLayer = new GraphicsLayer({
+      id: layerUuid,
+      title: layerName,
+      visible,
+      listMode,
+    });
+
+    // create the graphics layer
+    const layerToAdd: LayerType = {
+      id: -1,
+      uuid: layerUuid,
+      layerId: graphicsLayer.id,
+      portalId: '',
+      value: layerName,
+      name: file.file.name,
+      label: layerName,
+      layerType: layerType.value,
+      editType: 'add',
+      visible,
+      listMode,
+      sort: 0,
+      geometryType: 'esriGeometryPolygon',
+      addedFrom: 'file',
+      status: 'added',
+      sketchLayer: graphicsLayer,
+      parentLayer: null,
+    };
+
     const graphics: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
@@ -759,6 +793,8 @@ function FilePanel() {
             graphic.attributes['AC'] = null;
             graphic.attributes['CREATEDDATE'] = timestamp;
             graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+            graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
+            graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
             graphic.attributes['GLOBALID'] = uuid;
           }
         }
@@ -767,6 +803,8 @@ function FilePanel() {
 
           graphic.attributes['AA'] = null;
           graphic.attributes['AC'] = null;
+          graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
+          graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
@@ -823,38 +861,7 @@ function FilePanel() {
       return;
     }
 
-    const layerName = getLayerName(layers, file.file.name);
-    setNewLayerName(layerName);
-
-    const visible = layerType.value === 'Contamination Map' ? false : true;
-    const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
-    const graphicsLayer = new GraphicsLayer({
-      graphics,
-      title: layerName,
-      visible,
-      listMode,
-    });
-
-    // create the graphics layer
-    const layerToAdd: LayerType = {
-      id: -1,
-      uuid: generateUUID(),
-      layerId: graphicsLayer.id,
-      portalId: '',
-      value: layerName,
-      name: file.file.name,
-      label: layerName,
-      layerType: layerType.value,
-      editType: 'add',
-      visible,
-      listMode,
-      sort: 0,
-      geometryType: 'esriGeometryPolygon',
-      addedFrom: 'file',
-      status: 'added',
-      sketchLayer: graphicsLayer,
-      parentLayer: null,
-    };
+    graphicsLayer.addMany(graphics);
 
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({

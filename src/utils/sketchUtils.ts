@@ -502,11 +502,12 @@ export function createSampleLayer(
   name: string = 'Default Sample Layer',
   parentLayer: __esri.GroupLayer | null = null,
 ) {
-  const graphicsLayer = new GraphicsLayer({ title: name });
+  const layerUuid = generateUUID();
+  const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
 
   return {
     id: -1,
-    uuid: generateUUID(),
+    uuid: layerUuid,
     layerId: graphicsLayer.id,
     portalId: '',
     value: graphicsLayer.id,
@@ -666,4 +667,178 @@ export function getNextScenarioLayer(
     nextLayer,
     defaultLayerIndex,
   };
+}
+
+/**
+ * Gets the sample columns to include on the expandable table.
+ *
+ * @param tableWidth Used to determine how wide the columns should be.
+ * @param includeContaminationFields Says whether or not to include the contamination columns or not.
+ * @param includeUnits Says whether or not to include the units in the column headers.
+ * @param useEqualWidth Forces the table to use equal width columns.
+ */
+export function getSampleTableColumns({
+  tableWidth,
+  includeContaminationFields,
+  includeUnits = false,
+  useEqualWidth = false,
+}: {
+  tableWidth: number;
+  includeContaminationFields: boolean;
+  includeUnits?: boolean;
+  useEqualWidth?: boolean;
+}) {
+  const baseColumnWidth = 75;
+  const mediumColumnWidth = 140;
+  const largeColumnWidth = 160;
+
+  // add the base columns
+  let columns: any[] = [
+    {
+      Header: 'PERMANENT_IDENTIFIER',
+      accessor: 'PERMANENT_IDENTIFIER',
+      width: 0,
+      show: false,
+    },
+    {
+      Header: 'DECISIONUNITUUID',
+      accessor: 'DECISIONUNITUUID',
+      width: 0,
+      show: false,
+    },
+    {
+      Header: 'Layer',
+      accessor: 'DECISIONUNIT',
+      width: largeColumnWidth,
+    },
+    {
+      Header: 'Sample Type',
+      accessor: 'TYPE',
+      width: mediumColumnWidth,
+    },
+    {
+      Header: `Time to Prepare Kits ${
+        includeUnits ? '(person hrs/sample)' : ''
+      }`,
+      accessor: 'TTPK',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Time to Collect ${includeUnits ? '(person hrs/sample)' : ''}`,
+      accessor: 'TTC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Time to Analyze ${includeUnits ? '(person hrs/sample)' : ''}`,
+      accessor: 'TTA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Total Time per Sample ${
+        includeUnits ? '(person hrs/sample)' : ''
+      }`,
+      accessor: 'TTPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Limit of Detection ${includeUnits ? '(CFU)' : ''} Porous`,
+      accessor: 'LOD_P',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Limit of Detection ${includeUnits ? '(CFU)' : ''} Nonporous`,
+      accessor: 'LOD_NON',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Material Cost ${includeUnits ? '($/sample)' : ''}`,
+      accessor: 'MCPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Total Cost Per Sample ${
+        includeUnits ? '(Labor + Material + Waste)' : ''
+      }`,
+      accessor: 'TCPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Waste Volume ${includeUnits ? '(L/sample)' : ''}`,
+      accessor: 'WVPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Waste Weight ${includeUnits ? '(lbs/sample)' : ''}`,
+      accessor: 'WWPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Reference Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      accessor: 'SA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Actual Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      accessor: 'AA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Equivalent TOTS Samples',
+      accessor: 'AC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Analysis Labor Cost',
+      accessor: 'ALC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Analysis Material Cost',
+      accessor: 'AMC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Notes',
+      accessor: 'Notes',
+      width: largeColumnWidth,
+    },
+  ];
+
+  // add the contamination hits columns, if necessary
+  if (includeContaminationFields) {
+    columns = [
+      ...columns,
+      {
+        Header: 'Contamination Type',
+        accessor: 'CONTAMTYPE',
+        width: largeColumnWidth,
+      },
+      {
+        Header: 'Activity',
+        accessor: 'CONTAMVAL',
+        width: baseColumnWidth,
+      },
+      {
+        Header: 'Unit of Measure',
+        accessor: 'CONTAMUNIT',
+        width: baseColumnWidth,
+      },
+    ];
+  }
+
+  if (useEqualWidth) {
+    // set the column widths
+    const numColumns = columns.filter(
+      (col) => typeof col.show !== 'boolean' || col.show,
+    ).length;
+    const columnWidth = tableWidth > 0 ? tableWidth / numColumns - 1 : 0;
+    columns = columns.map((col) => {
+      return {
+        ...col,
+        width: col.show === 'boolean' && !col.show ? 0 : columnWidth,
+      };
+    });
+  }
+
+  return columns;
 }

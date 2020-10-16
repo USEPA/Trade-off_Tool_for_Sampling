@@ -935,6 +935,7 @@ function ResultCard({ result }: ResultCardProps) {
 
                   // build the graphics layer
                   const graphicsLayer = new GraphicsLayer({
+                    id: firstAttributes.DECISIONUNITUUID,
                     graphics: graphicsList,
                     title: layerName,
                   });
