@@ -502,11 +502,12 @@ export function createSampleLayer(
   name: string = 'Default Sample Layer',
   parentLayer: __esri.GroupLayer | null = null,
 ) {
-  const graphicsLayer = new GraphicsLayer({ title: name });
+  const layerUuid = generateUUID();
+  const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
 
   return {
     id: -1,
-    uuid: generateUUID(),
+    uuid: layerUuid,
     layerId: graphicsLayer.id,
     portalId: '',
     value: graphicsLayer.id,

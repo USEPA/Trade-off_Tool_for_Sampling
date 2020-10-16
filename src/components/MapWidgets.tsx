@@ -540,7 +540,6 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<Array<string>>([]);
   const setupEvents = React.useCallback(
     (
-      layers: LayerType[],
       sketchViewModel: __esri.SketchViewModel,
       setter: React.Dispatch<React.SetStateAction<boolean>>,
       sketchEventSetter: React.Dispatch<any>,
@@ -565,11 +564,6 @@ function MapWidgets({ mapView }: Props) {
             return;
           }
 
-          // get the layer uuid
-          const layer = layers.find(
-            (layer) => layer.layerId === graphic.layer.id,
-          );
-
           // get the predefined attributes using the id of the clicked button
           const uuid = generateUUID();
           let layerType: LayerTypeName = 'Samples';
@@ -583,8 +577,8 @@ function MapWidgets({ mapView }: Props) {
           } else {
             graphic.attributes = {
               ...sampleAttributes[id],
-              DECISIONUNITUUID: layer?.uuid,
-              DECISIONUNIT: layer?.label,
+              DECISIONUNITUUID: graphic.layer.id,
+              DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',
@@ -702,11 +696,10 @@ function MapWidgets({ mapView }: Props) {
   const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   React.useEffect(() => {
     if (!sketchVM || sketchEventsInitialized) return;
-    setupEvents(layers, sketchVM, setSketchVMActive, setUpdateSketchEvent);
+    setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
 
     setSketchEventsInitialized(true);
   }, [
-    layers,
     sketchVM,
     setupEvents,
     sketchEventsInitialized,
@@ -725,16 +718,10 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState<any>(null);
   React.useEffect(() => {
     if (!aoiSketchVM || aoiSketchEventsInitialized) return;
-    setupEvents(
-      layers,
-      aoiSketchVM,
-      setAoiSketchVMActive,
-      setAoiUpdateSketchEvent,
-    );
+    setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
   }, [
-    layers,
     aoiSketchVM,
     setupEvents,
     aoiSketchEventsInitialized,
@@ -1084,7 +1071,7 @@ function MapWidgets({ mapView }: Props) {
     ) as __esri.GroupLayer;
 
     // Get any graphics that have a contam value
-    if (trainingMode) {
+    if (trainingMode && groupLayer) {
       groupLayer.layers.forEach((layer) => {
         if (layer.type !== 'graphics') return;
 

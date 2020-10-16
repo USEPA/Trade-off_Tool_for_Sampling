@@ -800,7 +800,7 @@ function useEditsLayerStorage() {
     ) {
       const sketchLayer = new GraphicsLayer({
         title: editsLayer.label,
-        id: editsLayer.layerId,
+        id: editsLayer.uuid,
         visible: editsLayer.visible,
         listMode: editsLayer.listMode,
       });

@@ -725,7 +725,9 @@ function FilePanel() {
 
     const visible = layerType.value === 'Contamination Map' ? false : true;
     const listMode = layerType.value === 'Contamination Map' ? 'hide' : 'show';
+    const layerUuid = generateUUID();
     const graphicsLayer = new GraphicsLayer({
+      id: layerUuid,
       title: layerName,
       visible,
       listMode,
@@ -734,7 +736,7 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
-      uuid: generateUUID(),
+      uuid: layerUuid,
       layerId: graphicsLayer.id,
       portalId: '',
       value: layerName,
