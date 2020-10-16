@@ -22,6 +22,7 @@ import { SketchProvider, SketchContext } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
 import { useSessionStorage } from 'utils/hooks';
+import { getSampleTableColumns } from 'utils/sketchUtils';
 import { isIE } from 'utils/utils';
 // config
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
@@ -34,7 +35,6 @@ const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
 var startY = 0;
-const includeUnits = false;
 
 const gloablStyles = css`
   html {
@@ -228,6 +228,7 @@ function App() {
     setTablePanelExpanded,
     tablePanelHeight,
     setTablePanelHeight,
+    trainingMode,
   } = React.useContext(NavigationContext);
   const { layers, selectedSampleIds, setSelectedSampleIds } = React.useContext(
     SketchContext,
@@ -552,138 +553,10 @@ function App() {
                                 },
                               ]}
                               getColumns={(tableWidth: any) => {
-                                const columnWidth = tableWidth / 18 - 1;
-
-                                return [
-                                  {
-                                    Header: 'PERMANENT_IDENTIFIER',
-                                    accessor: 'PERMANENT_IDENTIFIER',
-                                    width: 0,
-                                    show: false,
-                                  },
-                                  {
-                                    Header: 'DECISIONUNITUUID',
-                                    accessor: 'DECISIONUNITUUID',
-                                    width: 0,
-                                    show: false,
-                                  },
-                                  {
-                                    Header: 'Layer',
-                                    accessor: 'DECISIONUNIT',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: 'Sample Type',
-                                    accessor: 'TYPE',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Time to Prepare Kits ${
-                                      includeUnits ? '(person hrs/sample)' : ''
-                                    }`,
-                                    accessor: 'TTPK',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Time to Collect ${
-                                      includeUnits ? '(person hrs/sample)' : ''
-                                    }`,
-                                    accessor: 'TTC',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Time to Analyze ${
-                                      includeUnits ? '(person hrs/sample)' : ''
-                                    }`,
-                                    accessor: 'TTA',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Total Time per Sample ${
-                                      includeUnits ? '(person hrs/sample)' : ''
-                                    }`,
-                                    accessor: 'TTPS',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Limit of Detection ${
-                                      includeUnits ? '(CFU)' : ''
-                                    } Porous`,
-                                    accessor: 'LOD_P',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Limit of Detection ${
-                                      includeUnits ? '(CFU)' : ''
-                                    } Nonporous`,
-                                    accessor: 'LOD_NON',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Material Cost ${
-                                      includeUnits ? '($/sample)' : ''
-                                    }`,
-                                    accessor: 'MCPS',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Total Cost Per Sample ${
-                                      includeUnits
-                                        ? '(Labor + Material + Waste)'
-                                        : ''
-                                    }`,
-                                    accessor: 'TCPS',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Waste Volume ${
-                                      includeUnits ? '(L/sample)' : ''
-                                    }`,
-                                    accessor: 'WVPS',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Waste Weight ${
-                                      includeUnits ? '(lbs/sample)' : ''
-                                    }`,
-                                    accessor: 'WWPS',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Reference Surface Area ${
-                                      includeUnits ? '(sq inch)' : ''
-                                    }`,
-                                    accessor: 'SA',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: `Actual Surface Area ${
-                                      includeUnits ? '(sq inch)' : ''
-                                    }`,
-                                    accessor: 'AA',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: 'Equivalent TOTS Samples',
-                                    accessor: 'AC',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: 'Notes',
-                                    accessor: 'Notes',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: 'Analysis Labor Cost',
-                                    accessor: 'ALC',
-                                    width: columnWidth,
-                                  },
-                                  {
-                                    Header: 'Analysis Material Cost',
-                                    accessor: 'AMC',
-                                    width: columnWidth,
-                                  },
-                                ];
+                                return getSampleTableColumns({
+                                  tableWidth,
+                                  includeContaminationFields: trainingMode,
+                                });
                               }}
                             />
                           </div>
