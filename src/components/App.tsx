@@ -551,6 +551,10 @@ function App() {
                                   id: 'TYPE',
                                   desc: false,
                                 },
+                                {
+                                  id: 'PERMANENT_IDENTIFIER',
+                                  desc: false,
+                                },
                               ]}
                               getColumns={(tableWidth: any) => {
                                 return getSampleTableColumns({

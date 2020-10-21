@@ -207,11 +207,12 @@ function ReactTable({
     totalColumnsWidth: number;
   } = useTable(
     {
+      autoResetSortBy: false,
       columns,
       data,
       defaultColumn,
       initialState: { selectedRowIds: initialSelectedRowIds, sortBy } as any,
-    },
+    } as any,
     useResizeColumns,
     useBlockLayout,
     useFlexLayout,
