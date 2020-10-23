@@ -321,7 +321,7 @@ function ReactTable({
                       role="gridcell"
                       {...cell.getCellProps()}
                     >
-                      {column.Render ? column.Render(cell) : cell.value}
+                      {cell.render('Cell')}
                     </div>
                   );
                 })}
