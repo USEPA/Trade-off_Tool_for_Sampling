@@ -587,6 +587,18 @@ function App() {
                                           onClick={(event) => {
                                             event.stopPropagation();
 
+                                            // select the sample
+                                            setSelectedSampleIds([
+                                              {
+                                                PERMANENT_IDENTIFIER:
+                                                  row.original
+                                                    .PERMANENT_IDENTIFIER,
+                                                DECISIONUNITUUID:
+                                                  row.original.DECISIONUNITUUID,
+                                              },
+                                            ]);
+
+                                            // zoom to the graphic
                                             if (!mapView) return;
                                             mapView.goTo(row.original.graphic);
                                             mapView.zoom = mapView.zoom - 1;
