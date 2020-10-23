@@ -27,7 +27,6 @@ import { isIE } from 'utils/utils';
 // config
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 import { unsupportedBrowserMessage } from 'config/errorMessages';
-import { AttributeItems } from 'config/sampleAttributes';
 // styles
 import '@reach/dialog/styles.css';
 
@@ -218,6 +217,18 @@ const sampleTableHeaderStyles = css`
   font-weight: bold;
 `;
 
+const zoomButtonContainerStyles = css`
+  text-align: center;
+`;
+
+const zoomButtonStyles = css`
+  background-color: transparent;
+  color: black;
+  margin: 0;
+  padding: 3px 6px;
+  font-size: 16px;
+`;
+
 function App() {
   const { calculateResults } = React.useContext(CalculateContext);
   const {
@@ -230,9 +241,12 @@ function App() {
     setTablePanelHeight,
     trainingMode,
   } = React.useContext(NavigationContext);
-  const { layers, selectedSampleIds, setSelectedSampleIds } = React.useContext(
-    SketchContext,
-  );
+  const {
+    mapView,
+    layers,
+    selectedSampleIds,
+    setSelectedSampleIds,
+  } = React.useContext(SketchContext);
 
   useSessionStorage();
 
@@ -302,12 +316,15 @@ function App() {
   }, [totsRef]);
 
   // count the number of samples
-  const sampleData: AttributeItems[] = [];
+  const sampleData: any[] = [];
   layers.forEach((layer) => {
     if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
     if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
       layer.sketchLayer.graphics.forEach((sample) => {
-        sampleData.push(sample.attributes);
+        sampleData.push({
+          graphic: sample,
+          ...sample.attributes,
+        });
       });
     }
   });
@@ -557,11 +574,35 @@ function App() {
                                 },
                               ]}
                               getColumns={(tableWidth: any) => {
-                                return getSampleTableColumns({
-                                  tableWidth,
-                                  includeContaminationFields: trainingMode,
-                                  includeUnits: true,
-                                });
+                                return [
+                                  {
+                                    Header: () => null,
+                                    id: 'zoom-button',
+                                    renderCell: true,
+                                    width: 30,
+                                    Cell: ({ row }: { row: any }) => (
+                                      <div css={zoomButtonContainerStyles}>
+                                        <button
+                                          css={zoomButtonStyles}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+
+                                            if (!mapView) return;
+                                            mapView.goTo(row.original.graphic);
+                                            mapView.zoom = mapView.zoom - 1;
+                                          }}
+                                        >
+                                          <i className="fas fa-search-plus" />
+                                        </button>
+                                      </div>
+                                    ),
+                                  },
+                                  ...getSampleTableColumns({
+                                    tableWidth,
+                                    includeContaminationFields: trainingMode,
+                                    includeUnits: true,
+                                  }),
+                                ];
                               }}
                             />
                           </div>
