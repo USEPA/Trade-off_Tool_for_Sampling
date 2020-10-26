@@ -48,6 +48,7 @@ import {
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
+import { reactSelectStyles } from 'styles';
 import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
@@ -203,7 +204,6 @@ const textStyles = css`
 const sketchAoiButtonStyles = css`
   background-color: white;
   color: black;
-  margin: 0 5px 0 0;
 
   &:hover,
   &:focus {
@@ -271,6 +271,11 @@ const inputStyles = css`
   padding-left: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+`;
+
+const inlineSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
 `;
 
 const widthInputStyles = css`
@@ -401,6 +406,10 @@ const lineSeparatorStyles = css`
   border-bottom: 1px solid #d8dfe2;
 `;
 
+const radioLabelStyles = css`
+  padding-left: 0.375rem;
+`;
+
 // --- components (LocateSamples) ---
 type GenerateRandomType = {
   status: 'none' | 'fetching' | 'success' | 'failure' | 'exceededTransferLimit';
@@ -409,7 +418,12 @@ type GenerateRandomType = {
 
 function LocateSamples() {
   const { setOptions } = React.useContext(DialogContext);
-  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
+  const {
+    setGoTo,
+    setGoToOptions,
+    trainingMode,
+    setTrainingMode,
+  } = React.useContext(NavigationContext);
   const {
     autoZoom,
     setAutoZoom,
@@ -570,21 +584,6 @@ function LocateSamples() {
       data: [],
     });
 
-    if (aoiSketchLayer.sketchLayer.type === 'graphics') {
-      // remove the graphics from the generate random mask
-      const editsCopy = updateLayerEdits({
-        edits,
-        layer: aoiSketchLayer,
-        type: 'delete',
-        changes: aoiSketchLayer.sketchLayer.graphics,
-      });
-
-      aoiSketchLayer.sketchLayer.removeAll();
-
-      // update the edits state
-      setEdits(editsCopy);
-    }
-
     // put the sketch layer on the map, if it isn't there already
     const layerIndex = map.layers.findIndex(
       (layer) => layer.id === aoiSketchLayer.layerId,
@@ -617,13 +616,21 @@ function LocateSamples() {
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount) return;
 
+    const aoiMaskLayer: LayerType | null =
+      generateRandomMode === 'draw'
+        ? aoiSketchLayer
+        : generateRandomMode === 'file'
+        ? selectedAoiFile
+        : null;
+    if (!aoiMaskLayer) return;
+
     setGenerateRandomResponse({ status: 'fetching', data: [] });
 
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
         let graphics: __esri.GraphicProperties[] = [];
-        if (aoiSketchLayer?.sketchLayer?.type === 'graphics') {
-          graphics = aoiSketchLayer.sketchLayer.graphics.toArray();
+        if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
+          graphics = aoiMaskLayer.sketchLayer.graphics.toArray();
         }
 
         // create a feature set for communicating with the GPServer
@@ -753,19 +760,21 @@ function LocateSamples() {
                 changes: collection,
               });
 
-              // remove the graphics from the generate random mask
-              if (
-                aoiSketchLayer &&
-                aoiSketchLayer.sketchLayer.type === 'graphics'
-              ) {
-                editsCopy = updateLayerEdits({
-                  edits: editsCopy,
-                  layer: aoiSketchLayer,
-                  type: 'delete',
-                  changes: aoiSketchLayer.sketchLayer.graphics,
-                });
+              if (generateRandomMode === 'draw') {
+                // remove the graphics from the generate random mask
+                if (
+                  aoiMaskLayer &&
+                  aoiMaskLayer.sketchLayer.type === 'graphics'
+                ) {
+                  editsCopy = updateLayerEdits({
+                    edits: editsCopy,
+                    layer: aoiMaskLayer,
+                    type: 'delete',
+                    changes: aoiMaskLayer.sketchLayer.graphics,
+                  });
 
-                aoiSketchLayer.sketchLayer.removeAll();
+                  aoiMaskLayer.sketchLayer.removeAll();
+                }
               }
 
               // update the edits state
@@ -786,11 +795,13 @@ function LocateSamples() {
               data: graphicsToAdd,
             });
 
-            if (
-              aoiSketchLayer &&
-              aoiSketchLayer.sketchLayer.type === 'graphics'
-            ) {
-              aoiSketchLayer.sketchLayer.removeAll();
+            if (generateRandomMode === 'draw') {
+              if (
+                aoiMaskLayer &&
+                aoiMaskLayer.sketchLayer.type === 'graphics'
+              ) {
+                aoiMaskLayer.sketchLayer.removeAll();
+              }
             }
           })
           .catch((err) => {
@@ -1109,6 +1120,13 @@ function LocateSamples() {
   const [editScenarioVisible, setEditScenarioVisible] = React.useState(false);
   const [addLayerVisible, setAddLayerVisible] = React.useState(false);
   const [editLayerVisible, setEditLayerVisible] = React.useState(false);
+  const [generateRandomMode, setGenerateRandomMode] = React.useState<
+    'draw' | 'file'
+  >('draw');
+  const [
+    selectedAoiFile,
+    setSelectedAoiFile,
+  ] = React.useState<LayerType | null>(null);
 
   // get a list of scenarios from edits
   const scenarios = getScenarios(edits);
@@ -1863,40 +1881,113 @@ function LocateSamples() {
                   {sketchLayer?.layerType !== 'VSP' && (
                     <React.Fragment>
                       <p>
-                        Click “Draw Sampling Mask” to draw a boundary on your
-                        map within which to place samples. Select a Sample Type
-                        from the menu and specify the number of samples to add.
-                        Click Submit to add samples.
+                        Select "Draw Sampling Mask" to draw a boundary on your
+                        map for placing samples or select "Use Imported Area of
+                        Interest" to use an Area of Interest file to place
+                        samples. Select a Sample Type from the menu and specify
+                        the number of samples to add. Click Submit to add
+                        samples.
                       </p>
-                      <button
-                        id="sampling-mask"
-                        title="Draw Sampling Mask"
-                        className="sketch-button"
-                        onClick={() => {
-                          if (!aoiSketchLayer) return;
-                          if (
-                            aoiSketchLayer.sketchLayer.type === 'graphics' &&
-                            aoiSketchLayer.sketchLayer.graphics.length === 0
-                          ) {
-                            sketchAoiButtonClick();
-                            return;
-                          }
+                      <div>
+                        <input
+                          id="draw-aoi"
+                          type="radio"
+                          name="mode"
+                          value="Draw area of Interest"
+                          checked={generateRandomMode === 'draw'}
+                          onChange={(ev) => {
+                            setGenerateRandomMode('draw');
 
-                          setOptions({
-                            title: 'Would you like to continue?',
-                            ariaLabel: 'Would you like to continue?',
-                            description:
-                              'There is already a sample mask on the map. If you continue, the existing sample mask will be deleted.',
-                            onContinue: sketchAoiButtonClick,
-                          });
-                        }}
-                        css={sketchAoiButtonStyles}
-                      >
-                        <span css={sketchAoiTextStyles}>
-                          <i className="fas fa-draw-polygon" />{' '}
-                          <span>Draw Sampling Mask</span>
-                        </span>
-                      </button>
+                            const maskLayers = layers.filter(
+                              (layer) => layer.layerType === 'Sampling Mask',
+                            );
+                            setAoiSketchLayer(maskLayers[0]);
+                          }}
+                        />
+                        <label htmlFor="draw-aoi" css={radioLabelStyles}>
+                          Draw Sampling Mask
+                        </label>
+                      </div>
+                      <div>
+                        <input
+                          id="use-aoi-file"
+                          type="radio"
+                          name="mode"
+                          value="Use Imported Area of Interest"
+                          checked={generateRandomMode === 'file'}
+                          onChange={(ev) => {
+                            setGenerateRandomMode('file');
+
+                            setAoiSketchLayer(null);
+
+                            if (!selectedAoiFile) {
+                              const aoiLayers = layers.filter(
+                                (layer) =>
+                                  layer.layerType === 'Area of Interest',
+                              );
+                              setSelectedAoiFile(aoiLayers[0]);
+                            }
+                          }}
+                        />
+                        <label htmlFor="use-aoi-file" css={radioLabelStyles}>
+                          Use Imported Area of Interest
+                        </label>
+                      </div>
+
+                      {generateRandomMode === 'draw' && (
+                        <button
+                          id="sampling-mask"
+                          title="Draw Sampling Mask"
+                          className="sketch-button"
+                          onClick={() => {
+                            if (!aoiSketchLayer) return;
+
+                            sketchAoiButtonClick();
+                          }}
+                          css={sketchAoiButtonStyles}
+                        >
+                          <span css={sketchAoiTextStyles}>
+                            <i className="fas fa-draw-polygon" />{' '}
+                            <span>Draw Sampling Mask</span>
+                          </span>
+                        </button>
+                      )}
+                      {generateRandomMode === 'file' && (
+                        <React.Fragment>
+                          <label htmlFor="aoi-mask-select-input">
+                            Area of Interest Mask
+                          </label>
+                          <div css={inlineMenuStyles}>
+                            <Select
+                              id="aoi-mask-select"
+                              inputId="aoi-mask-select-input"
+                              css={inlineSelectStyles}
+                              styles={reactSelectStyles}
+                              isClearable={true}
+                              value={selectedAoiFile}
+                              onChange={(ev) =>
+                                setSelectedAoiFile(ev as LayerType)
+                              }
+                              options={layers.filter(
+                                (layer) =>
+                                  layer.layerType === 'Area of Interest',
+                              )}
+                            />
+                            <button
+                              css={addButtonStyles}
+                              onClick={(ev) => {
+                                setGoTo('addData');
+                                setGoToOptions({
+                                  from: 'file',
+                                  layerType: 'Area of Interest',
+                                });
+                              }}
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </React.Fragment>
+                      )}
                       <br />
                       <label htmlFor="sample-type-select-input">
                         Sample Type
@@ -1931,23 +2022,27 @@ function LocateSamples() {
                       {generateRandomResponse.status ===
                         'exceededTransferLimit' &&
                         generateRandomExceededTransferLimitMessage}
-                      {numberRandomSamples &&
+                      {((generateRandomMode === 'draw' &&
+                        numberRandomSamples &&
                         aoiSketchLayer?.sketchLayer.type === 'graphics' &&
-                        aoiSketchLayer.sketchLayer.graphics.length > 0 && (
-                          <button
-                            css={submitButtonStyles}
-                            onClick={randomSamples}
-                          >
-                            {generateRandomResponse.status !== 'fetching' &&
-                              'Submit'}
-                            {generateRandomResponse.status === 'fetching' && (
-                              <React.Fragment>
-                                <i className="fas fa-spinner fa-pulse" />
-                                &nbsp;&nbsp;Loading...
-                              </React.Fragment>
-                            )}
-                          </button>
-                        )}
+                        aoiSketchLayer.sketchLayer.graphics.length > 0) ||
+                        (generateRandomMode === 'file' &&
+                          selectedAoiFile?.sketchLayer.type === 'graphics' &&
+                          selectedAoiFile.sketchLayer.graphics.length > 0)) && (
+                        <button
+                          css={submitButtonStyles}
+                          onClick={randomSamples}
+                        >
+                          {generateRandomResponse.status !== 'fetching' &&
+                            'Submit'}
+                          {generateRandomResponse.status === 'fetching' && (
+                            <React.Fragment>
+                              <i className="fas fa-spinner fa-pulse" />
+                              &nbsp;&nbsp;Loading...
+                            </React.Fragment>
+                          )}
+                        </button>
+                      )}
                     </React.Fragment>
                   )}
                 </div>
