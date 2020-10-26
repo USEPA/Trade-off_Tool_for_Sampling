@@ -204,7 +204,6 @@ const textStyles = css`
 const sketchAoiButtonStyles = css`
   background-color: white;
   color: black;
-  margin: 0 5px 0 0;
 
   &:hover,
   &:focus {
@@ -405,6 +404,10 @@ const trainingStyles = css`
 
 const lineSeparatorStyles = css`
   border-bottom: 1px solid #d8dfe2;
+`;
+
+const radioLabelStyles = css`
+  padding-left: 0.375rem;
 `;
 
 // --- components (LocateSamples) ---
@@ -1878,10 +1881,12 @@ function LocateSamples() {
                   {sketchLayer?.layerType !== 'VSP' && (
                     <React.Fragment>
                       <p>
-                        Click “Draw Sampling Mask” to draw a boundary on your
-                        map within which to place samples. Select a Sample Type
-                        from the menu and specify the number of samples to add.
-                        Click Submit to add samples.
+                        Select "Draw Sampling Mask" to draw a boundary on your
+                        map for placing samples or select "Use Imported Area of
+                        Interest" to use an Area of Interest file to place
+                        samples. Select a Sample Type from the menu and specify
+                        the number of samples to add. Click Submit to add
+                        samples.
                       </p>
                       <div>
                         <input
@@ -1899,7 +1904,9 @@ function LocateSamples() {
                             setAoiSketchLayer(maskLayers[0]);
                           }}
                         />
-                        <label htmlFor="draw-aoi">Draw Area of Interest</label>
+                        <label htmlFor="draw-aoi" css={radioLabelStyles}>
+                          Draw Sampling Mask
+                        </label>
                       </div>
                       <div>
                         <input
@@ -1922,7 +1929,7 @@ function LocateSamples() {
                             }
                           }}
                         />
-                        <label htmlFor="use-aoi-file">
+                        <label htmlFor="use-aoi-file" css={radioLabelStyles}>
                           Use Imported Area of Interest
                         </label>
                       </div>
