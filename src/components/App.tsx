@@ -33,6 +33,7 @@ import '@reach/dialog/styles.css';
 const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
+const minMapHeight = 180;
 var startY = 0;
 
 const gloablStyles = css`
@@ -477,10 +478,7 @@ function App() {
                               const mouseOffset = startY - e.clientY;
                               let newMapHeight = mapHeight - mouseOffset;
                               let newTableHeight = tableHeight + mouseOffset;
-                              const maxTableHeight =
-                                panelHeight -
-                                esrifooterheight -
-                                buttonDiv.clientHeight;
+                              const maxTableHeight = panelHeight - minMapHeight;
 
                               // prevent map being taller then content box
                               if (

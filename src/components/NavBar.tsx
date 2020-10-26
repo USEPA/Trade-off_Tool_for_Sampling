@@ -271,12 +271,10 @@ const floatPanelTableContainer = css`
 
 const floatPanelTableCellContainer = css`
   display: table-cell;
-  vertical-align: middle;
 `;
 
 const collapsePanelButton = css`
-  margin: 0;
-  margin-bottom: 10px !important;
+  margin: 10px 0 !important;
   display: flex;
   justify-content: center;
   width: ${panelCollapseButtonWidth};
