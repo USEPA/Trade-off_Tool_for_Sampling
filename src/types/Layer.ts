@@ -47,3 +47,8 @@ export type UrlLayerType = {
   type: string;
   layerId: string;
 };
+
+export type FieldInfos = {
+  fieldName: string;
+  label: string;
+}[];

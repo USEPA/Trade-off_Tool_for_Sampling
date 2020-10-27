@@ -26,9 +26,10 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
-import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
-import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import { geoprocessorFetch } from 'utils/fetchUtils';
+import { useDynamicPopup } from 'utils/hooks';
+import { updateLayerEdits } from 'utils/sketchUtils';
 import { chunkArray } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
@@ -167,6 +168,8 @@ function Calculate() {
     setInputSurfaceArea,
     setUpdateContextValues,
   } = React.useContext(CalculateContext);
+
+  const getPopupTemplate = useDynamicPopup();
 
   // callback for closing the results panel when leaving this tab
   const closePanel = React.useCallback(() => {
