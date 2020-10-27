@@ -9,7 +9,7 @@ import { FieldInfos, LayerType } from 'types/Layer';
 // utils
 import { getSketchableLayers } from 'utils/sketchUtils';
 // styles
-import { colors } from 'styles';
+import { colors, linkButtonStyles } from 'styles';
 
 type SaveStatusType = 'none' | 'success' | 'failure';
 
@@ -59,25 +59,6 @@ const saveButtonContainerStyles = css`
 
 const inputContainerStyles = css`
   margin-bottom: 10px;
-`;
-
-const LinkButtonStyles = css`
-  display: inline;
-  margin-bottom: 0;
-  margin-left: 0.25rem;
-  padding: 0;
-  border: none;
-  font-size: 87.5%;
-  text-decoration: underline;
-  color: #0071bc;
-  background-color: transparent;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    text-decoration: none;
-    color: #4c2c92;
-  }
 `;
 
 const iconStyles = css`
@@ -258,7 +239,7 @@ function MapPopup({
               </table>
             )}
             <button
-              css={LinkButtonStyles}
+              css={linkButtonStyles}
               onClick={() => setShowMore(!showMore)}
             >
               <i

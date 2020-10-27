@@ -1,27 +1,9 @@
 /** @jsx jsx */
 
 import React, { ReactNode } from 'react';
-import { jsx, css } from '@emotion/core';
-
-// --- styled components ---
-const LinkButtonStyles = css`
-  display: inline;
-  margin-bottom: 0;
-  margin-left: 0.25rem;
-  padding: 0;
-  border: none;
-  font-size: 87.5%;
-  text-decoration: underline;
-  color: #0071bc;
-  background-color: transparent;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    text-decoration: none;
-    color: #4c2c92;
-  }
-`;
+import { jsx } from '@emotion/core';
+// styles
+import { linkButtonStyles } from 'styles';
 
 // --- components ---
 type Props = {
@@ -40,7 +22,7 @@ function ShowLessMore({ text, charLimit }: Props) {
       <React.Fragment>
         {truncated ? `${text.substring(0, charLimit)}...` : text}
         <button
-          css={LinkButtonStyles}
+          css={linkButtonStyles}
           onClick={(ev) => setTruncated(!truncated)}
         >
           Show {truncated ? 'more' : 'less'}
@@ -54,7 +36,7 @@ function ShowLessMore({ text, charLimit }: Props) {
       <React.Fragment>
         {truncated ? '...' : text}
         <button
-          css={LinkButtonStyles}
+          css={linkButtonStyles}
           onClick={(ev) => setTruncated(!truncated)}
         >
           Show {truncated ? 'more' : 'less'}

@@ -24,7 +24,7 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // styles
-import { colors } from 'styles';
+import { colors, linkButtonStyles } from 'styles';
 import { LayerEditsType, ScenarioEditsType } from 'types/Edits';
 
 export type SaveStatusType =
@@ -345,22 +345,9 @@ function EditScenario({
   );
 }
 
-const LinkButtonStyles = css`
-  display: inline;
-  margin-bottom: 0;
-  padding: 0;
-  border: none;
-  font-size: 87.5%;
-  text-decoration: underline;
-  color: #0071bc;
-  background-color: transparent;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    text-decoration: none;
-    color: #4c2c92;
-  }
+const modLinkButtonStyles = css`
+  ${linkButtonStyles}
+  margin-left: 0;
 `;
 
 // --- components (EditLayer) ---
@@ -540,7 +527,7 @@ function EditLayer({
       <p>
         Enter the name for a new empty sample layer and click save or use the{' '}
         <button
-          css={LinkButtonStyles}
+          css={modLinkButtonStyles}
           onClick={(ev) => {
             setGoTo('addData');
             setGoToOptions({
