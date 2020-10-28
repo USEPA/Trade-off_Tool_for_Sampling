@@ -28,23 +28,6 @@ const containerStyles = css`
   }
 `;
 
-const headerStyles = css`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const buttonStyles = css`
-  padding: 5px;
-  background-color: white;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    background-color: #f0f0f0;
-  }
-`;
-
 const noteStyles = css`
   height: 75px;
   width: 100%;
@@ -204,17 +187,6 @@ function MapPopup({
 
   return (
     <div css={containerStyles}>
-      <div css={headerStyles}>
-        <div
-          id="Delete"
-          title="Delete"
-          className="sketch-button"
-          onClick={(ev) => onClick(ev, feature, 'Delete')}
-          css={buttonStyles}
-        >
-          <i className="fas fa-trash-alt" />
-        </div>
-      </div>
       {selectedGraphicsIds.length === 1 && (
         <React.Fragment>
           <div css={inputContainerStyles}>
@@ -225,7 +197,7 @@ function MapPopup({
                     if (!showMore && index > 3) return null;
 
                     return (
-                      <tr>
+                      <tr key={index}>
                         <th className="esri-feature__field-header">
                           {fieldInfo.label}
                         </th>

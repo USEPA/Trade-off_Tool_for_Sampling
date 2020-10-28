@@ -10,6 +10,7 @@ export type PolygonSymbol = {
 export type SelectedSampleType = {
   PERMANENT_IDENTIFIER: string;
   DECISIONUNITUUID: string;
+  selection_method: 'row-click' | 'sample-click';
 };
 
 export type AttributeItems = {

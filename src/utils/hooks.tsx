@@ -684,7 +684,7 @@ export function useCalculatePlan() {
 // This is primarily needed for sample popups.
 export function useDynamicPopup() {
   const { Collection } = useEsriModulesContext();
-  const { edits, setEdits, layers, mapView } = React.useContext(SketchContext);
+  const { edits, setEdits, layers } = React.useContext(SketchContext);
 
   // Makes all sketch buttons no longer active by removing
   // the sketch-button-selected class.
@@ -731,24 +731,6 @@ export function useDynamicPopup() {
     );
     graphic.attributes = tempGraphic.attributes;
 
-    if (type === 'Delete') {
-      changes.add(graphic);
-
-      // make a copy of the edits context variable
-      const editsCopy = updateLayerEdits({
-        edits,
-        layer: tempSketchLayer,
-        type: 'delete',
-        changes,
-      });
-
-      setEdits(editsCopy);
-
-      tempSketchLayer.sketchLayer.remove(graphic);
-
-      // close the popup
-      mapView?.popup.close();
-    }
     if (type === 'Save') {
       changes.add(graphic);
 
@@ -907,9 +889,24 @@ export function useDynamicPopup() {
         fieldInfos.push({ fieldName: 'CONTAMUNIT', label: 'Unit of Measure' });
       }
 
+      const actions = new Collection<any>();
+      actions.addMany([
+        {
+          title: 'Delete Sample',
+          id: 'delete',
+          className: 'esri-icon-trash',
+        },
+        {
+          title: 'View In Table',
+          id: 'table',
+          className: 'esri-icon-table',
+        },
+      ]);
+
       return {
         title: '',
         content: (feature: any) => getSampleTemplate(feature, fieldInfos),
+        actions,
       };
     }
 
