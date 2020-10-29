@@ -531,8 +531,6 @@ function Calculate() {
 
         Promise.all(requests)
           .then((responses: any) => {
-            console.log('GPServer contamination responses: ', responses);
-
             // perform calculations to update talley in nav bar
             setUpdateContextValues(true);
 

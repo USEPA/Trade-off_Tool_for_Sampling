@@ -450,7 +450,6 @@ function FilePanel() {
     const analyzeUrl = `${sharingUrl}/content/features/analyze`;
     fetchPostFile(analyzeUrl, params, file.file)
       .then((res: any) => {
-        console.log('analyzeResponse: ', res);
         setAnalyzeResponse(res);
       })
       .catch((err) => {
@@ -542,7 +541,6 @@ function FilePanel() {
     };
     fetchPostFile(generateUrl, params, file.file)
       .then((res: any) => {
-        console.log('generate res: ', res);
         if (res.error) {
           setUploadStatus('import-error');
           return;
@@ -632,8 +630,6 @@ function FilePanel() {
 
             Promise.all(requests)
               .then((responses) => {
-                console.log('VSP responses: ', responses);
-
                 // get the first result for filling in metadata
                 let firstResult = responses[0].results[0].value;
                 const features: any[] = [];
@@ -1061,7 +1057,6 @@ function FilePanel() {
       };
       fetchPost(kmlUrl, params)
         .then((res: any) => {
-          console.log('kml res: ', res);
           setGenerateResponse(res);
         })
         .catch((err) => {

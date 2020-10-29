@@ -58,7 +58,6 @@ export async function writeToStorage(
     const message = `New storage size would be ${
       storageSize + itemSize
     }K up from ${storageSize}K already in storage`;
-    console.log(message);
     console.error(e);
 
     setOptions({

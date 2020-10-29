@@ -684,7 +684,6 @@ function LocateSamples() {
         }
         Promise.all(requests)
           .then((responses: any) => {
-            console.log('generateRandom responses: ', responses);
             let res;
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
