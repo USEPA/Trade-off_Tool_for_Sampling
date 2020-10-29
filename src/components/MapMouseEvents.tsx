@@ -73,16 +73,36 @@ function MapMouseEvents({ mapView }: Props) {
           const sketchLayerId = tempWindow.sampleSketchVmInternalLayerId;
           const aoiSketchLayerId = tempWindow.aoiSketchVmInternalLayerId;
           const popupItems: __esri.Graphic[] = [];
+          const newIds: string[] = [];
           res.results.forEach((item: any) => {
             const layerId = item.graphic?.layer?.id;
             if (layerId === sketchLayerId || layerId === aoiSketchLayerId)
               return;
 
             popupItems.push(item.graphic);
+
+            // get a list of graphic ids
+            if (item.graphic.attributes?.PERMANENT_IDENTIFIER) {
+              newIds.push(item.graphic.attributes.PERMANENT_IDENTIFIER);
+            }
           });
 
+          const curIds: string[] = [];
+          mapView.popup.features.forEach((feature: any) => {
+            if (feature.attributes?.PERMANENT_IDENTIFIER) {
+              curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
+            }
+          });
+
+          // sort the id arrays
+          newIds.sort();
+          curIds.sort();
+
           // open the popup
-          if (popupItems.length > 0) {
+          if (
+            popupItems.length > 0 &&
+            curIds.toString() !== newIds.toString()
+          ) {
             const firstGeometry = popupItems[0].geometry as any;
             mapView.popup.open({
               location:
