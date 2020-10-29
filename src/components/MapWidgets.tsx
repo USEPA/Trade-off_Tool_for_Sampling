@@ -167,6 +167,11 @@ function MapWidgets({ mapView }: Props) {
       pointSymbol: polygonSymbol,
     });
 
+    const tempSvm = svm as any;
+    const tempWindow = window as any;
+    tempWindow.sampleSketchVmInternalLayerId =
+      tempSvm._internalGraphicsLayer.id;
+
     setSketchVM(svm);
   }, [
     SketchViewModel,
@@ -187,6 +192,10 @@ function MapWidgets({ mapView }: Props) {
       polygonSymbol,
       pointSymbol: polygonSymbol,
     });
+
+    const tempSvm = svm as any;
+    const tempWindow = window as any;
+    tempWindow.aoiSketchVmInternalLayerId = tempSvm._internalGraphicsLayer.id;
 
     setAoiSketchVM(svm);
   }, [
@@ -306,6 +315,10 @@ function MapWidgets({ mapView }: Props) {
       });
 
       sketchViewModel.on('update', (event) => {
+        // dock the popup when sketch tools are active
+        sketchViewModel.view.popup.dockEnabled =
+          event.state === 'complete' ? false : true;
+
         let isActive = event.state === 'complete' ? false : true;
         // the updates have completed add them to the edits variable
         if (event.state === 'complete' && !event.aborted) {

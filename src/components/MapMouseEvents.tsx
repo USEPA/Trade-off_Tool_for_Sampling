@@ -66,6 +66,32 @@ function MapMouseEvents({ mapView }: Props) {
               },
             ];
           });
+
+          // get all of the graphics within the click except for those associated
+          // with the sketch tools
+          const tempWindow = window as any;
+          const sketchLayerId = tempWindow.sampleSketchVmInternalLayerId;
+          const aoiSketchLayerId = tempWindow.aoiSketchVmInternalLayerId;
+          const popupItems: __esri.Graphic[] = [];
+          res.results.forEach((item: any) => {
+            const layerId = item.graphic?.layer?.id;
+            if (layerId === sketchLayerId || layerId === aoiSketchLayerId)
+              return;
+
+            popupItems.push(item.graphic);
+          });
+
+          // open the popup
+          if (popupItems.length > 0) {
+            const firstGeometry = popupItems[0].geometry as any;
+            mapView.popup.open({
+              location:
+                firstGeometry.type === 'point'
+                  ? firstGeometry
+                  : firstGeometry.centroid,
+              features: popupItems,
+            });
+          }
         })
         .catch((err: any) => console.error(err));
     },
