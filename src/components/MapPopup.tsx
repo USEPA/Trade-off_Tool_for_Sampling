@@ -48,28 +48,14 @@ const iconStyles = css`
   margin-right: 5px;
 `;
 
-const saveButtonStyles = (status: SaveStatusType) => {
-  let backgroundColor = '';
-  if (status === 'success') {
-    backgroundColor = `background-color: ${colors.green()};`;
+const saveButtonStyles = (status: SaveStatusType) => css`
+  margin: 5px 0;
+  ${status === 'failure' ? `background-color: ${colors.red()};` : ''}
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.65;
   }
-  if (status === 'failure') {
-    backgroundColor = `background-color: ${colors.red()};`;
-  }
-
-  return css`
-    margin: 5px 0;
-    ${backgroundColor}
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.65;
-    }
-  `;
-};
-
-const saveMessageStyles = css`
-  color: ${colors.green()};
 `;
 
 // --- components (FeatureTool) ---
@@ -287,11 +273,6 @@ function MapPopup({
                     </React.Fragment>
                   )}
                 </button>
-                {saveStatus === 'success' && (
-                  <div css={saveMessageStyles}>
-                    <i className="fas fa-check" /> Saved Successfully
-                  </div>
-                )}
               </div>
             </React.Fragment>
           )}
