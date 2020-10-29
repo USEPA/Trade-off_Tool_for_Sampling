@@ -87,6 +87,7 @@ function MapMouseEvents({ mapView }: Props) {
             }
           });
 
+          // get list of graphic ids currently in the popup
           const curIds: string[] = [];
           mapView.popup.features.forEach((feature: any) => {
             if (feature.attributes?.PERMANENT_IDENTIFIER) {
