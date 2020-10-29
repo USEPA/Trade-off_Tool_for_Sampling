@@ -16,9 +16,9 @@ import {
   getFeatureLayer,
   getFeatureLayers,
 } from 'utils/arcGisRestUtils';
+import { useDynamicPopup } from 'utils/hooks';
 import {
   deepCopyObject,
-  getPopupTemplate,
   getNextScenarioLayer,
   getSimplePopupTemplate,
   updateLayerEdits,
@@ -719,6 +719,7 @@ function ResultCard({ result }: ResultCardProps) {
     setUserDefinedOptions,
     setUserDefinedAttributes,
   } = React.useContext(SketchContext);
+  const getPopupTemplate = useDynamicPopup();
 
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = React.useState(false);

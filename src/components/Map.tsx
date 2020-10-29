@@ -58,6 +58,7 @@ function Map({ height }: Props) {
       zoom: 3,
       popup: {
         defaultPopupTemplateEnabled: true,
+        maxInlineActions: 5,
       },
       spatialReference: {
         wkid: 3857,

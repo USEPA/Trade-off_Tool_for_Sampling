@@ -153,9 +153,10 @@ type Props = {
   id: string;
   data: Array<any>;
   getColumns: Function;
+  idColumn: string;
   striped?: boolean;
   height: number;
-  initialSelectedRowIds: { [key: number]: boolean };
+  initialSelectedRowIds: any;
   onSelectionChange: Function;
   sortBy: any;
 };
@@ -164,6 +165,7 @@ function ReactTable({
   id,
   data,
   getColumns,
+  idColumn,
   striped = false,
   height,
   initialSelectedRowIds,
@@ -211,7 +213,10 @@ function ReactTable({
       columns,
       data,
       defaultColumn,
-      initialState: { selectedRowIds: initialSelectedRowIds, sortBy } as any,
+      initialState: {
+        selectedRowIds: initialSelectedRowIds.ids,
+        sortBy,
+      } as any,
     } as any,
     useResizeColumns,
     useBlockLayout,
@@ -226,6 +231,28 @@ function ReactTable({
     if (!node) return;
     setTableWidth(node.getBoundingClientRect().width);
   }, []);
+
+  React.useEffect(() => {
+    // don't scroll for row clicks
+    const ids = Object.keys(initialSelectedRowIds.ids);
+    if (
+      ids.length === 0 ||
+      initialSelectedRowIds.selectionMethod === 'row-click'
+    ) {
+      return;
+    }
+
+    // get the first row element
+    const firstRowId = ids[0];
+    const uuid = data[parseInt(firstRowId)].PERMANENT_IDENTIFIER;
+    const firstRow = document.getElementById(uuid);
+
+    // scroll the table down to the first row
+    const table = document.getElementById(id);
+    if (firstRow && table) {
+      table.scrollTop = firstRow.offsetTop - firstRow.offsetHeight;
+    }
+  }, [initialSelectedRowIds, data, id]);
 
   return (
     <div
@@ -297,6 +324,7 @@ function ReactTable({
             prepareRow(row);
             return (
               <div
+                id={tempRow.original[idColumn]}
                 className={`rt-tr ${striped ? 'rt-striped' : ''} ${
                   isEven ? '-odd' : '-even'
                 } ${selected ? 'rt-selected' : ''}`}

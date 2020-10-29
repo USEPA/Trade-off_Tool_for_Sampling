@@ -75,6 +75,10 @@ const gloablStyles = css`
     height: 1px;
     overflow: hidden;
   }
+
+  .esri-popup__action-text {
+    display: none;
+  }
 `;
 
 const errorContainerStyles = css`
@@ -342,16 +346,21 @@ function App() {
   }
 
   // determine which rows of the table should be selected
-  const initialSelectedRowIds: { [key: number]: boolean } = {};
+  const ids: { [key: number]: boolean } = {};
+  let selectionMethod: 'row-click' | 'sample-click' = 'sample-click';
   sampleData.forEach((sample, index) => {
-    if (
-      selectedSampleIds.findIndex(
-        (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
-      ) !== -1
-    ) {
-      initialSelectedRowIds[index] = true;
+    const selectedIndex = selectedSampleIds.findIndex(
+      (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
+    );
+    if (selectedIndex !== -1) {
+      ids[index] = true;
+      selectionMethod = selectedSampleIds[selectedIndex].selection_method;
     }
   });
+  const initialSelectedRowIds = {
+    selectionMethod,
+    ids,
+  };
 
   return (
     <React.Fragment>
@@ -525,6 +534,7 @@ function App() {
                             <ReactTable
                               id="tots-samples-table"
                               data={sampleData}
+                              idColumn={'PERMANENT_IDENTIFIER'}
                               striped={true}
                               height={tablePanelHeight - resizerHeight - 30}
                               initialSelectedRowIds={initialSelectedRowIds}
@@ -541,11 +551,19 @@ function App() {
                                         PERMANENT_IDENTIFIER,
                                     ) !== -1
                                   ) {
-                                    return selectedSampleIds.filter(
+                                    const samples = selectedSampleIds.filter(
                                       (item) =>
                                         item.PERMANENT_IDENTIFIER !==
                                         PERMANENT_IDENTIFIER,
                                     );
+
+                                    return samples.map((sample) => {
+                                      return {
+                                        PERMANENT_IDENTIFIER,
+                                        DECISIONUNITUUID,
+                                        selection_method: 'row-click',
+                                      };
+                                    });
                                   }
 
                                   return [
@@ -553,6 +571,7 @@ function App() {
                                     {
                                       PERMANENT_IDENTIFIER,
                                       DECISIONUNITUUID,
+                                      selection_method: 'row-click',
                                     },
                                   ];
                                 });
@@ -593,6 +612,7 @@ function App() {
                                                     .PERMANENT_IDENTIFIER,
                                                 DECISIONUNITUUID:
                                                   row.original.DECISIONUNITUUID,
+                                                selection_method: 'row-click',
                                               },
                                             ]);
 

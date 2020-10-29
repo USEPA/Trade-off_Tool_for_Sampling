@@ -1,3 +1,5 @@
+/** @jsx jsx */
+
 import { v4 as uuidv4 } from 'uuid';
 // types
 import {
@@ -6,7 +8,7 @@ import {
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
-import { LayerType, LayerTypeName } from 'types/Layer';
+import { LayerType } from 'types/Layer';
 import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
@@ -328,112 +330,6 @@ export function getSimplePopupTemplate(attributes: any) {
       },
     ],
   };
-}
-
-/**
- * Creates a popup that contains all of the attributes with human readable labels.
- * The attributes displayed depends on the type provided.
- * Note: Reference layers will return an empty object. Reference layers should not use
- *  this function for getting the popup.
- *
- * @param type - The layer type to get the popup for.
- * @param includeContaminationFields - If true the contamination map fields will be included in the samples popups.
- * @returns the json object to pass to the Esri PopupTemplate constructor.
- */
-export function getPopupTemplate(
-  type: LayerTypeName,
-  includeContaminationFields: boolean = false,
-) {
-  if (type === 'Sampling Mask') {
-    return {
-      title: '',
-      content: [
-        {
-          type: 'fields',
-          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
-        },
-      ],
-    };
-  }
-  if (type === 'Area of Interest') {
-    return {
-      title: '',
-      content: [
-        {
-          type: 'fields',
-          fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
-        },
-      ],
-    };
-  }
-  if (type === 'Contamination Map') {
-    return {
-      title: '',
-      content: [
-        {
-          type: 'fields',
-          fieldInfos: [
-            { fieldName: 'TYPE', label: 'Type' },
-            { fieldName: 'CONTAMTYPE', label: 'Contamination Type' },
-            { fieldName: 'CONTAMVAL', label: 'Activity' },
-            { fieldName: 'CONTAMUNIT', label: 'Unit of Measure' },
-          ],
-        },
-      ],
-    };
-  }
-  if (type === 'Samples' || type === 'VSP') {
-    const fieldInfos = [
-      { fieldName: 'TYPE', label: 'Sample Type' },
-      {
-        fieldName: 'TTPK',
-        label: 'Time to Prepare Kits (person hrs/sample)',
-      },
-      { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
-      { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
-      {
-        fieldName: 'TTPS',
-        label: 'Total Time per Sample (person hrs/sample)',
-      },
-      { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
-      {
-        fieldName: 'LOD_NON',
-        label: 'Limit of Detection (CFU) Nonporous',
-      },
-      { fieldName: 'MCPS', label: 'Material Cost ($/sample)' },
-      {
-        fieldName: 'TCPS',
-        label: 'Total Cost Per Sample (Labor + Material + Waste)',
-      },
-      { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
-      { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
-      { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
-      { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
-      { fieldName: 'AC', label: 'Number of Equivalent TOTS Samples' },
-      { fieldName: 'Notes', label: 'Notes' },
-      { fieldName: 'ALC', label: 'Analysis Labor Cost' },
-      { fieldName: 'AMC', label: 'Analysis Material Cost' },
-    ];
-
-    // add the contamination map related fields if necessary
-    if (includeContaminationFields) {
-      fieldInfos.push({ fieldName: 'CONTAMTYPE', label: 'Contamination Type' });
-      fieldInfos.push({ fieldName: 'CONTAMVAL', label: 'Activity' });
-      fieldInfos.push({ fieldName: 'CONTAMUNIT', label: 'Unit of Measure' });
-    }
-
-    return {
-      title: '',
-      content: [
-        {
-          type: 'fields',
-          fieldInfos,
-        },
-      ],
-    };
-  }
-
-  return {};
 }
 
 /**

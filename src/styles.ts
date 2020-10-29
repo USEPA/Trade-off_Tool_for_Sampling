@@ -1,3 +1,5 @@
+import { css } from '@emotion/core';
+
 const colors = {
   black: (alpha: number = 1) => `rgba(0, 0, 0, ${alpha})`, // #000,
   white: (alpha: number = 1) => `rgba(255, 255, 255, ${alpha})`, // #fff,
@@ -23,4 +25,23 @@ const reactSelectStyles = {
   },
 };
 
-export { colors, reactSelectStyles };
+const linkButtonStyles = css`
+  display: inline;
+  margin-bottom: 0;
+  margin-left: 0.25rem;
+  padding: 0;
+  border: none;
+  font-size: 87.5%;
+  text-decoration: underline;
+  color: #0071bc;
+  background-color: transparent;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+    color: #4c2c92;
+  }
+`;
+
+export { colors, reactSelectStyles, linkButtonStyles };

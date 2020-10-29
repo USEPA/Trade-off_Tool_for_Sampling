@@ -1,6 +1,10 @@
 /** @jsx jsx */
 
 import React from 'react';
+import ReactDOM from 'react-dom';
+import { jsx } from '@emotion/core';
+// components
+import MapPopup from 'components/MapPopup';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
@@ -18,11 +22,17 @@ import {
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
-import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
+import {
+  FieldInfos,
+  LayerType,
+  LayerTypeName,
+  PortalLayerType,
+  UrlLayerType,
+} from 'types/Layer';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
-import { findLayerInEdits, getPopupTemplate } from 'utils/sketchUtils';
+import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
   UserDefinedAttributes,
@@ -48,7 +58,6 @@ export async function writeToStorage(
     const message = `New storage size would be ${
       storageSize + itemSize
     }K up from ${storageSize}K already in storage`;
-    console.log(message);
     console.error(e);
 
     setOptions({
@@ -670,6 +679,240 @@ export function useCalculatePlan() {
   ]);
 }
 
+// Allows using a dynamicPopup that has access to react state/context.
+// This is primarily needed for sample popups.
+export function useDynamicPopup() {
+  const { Collection } = useEsriModulesContext();
+  const { edits, setEdits, layers } = React.useContext(SketchContext);
+
+  // Makes all sketch buttons no longer active by removing
+  // the sketch-button-selected class.
+  function deactivateButtons() {
+    const buttons = document.querySelectorAll('.sketch-button');
+
+    for (let i = 0; i < buttons.length; i++) {
+      buttons[i].classList.remove('sketch-button-selected');
+    }
+  }
+
+  // handles the sketch button clicks
+  const handleClick = (
+    ev: React.MouseEvent<HTMLElement>,
+    feature: any,
+    type: string,
+    newLayer: LayerType | null = null,
+  ) => {
+    if (!feature?.graphic) return;
+
+    // set the clicked button as active until the drawing is complete
+    deactivateButtons();
+
+    const target = ev.target as HTMLElement;
+    target.classList.add('sketch-button-selected');
+
+    const changes = new Collection<__esri.Graphic>();
+
+    // find the layer
+    const tempGraphic = feature.graphic;
+    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
+    const tempSketchLayer = layers.find(
+      (layer) => layer.layerId === tempLayer.id,
+    );
+    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
+      return;
+    }
+
+    // find the graphic
+    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        tempGraphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    graphic.attributes = tempGraphic.attributes;
+
+    if (type === 'Save') {
+      changes.add(graphic);
+
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+
+      setEdits(editsCopy);
+    }
+    if (type === 'Move' && newLayer) {
+      // get items from sketch view model
+      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+      graphic.attributes.DECISIONUNIT = newLayer.label;
+      changes.add(graphic);
+
+      // add the graphics to move to the new layer
+      let editsCopy = updateLayerEdits({
+        edits,
+        layer: newLayer,
+        type: 'add',
+        changes,
+      });
+
+      // remove the graphics from the old layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'delete',
+        changes,
+      });
+      setEdits(editsCopy);
+
+      // move between layers on map
+      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+    }
+  };
+
+  // Gets the sample popup with controls
+  const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
+    const content = (
+      <MapPopup
+        feature={feature}
+        selectedGraphicsIds={[feature.graphic.attributes.PERMANENT_IDENTIFIER]}
+        edits={edits}
+        layers={layers}
+        fieldInfos={fieldInfos}
+        onClick={handleClick}
+      />
+    );
+
+    // wrap the content for esri
+    const contentContainer = document.createElement('div');
+    ReactDOM.render(content, contentContainer);
+
+    return contentContainer;
+  };
+
+  /**
+   * Creates a popup that contains all of the attributes with human readable labels.
+   * The attributes displayed depends on the type provided.
+   * Note: Reference layers will return an empty object. Reference layers should not use
+   *  this function for getting the popup.
+   *
+   * @param type - The layer type to get the popup for.
+   * @param includeContaminationFields - If true the contamination map fields will be included in the samples popups.
+   * @returns the json object or function to pass to the Esri PopupTemplate constructor.
+   */
+  return function getPopupTemplate(
+    type: LayerTypeName,
+    includeContaminationFields: boolean = false,
+  ) {
+    if (type === 'Sampling Mask') {
+      return {
+        title: '',
+        content: [
+          {
+            type: 'fields',
+            fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
+          },
+        ],
+      };
+    }
+    if (type === 'Area of Interest') {
+      return {
+        title: '',
+        content: [
+          {
+            type: 'fields',
+            fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
+          },
+        ],
+      };
+    }
+    if (type === 'Contamination Map') {
+      return {
+        title: '',
+        content: [
+          {
+            type: 'fields',
+            fieldInfos: [
+              { fieldName: 'TYPE', label: 'Type' },
+              { fieldName: 'CONTAMTYPE', label: 'Contamination Type' },
+              { fieldName: 'CONTAMVAL', label: 'Activity' },
+              { fieldName: 'CONTAMUNIT', label: 'Unit of Measure' },
+            ],
+          },
+        ],
+      };
+    }
+    if (type === 'Samples' || type === 'VSP') {
+      const fieldInfos = [
+        { fieldName: 'TYPE', label: 'Sample Type' },
+        {
+          fieldName: 'TTPK',
+          label: 'Time to Prepare Kits (person hrs/sample)',
+        },
+        { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
+        { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
+        {
+          fieldName: 'TTPS',
+          label: 'Total Time per Sample (person hrs/sample)',
+        },
+        { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
+        {
+          fieldName: 'LOD_NON',
+          label: 'Limit of Detection (CFU) Nonporous',
+        },
+        { fieldName: 'MCPS', label: 'Material Cost ($/sample)' },
+        {
+          fieldName: 'TCPS',
+          label: 'Total Cost Per Sample (Labor + Material + Waste)',
+        },
+        { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
+        { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
+        { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
+        { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
+        { fieldName: 'AC', label: 'Number of Equivalent TOTS Samples' },
+        { fieldName: 'Notes', label: 'Notes' },
+        { fieldName: 'ALC', label: 'Analysis Labor Cost' },
+        { fieldName: 'AMC', label: 'Analysis Material Cost' },
+      ];
+
+      // add the contamination map related fields if necessary
+      if (includeContaminationFields) {
+        fieldInfos.push({
+          fieldName: 'CONTAMTYPE',
+          label: 'Contamination Type',
+        });
+        fieldInfos.push({ fieldName: 'CONTAMVAL', label: 'Activity' });
+        fieldInfos.push({ fieldName: 'CONTAMUNIT', label: 'Unit of Measure' });
+      }
+
+      const actions = new Collection<any>();
+      actions.addMany([
+        {
+          title: 'Delete Sample',
+          id: 'delete',
+          className: 'esri-icon-trash',
+        },
+        {
+          title: 'View In Table',
+          id: 'table',
+          className: 'esri-icon-table',
+        },
+      ]);
+
+      return {
+        title: '',
+        content: (feature: any) => getSampleTemplate(feature, fieldInfos),
+        actions,
+      };
+    }
+
+    return {};
+  };
+}
+
 ///////////////////////////////////////////////////////////////////
 ////////////////// Browser storage related hooks //////////////////
 ///////////////////////////////////////////////////////////////////
@@ -768,6 +1011,7 @@ function useEditsLayerStorage() {
     polygonSymbol,
     symbolsInitialized,
   } = React.useContext(SketchContext);
+  const getPopupTemplate = useDynamicPopup();
 
   // Retreives edit data from browser storage when the app loads
   React.useEffect(() => {
@@ -918,6 +1162,7 @@ function useEditsLayerStorage() {
     GroupLayer,
     Polygon,
     setEdits,
+    getPopupTemplate,
     setLayers,
     layers,
     layersInitialized,

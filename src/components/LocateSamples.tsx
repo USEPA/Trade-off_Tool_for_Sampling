@@ -34,13 +34,12 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
-import { useGeometryTools, useStartOver } from 'utils/hooks';
+import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   findLayerInEdits,
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
   getNextScenarioLayer,
-  getPopupTemplate,
   getScenarios,
   getSketchableLayers,
   updateLayerEdits,
@@ -460,6 +459,7 @@ function LocateSamples() {
   } = useEsriModulesContext();
   const startOver = useStartOver();
   const { calculateArea, createBuffer } = useGeometryTools();
+  const getPopupTemplate = useDynamicPopup();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
   // if available. If the drop down is empty, an empty sketchLayer will be
@@ -546,15 +546,6 @@ function LocateSamples() {
     // determine whether the sketch button draws points or polygons
     let shapeType = sampleAttributes[label].ShapeType;
 
-    // disable popups for the active sketch layer, so the user doesn't
-    // get shape edit controls and a popup at the same time.
-    if (map) {
-      map.layers.forEach((layer: any) => {
-        // had to use any, since some layer types don't have popupEnabled
-        if (layer.popupEnabled) layer.popupEnabled = false;
-      });
-    }
-
     // make the style of the button active
     const wasSet = activateSketchButton(label);
 
@@ -598,15 +589,6 @@ function LocateSamples() {
 
     // activate the sketch tool
     aoiSketchVM.create('polygon');
-
-    // disable popups for the active sketch layer, so the user doesn't
-    // get shape edit controls and a popup at the same time.
-    if (map) {
-      map.layers.forEach((layer: any) => {
-        // had to use any, since some layer types don't have popupEnabled
-        if (layer.popupEnabled) layer.popupEnabled = false;
-      });
-    }
 
     // make the style of the button active
     activateSketchButton('sampling-mask');
@@ -702,7 +684,6 @@ function LocateSamples() {
         }
         Promise.all(requests)
           .then((responses: any) => {
-            console.log('generateRandom responses: ', responses);
             let res;
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
