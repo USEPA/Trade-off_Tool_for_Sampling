@@ -60,6 +60,11 @@ const saveButtonStyles = (status: SaveStatusType) => {
   return css`
     margin: 5px 0;
     ${backgroundColor}
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.65;
+    }
   `;
 };
 
@@ -250,37 +255,38 @@ function MapPopup({
                 />
               </div>
               <div css={saveButtonContainerStyles}>
-                {(graphicNote !== note ||
-                  activeLayerId !== selectedLayer?.layerId) && (
-                  <button
-                    css={saveButtonStyles(saveStatus)}
-                    onClick={(ev) => {
-                      // set the notes
-                      if (feature?.graphic) {
-                        feature.graphic.attributes['Notes'] = note;
-                        setGraphicNote(note);
+                <button
+                  css={saveButtonStyles(saveStatus)}
+                  disabled={
+                    graphicNote === note &&
+                    activeLayerId === selectedLayer?.layerId
+                  }
+                  onClick={(ev) => {
+                    // set the notes
+                    if (feature?.graphic) {
+                      feature.graphic.attributes['Notes'] = note;
+                      setGraphicNote(note);
 
-                        // move the graphic if it is on a different layer
-                        if (activeLayerId !== selectedLayer?.layerId) {
-                          onClick(ev, feature, 'Move', selectedLayer);
-                        } else {
-                          onClick(ev, feature, 'Save');
-                        }
-
-                        setSaveStatus('success');
+                      // move the graphic if it is on a different layer
+                      if (activeLayerId !== selectedLayer?.layerId) {
+                        onClick(ev, feature, 'Move', selectedLayer);
                       } else {
-                        setSaveStatus('failure');
+                        onClick(ev, feature, 'Save');
                       }
-                    }}
-                  >
-                    {saveStatus === 'none' && 'Save'}
-                    {saveStatus === 'failure' && (
-                      <React.Fragment>
-                        <i className="fas fa-exclamation-triangle" /> Error
-                      </React.Fragment>
-                    )}
-                  </button>
-                )}
+
+                      setSaveStatus('success');
+                    } else {
+                      setSaveStatus('failure');
+                    }
+                  }}
+                >
+                  {saveStatus === 'none' && 'Save'}
+                  {saveStatus === 'failure' && (
+                    <React.Fragment>
+                      <i className="fas fa-exclamation-triangle" /> Error
+                    </React.Fragment>
+                  )}
+                </button>
                 {saveStatus === 'success' && (
                   <div css={saveMessageStyles}>
                     <i className="fas fa-check" /> Saved Successfully
