@@ -847,6 +847,7 @@ export function useDynamicPopup() {
     }
     if (type === 'Samples' || type === 'VSP') {
       const fieldInfos = [
+        { fieldName: 'DECISIONUNIT', label: 'Layer' },
         { fieldName: 'TYPE', label: 'Sample Type' },
         { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
         { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
