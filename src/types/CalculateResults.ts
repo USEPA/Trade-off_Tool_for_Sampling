@@ -18,7 +18,7 @@ export type CalculateResultsDataType = {
   'User Specified Sampling Team Labor Cost': number;
   'Time to Prepare Kits': number;
   'Time to Collect': number;
-  'Material Cost': number;
+  'Sampling Material Cost': number;
   'Sampling Personnel Labor Cost': number;
   'Time to Complete Sampling': number;
   'Total Sampling Labor Cost': number;

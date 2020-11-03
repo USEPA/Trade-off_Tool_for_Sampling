@@ -969,7 +969,7 @@ function LocateSamples() {
     }
     if (!isNumberValid(mcps)) {
       isValid = false;
-      messageParts.push('Material Cost needs a numeric value.');
+      messageParts.push('Sampling Material Cost needs a numeric value.');
     }
     if (!isNumberValid(sa, 'greaterThan0')) {
       isValid = false;
@@ -2422,7 +2422,7 @@ function LocateSamples() {
                           onChange={(ev) => setLodnon(ev.target.value)}
                         />
                         <label htmlFor="mcps-input">
-                          Material Cost <em>($/sample)</em>
+                          Sampling Material Cost <em>($/sample)</em>
                         </label>
                         <input
                           id="mcps-input"

@@ -393,7 +393,7 @@ function CalculateResults() {
         .style(labelStyle);
       summarySheet
         .cell(11, 4)
-        .number(calculateResults.data['Material Cost'])
+        .number(calculateResults.data['Sampling Material Cost'])
         .style(currencyStyle);
 
       // col 5 & 6
@@ -667,10 +667,13 @@ function CalculateResults() {
         .style(labelStyle);
       resultsSheet.cell(8, 4).number(calculateResults.data['Time to Collect']);
 
-      resultsSheet.cell(9, 3).string('Material Cost').style(labelStyle);
+      resultsSheet
+        .cell(9, 3)
+        .string('Sampling Material Cost')
+        .style(labelStyle);
       resultsSheet
         .cell(9, 4)
-        .number(calculateResults.data['Material Cost'])
+        .number(calculateResults.data['Sampling Material Cost'])
         .style(currencyStyle);
 
       resultsSheet
@@ -898,7 +901,7 @@ function CalculateResults() {
             />
             <LabelValue
               label="Total Sampling Material Cost ($)"
-              value={calculateResults.data['Material Cost']}
+              value={calculateResults.data['Sampling Material Cost']}
             />
             <hr css={resourceTallySeparator} />
 
@@ -969,8 +972,8 @@ function CalculateResults() {
               value={calculateResults.data['Time to Collect']}
             />
             <LabelValue
-              label="Material Cost ($)"
-              value={calculateResults.data['Material Cost']}
+              label="Sampling Material Cost ($)"
+              value={calculateResults.data['Sampling Material Cost']}
             />
             <LabelValue
               label="Sampling Personnel Labor Cost ($)"

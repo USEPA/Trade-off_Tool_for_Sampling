@@ -647,7 +647,7 @@ export function getSampleTableColumns({
       width: baseColumnWidth,
     },
     {
-      Header: `Material Cost ${includeUnits ? '($/sample)' : ''}`,
+      Header: `Sampling Material Cost ${includeUnits ? '($/sample)' : ''}`,
       accessor: 'MCPS',
       width: baseColumnWidth,
     },

@@ -627,7 +627,7 @@ export function useCalculatePlan() {
       'Total Sampled Area': totalArea,
       'Time to Prepare Kits': totals.ttpk,
       'Time to Collect': totals.ttc,
-      'Material Cost': totals.mcps,
+      'Sampling Material Cost': totals.mcps,
       'Time to Analyze': totals.tta,
       'Analysis Labor Cost': totals.alc,
       'Analysis Material Cost': totals.amc,
@@ -863,7 +863,7 @@ export function useDynamicPopup() {
           fieldName: 'LOD_NON',
           label: 'Limit of Detection (CFU) Nonporous',
         },
-        { fieldName: 'MCPS', label: 'Material Cost ($/sample)' },
+        { fieldName: 'MCPS', label: 'Sampling Material Cost ($/sample)' },
         {
           fieldName: 'TCPS',
           label: 'Total Cost Per Sample (Labor + Material + Waste)',
