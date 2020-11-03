@@ -848,6 +848,17 @@ export function useDynamicPopup() {
     if (type === 'Samples' || type === 'VSP') {
       const fieldInfos = [
         { fieldName: 'TYPE', label: 'Sample Type' },
+        { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
+        { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
+        { fieldName: 'AC', label: 'Equivalent TOTS Samples' },
+        {
+          fieldName: 'TCPS',
+          label: 'Total Cost Per Sample (Labor + Material + Waste)',
+        },
+        { fieldName: 'Notes', label: 'Notes' },
+        { fieldName: 'ALC', label: 'Analysis Labor Cost' },
+        { fieldName: 'AMC', label: 'Analysis Material Cost' },
+        { fieldName: 'MCPS', label: 'Sampling Material Cost ($/sample)' },
         {
           fieldName: 'TTPK',
           label: 'Time to Prepare Kits (person hrs/sample)',
@@ -863,19 +874,8 @@ export function useDynamicPopup() {
           fieldName: 'LOD_NON',
           label: 'Limit of Detection (CFU) Nonporous',
         },
-        { fieldName: 'MCPS', label: 'Sampling Material Cost ($/sample)' },
-        {
-          fieldName: 'TCPS',
-          label: 'Total Cost Per Sample (Labor + Material + Waste)',
-        },
         { fieldName: 'WVPS', label: 'Waste Volume (L/sample)' },
         { fieldName: 'WWPS', label: 'Waste Weight (lbs/sample)' },
-        { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
-        { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
-        { fieldName: 'AC', label: 'Number of Equivalent TOTS Samples' },
-        { fieldName: 'Notes', label: 'Notes' },
-        { fieldName: 'ALC', label: 'Analysis Labor Cost' },
-        { fieldName: 'AMC', label: 'Analysis Material Cost' },
       ];
 
       // add the contamination map related fields if necessary

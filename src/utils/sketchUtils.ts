@@ -613,6 +613,48 @@ export function getSampleTableColumns({
       width: mediumColumnWidth,
     },
     {
+      Header: `Reference Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      accessor: 'SA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Actual Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      accessor: 'AA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Equivalent TOTS Samples',
+      accessor: 'AC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Total Cost Per Sample ${
+        includeUnits ? '(Labor + Material + Waste)' : ''
+      }`,
+      accessor: 'TCPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Notes',
+      accessor: 'Notes',
+      width: largeColumnWidth,
+    },
+    {
+      Header: 'Analysis Labor Cost',
+      accessor: 'ALC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Analysis Material Cost',
+      accessor: 'AMC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: `Sampling Material Cost ${includeUnits ? '($/sample)' : ''}`,
+      accessor: 'MCPS',
+      width: baseColumnWidth,
+    },
+    {
       Header: `Time to Prepare Kits ${
         includeUnits ? '(person hrs/sample)' : ''
       }`,
@@ -647,18 +689,6 @@ export function getSampleTableColumns({
       width: baseColumnWidth,
     },
     {
-      Header: `Sampling Material Cost ${includeUnits ? '($/sample)' : ''}`,
-      accessor: 'MCPS',
-      width: baseColumnWidth,
-    },
-    {
-      Header: `Total Cost Per Sample ${
-        includeUnits ? '(Labor + Material + Waste)' : ''
-      }`,
-      accessor: 'TCPS',
-      width: baseColumnWidth,
-    },
-    {
       Header: `Waste Volume ${includeUnits ? '(L/sample)' : ''}`,
       accessor: 'WVPS',
       width: baseColumnWidth,
@@ -667,36 +697,6 @@ export function getSampleTableColumns({
       Header: `Waste Weight ${includeUnits ? '(lbs/sample)' : ''}`,
       accessor: 'WWPS',
       width: baseColumnWidth,
-    },
-    {
-      Header: `Reference Surface Area ${includeUnits ? '(sq inch)' : ''}`,
-      accessor: 'SA',
-      width: baseColumnWidth,
-    },
-    {
-      Header: `Actual Surface Area ${includeUnits ? '(sq inch)' : ''}`,
-      accessor: 'AA',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Equivalent TOTS Samples',
-      accessor: 'AC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Analysis Labor Cost',
-      accessor: 'ALC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Analysis Material Cost',
-      accessor: 'AMC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Notes',
-      accessor: 'Notes',
-      width: largeColumnWidth,
     },
   ];
 
