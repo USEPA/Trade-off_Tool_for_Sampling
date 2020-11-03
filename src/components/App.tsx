@@ -630,7 +630,6 @@ function App() {
                                   ...getSampleTableColumns({
                                     tableWidth,
                                     includeContaminationFields: trainingMode,
-                                    includeUnits: true,
                                   }),
                                 ];
                               }}

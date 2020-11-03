@@ -570,18 +570,15 @@ export function getNextScenarioLayer(
  *
  * @param tableWidth Used to determine how wide the columns should be.
  * @param includeContaminationFields Says whether or not to include the contamination columns or not.
- * @param includeUnits Says whether or not to include the units in the column headers.
  * @param useEqualWidth Forces the table to use equal width columns.
  */
 export function getSampleTableColumns({
   tableWidth,
   includeContaminationFields,
-  includeUnits = false,
   useEqualWidth = false,
 }: {
   tableWidth: number;
   includeContaminationFields: boolean;
-  includeUnits?: boolean;
   useEqualWidth?: boolean;
 }) {
   const baseColumnWidth = 100;
@@ -613,12 +610,12 @@ export function getSampleTableColumns({
       width: mediumColumnWidth,
     },
     {
-      Header: `Reference Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      Header: 'Reference Surface Area (sq inch)',
       accessor: 'SA',
       width: baseColumnWidth,
     },
     {
-      Header: `Actual Surface Area ${includeUnits ? '(sq inch)' : ''}`,
+      Header: 'Actual Surface Area (sq inch)',
       accessor: 'AA',
       width: baseColumnWidth,
     },
@@ -628,9 +625,7 @@ export function getSampleTableColumns({
       width: baseColumnWidth,
     },
     {
-      Header: `Total Cost Per Sample ${
-        includeUnits ? '(Labor + Material + Waste)' : ''
-      }`,
+      Header: 'Total Cost Per Sample (Labor + Material + Waste)',
       accessor: 'TCPS',
       width: baseColumnWidth,
     },
@@ -650,51 +645,47 @@ export function getSampleTableColumns({
       width: baseColumnWidth,
     },
     {
-      Header: `Sampling Material Cost ${includeUnits ? '($/sample)' : ''}`,
+      Header: 'Sampling Material Cost ($/sample)',
       accessor: 'MCPS',
       width: baseColumnWidth,
     },
     {
-      Header: `Time to Prepare Kits ${
-        includeUnits ? '(person hrs/sample)' : ''
-      }`,
+      Header: 'Time to Prepare Kits (person hrs/sample)',
       accessor: 'TTPK',
       width: baseColumnWidth,
     },
     {
-      Header: `Time to Collect ${includeUnits ? '(person hrs/sample)' : ''}`,
+      Header: 'Time to Collect (person hrs/sample)',
       accessor: 'TTC',
       width: baseColumnWidth,
     },
     {
-      Header: `Time to Analyze ${includeUnits ? '(person hrs/sample)' : ''}`,
+      Header: 'Time to Analyze (person hrs/sample)',
       accessor: 'TTA',
       width: baseColumnWidth,
     },
     {
-      Header: `Total Time per Sample ${
-        includeUnits ? '(person hrs/sample)' : ''
-      }`,
+      Header: 'Total Time per Sample (person hrs/sample)',
       accessor: 'TTPS',
       width: baseColumnWidth,
     },
     {
-      Header: `Limit of Detection ${includeUnits ? '(CFU)' : ''} Porous`,
+      Header: 'Limit of Detection (CFU) Porous',
       accessor: 'LOD_P',
       width: baseColumnWidth,
     },
     {
-      Header: `Limit of Detection ${includeUnits ? '(CFU)' : ''} Nonporous`,
+      Header: 'Limit of Detection (CFU) Nonporous',
       accessor: 'LOD_NON',
       width: baseColumnWidth,
     },
     {
-      Header: `Waste Volume ${includeUnits ? '(L/sample)' : ''}`,
+      Header: 'Waste Volume (L/sample)',
       accessor: 'WVPS',
       width: baseColumnWidth,
     },
     {
-      Header: `Waste Weight ${includeUnits ? '(lbs/sample)' : ''}`,
+      Header: 'Waste Weight (lbs/sample)',
       accessor: 'WWPS',
       width: baseColumnWidth,
     },
