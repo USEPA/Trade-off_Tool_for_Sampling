@@ -159,33 +159,34 @@ const resourceTallyStyles = css`
   border-top: 5px solid ${buttonVisitedColor};
   border-bottom: 5px solid ${buttonVisitedColor};
   padding: 5px;
-
-  i {
-    color: ${buttonVisitedColor};
-  }
+  font-size: 0.85rem;
 `;
 
 const tallyTitle = css`
   color: white;
   margin: 0;
-  padding: 0 0 0.5em;
+  padding: 0 0 0.25em;
   font-size: 100%;
   font-weight: bold;
   line-height: 1.3;
 `;
 
 const resourceTallyContainerStyles = css`
-  display: inline-block;
+  width: 100%;
   text-align: left;
+`;
+
+const subTallyStyles = css`
+  margin-left: 15px;
+`;
+
+const mainTallyStyles = css`
+  font-weight: bold;
 `;
 
 const resourceTallySeparator = css`
   border-top: none;
   border-bottom: 1px solid ${buttonVisitedColor};
-`;
-
-const limitingFactorStyles = css`
-  color: ${buttonVisitedColor};
 `;
 
 const helpIconStyles = css`
@@ -422,24 +423,55 @@ function NavBar({ height }: Props) {
             <div css={resourceTallyStyles}>
               <h3 css={tallyTitle}>Resource Tally</h3>
               <div css={resourceTallyContainerStyles}>
-                <i className="fas fa-dollar-sign fa-fw" />{' '}
-                {calculateResults.data['Total Cost'].toLocaleString()}
-                <br />
-                <i className="far fa-clock fa-fw" />{' '}
-                {calculateResults.data['Total Time'].toLocaleString()} day(s)
+                <div css={mainTallyStyles}>
+                  Total Cost: $
+                  {Math.round(
+                    calculateResults.data['Total Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-users fa-fw" /> $
+                  {Math.round(
+                    calculateResults.data['Total Sampling Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-flask fa-fw" /> $
+                  {Math.round(
+                    calculateResults.data['Total Analysis Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={mainTallyStyles}>
+                  Max Time day(s):{' '}
+                  {calculateResults.data['Total Time'].toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-users fa-fw" />{' '}
+                  {(
+                    Math.round(
+                      calculateResults.data['Time to Complete Sampling'] * 10,
+                    ) / 10
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-flask fa-fw" />{' '}
+                  {(
+                    Math.round(
+                      calculateResults.data['Time to Complete Analyses'] * 10,
+                    ) / 10
+                  ).toLocaleString()}
+                </div>
                 <hr css={resourceTallySeparator} />
               </div>
               {calculateResults.data['Limiting Time Factor'] && (
                 <div>
-                  Limiting Factor
+                  <span css={mainTallyStyles}>Limiting Factor</span>
                   <br />
                   {calculateResults.data['Limiting Time Factor'] ===
                     'Sampling' && <i className="fas fa-users fa-fw" />}
                   {calculateResults.data['Limiting Time Factor'] ===
                     'Analysis' && <i className="fas fa-flask fa-fw" />}{' '}
-                  <span css={limitingFactorStyles}>
-                    {calculateResults.data['Limiting Time Factor']}
-                  </span>
+                  <span>{calculateResults.data['Limiting Time Factor']}</span>
                 </div>
               )}
             </div>
