@@ -600,7 +600,8 @@ export function useCalculatePlan() {
     if (labThroughput + 1 < timeCompleteSampling) {
       totalTime = timeCompleteSampling;
     } else {
-      totalTime = labThroughput + 1;
+      labThroughput += 1;
+      totalTime = labThroughput;
     }
 
     // Get limiting time factor (will be undefined if they are equal)
