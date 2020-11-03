@@ -465,7 +465,7 @@ function NavBar({ height }: Props) {
               </div>
               {calculateResults.data['Limiting Time Factor'] && (
                 <div>
-                  Limiting Factor
+                  <span css={mainTallyStyles}>Limiting Factor</span>
                   <br />
                   {calculateResults.data['Limiting Time Factor'] ===
                     'Sampling' && <i className="fas fa-users fa-fw" />}
