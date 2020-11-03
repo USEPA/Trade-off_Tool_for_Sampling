@@ -589,8 +589,9 @@ export function useCalculatePlan() {
     let labThroughput = totals.tta / totalLabHours;
 
     // calculate total cost and time
-    const totalCost =
-      totalSamplingLaborCost + totals.mcps + totals.alc + totals.amc;
+    const totalSamplingCost = totalSamplingLaborCost + totals.mcps;
+    const totalAnalysisCost = totals.alc + totals.amc;
+    const totalCost = totalSamplingCost + totalAnalysisCost;
 
     // Calculate total time. Note: Total Time is the greater of sample collection time or Analysis Total Time.
     // If Analysis Time is equal to or greater than Sampling Total Time then the value reported is total Analysis Time Plus one day.
@@ -645,6 +646,8 @@ export function useCalculatePlan() {
       'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
       'Time to Complete Sampling': timeCompleteSampling,
       'Total Sampling Labor Cost': totalSamplingLaborCost,
+      'Total Sampling Cost': totalSamplingCost,
+      'Total Analysis Cost': totalAnalysisCost,
 
       // analysis
       'Time to Complete Analyses': labThroughput,
