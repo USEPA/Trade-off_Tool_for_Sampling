@@ -460,7 +460,7 @@ function Calculate() {
               {
                 name: 'MCPS',
                 type: 'double',
-                alias: 'Material Cost per Sample',
+                alias: 'Sampling Material Cost per Sample',
               },
               {
                 name: 'TCPS',
