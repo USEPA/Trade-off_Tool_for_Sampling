@@ -76,6 +76,11 @@ const gloablStyles = css`
     overflow: hidden;
   }
 
+  .esri-popup__main-container {
+    min-height: 450px !important;
+    min-width: 460px !important;
+  }
+
   .esri-popup__action-text {
     display: none;
   }
@@ -89,6 +94,7 @@ const appStyles = (offset: number) => css`
   display: flex;
   flex-direction: column;
   height: calc(100vh - ${offset}px);
+  min-height: 675px;
   width: calc(100% + ${epaMarginOffset * 2 + 'px'});
   margin-left: -${epaMarginOffset}px;
 `;

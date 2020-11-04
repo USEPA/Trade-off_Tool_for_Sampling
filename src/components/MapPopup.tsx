@@ -185,7 +185,7 @@ function MapPopup({
               <table className="esri-widget__table">
                 <tbody>
                   {fieldInfos.map((fieldInfo, index) => {
-                    if (!showMore && index > 3) return null;
+                    if (!showMore && index > 4) return null;
 
                     return (
                       <tr key={index}>
