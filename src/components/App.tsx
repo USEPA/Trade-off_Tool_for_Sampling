@@ -76,6 +76,11 @@ const gloablStyles = css`
     overflow: hidden;
   }
 
+  .esri-popup__main-container {
+    min-height: 450px !important;
+    min-width: 460px !important;
+  }
+
   .esri-popup__action-text {
     display: none;
   }
