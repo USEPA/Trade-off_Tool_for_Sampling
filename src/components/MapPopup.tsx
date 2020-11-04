@@ -241,38 +241,38 @@ function MapPopup({
                 />
               </div>
               <div css={saveButtonContainerStyles}>
-                <button
-                  css={saveButtonStyles(saveStatus)}
-                  disabled={
-                    graphicNote === note &&
-                    activeLayerId === selectedLayer?.layerId
-                  }
-                  onClick={(ev) => {
-                    // set the notes
-                    if (feature?.graphic) {
-                      feature.graphic.attributes['Notes'] = note;
-                      setGraphicNote(note);
+                {(graphicNote !== note ||
+                  activeLayerId !== selectedLayer?.layerId) && (
+                  <button
+                    css={saveButtonStyles(saveStatus)}
+                    onClick={(ev) => {
+                      // set the notes
+                      if (feature?.graphic) {
+                        feature.graphic.attributes['Notes'] = note;
+                        setGraphicNote(note);
 
-                      // move the graphic if it is on a different layer
-                      if (activeLayerId !== selectedLayer?.layerId) {
-                        onClick(ev, feature, 'Move', selectedLayer);
+                        // move the graphic if it is on a different layer
+                        if (activeLayerId !== selectedLayer?.layerId) {
+                          onClick(ev, feature, 'Move', selectedLayer);
+                        } else {
+                          onClick(ev, feature, 'Save');
+                        }
+
+                        setSaveStatus('success');
                       } else {
-                        onClick(ev, feature, 'Save');
+                        setSaveStatus('failure');
                       }
-
-                      setSaveStatus('success');
-                    } else {
-                      setSaveStatus('failure');
-                    }
-                  }}
-                >
-                  {saveStatus === 'none' && 'Save'}
-                  {saveStatus === 'failure' && (
-                    <React.Fragment>
-                      <i className="fas fa-exclamation-triangle" /> Error
-                    </React.Fragment>
-                  )}
-                </button>
+                    }}
+                  >
+                    {saveStatus === 'failure' ? (
+                      <React.Fragment>
+                        <i className="fas fa-exclamation-triangle" /> Error
+                      </React.Fragment>
+                    ) : (
+                      'Save'
+                    )}
+                  </button>
+                )}
               </div>
             </React.Fragment>
           )}
