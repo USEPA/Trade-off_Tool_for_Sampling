@@ -245,32 +245,45 @@ export function useGeometryTools() {
   // where the width of the sqaure is the provided width.
   const createBuffer = React.useCallback(
     (graphic: __esri.Graphic, width: number) => {
-      // create the graphic
-      let geometry;
-      let center: __esri.Point | null = null;
-      if (graphic.geometry.type === 'point') {
-        geometry = graphic.geometry as __esri.Point;
-        center = geometry;
-      }
-      if (graphic.geometry.type === 'polygon') {
-        geometry = graphic.geometry as __esri.Polygon;
-        center = geometry.centroid as __esri.Point;
-      }
+      if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
-      if (!center) return;
+      // convert the geometry to WGS84 for geometryEngine
+      // Cast the geometry as a Polygon to avoid typescript errors on
+      // accessing the centroid.
+      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+        graphic.geometry,
+      ) as __esri.Point;
+
+      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+
+      // get the spatial reference from the centroid
+      const { latitude, longitude } = wgsGeometry;
+      const base_wkid = latitude > 0 ? 32600 : 32700;
+      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+      const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+      if (!spatialReference) return 'ERROR - Spatial Reference is null';
+
+      // project the geometry
+      const projectedGeometry = loadedProjection.project(
+        wgsGeometry,
+        spatialReference,
+      ) as __esri.Point;
+
+      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
 
       // create a circular buffer around the center point
-      const halfWidth = width / 2;
-      const ptBuff = geometryEngine.geodesicBuffer(
-        center,
+      const halfWidth = Math.sqrt(graphic.attributes.SA) / 2;
+      const ptBuff = geometryEngine.buffer(
+        projectedGeometry,
         halfWidth,
         109009,
       ) as __esri.Polygon;
 
       // use the extent to make the buffer a square
-      graphic.geometry = new Polygon({
-        spatialReference: center.spatialReference,
-        centroid: center,
+      const projectedPolygon = new Polygon({
+        spatialReference: projectedGeometry.spatialReference,
+        centroid: projectedGeometry,
         rings: [
           [
             [ptBuff.extent.xmin, ptBuff.extent.ymin],
@@ -281,8 +294,22 @@ export function useGeometryTools() {
           ],
         ],
       });
+
+      // re-project the geometry back to the original spatialReference
+      const reprojectedGeometry = loadedProjection.project(
+        projectedPolygon,
+        graphic.geometry.spatialReference,
+      ) as __esri.Point;
+
+      graphic.geometry = reprojectedGeometry;
     },
-    [geometryEngine, Polygon],
+    [
+      geometryEngine,
+      Polygon,
+      loadedProjection,
+      SpatialReference,
+      webMercatorUtils,
+    ],
   );
 
   return { calculateArea, createBuffer, loadedProjection };
