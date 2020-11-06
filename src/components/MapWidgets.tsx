@@ -300,7 +300,7 @@ function MapWidgets({ mapView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            createBuffer(graphic, graphic.attributes.Width);
+            createBuffer(graphic);
           }
 
           // save the graphic

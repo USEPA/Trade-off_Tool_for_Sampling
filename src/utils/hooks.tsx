@@ -79,6 +79,23 @@ function getLayerById(layers: LayerType[], id: string) {
   return layers[index];
 }
 
+// Finds the center of the provided geometry
+function getCenterOfGeometry(geometry: __esri.Geometry) {
+  let geometryCasted;
+  let center: __esri.Point | null = null;
+
+  // get the center based on geometry type
+  if (geometry.type === 'point') {
+    geometryCasted = geometry as __esri.Point;
+    center = geometryCasted;
+  } else if (geometry.type === 'polygon') {
+    geometryCasted = geometry as __esri.Polygon;
+    center = geometryCasted.centroid;
+  }
+
+  return center;
+}
+
 // Hook that allows the user to easily start over without
 // having to manually start a new session.
 export function useStartOver() {
@@ -244,7 +261,7 @@ export function useGeometryTools() {
   // Creates a square buffer around the center of the provided graphic,
   // where the width of the sqaure is the provided width.
   const createBuffer = React.useCallback(
-    (graphic: __esri.Graphic, width: number) => {
+    (graphic: __esri.Graphic) => {
       if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
       // convert the geometry to WGS84 for geometryEngine
@@ -252,12 +269,16 @@ export function useGeometryTools() {
       // accessing the centroid.
       const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
         graphic.geometry,
-      ) as __esri.Point;
+      );
 
       if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
 
+      // get the center
+      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+      if (!center) return;
+
       // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry;
+      const { latitude, longitude } = center;
       const base_wkid = latitude > 0 ? 32600 : 32700;
       const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
       const spatialReference = new SpatialReference({ wkid: out_wkid });
@@ -268,22 +289,25 @@ export function useGeometryTools() {
       const projectedGeometry = loadedProjection.project(
         wgsGeometry,
         spatialReference,
-      ) as __esri.Point;
+      ) as __esri.Geometry;
 
       if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
+
+      center = getCenterOfGeometry(projectedGeometry);
+      if (!center) return;
 
       // create a circular buffer around the center point
       const halfWidth = Math.sqrt(graphic.attributes.SA) / 2;
       const ptBuff = geometryEngine.buffer(
-        projectedGeometry,
+        center,
         halfWidth,
         109009,
       ) as __esri.Polygon;
 
       // use the extent to make the buffer a square
       const projectedPolygon = new Polygon({
-        spatialReference: projectedGeometry.spatialReference,
-        centroid: projectedGeometry,
+        spatialReference: center.spatialReference,
+        centroid: center,
         rings: [
           [
             [ptBuff.extent.xmin, ptBuff.extent.ymin],

@@ -831,7 +831,6 @@ function ResultCard({ result }: ResultCardProps) {
                       GLOBALID: null,
                       TYPE: attributes.TYPE,
                       ShapeType: attributes.ShapeType,
-                      Width: Number(attributes.Width),
                       TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
                       TTC: attributes.TTC ? Number(attributes.TTC) : null,
                       TTA: attributes.TTA ? Number(attributes.TTA) : null,
