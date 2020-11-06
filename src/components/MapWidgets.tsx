@@ -116,7 +116,7 @@ function MapWidgets({ mapView }: Props) {
     PopupTemplate,
     SketchViewModel,
   } = useEsriModulesContext();
-  const { createBuffer } = useGeometryTools();
+  const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
 
   // Creates and adds the home widget to the map.
@@ -300,7 +300,7 @@ function MapWidgets({ mapView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            createBuffer(graphic, graphic.attributes.Width);
+            createBuffer(graphic);
           }
 
           // save the graphic
@@ -378,7 +378,7 @@ function MapWidgets({ mapView }: Props) {
   ] = React.useState(false);
   const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
   React.useEffect(() => {
-    if (!sketchVM || sketchEventsInitialized) return;
+    if (!sketchVM || !loadedProjection || sketchEventsInitialized) return;
     setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
 
     setSketchEventsInitialized(true);
@@ -387,6 +387,7 @@ function MapWidgets({ mapView }: Props) {
     setupEvents,
     sketchEventsInitialized,
     setSketchEventsInitialized,
+    loadedProjection,
   ]);
 
   // Setup the sketch view model events for the Sampling Mask sketchVM
@@ -400,7 +401,7 @@ function MapWidgets({ mapView }: Props) {
     setAoiUpdateSketchEvent, //
   ] = React.useState<any>(null);
   React.useEffect(() => {
-    if (!aoiSketchVM || aoiSketchEventsInitialized) return;
+    if (!aoiSketchVM || !loadedProjection || aoiSketchEventsInitialized) return;
     setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
@@ -409,6 +410,7 @@ function MapWidgets({ mapView }: Props) {
     setupEvents,
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized,
+    loadedProjection,
   ]);
 
   // Get the active sketchVM

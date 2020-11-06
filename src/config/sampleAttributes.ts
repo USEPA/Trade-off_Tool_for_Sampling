@@ -19,7 +19,6 @@ export type AttributeItems = {
   GLOBALID: string | null;
   TYPE: string;
   ShapeType: string;
-  Width: number;
   SA: number | null;
   AA: number | null;
   TTPK: number | null;
@@ -63,7 +62,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Sponge',
     ShapeType: 'point',
-    Width: 10,
     SA: 100,
     AA: null,
     TTPK: 0.12,
@@ -96,7 +94,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Micro Vac',
     ShapeType: 'point',
-    Width: 12.2794,
     SA: 144,
     AA: null,
     TTPK: 0.18,
@@ -129,7 +126,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Wet Vac',
     ShapeType: 'polygon',
-    Width: 169.9664,
     SA: 28800,
     AA: null,
     TTPK: 0.33,
@@ -162,7 +158,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Robot',
     ShapeType: 'polygon',
-    Width: 379.80360065,
     SA: 144000,
     AA: null,
     TTPK: 0.33,
@@ -195,7 +190,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Aggressive Air',
     ShapeType: 'polygon',
-    Width: 109.7886,
     SA: 144000,
     AA: null,
     TTPK: 0.33,
@@ -228,7 +222,6 @@ export const sampleAttributes: Attributes = {
     GLOBALID: null,
     TYPE: 'Swab',
     ShapeType: 'point',
-    Width: 2,
     SA: 4,
     AA: null,
     TTPK: 0.12,

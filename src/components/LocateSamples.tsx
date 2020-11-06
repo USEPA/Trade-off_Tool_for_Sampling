@@ -245,18 +245,6 @@ const addButtonStyles = css`
   height: 38px; /* same height as ReactSelect */
 `;
 
-const widthAreaCheckContainerStyles = css`
-  margin-bottom: 10px;
-`;
-
-const widthInputContainerStyles = css`
-  margin-right: 10px;
-`;
-
-const checkAreaButtonStyles = css`
-  margin: 10px 0 0 0;
-`;
-
 const fullWidthSelectStyles = css`
   width: 100%;
   margin-right: 10px;
@@ -275,11 +263,6 @@ const inputStyles = css`
 const inlineSelectStyles = css`
   width: 100%;
   margin-right: 10px;
-`;
-
-const widthInputStyles = css`
-  ${inputStyles}
-  margin: 0;
 `;
 
 const submitButtonStyles = css`
@@ -454,11 +437,10 @@ function LocateSamples() {
     Geoprocessor,
     Graphic,
     GraphicsLayer,
-    Point,
     Polygon,
   } = useEsriModulesContext();
   const startOver = useStartOver();
-  const { calculateArea, createBuffer } = useGeometryTools();
+  const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
@@ -832,8 +814,6 @@ function LocateSamples() {
   const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
     null,
   );
-  const [width, setWidth] = React.useState<string | null>('');
-  const [areaTest, setAreaTest] = React.useState<string | null>(null);
   const [ttpk, setTtpk] = React.useState<string | null>('');
   const [ttc, setTtc] = React.useState<string | null>('');
   const [tta, setTta] = React.useState<string | null>('');
@@ -857,8 +837,6 @@ function LocateSamples() {
     if (editType === 'create') {
       setEditingStatus(editType);
       setShapeType(null);
-      setWidth('');
-      setAreaTest(null);
       setTtpk('');
       setTtc('');
       setTta('');
@@ -893,8 +871,6 @@ function LocateSamples() {
 
     setEditingStatus(editType);
     setShapeType(shapeType);
-    setWidth(attributes.Width.toString());
-    setAreaTest(null);
     setTtpk(attributes.TTPK ? attributes.TTPK.toString() : null);
     setTtc(attributes.TTC ? attributes.TTC.toString() : null);
     setTta(attributes.TTA ? attributes.TTA.toString() : null);
@@ -950,10 +926,6 @@ function LocateSamples() {
       messageParts.push(
         `The "${sampleTypeName}" name is already in use. Please rename the sample type and try again.`,
       );
-    }
-    if (shapeType?.value === 'point' && !isNumberValid(width, 'greaterThan0')) {
-      isValid = false;
-      messageParts.push('Points must have a width greater than 0.');
     }
     if (!isNumberValid(ttpk)) {
       isValid = false;
@@ -1024,7 +996,7 @@ function LocateSamples() {
     graphics.forEach((graphic: __esri.Graphic) => {
       // update attributes for the edited type
       if (graphic.attributes.TYPE === oldType) {
-        const widthChanged = graphic.attributes.Width !== newAttributes.Width;
+        const areaChanged = graphic.attributes.SA !== newAttributes.SA;
         const shapeTypeChanged =
           graphic.attributes.ShapeType !== newAttributes.ShapeType;
 
@@ -1049,10 +1021,10 @@ function LocateSamples() {
         // polygon to a point
         if (
           newAttributes.ShapeType === 'point' &&
-          (widthChanged || shapeTypeChanged)
+          (areaChanged || shapeTypeChanged)
         ) {
           // convert the geometry _esriPolygon if it is missing stuff
-          createBuffer(graphic as __esri.Graphic, Number(width));
+          createBuffer(graphic as __esri.Graphic);
         }
 
         editedGraphics.push(graphic);
@@ -2309,56 +2281,6 @@ function LocateSamples() {
                             { value: 'polygon', label: 'Polygon' },
                           ]}
                         />
-                        {shapeType?.value === 'point' && (
-                          <div css={widthAreaCheckContainerStyles}>
-                            <div css={inlineMenuStyles}>
-                              <div css={widthInputContainerStyles}>
-                                <label htmlFor="shape-width-input">
-                                  Shape Width (inches)
-                                </label>
-                                <input
-                                  id="shape-width-input"
-                                  disabled={editingStatus === 'view'}
-                                  css={widthInputStyles}
-                                  value={width ? width : ''}
-                                  onChange={(ev) => setWidth(ev.target.value)}
-                                />
-                              </div>
-                              <button
-                                css={checkAreaButtonStyles}
-                                onClick={(ev) => {
-                                  // Create a point in Washington DC
-                                  const geometry = new Point({
-                                    spatialReference: { wkid: 3857 },
-                                    latitude: 38.9072,
-                                    longitude: -77.0369,
-                                  });
-                                  const testPoint = new Graphic({ geometry });
-
-                                  createBuffer(testPoint, Number(width));
-                                  const area = calculateArea(testPoint);
-
-                                  let areaStr = '';
-                                  if (typeof area === 'number') {
-                                    areaStr = String(
-                                      Math.round(area * 10) / 10,
-                                    );
-                                  } else {
-                                    areaStr = area;
-                                  }
-
-                                  setAreaTest(areaStr);
-                                }}
-                              >
-                                Check Area
-                              </button>
-                            </div>
-
-                            {areaTest && (
-                              <span>Approximate Area: {areaTest} sq in</span>
-                            )}
-                          </div>
-                        )}
                         <label htmlFor="ttpk-input">
                           Time to Prepare Kits <em>(person hrs/sample)</em>
                         </label>
@@ -2524,7 +2446,6 @@ function LocateSamples() {
                                   GLOBALID: null,
                                   TYPE: sampleTypeName,
                                   ShapeType: shapeType.value,
-                                  Width: Number(width),
                                   TTPK: ttpk ? Number(ttpk) : null,
                                   TTC: ttc ? Number(ttc) : null,
                                   TTA: tta ? Number(tta) : null,
