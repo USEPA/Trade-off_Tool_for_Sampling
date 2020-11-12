@@ -103,7 +103,7 @@ function GettingStarted({ isOpen, children }: Props) {
             added to the plan, a table will become available where you can see
             the attributes of all samples. You can create custom sample types or
             clone existing sample types to support conducting "what-if"
-            scnearios.
+            scenarios.
           </li>
           <li>
             <strong>Calculate Resources</strong> — Default resource constraints
