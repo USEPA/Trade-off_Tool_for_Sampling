@@ -42,11 +42,15 @@ const resourceTallySeparator = css`
 type LabelValueProps = {
   label: ReactNode | string;
   value: string | number | undefined | null;
+  isMonetary?: boolean;
 };
 
-function LabelValue({ label, value }: LabelValueProps) {
+function LabelValue({ label, value, isMonetary = false }: LabelValueProps) {
   let formattedValue = value;
-  if (typeof value === 'number') formattedValue = value.toLocaleString();
+  if (typeof value === 'number') {
+    if (isMonetary) formattedValue = Math.round(value).toLocaleString();
+    else formattedValue = value.toLocaleString();
+  }
 
   return (
     <div css={labelValueStyles}>
@@ -875,6 +879,7 @@ function CalculateResults() {
             <LabelValue
               label="Total Cost ($)"
               value={calculateResults.data['Total Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Total Time (days)"
@@ -898,10 +903,12 @@ function CalculateResults() {
             <LabelValue
               label="Total Sampling Labor Cost ($)"
               value={calculateResults.data['Total Sampling Labor Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Total Sampling Material Cost ($)"
               value={calculateResults.data['Sampling Material Cost']}
+              isMonetary={true}
             />
             <hr css={resourceTallySeparator} />
 
@@ -917,10 +924,12 @@ function CalculateResults() {
             <LabelValue
               label="Total Analysis Labor Cost ($)"
               value={calculateResults.data['Analysis Labor Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Total Analysis Material Cost ($)"
               value={calculateResults.data['Analysis Material Cost']}
+              isMonetary={true}
             />
             <br />
 
@@ -962,6 +971,7 @@ function CalculateResults() {
               value={
                 calculateResults.data['User Specified Sampling Team Labor Cost']
               }
+              isMonetary={true}
             />
             <LabelValue
               label="Time to Prepare Kits (person hours)"
@@ -974,10 +984,12 @@ function CalculateResults() {
             <LabelValue
               label="Sampling Material Cost ($)"
               value={calculateResults.data['Sampling Material Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Sampling Personnel Labor Cost ($)"
               value={calculateResults.data['Sampling Personnel Labor Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Time to Complete Sampling (days)"
@@ -986,6 +998,7 @@ function CalculateResults() {
             <LabelValue
               label="Total Sampling Labor Cost ($)"
               value={calculateResults.data['Total Sampling Labor Cost']}
+              isMonetary={true}
             />
             <hr css={resourceTallySeparator} />
 
@@ -1001,10 +1014,12 @@ function CalculateResults() {
             <LabelValue
               label="Analysis Labor Cost ($)"
               value={calculateResults.data['Analysis Labor Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Analysis Material Cost ($)"
               value={calculateResults.data['Analysis Material Cost']}
+              isMonetary={true}
             />
             <LabelValue
               label="Waste Volume (L)"
