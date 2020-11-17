@@ -99,9 +99,9 @@ function GettingStarted({ isOpen, children }: Props) {
             your plan, give it a name and description and add targeted samples
             or use the “Add Multiple Random Samples” to draw multiple samples of
             the same type in a specified area of interest. A Resource Tally will
-            update as you continue building your plan. A comparison summary
-            table is also available detailing the attributes of any samples that
-            are added to the plan. You can create custom sample types or clone
+            update as you continue building your plan. A companion summary table
+            is also available detailing the attributes of any samples that are
+            added to the plan. You can create custom sample types or clone
             existing sample types to support conducting "what-if" scenarios.
           </li>
           <li>
