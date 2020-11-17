@@ -1074,8 +1074,8 @@ function LocateSamples() {
   const [addLayerVisible, setAddLayerVisible] = React.useState(false);
   const [editLayerVisible, setEditLayerVisible] = React.useState(false);
   const [generateRandomMode, setGenerateRandomMode] = React.useState<
-    'draw' | 'file'
-  >('draw');
+    'draw' | 'file' | ''
+  >('');
   const [
     selectedAoiFile,
     setSelectedAoiFile,
@@ -1941,60 +1941,68 @@ function LocateSamples() {
                           </div>
                         </React.Fragment>
                       )}
-                      <br />
-                      <label htmlFor="sample-type-select-input">
-                        Sample Type
-                      </label>
-                      <Select
-                        id="sample-type-select"
-                        inputId="sample-type-select-input"
-                        css={fullWidthSelectStyles}
-                        value={sampleType}
-                        onChange={(ev) => setSampleType(ev as SampleSelectType)}
-                        options={allSampleOptions}
-                      />
-                      <label htmlFor="number-of-samples-input">
-                        Number of Samples
-                      </label>
-                      <input
-                        id="number-of-samples-input"
-                        css={inputStyles}
-                        value={numberRandomSamples}
-                        onChange={(ev) =>
-                          setNumberRandomSamples(ev.target.value)
-                        }
-                      />
-                      {generateRandomResponse.status === 'success' &&
-                        sketchLayer &&
-                        generateRandomSuccessMessage(
-                          generateRandomResponse.data.length,
-                          sketchLayer.label,
-                        )}
-                      {generateRandomResponse.status === 'failure' &&
-                        webServiceErrorMessage}
-                      {generateRandomResponse.status ===
-                        'exceededTransferLimit' &&
-                        generateRandomExceededTransferLimitMessage}
-                      {((generateRandomMode === 'draw' &&
-                        numberRandomSamples &&
-                        aoiSketchLayer?.sketchLayer.type === 'graphics' &&
-                        aoiSketchLayer.sketchLayer.graphics.length > 0) ||
-                        (generateRandomMode === 'file' &&
-                          selectedAoiFile?.sketchLayer.type === 'graphics' &&
-                          selectedAoiFile.sketchLayer.graphics.length > 0)) && (
-                        <button
-                          css={submitButtonStyles}
-                          onClick={randomSamples}
-                        >
-                          {generateRandomResponse.status !== 'fetching' &&
-                            'Submit'}
-                          {generateRandomResponse.status === 'fetching' && (
-                            <React.Fragment>
-                              <i className="fas fa-spinner fa-pulse" />
-                              &nbsp;&nbsp;Loading...
-                            </React.Fragment>
+                      {generateRandomMode && (
+                        <React.Fragment>
+                          <br />
+                          <label htmlFor="sample-type-select-input">
+                            Sample Type
+                          </label>
+                          <Select
+                            id="sample-type-select"
+                            inputId="sample-type-select-input"
+                            css={fullWidthSelectStyles}
+                            value={sampleType}
+                            onChange={(ev) =>
+                              setSampleType(ev as SampleSelectType)
+                            }
+                            options={allSampleOptions}
+                          />
+                          <label htmlFor="number-of-samples-input">
+                            Number of Samples
+                          </label>
+                          <input
+                            id="number-of-samples-input"
+                            css={inputStyles}
+                            value={numberRandomSamples}
+                            onChange={(ev) =>
+                              setNumberRandomSamples(ev.target.value)
+                            }
+                          />
+                          {generateRandomResponse.status === 'success' &&
+                            sketchLayer &&
+                            generateRandomSuccessMessage(
+                              generateRandomResponse.data.length,
+                              sketchLayer.label,
+                            )}
+                          {generateRandomResponse.status === 'failure' &&
+                            webServiceErrorMessage}
+                          {generateRandomResponse.status ===
+                            'exceededTransferLimit' &&
+                            generateRandomExceededTransferLimitMessage}
+                          {((generateRandomMode === 'draw' &&
+                            numberRandomSamples &&
+                            aoiSketchLayer?.sketchLayer.type === 'graphics' &&
+                            aoiSketchLayer.sketchLayer.graphics.length > 0) ||
+                            (generateRandomMode === 'file' &&
+                              selectedAoiFile?.sketchLayer.type ===
+                                'graphics' &&
+                              selectedAoiFile.sketchLayer.graphics.length >
+                                0)) && (
+                            <button
+                              css={submitButtonStyles}
+                              onClick={randomSamples}
+                            >
+                              {generateRandomResponse.status !== 'fetching' &&
+                                'Submit'}
+                              {generateRandomResponse.status === 'fetching' && (
+                                <React.Fragment>
+                                  <i className="fas fa-spinner fa-pulse" />
+                                  &nbsp;&nbsp;Loading...
+                                </React.Fragment>
+                              )}
+                            </button>
                           )}
-                        </button>
+                        </React.Fragment>
                       )}
                     </React.Fragment>
                   )}
