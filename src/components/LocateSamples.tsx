@@ -1418,6 +1418,8 @@ function LocateSamples() {
                             const index = edits.edits.findIndex(
                               (layer) =>
                                 layer.type === 'layer' &&
+                                (layer.layerType === 'Samples' ||
+                                  layer.layerType === 'VSP') &&
                                 layer.layerId !== sketchLayer.layerId,
                             );
                             if (index > -1) {
