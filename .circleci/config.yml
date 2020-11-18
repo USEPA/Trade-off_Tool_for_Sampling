@@ -56,24 +56,8 @@ jobs:
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
-          name: Deploy to totsbeta server
-          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsbeta
-
-  deploy-staging2:
-    <<: *set-container
-    working_directory: ~/repo
-    steps:
-      - checkout
-      - <<: *restore-cache
-      - run: npm install
-      - <<: *save-cache
-      - run: npm test
-      - run: npm run build
-      - <<: *add-ssh-keys
-      - run: *trust-server
-      - run:
-          name: Deploy to totsbeta server
-          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsbeta2
+          name: Deploy to totsstage server
+          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsstage
 
 workflows:
   version: 2
@@ -87,7 +71,3 @@ workflows:
           filters:
             branches:
               only: staging
-      - deploy-staging2:
-          filters:
-            branches:
-              only: staging2
