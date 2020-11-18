@@ -585,7 +585,9 @@ function MapWidgets({ mapView }: Props) {
     }
 
     const group = 'contamination-highlights-group';
-    handles.remove(group);
+    try {
+      handles.remove(group);
+    } catch (e) {}
 
     // find the group layer
     const groupLayer = map.findLayerById(
@@ -622,7 +624,9 @@ function MapWidgets({ mapView }: Props) {
     }
 
     const group = 'highlights-group';
-    handles.remove(group);
+    try {
+      handles.remove(group);
+    } catch (e) {}
 
     const samples: any = {};
     selectedSampleIds.forEach((sample) => {
