@@ -74,7 +74,7 @@ export const attributeOverwriteWarning = (
   sampleType: SampleSelectType | null,
 ) => {
   const sampleTypeStr = sampleType
-    ? sampleType.label
+    ? sampleType.value
     : 'the corresponding sample type';
   return (
     <MessageBox
@@ -224,6 +224,12 @@ export const contaminationHitsSuccessMessage = (numberOfHits: number) => (
   />
 );
 
+export const userDefinedValidationMessage = (
+  message: JSX.Element[] | string,
+) => (
+  <MessageBox severity="error" title="Validation Failure" message={message} />
+);
+
 // calculate results panel
 export const screenshotFailureMessage = (
   <MessageBox
@@ -274,7 +280,7 @@ export const pulblishSuccessMessage = (
 export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
-    title="Scenario Name Not Available"
-    message={`The "${scenarioName}" name is already in use. Please rename the scenario and try again.`}
+    title="Plan Name Not Available"
+    message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
   />
 );

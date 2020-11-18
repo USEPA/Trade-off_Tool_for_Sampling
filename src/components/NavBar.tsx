@@ -159,33 +159,34 @@ const resourceTallyStyles = css`
   border-top: 5px solid ${buttonVisitedColor};
   border-bottom: 5px solid ${buttonVisitedColor};
   padding: 5px;
-
-  i {
-    color: ${buttonVisitedColor};
-  }
+  font-size: 0.85rem;
 `;
 
 const tallyTitle = css`
   color: white;
   margin: 0;
-  padding: 0 0 0.5em;
+  padding: 0 0 0.25em;
   font-size: 100%;
   font-weight: bold;
   line-height: 1.3;
 `;
 
 const resourceTallyContainerStyles = css`
-  display: inline-block;
+  width: 100%;
   text-align: left;
+`;
+
+const subTallyStyles = css`
+  margin-left: 15px;
+`;
+
+const mainTallyStyles = css`
+  font-weight: bold;
 `;
 
 const resourceTallySeparator = css`
   border-top: none;
   border-bottom: 1px solid ${buttonVisitedColor};
-`;
-
-const limitingFactorStyles = css`
-  color: ${buttonVisitedColor};
 `;
 
 const helpIconStyles = css`
@@ -201,15 +202,22 @@ const helpIconStyles = css`
   text-align: center;
 `;
 
-const floatPanelStyles = (
-  width: string,
-  height: number,
-  left: string,
-  expanded: boolean,
-) => {
+const floatPanelStyles = ({
+  width,
+  height,
+  left,
+  expanded,
+  zIndex,
+}: {
+  width: string;
+  height: number;
+  left: string;
+  expanded: boolean;
+  zIndex: number;
+}) => {
   return css`
     display: ${expanded ? 'block' : 'none'};
-    z-index: 99;
+    z-index: ${zIndex};
     position: absolute;
     height: ${height}px;
     left: ${left};
@@ -218,21 +226,28 @@ const floatPanelStyles = (
   `;
 };
 
-const floatPanelContentStyles = css`
-  float: left;
-  position: relative;
-  height: 100%;
-  overflow: auto;
-  pointer-events: all;
+const floatPanelContentStyles = (includeOverflow: boolean = true) => {
+  return css`
+    float: left;
+    position: relative;
+    height: 100%;
+    ${includeOverflow ? 'overflow: auto;' : ''}
+    pointer-events: all;
 
-  /* styles to be overridden */
-  width: ${panelWidth};
-  color: black;
-  background-color: white;
+    /* styles to be overridden */
+    width: ${panelWidth};
+    color: black;
+    background-color: white;
+  `;
+};
+
+const floatPanelScrollContainerStyles = css`
+  overflow: auto;
+  height: 100%;
 `;
 
 const resultsFloatPanelContentStyles = css`
-  ${floatPanelContentStyles}
+  ${floatPanelContentStyles()}
 
   width: ${resultsPanelWidth};
   color: white;
@@ -257,12 +272,10 @@ const floatPanelTableContainer = css`
 
 const floatPanelTableCellContainer = css`
   display: table-cell;
-  vertical-align: middle;
 `;
 
 const collapsePanelButton = css`
-  margin: 0;
-  margin-bottom: 10px !important;
+  margin: 10px 0 !important;
   display: flex;
   justify-content: center;
   width: ${panelCollapseButtonWidth};
@@ -301,22 +314,31 @@ function NavBar({ height }: Props) {
     setGettingStartedOpen,
     latestStepIndex,
     setLatestStepIndex,
+    panelExpanded,
+    setPanelExpanded,
+    resultsExpanded,
+    setResultsExpanded,
   } = React.useContext(NavigationContext);
 
-  const [expanded, setExpanded] = React.useState(false);
   const toggleExpand = React.useCallback(
     (panel: PanelType, panelIndex: number) => {
       if (panel === currentPanel) {
-        setExpanded(false);
+        setPanelExpanded(false);
         setCurrentPanel(null);
       } else {
-        setExpanded(true);
+        setPanelExpanded(true);
         setCurrentPanel(panel);
       }
 
       if (panelIndex > latestStepIndex) setLatestStepIndex(panelIndex);
     },
-    [currentPanel, setCurrentPanel, latestStepIndex, setLatestStepIndex],
+    [
+      currentPanel,
+      setCurrentPanel,
+      latestStepIndex,
+      setLatestStepIndex,
+      setPanelExpanded,
+    ],
   );
 
   React.useEffect(() => {
@@ -338,16 +360,15 @@ function NavBar({ height }: Props) {
     setGoTo('');
   }, [goTo, setGoTo, toggleExpand]);
 
-  const [resultsExpanded, setResultsExpanded] = React.useState(false);
   React.useEffect(() => {
     if (calculateResults.status !== 'none') {
       setResultsExpanded(true);
     }
-  }, [calculateResults]);
+  }, [calculateResults, setResultsExpanded]);
 
   // determine how far to the right the expand/collapse buttons should be
   let expandLeft = navPanelWidth;
-  if (expanded) {
+  if (panelExpanded) {
     if (
       currentPanel?.value !== 'calculate' ||
       calculateResults.panelOpen === false ||
@@ -402,24 +423,55 @@ function NavBar({ height }: Props) {
             <div css={resourceTallyStyles}>
               <h3 css={tallyTitle}>Resource Tally</h3>
               <div css={resourceTallyContainerStyles}>
-                <i className="fas fa-dollar-sign fa-fw" />{' '}
-                {calculateResults.data['Total Cost'].toLocaleString()}
-                <br />
-                <i className="far fa-clock fa-fw" />{' '}
-                {calculateResults.data['Total Time'].toLocaleString()} day(s)
+                <div css={mainTallyStyles}>
+                  Total Cost: $
+                  {Math.round(
+                    calculateResults.data['Total Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-users fa-fw" /> $
+                  {Math.round(
+                    calculateResults.data['Total Sampling Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-flask fa-fw" /> $
+                  {Math.round(
+                    calculateResults.data['Total Analysis Cost'],
+                  ).toLocaleString()}
+                </div>
+                <div css={mainTallyStyles}>
+                  Max Time day(s):{' '}
+                  {calculateResults.data['Total Time'].toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-users fa-fw" />{' '}
+                  {(
+                    Math.round(
+                      calculateResults.data['Time to Complete Sampling'] * 10,
+                    ) / 10
+                  ).toLocaleString()}
+                </div>
+                <div css={subTallyStyles}>
+                  <i className="fas fa-flask fa-fw" />{' '}
+                  {(
+                    Math.round(
+                      calculateResults.data['Time to Complete Analyses'] * 10,
+                    ) / 10
+                  ).toLocaleString()}
+                </div>
                 <hr css={resourceTallySeparator} />
               </div>
               {calculateResults.data['Limiting Time Factor'] && (
                 <div>
-                  Limiting Factor
+                  <span css={mainTallyStyles}>Limiting Factor</span>
                   <br />
                   {calculateResults.data['Limiting Time Factor'] ===
                     'Sampling' && <i className="fas fa-users fa-fw" />}
                   {calculateResults.data['Limiting Time Factor'] ===
                     'Analysis' && <i className="fas fa-flask fa-fw" />}{' '}
-                  <span css={limitingFactorStyles}>
-                    {calculateResults.data['Limiting Time Factor']}
-                  </span>
+                  <span>{calculateResults.data['Limiting Time Factor']}</span>
                 </div>
               )}
             </div>
@@ -436,26 +488,40 @@ function NavBar({ height }: Props) {
       </div>
       {currentPanel && (
         <div
-          css={floatPanelStyles(panelWidth, height, navPanelWidth, expanded)}
+          css={floatPanelStyles({
+            width: panelWidth,
+            height,
+            left: navPanelWidth,
+            expanded: panelExpanded,
+            zIndex: 2,
+          })}
         >
-          <div css={floatPanelContentStyles}>
-            {currentPanel.value === 'search' && <Search />}
-            {currentPanel.value === 'addData' && <AddData />}
-            {currentPanel.value === 'locateSamples' && <LocateSamples />}
-            {currentPanel.value === 'calculate' && <Calculate />}
-            {currentPanel.value === 'publish' && <Publish />}
+          <div css={floatPanelContentStyles(false)}>
+            <div
+              id="tots-panel-scroll-container"
+              css={floatPanelScrollContainerStyles}
+            >
+              {currentPanel.value === 'search' && <Search />}
+              {currentPanel.value === 'addData' && <AddData />}
+              {currentPanel.value === 'locateSamples' && <LocateSamples />}
+              {currentPanel.value === 'calculate' && <Calculate />}
+              {currentPanel.value === 'publish' && <Publish />}
+            </div>
           </div>
         </div>
       )}
       {currentPanel?.value === 'calculate' &&
         calculateResults.panelOpen === true && (
           <div
-            css={floatPanelStyles(
-              resultsPanelWidth,
+            css={floatPanelStyles({
+              width: resultsPanelWidth,
               height,
-              `calc(${navPanelWidth} + ${expanded ? panelWidth : '0px'})`,
-              resultsExpanded,
-            )}
+              left: `calc(${navPanelWidth} + ${
+                panelExpanded ? panelWidth : '0px'
+              })`,
+              expanded: resultsExpanded,
+              zIndex: 2,
+            })}
           >
             <div css={resultsFloatPanelContentStyles}>
               <CalculateResults />
@@ -464,27 +530,30 @@ function NavBar({ height }: Props) {
         )}
       {(currentPanel || calculateResults.panelOpen === true) && (
         <div
-          css={floatPanelStyles(
-            panelCollapseButtonWidth,
+          css={floatPanelStyles({
+            width: panelCollapseButtonWidth,
             height,
-            expandLeft,
-            true,
-          )}
+            left: expandLeft,
+            expanded: true,
+            zIndex: 3,
+          })}
         >
-          <div css={floatPanelButtonContainer(expanded)}>
+          <div css={floatPanelButtonContainer(panelExpanded)}>
             <div css={floatPanelTableContainer}>
               <div css={floatPanelTableCellContainer}>
                 {currentPanel && (
                   <button
                     css={collapsePanelButton}
-                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${
+                    aria-label={`${panelExpanded ? 'Collapse' : 'Expand'} ${
                       currentPanel.label
                     } Panel`}
-                    onClick={() => setExpanded(!expanded)}
+                    onClick={() => setPanelExpanded(!panelExpanded)}
                   >
                     <i
                       className={
-                        expanded ? 'fas fa-angle-left' : 'fas fa-angle-right'
+                        panelExpanded
+                          ? 'fas fa-angle-left'
+                          : 'fas fa-angle-right'
                       }
                     />
                   </button>

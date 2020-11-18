@@ -7,14 +7,14 @@ import { DialogOverlay, DialogContent } from '@reach/dialog';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 // styles
-import { colors } from 'styles';
+import { colors, linkButtonStyles } from 'styles';
 // images
 import epaLogo from 'images/epaLogo.png';
 
 // --- styles (SplashScreen) ---
 const overlayStyles = css`
   &[data-reach-dialog-overlay] {
-    z-index: 1000;
+    z-index: 100;
     background-color: ${colors.black(0.75)};
   }
 `;
@@ -72,18 +72,20 @@ const footerStyles = css`
   justify-content: space-between;
 `;
 
-const linkButtonStyles = css`
-  display: inline;
+const modLinkButtonStyles = css`
+  ${linkButtonStyles}
+
   margin: 0;
-  padding: 0;
-  border: none;
   font-family: inherit;
   font-size: 0.875rem;
-  text-decoration: underline;
   color: #fffe99;
-  background-color: transparent;
-  cursor: pointer;
   outline: none;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+    color: #fffe99;
+  }
 `;
 
 const buttonStyles = css`
@@ -187,7 +189,7 @@ function SplashScreen() {
         <p>
           Review{' '}
           <button
-            css={linkButtonStyles}
+            css={modLinkButtonStyles}
             onClick={() => {
               setGettingStartedOpen(true);
               setIsOpen(false);

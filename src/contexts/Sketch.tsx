@@ -7,10 +7,18 @@ import { fetchCheck } from 'utils/fetchUtils';
 // config
 import { totsGPServer } from 'config/webService';
 // types
-import { EditsType } from 'types/Edits';
+import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
+import {
+  UserDefinedAttributes,
+  SampleSelectType,
+  SelectedSampleType,
+  PolygonSymbol,
+} from 'config/sampleAttributes';
 
 type SketchType = {
+  autoZoom: boolean;
+  setAutoZoom: React.Dispatch<React.SetStateAction<boolean>>;
   basemapWidget: __esri.BasemapGallery | null;
   setBasemapWidget: React.Dispatch<
     React.SetStateAction<__esri.BasemapGallery | null>
@@ -19,6 +27,10 @@ type SketchType = {
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
+  polygonSymbol: PolygonSymbol;
+  setPolygonSymbol: React.Dispatch<React.SetStateAction<PolygonSymbol>>;
+  symbolsInitialized: boolean;
+  setSymbolsInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layersInitialized: boolean;
   setLayersInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layers: LayerType[];
@@ -37,6 +49,14 @@ type SketchType = {
   setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
   setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
+  selectedSampleIds: SelectedSampleType[];
+  setSelectedSampleIds: React.Dispatch<
+    React.SetStateAction<SelectedSampleType[]>
+  >;
+  selectedScenario: ScenarioEditsType | null;
+  setSelectedScenario: React.Dispatch<
+    React.SetStateAction<ScenarioEditsType | null>
+  >;
   sketchVM: __esri.SketchViewModel | null;
   setSketchVM: React.Dispatch<
     React.SetStateAction<__esri.SketchViewModel | null>
@@ -46,15 +66,36 @@ type SketchType = {
     React.SetStateAction<__esri.SketchViewModel | null>
   >;
   getGpMaxRecordCount: (() => Promise<number>) | null;
+  userDefinedOptions: SampleSelectType[];
+  setUserDefinedOptions: React.Dispatch<
+    React.SetStateAction<SampleSelectType[]>
+  >;
+  userDefinedAttributes: UserDefinedAttributes;
+  setUserDefinedAttributes: React.Dispatch<
+    React.SetStateAction<UserDefinedAttributes>
+  >;
 };
 
 export const SketchContext = React.createContext<SketchType>({
+  autoZoom: false,
+  setAutoZoom: () => {},
   basemapWidget: null,
   setBasemapWidget: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
+  polygonSymbol: {
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  },
+  setPolygonSymbol: () => {},
+  symbolsInitialized: false,
+  setSymbolsInitialized: () => {},
   layersInitialized: false,
   setLayersInitialized: () => {},
   layers: [],
@@ -65,6 +106,10 @@ export const SketchContext = React.createContext<SketchType>({
   setReferenceLayers: () => {},
   urlLayers: [],
   setUrlLayers: () => {},
+  selectedSampleIds: [],
+  setSelectedSampleIds: () => {},
+  selectedScenario: null,
+  setSelectedScenario: () => {},
   sketchLayer: null,
   setSketchLayer: () => {},
   aoiSketchLayer: null,
@@ -78,11 +123,16 @@ export const SketchContext = React.createContext<SketchType>({
   aoiSketchVM: null,
   setAoiSketchVM: () => {},
   getGpMaxRecordCount: null,
+  userDefinedOptions: [],
+  setUserDefinedOptions: () => {},
+  userDefinedAttributes: { editCount: 0, attributes: {} },
+  setUserDefinedAttributes: () => {},
 });
 
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
     setBasemapWidget, //
@@ -98,8 +148,24 @@ export function SketchProvider({ children }: Props) {
     null,
   );
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
+  const [polygonSymbol, setPolygonSymbol] = React.useState<PolygonSymbol>({
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  });
+  const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
+  const [selectedSampleIds, setSelectedSampleIds] = React.useState<
+    SelectedSampleType[]
+  >([]);
+  const [
+    selectedScenario,
+    setSelectedScenario, //
+  ] = React.useState<ScenarioEditsType | null>(null);
   const [
     sketchVM,
     setSketchVM, //
@@ -108,6 +174,12 @@ export function SketchProvider({ children }: Props) {
     aoiSketchVM,
     setAoiSketchVM, //
   ] = React.useState<__esri.SketchViewModel | null>(null);
+  const [userDefinedOptions, setUserDefinedOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
+  const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
+    UserDefinedAttributes
+  >({ editCount: 0, attributes: {} });
 
   // define the context funtion for getting the max record count
   // of the gp server
@@ -136,12 +208,18 @@ export function SketchProvider({ children }: Props) {
   return (
     <SketchContext.Provider
       value={{
+        autoZoom,
+        setAutoZoom,
         basemapWidget,
         setBasemapWidget,
         edits,
         setEdits,
         homeWidget,
         setHomeWidget,
+        polygonSymbol,
+        setPolygonSymbol,
+        symbolsInitialized,
+        setSymbolsInitialized,
         layersInitialized,
         setLayersInitialized,
         layers,
@@ -152,6 +230,10 @@ export function SketchProvider({ children }: Props) {
         setReferenceLayers,
         urlLayers,
         setUrlLayers,
+        selectedSampleIds,
+        setSelectedSampleIds,
+        selectedScenario,
+        setSelectedScenario,
         sketchLayer,
         setSketchLayer,
         aoiSketchLayer,
@@ -165,6 +247,10 @@ export function SketchProvider({ children }: Props) {
         aoiSketchVM,
         setAoiSketchVM,
         getGpMaxRecordCount,
+        userDefinedOptions,
+        setUserDefinedOptions,
+        userDefinedAttributes,
+        setUserDefinedAttributes,
       }}
     >
       {children}

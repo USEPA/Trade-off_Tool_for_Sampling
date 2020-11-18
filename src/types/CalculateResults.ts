@@ -18,8 +18,9 @@ export type CalculateResultsDataType = {
   'User Specified Sampling Team Labor Cost': number;
   'Time to Prepare Kits': number;
   'Time to Collect': number;
-  'Material Cost': number;
+  'Sampling Material Cost': number;
   'Sampling Personnel Labor Cost': number;
+  'Total Sampling Cost': number;
   'Time to Complete Sampling': number;
   'Total Sampling Labor Cost': number;
   'User Specified Number of Available Labs for Analysis': number;
@@ -28,6 +29,7 @@ export type CalculateResultsDataType = {
   'Time to Analyze': number;
   'Analysis Labor Cost': number;
   'Analysis Material Cost': number;
+  'Total Analysis Cost': number;
   'Waste Volume': number;
   'Waste Weight': number;
 };
@@ -37,6 +39,7 @@ export type CalculateResultsType = {
     | 'none'
     | 'no-graphics'
     | 'no-layer'
+    | 'no-scenario'
     | 'fetching'
     | 'success'
     | 'failure';

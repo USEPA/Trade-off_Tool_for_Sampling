@@ -26,9 +26,10 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
-import { geoprocessorFetch } from 'utils/fetchUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
-import { getPopupTemplate, updateLayerEdits } from 'utils/sketchUtils';
+import { geoprocessorFetch } from 'utils/fetchUtils';
+import { useDynamicPopup } from 'utils/hooks';
+import { updateLayerEdits } from 'utils/sketchUtils';
 import { chunkArray } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
@@ -45,6 +46,28 @@ type ContaminationResultsType = {
     | 'failure';
   data: any[] | null;
 };
+
+// Gets all of the graphics of a group layer associated with the provided layerId
+function getGraphics(map: __esri.Map, layerId: string) {
+  const graphics: __esri.Graphic[] = [];
+  let groupLayer: __esri.GroupLayer | null = null;
+
+  // find the group layer
+  const tempGroupLayer = map.layers.find((layer) => layer.id === layerId);
+
+  // get the graphics
+  if (tempGroupLayer) {
+    groupLayer = tempGroupLayer as __esri.GroupLayer;
+    groupLayer.layers.forEach((layer) => {
+      if (layer.type !== 'graphics') return;
+
+      const graphicsLayer = layer as __esri.GraphicsLayer;
+      graphics.push(...graphicsLayer.graphics.toArray());
+    });
+  }
+
+  return { groupLayer, graphics };
+}
 
 // --- styles (Calculate) ---
 const inputStyles = css`
@@ -108,7 +131,10 @@ function Calculate() {
     edits,
     setEdits,
     layers,
+    setLayers,
+    map,
     sketchLayer,
+    selectedScenario,
     getGpMaxRecordCount,
   } = React.useContext(SketchContext);
   const {
@@ -117,22 +143,33 @@ function Calculate() {
     calculateResults,
     setCalculateResults,
     numLabs,
-    setNumLabs,
     numLabHours,
-    setNumLabHours,
     numSamplingHours,
-    setNumSamplingHours,
     numSamplingPersonnel,
-    setNumSamplingPersonnel,
     numSamplingShifts,
-    setNumSamplingShifts,
     numSamplingTeams,
-    setNumSamplingTeams,
     samplingLaborCost,
-    setSamplingLaborCost,
     surfaceArea,
-    setSurfaceArea,
+    inputNumLabs,
+    setInputNumLabs,
+    inputNumLabHours,
+    setInputNumLabHours,
+    inputNumSamplingHours,
+    setInputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    setInputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    setInputNumSamplingShifts,
+    inputNumSamplingTeams,
+    setInputNumSamplingTeams,
+    inputSamplingLaborCost,
+    setInputSamplingLaborCost,
+    inputSurfaceArea,
+    setInputSurfaceArea,
+    setUpdateContextValues,
   } = React.useContext(CalculateContext);
+
+  const getPopupTemplate = useDynamicPopup();
 
   // callback for closing the results panel when leaving this tab
   const closePanel = React.useCallback(() => {
@@ -152,56 +189,48 @@ function Calculate() {
     };
   }, [closePanel]);
 
-  // input states
-  const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
-  const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
-  const [inputSurfaceArea, setInputSurfaceArea] = React.useState(surfaceArea);
-  const [
-    inputNumSamplingHours,
-    setInputNumSamplingHours, //
-  ] = React.useState(numSamplingHours);
-  const [
-    inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
-  ] = React.useState(numSamplingPersonnel);
-  const [
-    inputNumSamplingShifts,
-    setInputNumSamplingShifts, //
-  ] = React.useState(numSamplingShifts);
-  const [
-    inputNumSamplingTeams,
-    setInputNumSamplingTeams, //
-  ] = React.useState(numSamplingTeams);
-  const [
-    inputSamplingLaborCost,
-    setInputSamplingLaborCost, //
-  ] = React.useState(samplingLaborCost);
+  // Initialize the contamination map to the first available one
+  const [contamMapInitialized, setContamMapInitialized] = React.useState(false);
+  React.useEffect(() => {
+    if (contamMapInitialized) return;
 
-  // updates the calculate context with the user input values
-  function updateContextValues() {
-    setNumLabs(inputNumLabs);
-    setNumLabHours(inputNumLabHours);
-    setNumSamplingHours(inputNumSamplingHours);
-    setNumSamplingPersonnel(inputNumSamplingPersonnel);
-    setNumSamplingShifts(inputNumSamplingShifts);
-    setNumSamplingTeams(inputNumSamplingTeams);
-    setSamplingLaborCost(inputSamplingLaborCost);
-    setSurfaceArea(inputSurfaceArea);
-  }
+    setContamMapInitialized(true);
+
+    // exit early since there is no need to set the contamination map
+    if (contaminationMap) return;
+
+    // set the contamination map to the first available one
+    const newContamMap = layers.find(
+      (layer) => layer.layerType === 'Contamination Map',
+    );
+    if (!newContamMap) return;
+    setContaminationMap(newContamMap);
+  }, [contaminationMap, setContaminationMap, contamMapInitialized, layers]);
 
   // updates context to run the calculations
   function runCalculation() {
+    if (!map) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
+    if (selectedScenario.layers.length === 0) {
       setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
+    const { graphics } = getGraphics(map, selectedScenario.layerId);
+
     // set the no graphics status
-    if (sketchLayer.sketchLayer.graphics.length === 0) {
+    if (graphics.length === 0) {
       setCalculateResults({
         status: 'no-graphics',
         panelOpen: true,
@@ -217,6 +246,7 @@ function Calculate() {
       numLabs === inputNumLabs &&
       numLabHours === inputNumLabHours &&
       numSamplingHours === inputNumSamplingHours &&
+      numSamplingShifts === inputNumSamplingShifts &&
       numSamplingPersonnel === inputNumSamplingPersonnel &&
       numSamplingTeams === inputNumSamplingTeams &&
       samplingLaborCost === inputSamplingLaborCost &&
@@ -240,7 +270,7 @@ function Calculate() {
 
     // open the panel and update context to run calculations
     setCalculateResults({ status: 'fetching', panelOpen: true, data: null });
-    updateContextValues();
+    setUpdateContextValues(true);
   }
 
   const [
@@ -252,12 +282,21 @@ function Calculate() {
   // map.
   function runContaminationCalculation() {
     if (!getGpMaxRecordCount) return;
+    if (!map || !sketchLayer?.sketchLayer) return;
+
+    // set no scenario status
+    if (!selectedScenario) {
+      setCalculateResults({
+        status: 'no-scenario',
+        panelOpen: true,
+        data: null,
+      });
+      return;
+    }
+
     // set the no layer status
-    if (
-      !sketchLayer?.sketchLayer ||
-      sketchLayer.sketchLayer.type !== 'graphics'
-    ) {
-      setContaminationResults({ status: 'no-layer', data: null });
+    if (selectedScenario.layers.length === 0) {
+      setCalculateResults({ status: 'no-layer', panelOpen: true, data: null });
       return;
     }
 
@@ -329,9 +368,11 @@ function Calculate() {
       ],
     });
 
-    const sketchedGraphics: __esri.Graphic[] = [];
-    sketchedGraphics.push(...sketchLayer.sketchLayer.graphics.toArray());
-    if (sketchedGraphics.length === 0) {
+    const { groupLayer, graphics: sketchedGraphics } = getGraphics(
+      map,
+      selectedScenario.layerId,
+    );
+    if (sketchedGraphics.length === 0 || !groupLayer) {
       // display the no-graphics warning
       setContaminationResults({
         status: 'no-graphics',
@@ -419,7 +460,7 @@ function Calculate() {
               {
                 name: 'MCPS',
                 type: 'double',
-                alias: 'Material Cost per Sample',
+                alias: 'Sampling Material Cost per Sample',
               },
               {
                 name: 'TCPS',
@@ -484,17 +525,14 @@ function Calculate() {
             Geoprocessor,
             url: `${totsGPServer}/Contamination Results`,
             inputParameters: params,
-            useProxy: true,
           });
           requests.push(request);
         });
 
         Promise.all(requests)
           .then((responses: any) => {
-            console.log('GPServer contamination responses: ', responses);
-
             // perform calculations to update talley in nav bar
-            updateContextValues();
+            setUpdateContextValues(true);
 
             const resFeatures: any[] = [];
             for (let i = 0; i < responses.length; i++) {
@@ -515,46 +553,92 @@ function Calculate() {
               }
             }
 
+            // make the contamination map visible in the legend
+            contaminationMap.listMode = 'show';
+            contaminationMap.sketchLayer.listMode = 'show';
+            setContaminationMap((layer) => {
+              return {
+                ...layer,
+                listMode: 'show',
+              } as LayerType;
+            });
+
+            // find the layer being edited
+            const index = layers.findIndex(
+              (layer) => layer.layerId === contaminationMap.layerId,
+            );
+
+            // update the layers context
+            if (index > -1) {
+              setLayers((layers) => {
+                return [
+                  ...layers.slice(0, index),
+                  {
+                    ...contaminationMap,
+                    listMode: 'show',
+                  },
+                  ...layers.slice(index + 1),
+                ];
+              });
+            }
+
+            // make a copy of the edits context variable
+            let editsCopy = updateLayerEdits({
+              edits,
+              layer: contaminationMap,
+              type: 'properties',
+            });
+
             // save the data to state, use an empty array if there is no data
             if (resFeatures.length > 0) {
               const popupTemplate = new PopupTemplate(
                 getPopupTemplate(sketchLayer.layerType, true),
               );
-              const layer = sketchLayer.sketchLayer as __esri.GraphicsLayer;
-              // update the contam value attribute of the graphics
-              layer.graphics.forEach((graphic) => {
-                const resFeature = resFeatures.find(
-                  (feature: any) =>
-                    graphic.attributes.PERMANENT_IDENTIFIER ===
-                    feature.attributes.PERMANENT_IDENTIFIER,
+
+              // loop through the layers and update the contam values
+              groupLayer.layers.forEach((graphicsLayer) => {
+                if (graphicsLayer.type !== 'graphics') return;
+
+                const tempLayer = graphicsLayer as __esri.GraphicsLayer;
+                // update the contam value attribute of the graphics
+                tempLayer.graphics.forEach((graphic) => {
+                  const resFeature = resFeatures.find(
+                    (feature: any) =>
+                      graphic.attributes.PERMANENT_IDENTIFIER ===
+                      feature.attributes.PERMANENT_IDENTIFIER,
+                  );
+
+                  // if the graphic was not found in the response, set contam value to null,
+                  // otherwise use the contam value value found in the response.
+                  let contamValue = null;
+                  let contamType = graphic.attributes.CONTAMTYPE;
+                  let contamUnit = graphic.attributes.CONTAMUNIT;
+                  if (resFeature) {
+                    contamValue = resFeature.attributes.CONTAMVAL;
+                    contamType = resFeature.attributes.CONTAMTYPE;
+                    contamUnit = resFeature.attributes.CONTAMUNIT;
+                  }
+                  graphic.attributes.CONTAMVAL = contamValue;
+                  graphic.attributes.CONTAMTYPE = contamType;
+                  graphic.attributes.CONTAMUNIT = contamUnit;
+                  graphic.popupTemplate = popupTemplate;
+                });
+
+                // find the layer
+                const layer = layers.find(
+                  (layer) => layer.layerId === graphicsLayer.id,
                 );
+                if (!layer) return;
 
-                // if the graphic was not found in the response, set contam value to null,
-                // otherwise use the contam value value found in the response.
-                let contamValue = null;
-                let contamType = graphic.attributes.CONTAMTYPE;
-                let contamUnit = graphic.attributes.CONTAMUNIT;
-                if (resFeature) {
-                  contamValue = resFeature.attributes.CONTAMVAL;
-                  contamType = resFeature.attributes.CONTAMTYPE;
-                  contamUnit = resFeature.attributes.CONTAMUNIT;
-                }
-                graphic.attributes.CONTAMVAL = contamValue;
-                graphic.attributes.CONTAMTYPE = contamType;
-                graphic.attributes.CONTAMUNIT = contamUnit;
-                graphic.popupTemplate = popupTemplate;
+                // update the graphics of the sketch layer
+                editsCopy = updateLayerEdits({
+                  edits: editsCopy,
+                  layer: layer,
+                  type: 'update',
+                  changes: tempLayer.graphics,
+                  hasContaminationRan: true,
+                });
               });
-
-              // make a copy of the edits context variable
-              const editsCopy = updateLayerEdits({
-                edits,
-                layer: sketchLayer,
-                type: 'update',
-                changes: layer.graphics,
-                hasContaminationRan: true,
-              });
-
-              setEdits(editsCopy);
 
               setContaminationResults({
                 status: 'success',
@@ -566,12 +650,14 @@ function Calculate() {
                 data: [],
               });
             }
+
+            setEdits(editsCopy);
           })
           .catch((err) => {
             console.error(err);
 
             // perform calculations to update talley in nav bar
-            updateContextValues();
+            setUpdateContextValues(true);
 
             setContaminationResults({
               status: 'failure',
@@ -583,7 +669,7 @@ function Calculate() {
         console.error(err);
 
         // perform calculations to update talley in nav bar
-        updateContextValues();
+        setUpdateContextValues(true);
 
         setContaminationResults({
           status: 'failure',
@@ -592,11 +678,19 @@ function Calculate() {
       });
   }
 
+  // Run calculations when the user exits this tab, by updating
+  // the context values.
+  React.useEffect(() => {
+    return function cleanup() {
+      setUpdateContextValues(true);
+    };
+  }, [setUpdateContextValues]);
+
   return (
     <div css={panelContainer}>
       <div>
         <div css={sectionContainer}>
-          <h2>Calculate</h2>
+          <h2>Calculate Resources</h2>
           <p>
             Default resource constraints are provided to estimate the cost and
             time required to implement the designed plan. You can change the
@@ -614,17 +708,13 @@ function Calculate() {
             Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
-            <strong>Layer Name: </strong>
-            {sketchLayer?.label}
+            <strong>Plan Name: </strong>
+            {selectedScenario?.scenarioName}
           </p>
           <p css={layerInfo}>
-            <strong>Scenario Name: </strong>
-            {sketchLayer?.scenarioName}
-          </p>
-          <p css={layerInfo}>
-            <strong>Scenario Description: </strong>
+            <strong>Plan Description: </strong>
             <ShowLessMore
-              text={sketchLayer?.scenarioDescription}
+              text={selectedScenario?.scenarioDescription}
               charLimit={20}
             />
           </p>
@@ -783,7 +873,6 @@ function Calculate() {
                       inputId="contamination-map-select-input"
                       css={fullWidthSelectStyles}
                       styles={reactSelectStyles}
-                      isClearable={true}
                       value={contaminationMap}
                       onChange={(ev) => setContaminationMap(ev as LayerType)}
                       options={layers.filter(
@@ -819,7 +908,8 @@ function Calculate() {
                     'no-contamination-graphics' &&
                     noContaminationGraphicsMessage}
                   {contaminationResults.status === 'success' &&
-                    contaminationResults?.data?.length &&
+                    contaminationResults?.data &&
+                    contaminationResults.data.length > -1 &&
                     contaminationHitsSuccessMessage(
                       contaminationResults.data.length,
                     )}

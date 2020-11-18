@@ -3,7 +3,7 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
-import EditLayerMetaData from 'components/EditLayerMetaData';
+import { EditScenario } from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
@@ -14,14 +14,30 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
+import { findLayerInEdits } from 'utils/sketchUtils';
 // types
-import { DeleteFeatureType, FeatureEditsType } from 'types/Edits';
+import {
+  DeleteFeatureType,
+  FeatureEditsType,
+  LayerEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
 // config
 import {
   notLoggedInMessage,
   pulblishSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
+import { LayerType } from 'types/Layer';
+
+type PublishResults = {
+  [key: string]: {
+    adds: FeatureEditsType[];
+    updates: FeatureEditsType[];
+    deletes: DeleteFeatureType[];
+    published: FeatureEditsType[];
+  };
+};
 
 // --- styles (Publish) ---
 const panelContainer = css`
@@ -62,7 +78,7 @@ type PublishType = {
 };
 
 function Publish() {
-  const { IdentityManager } = useEsriModulesContext();
+  const { GraphicsLayer, IdentityManager } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
@@ -72,8 +88,10 @@ function Publish() {
   const {
     edits,
     setEdits,
+    layers,
     setLayers,
-    sketchLayer, //
+    sketchLayer,
+    selectedScenario,
   } = React.useContext(SketchContext);
 
   // Checks browser storage to determine if the user clicked publish and logged in.
@@ -120,7 +138,7 @@ function Publish() {
   React.useEffect(() => {
     if (
       !portal ||
-      !sketchLayer ||
+      !selectedScenario ||
       !publishButtonClicked ||
       hasNameBeenChecked
     ) {
@@ -133,13 +151,13 @@ function Publish() {
       rawData: null,
     });
 
-    if (sketchLayer.status === 'edited') {
+    if (selectedScenario.status === 'edited') {
       setHasNameBeenChecked(true);
       return;
     }
 
     // check if the service (scenario) name is availble before continuing
-    isServiceNameAvailable(portal, sketchLayer.scenarioName)
+    isServiceNameAvailable(portal, selectedScenario.scenarioName)
       .then((res: any) => {
         if (!res.available) {
           setPublishButtonClicked(false);
@@ -161,7 +179,14 @@ function Publish() {
           rawData: err,
         });
       });
-  }, [portal, sketchLayer, publishButtonClicked, hasNameBeenChecked]);
+  }, [
+    portal,
+    selectedScenario,
+    sketchLayer,
+    publishButtonClicked,
+    hasNameBeenChecked,
+    layers,
+  ]);
 
   // Run the publish
   const [publishResponse, setPublishResponse] = React.useState<PublishType>({
@@ -171,7 +196,15 @@ function Publish() {
   });
   React.useEffect(() => {
     if (!oAuthInfo || !portal || !signedIn) return;
-    if (!sketchLayer || !publishButtonClicked || !hasNameBeenChecked) return;
+    if (
+      !layers ||
+      layers.length === 0 ||
+      !selectedScenario ||
+      !publishButtonClicked ||
+      !hasNameBeenChecked
+    ) {
+      return;
+    }
 
     setPublishButtonClicked(false);
 
@@ -181,17 +214,132 @@ function Publish() {
       rawData: null,
     });
 
-    const layerEditsIndex = edits.edits.findIndex(
-      (editLayer) => editLayer.layerId === sketchLayer.layerId,
+    const { scenarioIndex, editsScenario } = findLayerInEdits(
+      edits.edits,
+      selectedScenario.layerId,
     );
-    if (layerEditsIndex === -1) return;
 
-    const layerEdits = edits.edits[layerEditsIndex];
+    // exit early if the scenario was not found
+    if (
+      scenarioIndex === -1 ||
+      !editsScenario ||
+      editsScenario.layers.length === 0
+    ) {
+      setPublishResponse({
+        status: 'fetch-failure',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+      return;
+    }
+
+    const originalLayers = layers.filter(
+      (layer) =>
+        editsScenario.layers.findIndex(
+          (childLayer) => childLayer.layerId === layer.layerId,
+        ) !== -1,
+    );
+
+    // make the layer publish layer
+    const graphicsLayer = new GraphicsLayer({
+      title: selectedScenario.scenarioName,
+      visible: false,
+      listMode: 'hide',
+    });
+
+    let publishLayer: LayerType | null = null;
+    originalLayers.forEach((layer, index) => {
+      if (index === 0) {
+        publishLayer = {
+          ...layer,
+          label: selectedScenario.scenarioName,
+          layerId: selectedScenario.layerId,
+          layerType: 'Samples',
+          name: selectedScenario.scenarioName,
+          sketchLayer: graphicsLayer,
+          value: selectedScenario.scenarioName,
+        };
+      }
+
+      if (
+        !publishLayer ||
+        publishLayer.sketchLayer.type !== 'graphics' ||
+        layer.sketchLayer.type !== 'graphics'
+      ) {
+        return;
+      }
+
+      const clonedGraphics = layer.sketchLayer.graphics.clone();
+      publishLayer.sketchLayer.addMany(clonedGraphics.toArray());
+    });
+    const publishLayers: LayerType[] = publishLayer ? [publishLayer] : [];
+
+    // build the layerEdits
+    let layerEdits: LayerEditsType = {
+      type: 'layer',
+      id: editsScenario.id,
+      uuid: '', // no need for a uuid since this is combining layers into one
+      layerId: editsScenario.layerId,
+      portalId: editsScenario.portalId,
+      name: editsScenario.name,
+      label: editsScenario.label,
+      layerType: editsScenario.layerType,
+      addedFrom: editsScenario.addedFrom,
+      hasContaminationRan: editsScenario.hasContaminationRan,
+      status: editsScenario.status,
+      editType: editsScenario.editType,
+      visible: editsScenario.visible,
+      listMode: editsScenario.listMode,
+      sort: 0, // no need for a uuid since this is combining layers into one
+      adds: [],
+      updates: [],
+      deletes: [],
+      published: [],
+    };
+
+    // add graphics to the layer to publish while also setting
+    // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
+    editsScenario.layers.forEach((layer) => {
+      layerEdits.published = layerEdits.published.concat(layer.published);
+
+      layer.adds.forEach((item) => {
+        layerEdits.adds.push({
+          ...item,
+          attributes: {
+            ...item.attributes,
+            DECISIONUNITUUID: layer.uuid,
+            DECISIONUNIT: layer.label,
+            DECISIONUNITSORT: layer.sort,
+          },
+        });
+      });
+      layer.updates.forEach((item) => {
+        layerEdits.updates.push({
+          ...item,
+          attributes: {
+            ...item.attributes,
+            DECISIONUNITUUID: layer.uuid,
+            DECISIONUNIT: layer.label,
+            DECISIONUNITSORT: layer.sort,
+          },
+        });
+      });
+      layer.deletes.forEach((item) => {
+        layerEdits.deletes.push({
+          ...item,
+          DECISIONUNITUUID: layer.uuid,
+        });
+      });
+    });
 
     publish({
       portal,
-      layers: [sketchLayer],
+      layers: publishLayers,
       edits: [layerEdits],
+      serviceMetaData: {
+        name: editsScenario.scenarioName,
+        description: editsScenario.scenarioDescription,
+      },
     })
       .then((res: any) => {
         // get totals
@@ -201,10 +349,7 @@ function Publish() {
           deleted: 0,
           failed: 0,
         };
-        const newAdds: FeatureEditsType[] = [];
-        const newUpdates: FeatureEditsType[] = [];
-        const newDeletes: DeleteFeatureType[] = [];
-        let newPublished = layerEdits.published;
+        const changes: PublishResults = {};
 
         const layerRes: any = res[0];
         // need to loop through each array and check the success flag
@@ -214,15 +359,31 @@ function Publish() {
 
             // update the edits arrays
             const origItem = layerEdits.adds[index];
+            const decisionUUID = origItem.attributes.DECISIONUNITUUID;
             if (item.success) {
               origItem.attributes.OBJECTID = item.objectId;
               origItem.attributes.GLOBALID = item.globalId;
 
-              newPublished.push(origItem);
+              // update the published for this layer
+              if (changes.hasOwnProperty(decisionUUID)) {
+                changes[decisionUUID].published.push(origItem);
+              } else {
+                changes[decisionUUID] = {
+                  adds: [],
+                  updates: [],
+                  deletes: [],
+                  published: [origItem],
+                };
+              }
+
+              // find the tots layer
+              const mapLayer = layers.find(
+                (layer) => layer.uuid === decisionUUID,
+              );
 
               // update the graphic on the map
-              if (sketchLayer.sketchLayer.type === 'graphics') {
-                const graphic = sketchLayer.sketchLayer.graphics.find(
+              if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
+                const graphic = mapLayer.sketchLayer.graphics.find(
                   (graphic) =>
                     graphic.attributes.PERMANENT_IDENTIFIER ===
                     origItem.attributes.PERMANENT_IDENTIFIER,
@@ -234,7 +395,17 @@ function Publish() {
                 }
               }
             } else {
-              newAdds.push(origItem);
+              // update the adds for this layer
+              if (changes.hasOwnProperty(decisionUUID)) {
+                changes[decisionUUID].adds.push(origItem);
+              } else {
+                changes[decisionUUID] = {
+                  adds: [origItem],
+                  updates: [],
+                  deletes: [],
+                  published: [],
+                };
+              }
             }
           });
         }
@@ -244,12 +415,16 @@ function Publish() {
 
             // update the edits arrays
             const origItem = layerEdits.updates[index];
+            const decisionUUID = origItem.attributes.DECISIONUNITUUID;
             if (item.success) {
               origItem.attributes.OBJECTID = item.objectId;
               origItem.attributes.GLOBALID = item.globalId;
 
+              // get the publish items for this layer
+              let layerNewPublished = changes[decisionUUID].published;
+
               // find the item in published
-              const index = newPublished.findIndex(
+              const index = layerNewPublished.findIndex(
                 (pubItem) =>
                   pubItem.attributes.PERMANENT_IDENTIFIER ===
                   origItem.attributes.PERMANENT_IDENTIFIER,
@@ -257,16 +432,21 @@ function Publish() {
 
               // update the item in newPublished
               if (index > -1) {
-                newPublished = [
-                  ...newPublished.slice(0, index),
+                changes[decisionUUID].published = [
+                  ...layerNewPublished.slice(0, index),
                   origItem,
-                  ...newPublished.slice(index + 1),
+                  ...layerNewPublished.slice(index + 1),
                 ];
               }
 
+              // find the tots layer
+              const mapLayer = layers.find(
+                (layer) => layer.uuid === decisionUUID,
+              );
+
               // update the graphic on the map
-              if (sketchLayer.sketchLayer.type === 'graphics') {
-                const graphic = sketchLayer.sketchLayer.graphics.find(
+              if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
+                const graphic = mapLayer.sketchLayer.graphics.find(
                   (graphic) =>
                     graphic.attributes.PERMANENT_IDENTIFIER ===
                     origItem.attributes.PERMANENT_IDENTIFIER,
@@ -278,7 +458,17 @@ function Publish() {
                 }
               }
             } else {
-              newUpdates.push(origItem);
+              // update the updates for this layer
+              if (changes.hasOwnProperty(decisionUUID)) {
+                changes[decisionUUID].updates.push(origItem);
+              } else {
+                changes[decisionUUID] = {
+                  adds: [],
+                  updates: [origItem],
+                  deletes: [],
+                  published: [],
+                };
+              }
             }
           });
         }
@@ -288,9 +478,13 @@ function Publish() {
 
             // update the edits delete array
             const origItem = layerEdits.deletes[index];
+            const decisionUUID = origItem.DECISIONUNITUUID;
             if (item.success) {
+              // get the publish items for this layer
+              let layerNewPublished = changes[decisionUUID].published;
+
               // find the item in published
-              const pubIndex = newPublished.findIndex(
+              const pubIndex = layerNewPublished.findIndex(
                 (pubItem) =>
                   pubItem.attributes.PERMANENT_IDENTIFIER ===
                   origItem.PERMANENT_IDENTIFIER,
@@ -298,13 +492,23 @@ function Publish() {
 
               // update the item in newPublished
               if (pubIndex > -1) {
-                newPublished = [
-                  ...newPublished.slice(0, pubIndex),
-                  ...newPublished.slice(pubIndex + 1),
+                changes[decisionUUID].published = [
+                  ...layerNewPublished.slice(0, pubIndex),
+                  ...layerNewPublished.slice(pubIndex + 1),
                 ];
               }
             } else {
-              newDeletes.push(origItem);
+              // update the updates for this layer
+              if (changes.hasOwnProperty(decisionUUID)) {
+                changes[decisionUUID].deletes.push(origItem);
+              } else {
+                changes[decisionUUID] = {
+                  adds: [],
+                  updates: [],
+                  deletes: [origItem],
+                  published: [],
+                };
+              }
             }
           });
         }
@@ -348,37 +552,38 @@ function Publish() {
         // make a copy of the edits context variable
         // update the edits state
         setEdits((edits) => {
-          const editedLayer = edits.edits[layerEditsIndex];
-          editedLayer.status = 'published';
-          editedLayer.adds = newAdds;
-          editedLayer.updates = newUpdates;
-          editedLayer.deletes = newDeletes;
-          editedLayer.published = newPublished;
+          const editsScenario = edits.edits[scenarioIndex] as ScenarioEditsType;
+          editsScenario.status = 'published';
+
+          editsScenario.layers.forEach((editedLayer) => {
+            const edits = changes[editedLayer.uuid];
+            editedLayer.adds = edits.adds;
+            editedLayer.updates = edits.updates;
+            editedLayer.deletes = edits.deletes;
+            editedLayer.published = edits.published;
+          });
 
           return {
             count: edits.count + 1,
             edits: [
-              ...edits.edits.slice(0, layerEditsIndex),
-              editedLayer,
-              ...edits.edits.slice(layerEditsIndex + 1),
+              ...edits.edits.slice(0, scenarioIndex),
+              editsScenario,
+              ...edits.edits.slice(scenarioIndex + 1),
             ],
           };
         });
 
         // updated the edited layer
-        setLayers((layers) => {
-          const editedLayerIndex = layers.findIndex(
-            (layer) => layer.layerId === sketchLayer.layerId,
-          );
-          const editedLayer = layers[editedLayerIndex];
-          editedLayer.status = 'published';
+        setLayers((layers) =>
+          layers.map((layer) => {
+            if (!changes.hasOwnProperty(layer.uuid)) return layer;
 
-          return [
-            ...layers.slice(0, editedLayerIndex),
-            editedLayer,
-            ...layers.slice(editedLayerIndex + 1),
-          ];
-        });
+            return {
+              ...layer,
+              status: 'published',
+            };
+          }),
+        );
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -389,6 +594,7 @@ function Publish() {
         });
       });
   }, [
+    GraphicsLayer,
     IdentityManager,
     edits,
     setEdits,
@@ -397,15 +603,15 @@ function Publish() {
     oAuthInfo,
     setGoToOptions,
     signedIn,
-    sketchLayer,
+    layers,
     publishButtonClicked,
     hasNameBeenChecked,
+    selectedScenario,
   ]);
 
   return (
     <div css={panelContainer}>
-      <h2>Publish</h2>
-
+      <h2>Publish Plan</h2>
       <div css={sectionContainer}>
         <p>
           Publish the created plan to ArcGIS Online. A hosted feature layer is
@@ -455,32 +661,24 @@ function Publish() {
             EXIT
           </a>
         </p>
-        <p css={layerInfo}>
-          <strong>Layer Name: </strong>
-          {sketchLayer?.label}
-        </p>
         {publishResponse.status === 'name-not-available' && (
-          <EditLayerMetaData
+          <EditScenario
+            initialScenario={selectedScenario}
             buttonText="Publish"
             initialStatus="name-not-available"
-            onSave={(status) => {
-              // let the component handle all statuses except for success
-              if (status !== 'success') return;
-
-              setPublishButtonClicked(true);
-            }}
+            onSave={() => setPublishButtonClicked(true)}
           />
         )}
         {publishResponse.status !== 'name-not-available' && (
           <React.Fragment>
             <p css={layerInfo}>
-              <strong>Scenario Name: </strong>
-              {sketchLayer?.scenarioName}
+              <strong>Plan Name: </strong>
+              {selectedScenario?.scenarioName}
             </p>
             <p css={layerInfo}>
-              <strong>Scenario Description: </strong>
+              <strong>Plan Description: </strong>
               <ShowLessMore
-                text={sketchLayer?.scenarioDescription}
+                text={selectedScenario?.scenarioDescription}
                 charLimit={20}
               />
             </p>

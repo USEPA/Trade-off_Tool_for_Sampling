@@ -3,10 +3,10 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 // components
+import MapMouseEvents from 'components/MapMouseEvents';
 import MapWidgets from 'components/MapWidgets';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
-import { CalculateContext } from 'contexts/Calculate';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { getGraphicsArray } from 'utils/sketchUtils';
@@ -29,8 +29,8 @@ function Map({ height }: Props) {
 
   const mapRef = React.useRef<HTMLDivElement>(null);
 
-  const { contaminationMap } = React.useContext(CalculateContext);
   const {
+    autoZoom,
     homeWidget,
     map,
     setMap,
@@ -58,6 +58,7 @@ function Map({ height }: Props) {
       zoom: 3,
       popup: {
         defaultPopupTemplateEnabled: true,
+        maxInlineActions: 5,
       },
       spatialReference: {
         wkid: 3857,
@@ -85,11 +86,31 @@ function Map({ height }: Props) {
         const imageryTypes = ['imagery', 'tile', 'vector-tile'];
         let type = 'other';
 
-        if (layer.type === 'graphics') {
+        let groupType = '';
+        if (layer.type === 'group') {
+          const groupLayer = layer as __esri.GroupLayer;
+          groupLayer.layers.forEach((layer, index) => {
+            if (groupType === 'combo') return;
+
+            if (index === 0) {
+              groupType = layer.type;
+              return;
+            }
+
+            if (groupType !== layer.type) {
+              groupType = 'combo';
+            }
+          });
+        }
+
+        if (layer.type === 'graphics' || groupType === 'graphics') {
           type = 'graphics';
-        } else if (layer.type === 'feature') {
+        } else if (layer.type === 'feature' || groupType === 'feature') {
           type = 'feature';
-        } else if (imageryTypes.includes(type)) {
+        } else if (
+          imageryTypes.includes(type) ||
+          imageryTypes.includes(groupType)
+        ) {
           type = 'imagery';
         }
 
@@ -114,14 +135,10 @@ function Map({ height }: Props) {
 
   // Zooms to the graphics whenever the sketchLayer changes
   React.useEffect(() => {
-    if (!map || !mapView || !homeWidget) return;
+    if (!map || !mapView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
-    const zoomGraphics = getGraphicsArray([
-      sketchLayer,
-      aoiSketchLayer,
-      contaminationMap,
-    ]);
+    const zoomGraphics = getGraphicsArray([sketchLayer, aoiSketchLayer]);
 
     if (zoomGraphics.length > 0) {
       mapView.goTo(zoomGraphics).then(() => {
@@ -132,9 +149,9 @@ function Map({ height }: Props) {
       });
     }
   }, [
+    autoZoom,
     map,
     mapView,
-    contaminationMap,
     aoiSketchLayer,
     sketchLayer,
     homeWidget,
@@ -143,7 +160,12 @@ function Map({ height }: Props) {
 
   return (
     <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
-      {mapView && <MapWidgets mapView={mapView} />}
+      {mapView && (
+        <React.Fragment>
+          <MapWidgets mapView={mapView} />
+          <MapMouseEvents mapView={mapView} />
+        </React.Fragment>
+      )}
     </div>
   );
 }
