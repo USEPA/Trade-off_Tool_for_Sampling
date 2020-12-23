@@ -81,14 +81,21 @@ function URLPanel() {
     // keep the original set of url layers in case the layer errors out
     const originalUrlLayers = urlLayers;
 
-    // add this layer to the url layers
-    const urlLayer = { url, type: urlType.value, layerId: layer.id };
-    setUrlLayers([...urlLayers, urlLayer]);
-
     // add the layer to the map
     map.add(layer);
 
-    layer.on('layerview-create', (event) => setStatus('success'));
+    layer.on('layerview-create', (event) => {
+      setUrlLayers((urlLayers) => {
+        urlLayers.forEach((urlLayer) => {
+          if (urlLayer.url === url && urlLayer.type === urlType.value) {
+            urlLayer.layerId = layer.id;
+          }
+        });
+
+        return urlLayers;
+      });
+      setStatus('success');
+    });
 
     layer.on('layerview-create-error', (event) => {
       console.error('create error event: ', event);
@@ -121,8 +128,14 @@ function URLPanel() {
 
     let layer: SupportedUrlLayerTypes | null = null;
     if (type === 'ArcGIS') {
+      // add this layer to the url layers
+      const urlLayer = { url, type: urlType.value, layerId: '' };
+      setUrlLayers([...urlLayers, urlLayer]);
+
       Layer.fromArcGISServerUrl({ url })
-        .then((layer) => setLayer(layer))
+        .then((layer) => {
+          setLayer(layer);
+        })
         .catch((err) => {
           console.error(err);
           setStatus('failure');
@@ -147,8 +160,15 @@ function URLPanel() {
     }
 
     // unsupported layer type
-    if (layer) setLayer(layer);
-    else setStatus('unsupported');
+    if (layer) {
+      // add this layer to the url layers
+      const urlLayer = { url, type: urlType.value, layerId: layer.id };
+      setUrlLayers([...urlLayers, urlLayer]);
+
+      setLayer(layer);
+    } else {
+      setStatus('unsupported');
+    }
   };
 
   return (

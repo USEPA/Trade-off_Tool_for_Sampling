@@ -1350,7 +1350,16 @@ function useUrlLayerStorage() {
 
       let layer;
       if (type === 'ArcGIS') {
-        layer = Layer.fromArcGISServerUrl({ url, properties: { id } });
+        Layer.fromArcGISServerUrl({ url, properties: { id } })
+          .then((layer) => {
+            map.add(layer);
+
+            setUrlLayers((urlLayers) => {
+              return [...urlLayers, urlLayer];
+            });
+          })
+          .catch((err) => console.error(err));
+        return;
       }
       if (type === 'WMS') {
         layer = new WMSLayer({ url, id });
@@ -1377,7 +1386,9 @@ function useUrlLayerStorage() {
       }
     });
 
-    setUrlLayers(newUrlLayers);
+    setUrlLayers((urlLayers) => {
+      return [...urlLayers, ...newUrlLayers];
+    });
   }, [
     // Esri Modules
     CSVLayer,
