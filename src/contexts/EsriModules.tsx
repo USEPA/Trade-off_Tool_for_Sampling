@@ -48,6 +48,7 @@ type EsriConstructors = [
   typeof import('esri/widgets/LayerList'),
   typeof import('esri/widgets/Legend'),
   typeof import('esri/widgets/Locate'),
+  typeof import('esri/widgets/ScaleBar'),
   typeof import('esri/widgets/Search'),
   typeof import('esri/widgets/Slider'),
   typeof import('esri/widgets/Sketch/SketchViewModel'),
@@ -97,9 +98,10 @@ type State = {
   LayerList: EsriConstructors[38];
   Legend: EsriConstructors[39];
   Locate: EsriConstructors[40];
-  Search: EsriConstructors[41];
-  Slider: EsriConstructors[42];
-  SketchViewModel: EsriConstructors[43];
+  ScaleBar: EsriConstructors[41];
+  Search: EsriConstructors[42];
+  Slider: EsriConstructors[43];
+  SketchViewModel: EsriConstructors[44];
 };
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
@@ -149,6 +151,7 @@ function EsriModulesProvider({ children }: Props) {
         'esri/widgets/LayerList',
         'esri/widgets/Legend',
         'esri/widgets/Locate',
+        'esri/widgets/ScaleBar',
         'esri/widgets/Search',
         'esri/widgets/Slider',
         'esri/widgets/Sketch/SketchViewModel',
@@ -200,6 +203,7 @@ function EsriModulesProvider({ children }: Props) {
         LayerList,
         Legend,
         Locate,
+        ScaleBar,
         Search,
         Slider,
         SketchViewModel,
@@ -246,6 +250,7 @@ function EsriModulesProvider({ children }: Props) {
           LayerList,
           Legend,
           Locate,
+          ScaleBar,
           Search,
           Slider,
           SketchViewModel,

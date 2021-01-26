@@ -114,6 +114,7 @@ function MapWidgets({ mapView }: Props) {
     Home,
     Locate,
     PopupTemplate,
+    ScaleBar,
     SketchViewModel,
   } = useEsriModulesContext();
   const { createBuffer, loadedProjection } = useGeometryTools();
@@ -131,6 +132,19 @@ function MapWidgets({ mapView }: Props) {
 
     setHomeWidget(widget);
   }, [mapView, Home, homeWidget, setHomeWidget]);
+
+  // Creates and adds the scale bar widget to the map
+  const [scaleBar, setScaleBar] = React.useState<__esri.ScaleBar | null>(null);
+  React.useEffect(() => {
+    if (!mapView || scaleBar) return;
+
+    const newScaleBar = new ScaleBar({
+      view: mapView,
+      unit: 'dual',
+    });
+    mapView.ui.add(newScaleBar, { position: 'bottom-right', index: 1 });
+    setScaleBar(newScaleBar);
+  }, [ScaleBar, mapView, scaleBar]);
 
   // Creates and adds the locate widget to the map.
   const [
