@@ -7,6 +7,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { DialogContext } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
@@ -16,7 +17,7 @@ import {
   getFeatureLayer,
   getFeatureLayers,
 } from 'utils/arcGisRestUtils';
-import { useDynamicPopup } from 'utils/hooks';
+import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   deepCopyObject,
   getNextScenarioLayer,
@@ -29,12 +30,14 @@ import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import {
   Attributes,
+  attributesToCheck,
   sampleAttributes,
   SampleSelectType,
 } from 'config/sampleAttributes';
 // config
 import {
   notLoggedInMessage,
+  sampleIssuesPopupMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 
@@ -691,6 +694,7 @@ type ResultCardProps = {
 
 function ResultCard({ result }: ResultCardProps) {
   const { portal } = React.useContext(AuthenticationContext);
+  const { setOptions } = React.useContext(DialogContext);
   const { trainingMode } = React.useContext(NavigationContext);
   const {
     FeatureLayer,
@@ -720,6 +724,7 @@ function ResultCard({ result }: ResultCardProps) {
     setUserDefinedAttributes,
   } = React.useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
+  const { sampleValidation } = useGeometryTools();
 
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = React.useState(false);
@@ -781,9 +786,91 @@ function ResultCard({ result }: ResultCardProps) {
             // define items used for updating states
             let editsCopy: EditsType = deepCopyObject(edits);
             const mapLayersToAdd: __esri.Layer[] = [];
+            const newAttributes: Attributes = {};
+            const newUserSampleTypes: SampleSelectType[] = [];
             const layersToAdd: LayerType[] = [];
             const refLayersToAdd: any[] = [];
             const zoomToGraphics: __esri.Graphic[] = [];
+
+            // function used for finalizing the adding of layers. This function is needed
+            // for displaying a popup mesage if there is an issue with any of the samples
+            function finalizeLayerAdd() {
+              if (!map) return;
+
+              // replace sample attributes the correct ones
+              mapLayersToAdd.forEach((parentLayer) => {
+                if (parentLayer.type !== 'group') return;
+
+                const tempParentLayer = parentLayer as __esri.GroupLayer;
+                tempParentLayer.layers.forEach((layer) => {
+                  const tempLayer = layer as __esri.GraphicsLayer;
+
+                  tempLayer.graphics.forEach((graphic) => {
+                    if (
+                      !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                    )
+                      return;
+
+                    const predefinedAttributes: any =
+                      sampleAttributes[graphic.attributes.TYPE];
+                    Object.keys(predefinedAttributes).forEach((key) => {
+                      if (!attributesToCheck.includes(key)) return;
+
+                      graphic.attributes[key] = predefinedAttributes[key];
+                    });
+                  });
+                });
+              });
+
+              // add custom sample types to browser storage
+              if (newUserSampleTypes.length > 0) {
+                setUserDefinedAttributes((item) => {
+                  Object.keys(newAttributes).forEach((key) => {
+                    const attributes = newAttributes[key];
+                    sampleAttributes[attributes.TYPE] = attributes;
+                    item.attributes[attributes.TYPE] = attributes;
+                  });
+
+                  return {
+                    editCount: item.editCount + 1,
+                    attributes: item.attributes,
+                  };
+                });
+
+                setUserDefinedOptions((options) => {
+                  return [...options, ...newUserSampleTypes];
+                });
+              }
+
+              // add all of the layers to the map
+              map.addMany(mapLayersToAdd);
+
+              // zoom to the graphics layer
+              if (zoomToGraphics.length > 0 && mapView) {
+                mapView.goTo(zoomToGraphics);
+              }
+
+              // set the state for session storage
+              setEdits(editsCopy);
+              setLayers((layers) => [...layers, ...layersToAdd]);
+              setReferenceLayers((layers: any) => [
+                ...layers,
+                ...refLayersToAdd,
+              ]);
+
+              // set the sketchLayer to the first tots sample layer
+              if (layersToAdd.length > -1) setSketchLayer(layersToAdd[0]);
+
+              // add the portal id to portal layers. This needed so the card on
+              // the search panel shows up as the layer having been added.
+              setPortalLayers((portalLayers) => [
+                ...portalLayers,
+                { id: result.id, type: 'tots' },
+              ]);
+
+              // reset the status
+              setStatus('');
+            }
 
             // create the layers to be added to the map
             for (let i = 0; i < responses.length; ) {
@@ -805,8 +892,6 @@ function ResultCard({ result }: ResultCardProps) {
               if (isSampleLayer || isVspLayer) {
                 // get the graphics from the layer
                 const graphics: LayerGraphics = {};
-                const newAttributes: Attributes = {};
-                const newUserSampleTypes: SampleSelectType[] = [];
                 layerFeatures.features.forEach((feature: any) => {
                   const graphic: any = Graphic.fromJSON(feature);
                   graphic.geometry.spatialReference = {
@@ -871,25 +956,6 @@ function ResultCard({ result }: ResultCardProps) {
                     graphics[decisionUuid] = [graphic];
                   }
                 });
-
-                if (newUserSampleTypes.length > 0) {
-                  setUserDefinedAttributes((item) => {
-                    Object.keys(newAttributes).forEach((key) => {
-                      const attributes = newAttributes[key];
-                      sampleAttributes[attributes.TYPE] = attributes;
-                      item.attributes[attributes.TYPE] = attributes;
-                    });
-
-                    return {
-                      editCount: item.editCount + 1,
-                      attributes: item.attributes,
-                    };
-                  });
-
-                  setUserDefinedOptions((options) => {
-                    return [...options, ...newUserSampleTypes];
-                  });
-                }
 
                 // need to build the scenario and group layer here
                 const groupLayer = new GroupLayer({
@@ -1031,31 +1097,25 @@ function ResultCard({ result }: ResultCardProps) {
               i += 2;
             }
 
-            // add all of the layers to the map
-            map.addMany(mapLayersToAdd);
+            // validate the area and attributes of features of the uploads. If there is an
+            // issue, display a popup asking the user if they would like the samples to be updated.
+            if (zoomToGraphics.length > 0) {
+              const output = sampleValidation(zoomToGraphics, true);
 
-            // zoom to the graphics layer
-            if (zoomToGraphics.length > 0 && mapView) {
-              mapView.goTo(zoomToGraphics);
+              if (output?.attributeMismatch) {
+                setOptions({
+                  title: 'Sample Issues',
+                  ariaLabel: 'Sample Issues',
+                  description: sampleIssuesPopupMessage(output, false),
+                  onContinue: () => finalizeLayerAdd(),
+                  onCancel: () => setStatus('canceled'),
+                });
+              } else {
+                finalizeLayerAdd();
+              }
+            } else {
+              finalizeLayerAdd();
             }
-
-            // set the state for session storage
-            setEdits(editsCopy);
-            setLayers((layers) => [...layers, ...layersToAdd]);
-            setReferenceLayers((layers: any) => [...layers, ...refLayersToAdd]);
-
-            // set the sketchLayer to the first tots sample layer
-            if (layersToAdd.length > -1) setSketchLayer(layersToAdd[0]);
-
-            // add the portal id to portal layers. This needed so the card on
-            // the search panel shows up as the layer having been added.
-            setPortalLayers((portalLayers) => [
-              ...portalLayers,
-              { id: result.id, type: 'tots' },
-            ]);
-
-            // reset the status
-            setStatus('');
           })
           .catch((err) => {
             console.error(err);
@@ -1243,6 +1303,7 @@ function ResultCard({ result }: ResultCardProps) {
         <span css={cardMessageStyles}>
           {status === 'loading' && 'Adding...'}
           {status === 'error' && 'Add Failed'}
+          {status === 'canceled' && 'Canceled'}
         </span>
         {map && (
           <React.Fragment>
