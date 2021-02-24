@@ -9,13 +9,13 @@ import Select from 'components/Select';
 import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { DialogContext } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
-// contexts
 import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
-import { useDynamicPopup } from 'utils/hooks';
+import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   generateUUID,
   getCurrentDateTime,
@@ -33,14 +33,15 @@ import {
   SampleSelectType,
 } from 'config/sampleAttributes';
 import {
-  attributeOverwriteWarning,
   fileReadErrorMessage,
   importErrorMessage,
   invalidFileTypeMessage,
   missingAttributesMessage,
   noDataMessage,
+  sampleIssuesPopupMessage,
   unknownSampleTypeMessage,
   uploadSuccessMessage,
+  userCanceledMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 
@@ -215,6 +216,7 @@ type UploadStatusType =
   | 'success'
   | 'failure'
   | 'no-data'
+  | 'user-canceled'
   | 'invalid-file-type'
   | 'import-error'
   | 'missing-attributes'
@@ -223,6 +225,7 @@ type UploadStatusType =
 
 function FilePanel() {
   const { portal } = React.useContext(AuthenticationContext);
+  const { setOptions } = React.useContext(DialogContext);
   const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
     NavigationContext,
   );
@@ -255,11 +258,16 @@ function FilePanel() {
   } = useEsriModulesContext();
 
   const getPopupTemplate = useDynamicPopup();
+  const { sampleValidation } = useGeometryTools();
 
   const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
   const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
   const [generateResponse, setGenerateResponse] = React.useState<any>(null);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
+  const [fileValidationStarted, setFileValidationStarted] = React.useState(
+    false,
+  );
+  const [fileValidated, setFileValidated] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
   const [missingAttributes, setMissingAttributes] = React.useState('');
 
@@ -341,6 +349,8 @@ function FilePanel() {
     setAnalyzeResponse(null);
     setGenerateResponse(null);
     setFeaturesAdded(false);
+    setFileValidationStarted(false);
+    setFileValidated(false);
     setMissingAttributes('');
 
     if (!fileType) {
@@ -692,6 +702,67 @@ function FilePanel() {
     getGpMaxRecordCount,
   ]);
 
+  // validate the area and attributes of features of the uploads. If there is an
+  // issue, display a popup asking the user if they would like the samples to be updated.
+  React.useEffect(() => {
+    if (
+      !map ||
+      !mapView ||
+      !layerType ||
+      !file?.file?.esriFileType ||
+      fileValidationStarted ||
+      fileValidated ||
+      featuresAdded
+    ) {
+      return;
+    }
+    if (layerType.value === 'Reference Layer') return;
+    if (!generateResponse) return;
+    if (
+      !generateResponse.featureCollection?.layers ||
+      generateResponse.featureCollection.layers.length === 0
+    ) {
+      setUploadStatus('no-data');
+      return;
+    }
+
+    setFileValidationStarted(true);
+
+    // build the list of graphics to be validated
+    const features: __esri.Graphic[] = [];
+    generateResponse.featureCollection.layers.forEach((layer: any) => {
+      layer.featureSet.features.forEach((feature: any, index: number) => {
+        features.push(feature);
+      });
+    });
+    const isFullGraphic = layerType.value === 'VSP' ? true : false;
+    const output = sampleValidation(features, isFullGraphic);
+
+    // display a message if any of the samples have some kind of issue
+    if (output?.areaOutOfTolerance || output?.attributeMismatch) {
+      setOptions({
+        title: 'Sample Issues',
+        ariaLabel: 'Sample Issues',
+        description: sampleIssuesPopupMessage(output),
+        onContinue: () => setFileValidated(true),
+        onCancel: () => setUploadStatus('user-canceled'),
+      });
+    } else {
+      setFileValidated(true);
+    }
+  }, [
+    layerType,
+    generateResponse,
+    featuresAdded,
+    file,
+    fileValidationStarted,
+    fileValidated,
+    map,
+    mapView,
+    sampleValidation,
+    setOptions,
+  ]);
+
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
   const [newLayerName, setNewLayerName] = React.useState('');
@@ -701,6 +772,7 @@ function FilePanel() {
       !mapView ||
       !layerType ||
       !file?.file?.esriFileType ||
+      !fileValidated ||
       featuresAdded
     ) {
       return;
@@ -882,26 +954,24 @@ function FilePanel() {
     setUploadStatus('success');
   }, [
     // esri modules
-    GraphicsLayer,
-    Field,
-    geometryJsonUtils,
     Graphic,
+    GraphicsLayer,
     PopupTemplate,
-    rendererJsonUtils,
 
     // app
     edits,
     setEdits,
-    layerType,
-    generateResponse,
-    getPopupTemplate,
     featuresAdded,
     file,
+    fileValidated,
+    generateResponse,
+    getPopupTemplate,
+    layers,
+    setLayers,
+    layerType,
     map,
     mapView,
     polygonSymbol,
-    layers,
-    setLayers,
     trainingMode,
   ]);
 
@@ -1239,22 +1309,20 @@ function FilePanel() {
                       </p>
                     </React.Fragment>
                   )}
-                  {layerType.value === 'Samples' &&
-                    attributeOverwriteWarning(null)}
                   {layerType.value === 'VSP' && (
-                    <span>
+                    <p>
                       <strong>WARNING</strong>: VSP Imports can take up to two
                       minutes to complete.
-                    </span>
+                    </p>
                   )}
-                  {layerType.value === 'VSP' &&
-                    attributeOverwriteWarning(sampleType)}
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
                   {uploadStatus === 'import-error' && importErrorMessage}
                   {uploadStatus === 'file-read-error' &&
                     fileReadErrorMessage(filename)}
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
+                  {uploadStatus === 'user-canceled' &&
+                    userCanceledMessage(filename)}
                   {uploadStatus === 'missing-attributes' &&
                     missingAttributesMessage(filename, missingAttributes)}
                   {uploadStatus === 'unknown-sample-type' &&

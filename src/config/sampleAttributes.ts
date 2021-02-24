@@ -55,6 +55,20 @@ export type UserDefinedAttributes = {
   attributes: Attributes;
 };
 
+export type SampleIssues = {
+  areaOutOfTolerance: boolean;
+  attributeMismatch: boolean;
+  attributesWithMismatch: string[];
+  difference: number;
+  graphic: __esri.Graphic | null;
+};
+
+export type SampleIssuesOutput = {
+  areaOutOfTolerance: boolean;
+  attributeMismatch: boolean;
+  samplesWithIssues: SampleIssues[];
+};
+
 export const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
@@ -262,3 +276,21 @@ export const SampleSelectOptions: SampleSelectType[] = Object.values(
   const value = item.TYPE;
   return { value, label: value, isPredefined: true };
 });
+
+export const attributesToCheck = [
+  'SA',
+  'TTPK',
+  'TTC',
+  'TTA',
+  'TTPS',
+  'LOD_P',
+  'LOD_NON',
+  'MCPS',
+  'TCPS',
+  'WVPS',
+  'WWPS',
+  'ALC',
+  'AMC',
+];
+
+export const areaTolerance = 1; // square inches

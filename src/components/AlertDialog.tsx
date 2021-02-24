@@ -79,7 +79,7 @@ function AlertDialog() {
     <DialogOverlay css={overlayStyles} isOpen={open}>
       <DialogContent css={dialogStyles} aria-label={options?.ariaLabel}>
         {options?.title && <h3>{options?.title}</h3>}
-        {options?.description}
+        <p>{options?.description}</p>
         <br />
         <div css={buttonContainerStyles}>
           {options?.onContinue && (
@@ -94,7 +94,15 @@ function AlertDialog() {
               Continue
             </button>
           )}
-          <button className="btn" css={buttonStyles} onClick={close}>
+          <button
+            className="btn"
+            css={buttonStyles}
+            onClick={() => {
+              close();
+
+              if (options?.onCancel) options.onCancel();
+            }}
+          >
             {options?.onContinue ? 'Cancel' : 'OK'}
           </button>
         </div>
