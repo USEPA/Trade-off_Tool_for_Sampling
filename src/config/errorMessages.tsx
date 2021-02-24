@@ -3,7 +3,7 @@ import { jsx } from '@emotion/core';
 // components
 import MessageBox from 'components/MessageBox';
 // config
-import { areaTolerance } from 'config/sampleAttributes';
+import { areaTolerance, SampleIssuesOutput } from 'config/sampleAttributes';
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -150,7 +150,7 @@ export const uploadSuccessMessage = (
 };
 
 export const sampleIssuesPopupMessage = (
-  output: any,
+  output: SampleIssuesOutput,
   useAreaTolerance: boolean = true,
   useAttributeMismatch: boolean = true,
 ) => {

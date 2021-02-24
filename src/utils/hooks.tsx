@@ -38,6 +38,8 @@ import {
   areaTolerance,
   attributesToCheck,
   sampleAttributes,
+  SampleIssues,
+  SampleIssuesOutput,
   SampleSelectType,
   UserDefinedAttributes,
 } from 'config/sampleAttributes';
@@ -341,20 +343,14 @@ export function useGeometryTools() {
 
   // Validates that the area of samples is within tolerance and that sample
   // attributes match up with the predefined attributes.
-  const sampleValidation = React.useCallback(
+  const sampleValidation: (
+    graphics: __esri.Graphic[],
+    isFullGraphic?: boolean,
+  ) => SampleIssuesOutput = React.useCallback(
     (graphics: __esri.Graphic[], isFullGraphic: boolean = false) => {
-      if (!loadedProjection) return;
-
       let areaOutOfTolerance = false;
       let attributeMismatch = false;
 
-      type SampleIssues = {
-        areaOutOfTolerance: boolean;
-        attributeMismatch: boolean;
-        attributesWithMismatch: string[];
-        difference: number;
-        graphic: __esri.Graphic | null;
-      };
       let sampleWithIssues: SampleIssues = {
         areaOutOfTolerance: false,
         attributeMismatch: false,
@@ -435,7 +431,7 @@ export function useGeometryTools() {
         }
       });
 
-      const output = {
+      const output: SampleIssuesOutput = {
         areaOutOfTolerance,
         attributeMismatch,
         samplesWithIssues,
@@ -446,7 +442,7 @@ export function useGeometryTools() {
 
       return output;
     },
-    [calculateArea, Graphic, loadedProjection, Polygon],
+    [calculateArea, Graphic, Polygon],
   );
 
   return { calculateArea, createBuffer, loadedProjection, sampleValidation };

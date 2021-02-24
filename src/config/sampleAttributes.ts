@@ -55,6 +55,20 @@ export type UserDefinedAttributes = {
   attributes: Attributes;
 };
 
+export type SampleIssues = {
+  areaOutOfTolerance: boolean;
+  attributeMismatch: boolean;
+  attributesWithMismatch: string[];
+  difference: number;
+  graphic: __esri.Graphic | null;
+};
+
+export type SampleIssuesOutput = {
+  areaOutOfTolerance: boolean;
+  attributeMismatch: boolean;
+  samplesWithIssues: SampleIssues[];
+};
+
 export const sampleAttributes: Attributes = {
   Sponge: {
     OBJECTID: '-1',
