@@ -79,7 +79,7 @@ function AlertDialog() {
     <DialogOverlay css={overlayStyles} isOpen={open}>
       <DialogContent css={dialogStyles} aria-label={options?.ariaLabel}>
         {options?.title && <h3>{options?.title}</h3>}
-        {options?.description}
+        <p>{options?.description}</p>
         <br />
         <div css={buttonContainerStyles}>
           {options?.onContinue && (
