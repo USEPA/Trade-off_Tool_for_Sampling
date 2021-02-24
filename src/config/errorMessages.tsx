@@ -149,16 +149,12 @@ export const uploadSuccessMessage = (
   );
 };
 
-export const sampleIssuesPopupMessage = (
-  output: SampleIssuesOutput,
-  useAreaTolerance: boolean = true,
-  useAttributeMismatch: boolean = true,
-) => {
+export const sampleIssuesPopupMessage = (output: SampleIssuesOutput) => {
   let message = '';
-  if (useAreaTolerance && output.areaOutOfTolerance) {
+  if (output.areaOutOfTolerance) {
     message += `The surface area associated with some of your samples is outside of the allowable tolerance (+- ${areaTolerance} sqin) of the provided reference area. TOTS will adjust the representation of each of your samples to account for the difference. `;
   }
-  if (useAttributeMismatch && output.attributeMismatch) {
+  if (output.attributeMismatch) {
     message +=
       'There is a mismatch between attributes. The attributes will need to be updated to continue. ';
   }

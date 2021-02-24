@@ -1102,11 +1102,11 @@ function ResultCard({ result }: ResultCardProps) {
             if (zoomToGraphics.length > 0) {
               const output = sampleValidation(zoomToGraphics, true);
 
-              if (output?.attributeMismatch) {
+              if (output?.areaOutOfTolerance || output?.attributeMismatch) {
                 setOptions({
                   title: 'Sample Issues',
                   ariaLabel: 'Sample Issues',
-                  description: sampleIssuesPopupMessage(output, false),
+                  description: sampleIssuesPopupMessage(output),
                   onContinue: () => finalizeLayerAdd(),
                   onCancel: () => setStatus('canceled'),
                 });
