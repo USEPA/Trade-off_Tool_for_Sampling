@@ -35,9 +35,11 @@ import { PanelValueType } from 'config/navigation';
 import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
-  UserDefinedAttributes,
-  SampleSelectType,
+  areaTolerance,
+  attributesToCheck,
   sampleAttributes,
+  SampleSelectType,
+  UserDefinedAttributes,
 } from 'config/sampleAttributes';
 
 // Saves data to session storage
@@ -202,6 +204,7 @@ export function useStartOver() {
 export function useGeometryTools() {
   const {
     geometryEngine,
+    Graphic,
     Polygon,
     projection,
     SpatialReference,
@@ -336,7 +339,117 @@ export function useGeometryTools() {
     ],
   );
 
-  return { calculateArea, createBuffer, loadedProjection };
+  // Validates that the area of samples is within tolerance and that sample
+  // attributes match up with the predefined attributes.
+  const sampleValidation = React.useCallback(
+    (graphics: __esri.Graphic[], isFullGraphic: boolean = false) => {
+      if (!loadedProjection) return;
+
+      let areaOutOfTolerance = false;
+      let attributeMismatch = false;
+
+      type SampleIssues = {
+        areaOutOfTolerance: boolean;
+        attributeMismatch: boolean;
+        attributesWithMismatch: string[];
+        difference: number;
+        graphic: __esri.Graphic | null;
+      };
+      let sampleWithIssues: SampleIssues = {
+        areaOutOfTolerance: false,
+        attributeMismatch: false,
+        attributesWithMismatch: [],
+        difference: 0,
+        graphic: null,
+      };
+      const samplesWithIssues: SampleIssues[] = [];
+
+      graphics.forEach((simpleGraphic) => {
+        let graphic = simpleGraphic;
+        if (!isFullGraphic) {
+          graphic = new Graphic({
+            ...simpleGraphic,
+            geometry: new Polygon({
+              ...simpleGraphic.geometry,
+            }),
+          });
+        }
+
+        // create the sample issues object
+        sampleWithIssues = {
+          areaOutOfTolerance: false,
+          attributeMismatch: false,
+          attributesWithMismatch: [],
+          difference: 0,
+          graphic,
+        };
+
+        // Calculates area and checks if the sample area is within the allowable
+        // tolerance of the reference surface area (SA) value
+        function performAreaToleranceCheck() {
+          // Get the area of the sample
+          const area = calculateArea(graphic);
+          if (typeof area !== 'number') return;
+
+          // check that area is within allowable tolerance
+          const difference = area - graphic.attributes.SA;
+          sampleWithIssues.difference = difference;
+          if (Math.abs(difference) > areaTolerance) {
+            areaOutOfTolerance = true;
+            sampleWithIssues.areaOutOfTolerance = true;
+          }
+        }
+
+        // Check if the sample is a predefined type or not
+        if (sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)) {
+          performAreaToleranceCheck();
+
+          // check sample attributes against predefined attributes
+          const predefinedAttributes: any =
+            sampleAttributes[graphic.attributes.TYPE];
+          Object.keys(predefinedAttributes).forEach((key) => {
+            if (!attributesToCheck.includes(key)) return;
+            if (
+              graphic.attributes.hasOwnProperty(key) &&
+              predefinedAttributes[key] === graphic.attributes[key]
+            ) {
+              return;
+            }
+
+            attributeMismatch = true;
+            sampleWithIssues.attributeMismatch = true;
+            sampleWithIssues.attributesWithMismatch.push(key);
+          });
+        } else {
+          // Check area tolerance of user defined sample types
+          if (graphic?.attributes?.SA) {
+            performAreaToleranceCheck();
+          }
+        }
+
+        if (
+          sampleWithIssues.areaOutOfTolerance ||
+          sampleWithIssues.attributeMismatch
+        ) {
+          samplesWithIssues.push(sampleWithIssues);
+        }
+      });
+
+      const output = {
+        areaOutOfTolerance,
+        attributeMismatch,
+        samplesWithIssues,
+      };
+      if (window.location.search.includes('devMode=true')) {
+        console.log('sampleValidation: ', output);
+      }
+
+      return output;
+    },
+    [calculateArea, Graphic, loadedProjection, Polygon],
+  );
+
+  return { calculateArea, createBuffer, loadedProjection, sampleValidation };
 }
 
 // Runs sampling plan calculations whenever the

@@ -94,7 +94,15 @@ function AlertDialog() {
               Continue
             </button>
           )}
-          <button className="btn" css={buttonStyles} onClick={close}>
+          <button
+            className="btn"
+            css={buttonStyles}
+            onClick={() => {
+              close();
+
+              if (options?.onCancel) options.onCancel();
+            }}
+          >
             {options?.onContinue ? 'Cancel' : 'OK'}
           </button>
         </div>

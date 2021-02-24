@@ -262,3 +262,21 @@ export const SampleSelectOptions: SampleSelectType[] = Object.values(
   const value = item.TYPE;
   return { value, label: value, isPredefined: true };
 });
+
+export const attributesToCheck = [
+  'SA',
+  'TTPK',
+  'TTC',
+  'TTA',
+  'TTPS',
+  'LOD_P',
+  'LOD_NON',
+  'MCPS',
+  'TCPS',
+  'WVPS',
+  'WWPS',
+  'ALC',
+  'AMC',
+];
+
+export const areaTolerance = 1; // square inches

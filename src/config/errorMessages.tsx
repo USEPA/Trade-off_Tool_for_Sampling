@@ -2,7 +2,6 @@
 import { jsx } from '@emotion/core';
 // components
 import MessageBox from 'components/MessageBox';
-import { SampleSelectType } from './sampleAttributes';
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -70,21 +69,6 @@ export const urlAlreadyAddedMessage = (url: string) => (
 );
 
 // add data tab - file upload messages
-export const attributeOverwriteWarning = (
-  sampleType: SampleSelectType | null,
-) => {
-  const sampleTypeStr = sampleType
-    ? sampleType.value
-    : 'the corresponding sample type';
-  return (
-    <MessageBox
-      severity="warning"
-      title="Some attributes will be replaced"
-      message={`The sample type and geometry are the only attributes retained. All other attributes will be replaced with the standard attributes for ${sampleTypeStr}.`}
-    />
-  );
-};
-
 export const invalidFileTypeMessage = (filename: string) => (
   <MessageBox
     severity="error"
@@ -114,6 +98,14 @@ export const noDataMessage = (filename: string) => (
     severity="error"
     title="No Data"
     message={`The ${filename} file did not have any data to display on the map`}
+  />
+);
+
+export const userCanceledMessage = (filename: string) => (
+  <MessageBox
+    severity="error"
+    title="Upload Canceled"
+    message={`The ${filename} upload was canceled by the user`}
   />
 );
 
@@ -153,6 +145,25 @@ export const uploadSuccessMessage = (
       message={`"${filename}" was successfully uploaded as "${layerName}"`}
     />
   );
+};
+
+export const sampleIssuesPopupMessage = (
+  output: any,
+  useAreaTolerance: boolean = true,
+  useAttributeMismatch: boolean = true,
+) => {
+  let message = '';
+  if (useAreaTolerance && output.areaOutOfTolerance) {
+    message +=
+      'The surface area associated with some of your samples is outside of the allowable tolerance (+- 1 sqin) of the provided reference area. TOTS will adjust the representation of each of your samples to account for the difference. ';
+  }
+  if (useAttributeMismatch && output.attributeMismatch) {
+    message +=
+      'There is a mismatch between attributes. The attributes will need to be updated to continue. ';
+  }
+  message += 'Would you like to continue?';
+
+  return message;
 };
 
 // create plan tab
