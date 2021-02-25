@@ -1,0 +1,50 @@
+{
+  "name": "epa-hsrp-tots-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.",
+  "keywords": [
+    "TOTS",
+    "Trade-off Tool for Sampling"
+  ],
+  "repository": "github:USEPA/EPA-HSRP-TOTS",
+  "bugs": "https://github.com/USEPA/EPA-HSRP-TOTS/issues",
+  "license": "CC0-1.0",
+  "author": "USEPA (https://www.epa.gov)",
+  "contributors": [
+    "Caleb Schwind <caleb.schwind@erg.com>",
+    "Courtney Myers <courtney.myers@erg.com>",
+    "Molly Rodgers <molly.rodgers@erg.com>"
+  ],
+  "engines": {
+    "node": "14.x"
+  },
+  "main": "app/server.js",
+  "scripts": {
+    "start": "nodemon -r dotenv/config --inspect app/server.js dotenv_config_path=./.env.local"
+  },
+  "dependencies": {
+    "dotenv": "8.2.0",
+    "express": "4.17.1",
+    "express-basic-auth": "1.2.0",
+    "helmet": "4.4.1",
+    "log4js": "6.3.0",
+    "request": "2.88.2",
+    "serve-favicon": "2.5.0"
+  },
+  "devDependencies": {
+    "browser-sync": "2.26.14",
+    "husky": "5.0.9",
+    "lint-staged": "10.5.4",
+    "nodemon": "2.0.7",
+    "prettier": "2.2.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "app/**/*.{js,json,css,md}": "prettier --write"
+  }
+}

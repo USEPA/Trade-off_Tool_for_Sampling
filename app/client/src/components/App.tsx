@@ -17,6 +17,7 @@ import ReactTable from 'components/ReactTable';
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
+import { LookupFilesProvider } from 'contexts/LookupFiles';
 import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
 import { SketchProvider, SketchContext } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
@@ -657,18 +658,20 @@ function App() {
 
 export default function AppContainer() {
   return (
-    <EsriModulesProvider>
-      <DialogProvider>
-        <AuthenticationProvider>
-          <CalculateProvider>
-            <NavigationProvider>
-              <SketchProvider>
-                <App />
-              </SketchProvider>
-            </NavigationProvider>
-          </CalculateProvider>
-        </AuthenticationProvider>
-      </DialogProvider>
-    </EsriModulesProvider>
+    <LookupFilesProvider>
+      <EsriModulesProvider>
+        <DialogProvider>
+          <AuthenticationProvider>
+            <CalculateProvider>
+              <NavigationProvider>
+                <SketchProvider>
+                  <App />
+                </SketchProvider>
+              </NavigationProvider>
+            </CalculateProvider>
+          </AuthenticationProvider>
+        </DialogProvider>
+      </EsriModulesProvider>
+    </LookupFilesProvider>
   );
 }

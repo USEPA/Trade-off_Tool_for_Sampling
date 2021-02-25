@@ -1,5 +1,3 @@
-import { proxyUrl } from 'config/webService';
-
 /**
  * Performs a fetch and validates the http status.
  *
@@ -7,8 +5,52 @@ import { proxyUrl } from 'config/webService';
  * @returns A promise that resolves to the fetch response.
  */
 export function fetchCheck(url: string, useProxy: boolean = false) {
-  const apiUrl = useProxy ? proxyUrl + url : url;
+  const { REACT_APP_PROXY_URL } = process.env;
+  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
   return fetch(apiUrl).then(checkResponse);
+}
+
+export function proxyFetch(apiUrl: string) {
+  const { REACT_APP_PROXY_URL } = process.env;
+  // if environment variable is not set, default to use the current site origin
+  const proxyUrl = REACT_APP_PROXY_URL || `${window.location.origin}/proxy`;
+  const url = `${proxyUrl}?url=${apiUrl}`;
+
+  return fetchCheck(url);
+}
+
+export function lookupFetch(path: string) {
+  const { REACT_APP_SERVER_URL } = process.env;
+  const baseUrl = REACT_APP_SERVER_URL || window.location.origin;
+  const url = `${baseUrl}/data/${path}`;
+
+  return new Promise<Object>((resolve, reject) => {
+    // Function that fetches the lookup file.
+    // This will retry the fetch 3 times if the fetch fails with a
+    // 1 second delay between each retry.
+    const fetchLookup = (retryCount: number = 0) => {
+      proxyFetch(url)
+        .then((data: any) => {
+          resolve(data);
+        })
+        .catch((err) => {
+          console.error(err);
+
+          // resolve the request when the max retry count of 3 is hit
+          if (retryCount === 3) {
+            reject(err);
+          } else {
+            // recursive retry (1 second between retries)
+            console.log(
+              `Failed to fetch ${path}. Retrying (${retryCount + 1} of 3)...`,
+            );
+            setTimeout(() => fetchLookup(retryCount + 1), 1000);
+          }
+        });
+    };
+
+    fetchLookup();
+  });
 }
 
 /**
@@ -25,7 +67,8 @@ export function fetchPost(
   useProxy: boolean = false,
   headers: any = { 'content-type': 'application/x-www-form-urlencoded' },
 ) {
-  const apiUrl = useProxy ? proxyUrl + url : url;
+  const { REACT_APP_PROXY_URL } = process.env;
+  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
 
   // build the url search params
   const body = new URLSearchParams();
@@ -60,7 +103,8 @@ export function fetchPostFile(
   file: any,
   useProxy: boolean = false,
 ) {
-  const apiUrl = useProxy ? proxyUrl + url : url;
+  const { REACT_APP_PROXY_URL } = process.env;
+  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
 
   // build the url search params
   const body = new FormData();
