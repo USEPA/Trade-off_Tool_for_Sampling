@@ -179,23 +179,14 @@ function MapMouseEvents({ mapView }: Props) {
 
     mapView.popup.on('trigger-action', (event) => {
       // Workaround for target not being on the PopupTriggerActionEvent
-      const tempEvent = event as any;
-      if (event.action.id === 'delete' && tempEvent?.target?.selectedFeature) {
-        setSampleToDelete(tempEvent.target.selectedFeature);
+      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
+        setSampleToDelete(mapView.popup.selectedFeature);
       }
       if (event.action.id === 'table') {
         setTablePanelExpanded(true);
       }
     });
-  }, [
-    Collection,
-    popupActionsInitialized,
-    mapView,
-    layers,
-    edits,
-    setEdits,
-    setTablePanelExpanded,
-  ]);
+  }, [popupActionsInitialized, mapView, setTablePanelExpanded]);
 
   return null;
 }

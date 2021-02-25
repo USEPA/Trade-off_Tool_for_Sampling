@@ -277,10 +277,7 @@ function MapWidgets({ mapView }: Props) {
           }
 
           if (!id) {
-            // workaround for an error that said "target" does not exist on
-            // type 'SketchViewModelUpdateEvent'.
-            const tempEvent = event as any;
-            tempEvent.target.cancel();
+            sketchViewModel.cancel();
             return;
           }
 
@@ -362,10 +359,7 @@ function MapWidgets({ mapView }: Props) {
         // prevent scale and reshape changes on the predefined graphics
         // allow moves and rotates
         if (isShapeChange && hasPredefinedBoxes) {
-          // workaround for an error that said "target" does not exist on
-          // type 'SketchViewModelUpdateEvent'.
-          const tempEvent = event as any;
-          tempEvent.target.cancel();
+          sketchViewModel.cancel();
         }
 
         setter(isActive);
