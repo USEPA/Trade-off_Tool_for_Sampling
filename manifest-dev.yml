@@ -1,0 +1,13 @@
+---
+applications:
+  - name: tots-dev
+    instances: 1
+    memory: 128M
+    disk_quota: 512MB
+    timeout: 180
+    buildpacks:
+      - nodejs_buildpack
+    command: node app/server.js
+    env:
+      NODE_ENV: development
+      LOGGER_LEVEL: DEBUG

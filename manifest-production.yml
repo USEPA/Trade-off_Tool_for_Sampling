@@ -1,0 +1,17 @@
+---
+applications:
+  - name: tots-prod
+    instances: 4
+    routes:
+      - route: tots-prod.app.cloud.gov
+      - route: tots.epa.gov
+    memory: 128M
+    disk_quota: 512MB
+    timeout: 180
+    buildpacks:
+      - nodejs_buildpack
+    command: node app/server.js
+    path: /
+    env:
+      NODE_ENV: production
+      LOGGER_LEVEL: ERROR
