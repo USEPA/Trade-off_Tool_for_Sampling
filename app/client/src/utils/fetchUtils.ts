@@ -4,21 +4,30 @@
  * @param apiUrl The webservice url to fetch data from
  * @returns A promise that resolves to the fetch response.
  */
-export function fetchCheck(url: string, useProxy: boolean = false) {
-  const { REACT_APP_PROXY_URL } = process.env;
-  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
-  return fetch(apiUrl).then(checkResponse);
+export function fetchCheck(url: string) {
+  return fetch(url).then(checkResponse);
 }
 
-export function proxyFetch(apiUrl: string) {
+/**
+ * Performs a fetch through the TOTS proxy.
+ *
+ * @param url The webservice url to fetch data from
+ * @returns A promise that resolves to the fetch response.
+ */
+export function proxyFetch(url: string) {
   const { REACT_APP_PROXY_URL } = process.env;
   // if environment variable is not set, default to use the current site origin
   const proxyUrl = REACT_APP_PROXY_URL || `${window.location.origin}/proxy`;
-  const url = `${proxyUrl}?url=${apiUrl}`;
 
-  return fetchCheck(url);
+  return fetchCheck(`${proxyUrl}?url=${url}`);
 }
 
+/**
+ * Performs a fetch to get a lookup file from S3.
+ *
+ * @param path The path to the lookup file to return
+ * @returns A promise that resolves to the fetch response.
+ */
 export function lookupFetch(path: string) {
   const { REACT_APP_SERVER_URL } = process.env;
   const baseUrl = REACT_APP_SERVER_URL || window.location.origin;
@@ -64,12 +73,8 @@ export function lookupFetch(path: string) {
 export function fetchPost(
   url: string,
   data: object,
-  useProxy: boolean = false,
   headers: any = { 'content-type': 'application/x-www-form-urlencoded' },
 ) {
-  const { REACT_APP_PROXY_URL } = process.env;
-  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
-
   // build the url search params
   const body = new URLSearchParams();
   for (let [key, value] of Object.entries(data)) {
@@ -82,7 +87,7 @@ export function fetchPost(
     body.append(key, valueToAdd);
   }
 
-  return fetch(apiUrl, {
+  return fetch(url, {
     method: 'POST',
     headers,
     body,
@@ -97,15 +102,7 @@ export function fetchPost(
  * @param file The file to send
  * @returns A promise that resolves to the fetch response.
  */
-export function fetchPostFile(
-  url: string,
-  data: object,
-  file: any,
-  useProxy: boolean = false,
-) {
-  const { REACT_APP_PROXY_URL } = process.env;
-  const apiUrl = useProxy ? `${REACT_APP_PROXY_URL}?url=${url}` : url;
-
+export function fetchPostFile(url: string, data: object, file: any) {
   // build the url search params
   const body = new FormData();
   for (let [key, value] of Object.entries(data)) {
@@ -119,7 +116,7 @@ export function fetchPostFile(
   }
   body.append('file', file);
 
-  return fetch(apiUrl, {
+  return fetch(url, {
     method: 'POST',
     body,
   }).then(checkResponse);

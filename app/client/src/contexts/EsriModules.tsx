@@ -2,6 +2,8 @@ import React from 'react';
 import { loadModules } from 'esri-loader';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
+// contexts
+import { useServicesContext } from 'contexts/LookupFiles';
 // config
 import { proxyUrl } from 'config/webService';
 
@@ -106,8 +108,12 @@ type State = {
 
 const EsriModulesContext = React.createContext<State | undefined>(undefined);
 function EsriModulesProvider({ children }: Props) {
+  const services = useServicesContext();
+
   const [modules, setModules] = React.useState<State | null>(null);
   React.useEffect(() => {
+    if (services.status === 'fetching' || modules) return;
+
     (loadModules(
       [
         'esri/config',
@@ -256,18 +262,20 @@ function EsriModulesProvider({ children }: Props) {
           SketchViewModel,
         });
 
-        // Have ESRI use the proxy for communicating with the TOTS GP Server
-        urlUtils.addProxyRule({
-          proxyUrl,
-          urlPrefix: 'https://ags.erg.com',
-        });
-        urlUtils.addProxyRule({
-          proxyUrl,
-          urlPrefix: 'http://ags.erg.com',
-        });
+        if (services.status === 'success') {
+          // Have ESRI use the proxy for communicating with the TOTS GP Server
+          urlUtils.addProxyRule({
+            proxyUrl: services.data.proxyUrl,
+            urlPrefix: 'https://ags.erg.com',
+          });
+          urlUtils.addProxyRule({
+            proxyUrl: services.data.proxyUrl,
+            urlPrefix: 'http://ags.erg.com',
+          });
+        }
       },
     );
-  }, []);
+  }, [modules, services]);
 
   if (!modules) return <LoadingSpinner />;
 

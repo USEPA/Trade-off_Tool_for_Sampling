@@ -1,3 +1,4 @@
 {
-    "totsGPServer": "https://app7.erg.com/PHP/proxy.php?https://ags.erg.com/arcgis/rest/services/TOTS_Dev/GPServer"
+  "totsGPServer": "https://ags.erg.com/arcgis/rest/services/TOTS_Dev/GPServer",
+  "proxyUrl": "https://app7.erg.com/PHP/proxy.php?"
 }

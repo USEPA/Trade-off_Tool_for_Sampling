@@ -2,10 +2,10 @@
 
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
+// contexts
+import { useServicesContext } from 'contexts/LookupFiles';
 // utils
 import { fetchCheck } from 'utils/fetchUtils';
-// config
-import { totsGPServer } from 'config/webService';
 // types
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
@@ -132,6 +132,8 @@ export const SketchContext = React.createContext<SketchType>({
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const services = useServicesContext();
+
   const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
@@ -188,6 +190,9 @@ export function SketchProvider({ children }: Props) {
   );
   function getGpMaxRecordCount(): Promise<number> {
     return new Promise<number>((resolve, reject) => {
+      if (services.status !== 'success')
+        reject('Services config file has not been loaded');
+
       // return the max record count, if we already have it
       if (gpMaxRecordCount) {
         resolve(gpMaxRecordCount);
@@ -195,7 +200,9 @@ export function SketchProvider({ children }: Props) {
       }
 
       // get the max record count from the gp server
-      fetchCheck(`${totsGPServer}?f=json`, true)
+      fetchCheck(
+        `${services.data.proxyUrl}${services.data.totsGPServer}?f=json`,
+      )
         .then((res: any) => {
           const maxRecordCount = res.maximumRecords;
           setGpMaxRecordCount(maxRecordCount);

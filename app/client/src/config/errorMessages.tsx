@@ -292,3 +292,12 @@ export const scenarioNameTakenMessage = (scenarioName: string) => (
     message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
   />
 );
+
+// feature not availble messages
+export const featureNotAvailableMessage = (featureName: string) => (
+  <MessageBox
+    severity="error"
+    title="Feature Not Available"
+    message={`The "${featureName}" is unavailble, please try again later.`}
+  />
+);

@@ -10,6 +10,7 @@ import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
+import { useServicesContext } from 'contexts/LookupFiles';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
@@ -26,13 +27,13 @@ import { chunkArray } from 'utils/utils';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import { totsGPServer } from 'config/webService';
 import {
   sampleAttributes,
   SampleSelectOptions,
   SampleSelectType,
 } from 'config/sampleAttributes';
 import {
+  featureNotAvailableMessage,
   fileReadErrorMessage,
   importErrorMessage,
   invalidFileTypeMessage,
@@ -259,6 +260,7 @@ function FilePanel() {
 
   const getPopupTemplate = useDynamicPopup();
   const { sampleValidation } = useGeometryTools();
+  const services = useServicesContext();
 
   const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
   const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
@@ -480,7 +482,8 @@ function FilePanel() {
       !file?.file?.esriFileType ||
       !sharingUrl ||
       file.file.name === file.lastFileName ||
-      !getGpMaxRecordCount
+      !getGpMaxRecordCount ||
+      services.status !== 'success'
     ) {
       return;
     }
@@ -632,7 +635,7 @@ function FilePanel() {
               };
               const request = geoprocessorFetch({
                 Geoprocessor,
-                url: `${totsGPServer}/VSP%20Import`,
+                url: `${services.data.totsGPServer}/VSP%20Import`,
                 inputParameters: params,
               });
               requests.push(request);
@@ -700,6 +703,7 @@ function FilePanel() {
     map,
     sampleType,
     getGpMaxRecordCount,
+    services,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
@@ -1220,8 +1224,16 @@ function FilePanel() {
               </p>
             </React.Fragment>
           )}
+          {layerType.value === 'VSP' && services.status === 'fetching' && (
+            <LoadingSpinner />
+          )}
+          {layerType.value === 'VSP' &&
+            services.status === 'failure' &&
+            featureNotAvailableMessage('VSP Import')}
           {(layerType.value !== 'VSP' ||
-            (layerType.value === 'VSP' && sampleType)) && (
+            (layerType.value === 'VSP' &&
+              sampleType &&
+              services.status === 'success')) && (
             <React.Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (

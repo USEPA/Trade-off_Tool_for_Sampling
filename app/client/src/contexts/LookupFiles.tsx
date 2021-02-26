@@ -1,7 +1,6 @@
 // @flow
 
-import React from 'react';
-import type { Node } from 'react';
+import React, { ReactNode } from 'react';
 // utilities
 import { lookupFetch } from 'utils/fetchUtils';
 
@@ -21,7 +20,7 @@ import { lookupFetch } from 'utils/fetchUtils';
 // --- components ---
 type LookupFile = {
   status: 'fetching' | 'success' | 'failure';
-  data: Object;
+  data: any;
 };
 
 type LookupFiles = {
@@ -29,17 +28,17 @@ type LookupFiles = {
   setServices: Function;
 };
 
-const LookupFilesContext: Object = React.createContext<LookupFiles>({
+const LookupFilesContext = React.createContext<LookupFiles>({
   services: { status: 'fetching', data: null },
   setServices: () => {},
 });
 
 type Props = {
-  children: Node;
+  children: ReactNode;
 };
 
 function LookupFilesProvider({ children }: Props) {
-  const [services, setServices] = React.useState({
+  const [services, setServices] = React.useState<LookupFile>({
     status: 'fetching',
     data: {},
   });
@@ -75,29 +74,6 @@ function useServicesContext() {
     // fetch the lookup file
     lookupFetch('config/services.json')
       .then((data) => {
-        const googleAnalyticsMapping = [];
-        data.googleAnalyticsMapping.forEach((item) => {
-          // get base url
-          let urlLookup = origin;
-          if (item.urlLookup !== 'origin') {
-            urlLookup = data;
-            const pathParts = item.urlLookup.split('.');
-            pathParts.forEach((part) => {
-              urlLookup = urlLookup[part];
-            });
-          }
-
-          let wildcardUrl = item.wildcardUrl;
-          wildcardUrl = wildcardUrl.replace(/\{urlLookup\}/g, urlLookup);
-
-          googleAnalyticsMapping.push({
-            wildcardUrl,
-            name: item.name,
-          });
-        });
-
-        window.googleAnalyticsMapping = googleAnalyticsMapping;
-
         setServices({ status: 'success', data });
       })
       .catch((err) => {
