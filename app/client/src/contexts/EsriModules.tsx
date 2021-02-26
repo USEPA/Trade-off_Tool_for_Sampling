@@ -4,8 +4,6 @@ import { loadModules } from 'esri-loader';
 import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
 import { useServicesContext } from 'contexts/LookupFiles';
-// config
-import { proxyUrl } from 'config/webService';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriConstructors = [

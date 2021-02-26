@@ -64,13 +64,6 @@ function useServicesContext() {
   if (!servicesInitialized) {
     servicesInitialized = true;
 
-    // get origin for mapping proxy calls
-    const loc = window.location;
-    const origin =
-      loc.hostname === 'localhost'
-        ? `${loc.protocol}//${loc.hostname}:9091`
-        : loc.origin;
-
     // fetch the lookup file
     lookupFetch('config/services.json')
       .then((data) => {
