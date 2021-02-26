@@ -8,7 +8,8 @@ references:
   restore-cache: &restore-cache
     restore_cache:
       keys:
-        - deps-{{ checksum "package.json" }}
+        - deps-{{ checksum "package.json" }}REACT_APP_ARCGIS_APP_ID="63iEfxuUmhMn2rNI"
+
         - deps-
 
   save-cache: &save-cache
@@ -20,7 +21,7 @@ references:
   add-ssh-keys: &add-ssh-keys
     add_ssh_keys:
       fingerprints:
-        - '20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7'
+        - "20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7"
 
   trust-server: &trust-server
     name: Fix host authenticity for server
@@ -29,14 +30,80 @@ references:
 jobs:
   deploy-develop:
     <<: *set-container
-    working_directory: ~/repo
+    working_directory: ~/project/app # directory where steps will be run
+    environment:
+      APP_NAME: tots-dev
+      APP_DOMAIN: app.cloud.gov
     steps:
-      - checkout
+      - checkout:
+        path: ~/project
       - <<: *restore-cache
-      - run: npm install
+      - run:
+          name: update-npm
+          command: 'sudo npm install -g npm@latest'
+      - run:
+          name: Check npm version
+          command: |
+            npm --version
+      - run:
+          name: Check node version
+          command: |
+            node --version
+      - run:
+          name: client build
+          command: |
+            cd client
+            npm install
+            npm run build
+      - run:
+          name: server build 
+          command: |
+            cd server
+            npm install
+            cd app
+            cd public
+            cp -a ../../../client/build/. .
+      - run:
+          name: Setup Cloud Foundry CLI
+          command: |
+            curl -v -L -o cf-cli_amd64.deb 'https://cli.run.pivotal.io/stable?release=debian64&source=github'
+            sudo dpkg -i cf-cli_amd64.deb
+            cf -v
+            cf api https://api.fr.cloud.gov  
+            cf auth "$CF_USER_DEV" "$CF_PASSWORD_DEV"
+            cf target -o "$CF_ORG" -s "$CF_SPACE_DEV"
+      - run:
+          name: Deploy application to Cloud.gov
+          command: |
+            cd server
+            cf push --no-start $APP_NAME-green -f ../manifest-dev.yml -p . -n $APP_NAME-green 
+            cf set-env $APP_NAME-green TOTS_BASIC_USER_NAME "$TOTS_BASIC_USER_NAME"
+            cf set-env $APP_NAME-green TOTS_BASIC_USER_PWD "$TOTS_BASIC_USER_PWD"
+      - run:
+          name: Start application on Cloud.gov and clean routes
+          command: |
+            cf start $APP_NAME-green
+            cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
+            cf delete-route app.cloud.gov -n $APP_NAME-green -f
+      - aws-s3/sync:
+          arguments: |
+            --acl public-read \
+            --cache-control "max-age=86400"
+          aws-access-key-id: CF_DEV_S3_ACCESS_KEY
+          aws-region: CF_DEV_S3_REGION
+          aws-secret-access-key: CF_DEV_S3_SECRET_KEY
+          from: server/app/public/data
+          overwrite: true
+          to: 's3://$CF_DEV_S3_BUCKET_ID/data'
+      - run:
+          name: Re-route green to blue and then remove blue
+          command: |
+            cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
+            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
+            cf stop $APP_NAME
+            cf delete $APP_NAME -f
+            cf rename $APP_NAME-green $APP_NAME
       - <<: *save-cache
-      - run: npm test
-      - run: npm run build
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
@@ -45,11 +112,81 @@ jobs:
 
   deploy-staging:
     <<: *set-container
-    working_directory: ~/repo
+    working_directory: ~/project/app # directory where steps will be run
+    environment:
+      APP_NAME: tots-stage
+      APP_DOMAIN: app.cloud.gov
     steps:
       - checkout
+        path: ~/project
       - <<: *restore-cache
-      - run: npm install
+      - run:
+          name: update-npm
+          command: 'sudo npm install -g npm@latest'
+      - run:
+          name: Check npm version
+          command: |
+            npm --version
+      - run:
+          name: Check node version
+          command: |
+            node --version
+      - run:
+          name: client build
+          command: |
+            cd client
+            npm install
+            npm run build
+      - run:
+          name: server build 
+          command: |
+            cd server
+            npm install
+            cd app
+            cd public
+            cp -a ../../../client/build/. .
+            rm -rf previous
+      - run:
+          name: Setup Cloud Foundry CLI
+          command: |
+            curl -v -L -o cf-cli_amd64.deb 'https://cli.run.pivotal.io/stable?release=debian64&source=github'
+            sudo dpkg -i cf-cli_amd64.deb
+            cf -v
+            cf api https://api.fr.cloud.gov  
+            cf auth "$CF_USER_STAGING" "$CF_PASSWORD_STAGING"
+            cf target -o "$CF_ORG" -s "$CF_SPACE_STAGING"
+      - run:
+          name: Deploy application to Cloud.gov
+          command: |
+            cd server
+            cf push --no-start $APP_NAME-green -f ../manifest-staging.yml -p . -n $APP_NAME-green 
+            cf set-env $APP_NAME-green GLOSSARY_AUTH "$GLOSSARY_AUTH"
+            cf set-env $APP_NAME-green HMW_BASIC_USER_NAME "$HMW_BASIC_USER_NAME"
+            cf set-env $APP_NAME-green HMW_BASIC_USER_PWD "$HMW_BASIC_USER_PWD"
+      - run:
+          name: Start application on Cloud.gov and clean routes
+          command: |
+            cf start $APP_NAME-green
+            cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
+            cf delete-route app.cloud.gov -n $APP_NAME-green -f
+      - aws-s3/sync:
+          arguments: |
+            --acl public-read \
+            --cache-control "max-age=86400"
+          aws-access-key-id: CF_STAGE_S3_ACCESS_KEY
+          aws-region: CF_STAGE_S3_REGION
+          aws-secret-access-key: CF_STAGE_S3_SECRET_KEY
+          from: server/app/public/data
+          overwrite: true
+          to: 's3://$CF_STAGE_S3_BUCKET_ID/data'
+      - run:
+          name: Re-route green to blue and then remove blue
+          command: |
+            cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
+            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
+            cf stop $APP_NAME
+            cf delete $APP_NAME -f
+            cf rename $APP_NAME-green $APP_NAME
       - <<: *save-cache
       - run: npm test
       - run: npm run build
