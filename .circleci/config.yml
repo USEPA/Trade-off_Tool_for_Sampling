@@ -18,14 +18,51 @@ references:
         - node_modules
       key: deps-{{ checksum "package.json" }}
 
-  add-ssh-keys: &add-ssh-keys
-    add_ssh_keys:
-      fingerprints:
-        - "20:59:1f:15:83:c2:30:2d:c5:66:02:7e:fa:b2:37:f7"
+  build-app: &build-app
+    - run:
+        name: update-npm
+        command: 'sudo npm install -g npm@latest'
+    - run:
+        name: Check npm version
+        command: |
+          npm --version
+    - run:
+        name: Check node version
+        command: |
+          node --version
+    - run:
+        name: client build
+        command: |
+          cd client
+          npm install
+          npm run build
+    - run:
+        name: server build 
+        command: |
+          cd server
+          npm install
+          cd app
+          cd public
+          cp -a ../../../client/build/. .
+          rm -rf previous
 
-  trust-server: &trust-server
-    name: Fix host authenticity for server
-    command: ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+  start-app: &start-app
+    - run:
+      name: Start application on Cloud.gov and clean routes
+      command: |
+        cf start $APP_NAME-green
+        cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
+        cf delete-route app.cloud.gov -n $APP_NAME-green -f
+        
+  rerout-green-to-blue: &reroute-green-to-blue
+    - run:
+      name: Re-route green to blue and then remove blue
+      command: |
+        cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
+        cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
+        cf stop $APP_NAME
+        cf delete $APP_NAME -f
+        cf rename $APP_NAME-green $APP_NAME
 
 jobs:
   deploy-develop:
@@ -38,31 +75,7 @@ jobs:
       - checkout:
         path: ~/project
       - <<: *restore-cache
-      - run:
-          name: update-npm
-          command: 'sudo npm install -g npm@latest'
-      - run:
-          name: Check npm version
-          command: |
-            npm --version
-      - run:
-          name: Check node version
-          command: |
-            node --version
-      - run:
-          name: client build
-          command: |
-            cd client
-            npm install
-            npm run build
-      - run:
-          name: server build 
-          command: |
-            cd server
-            npm install
-            cd app
-            cd public
-            cp -a ../../../client/build/. .
+      - <<: *build-app
       - run:
           name: Setup Cloud Foundry CLI
           command: |
@@ -79,12 +92,7 @@ jobs:
             cf push --no-start $APP_NAME-green -f ../manifest-dev.yml -p . -n $APP_NAME-green 
             cf set-env $APP_NAME-green TOTS_BASIC_USER_NAME "$TOTS_BASIC_USER_NAME"
             cf set-env $APP_NAME-green TOTS_BASIC_USER_PWD "$TOTS_BASIC_USER_PWD"
-      - run:
-          name: Start application on Cloud.gov and clean routes
-          command: |
-            cf start $APP_NAME-green
-            cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
-            cf delete-route app.cloud.gov -n $APP_NAME-green -f
+      - <<: *start-app
       - aws-s3/sync:
           arguments: |
             --acl public-read \
@@ -95,20 +103,8 @@ jobs:
           from: server/app/public/data
           overwrite: true
           to: 's3://$CF_DEV_S3_BUCKET_ID/data'
-      - run:
-          name: Re-route green to blue and then remove blue
-          command: |
-            cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
-            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
-            cf stop $APP_NAME
-            cf delete $APP_NAME -f
-            cf rename $APP_NAME-green $APP_NAME
+      - <<: *reroute-green-to-blue
       - <<: *save-cache
-      - <<: *add-ssh-keys
-      - run: *trust-server
-      - run:
-          name: Deploy to totsdev server
-          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
 
   deploy-staging:
     <<: *set-container
@@ -120,32 +116,7 @@ jobs:
       - checkout
         path: ~/project
       - <<: *restore-cache
-      - run:
-          name: update-npm
-          command: 'sudo npm install -g npm@latest'
-      - run:
-          name: Check npm version
-          command: |
-            npm --version
-      - run:
-          name: Check node version
-          command: |
-            node --version
-      - run:
-          name: client build
-          command: |
-            cd client
-            npm install
-            npm run build
-      - run:
-          name: server build 
-          command: |
-            cd server
-            npm install
-            cd app
-            cd public
-            cp -a ../../../client/build/. .
-            rm -rf previous
+      - <<: *build-app
       - run:
           name: Setup Cloud Foundry CLI
           command: |
@@ -160,15 +131,9 @@ jobs:
           command: |
             cd server
             cf push --no-start $APP_NAME-green -f ../manifest-staging.yml -p . -n $APP_NAME-green 
-            cf set-env $APP_NAME-green GLOSSARY_AUTH "$GLOSSARY_AUTH"
             cf set-env $APP_NAME-green HMW_BASIC_USER_NAME "$HMW_BASIC_USER_NAME"
             cf set-env $APP_NAME-green HMW_BASIC_USER_PWD "$HMW_BASIC_USER_PWD"
-      - run:
-          name: Start application on Cloud.gov and clean routes
-          command: |
-            cf start $APP_NAME-green
-            cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
-            cf delete-route app.cloud.gov -n $APP_NAME-green -f
+      - <<: *start-app
       - aws-s3/sync:
           arguments: |
             --acl public-read \
@@ -179,22 +144,8 @@ jobs:
           from: server/app/public/data
           overwrite: true
           to: 's3://$CF_STAGE_S3_BUCKET_ID/data'
-      - run:
-          name: Re-route green to blue and then remove blue
-          command: |
-            cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
-            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
-            cf stop $APP_NAME
-            cf delete $APP_NAME -f
-            cf rename $APP_NAME-green $APP_NAME
+      - <<: *reroute-green-to-blue
       - <<: *save-cache
-      - run: npm test
-      - run: npm run build
-      - <<: *add-ssh-keys
-      - run: *trust-server
-      - run:
-          name: Deploy to totsstage server
-          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsstage
 
 workflows:
   version: 2
