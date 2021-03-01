@@ -10,6 +10,8 @@ type AuthenticationType = {
   setOAuthInfo: React.Dispatch<React.SetStateAction<__esri.OAuthInfo | null>>;
   portal: __esri.Portal | null;
   setPortal: React.Dispatch<React.SetStateAction<__esri.Portal | null>>;
+  userInfo: any;
+  setUserInfo: React.Dispatch<React.SetStateAction<any>>;
 };
 
 export const AuthenticationContext = React.createContext<AuthenticationType>({
@@ -19,6 +21,8 @@ export const AuthenticationContext = React.createContext<AuthenticationType>({
   setOAuthInfo: () => {},
   portal: null,
   setPortal: () => {},
+  userInfo: null,
+  setUserInfo: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -30,6 +34,7 @@ export function AuthenticationProvider({ children }: Props) {
     setOAuthInfo, //
   ] = React.useState<__esri.OAuthInfo | null>(null);
   const [portal, setPortal] = React.useState<__esri.Portal | null>(null);
+  const [userInfo, setUserInfo] = React.useState<any>(null);
 
   return (
     <AuthenticationContext.Provider
@@ -40,6 +45,8 @@ export function AuthenticationProvider({ children }: Props) {
         setOAuthInfo,
         portal,
         setPortal,
+        userInfo,
+        setUserInfo,
       }}
     >
       {children}

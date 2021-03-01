@@ -10,6 +10,7 @@ import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
+import { fetchCheck } from 'utils/fetchUtils';
 import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
 // types
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
@@ -179,7 +180,10 @@ function Toolbar() {
     setSignedIn,
     oAuthInfo,
     setOAuthInfo,
+    portal,
     setPortal,
+    userInfo,
+    setUserInfo,
   } = React.useContext(AuthenticationContext);
 
   // Initialize the OAuth
@@ -231,6 +235,20 @@ function Toolbar() {
     setPortal,
     hasCheckedSignInStatus,
   ]);
+
+  // Get the user information
+  React.useEffect(() => {
+    if (!portal || userInfo) return;
+
+    const tempPortal: any = portal;
+    fetchCheck(
+      `${tempPortal.user.url}?f=json&token=${tempPortal.credential.token}`,
+    )
+      .then((res) => {
+        setUserInfo(res);
+      })
+      .catch((err) => console.error(err));
+  }, [portal, userInfo, setUserInfo]);
 
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = React.useState(false);
