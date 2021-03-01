@@ -171,7 +171,13 @@ const exitDisclaimerStyles = css`
 type LocationType =
   | { value: 'ArcGIS Online'; label: 'ArcGIS Online' }
   | { value: 'My Content'; label: 'My Content' }
-  | { value: 'My Organization'; label: 'My Organization' };
+  | { value: 'My Organization'; label: 'My Organization' }
+  | { value: 'My Groups'; label: 'My Groups' };
+
+type GroupType = {
+  value: string;
+  label: string;
+};
 
 type SortByType = {
   value: 'none' | 'title' | 'owner' | 'avgrating' | 'numviews' | 'modified';
@@ -185,7 +191,7 @@ type SearchResultsType = {
 };
 
 function SearchPanel() {
-  const { portal } = React.useContext(AuthenticationContext);
+  const { portal, userInfo } = React.useContext(AuthenticationContext);
   const { mapView } = React.useContext(SketchContext);
   const { Portal, watchUtils } = useEsriModulesContext();
 
@@ -197,6 +203,7 @@ function SearchPanel() {
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
   });
+  const [group, setGroup] = React.useState<GroupType | null>(null);
   const [search, setSearch] = React.useState('');
   const [searchText, setSearchText] = React.useState('');
   const [withinMap, setWithinMap] = React.useState(false);
@@ -222,6 +229,20 @@ function SearchPanel() {
     defaultSort: 'desc',
   });
   const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+
+  // Initializes the group selection
+  React.useEffect(() => {
+    if (group || !userInfo?.groups || userInfo.groups.length === 0) return;
+
+    const firstGroup = userInfo.groups.sort((a: any, b: any) =>
+      a.title.localeCompare(b.title),
+    )[0];
+
+    setGroup({
+      value: firstGroup.id,
+      label: firstGroup.title,
+    });
+  }, [group, userInfo]);
 
   // Builds and executes the search query on search button click
   React.useEffect(() => {
@@ -268,6 +289,14 @@ function SearchPanel() {
         query,
         `owner:${escapeForLucene(tmpPortal.user.orgId)}`,
       );
+    }
+    if (location.value === 'My Groups') {
+      if (!group) {
+        setSearchResults({ status: 'success', data: null });
+        return;
+      }
+
+      query = appendToQuery(query, `group:${escapeForLucene(group.value)}`);
     }
 
     // type selection
@@ -333,6 +362,7 @@ function SearchPanel() {
       });
   }, [
     currentExtent,
+    group,
     Portal,
     portal,
     location,
@@ -347,6 +377,7 @@ function SearchPanel() {
     wms,
     sortBy,
     sortOrder,
+    userInfo,
   ]);
 
   // Runs the query for changing pages of the result set
@@ -415,8 +446,31 @@ function SearchPanel() {
           { value: 'ArcGIS Online', label: 'ArcGIS Online' },
           { value: 'My Content', label: 'My Content' },
           { value: 'My Organization', label: 'My Organization' },
+          { value: 'My Groups', label: 'My Groups' },
         ]}
       />
+      {location.value === 'My Groups' && (
+        <React.Fragment>
+          <label htmlFor="group-select">Group</label>
+          <Select
+            inputId="group-select"
+            value={group}
+            onChange={(ev) => setGroup(ev as GroupType)}
+            options={
+              userInfo?.groups?.length > 0
+                ? userInfo.groups
+                    .sort((a: any, b: any) => a.title.localeCompare(b.title))
+                    .map((group: any) => {
+                      return {
+                        value: group.id,
+                        label: group.title,
+                      };
+                    })
+                : []
+            }
+          />
+        </React.Fragment>
+      )}
       <label htmlFor="search-input">Search</label>
       <form
         css={searchContainerStyles}
