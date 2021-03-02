@@ -79,12 +79,8 @@ export const invalidFileTypeMessage = (filename: string) => (
   />
 );
 
-export const importErrorMessage = (
-  <MessageBox
-    severity="error"
-    title="Invalid File Type"
-    message="Unable to import this dataset."
-  />
+export const importErrorMessage = (message: string) => (
+  <MessageBox severity="error" title="File Upload Error" message={message} />
 );
 
 export const fileReadErrorMessage = (filename: string) => (

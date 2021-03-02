@@ -219,6 +219,7 @@ type UploadStatusType =
   | 'user-canceled'
   | 'invalid-file-type'
   | 'import-error'
+  | 'over-max-features'
   | 'missing-attributes'
   | 'unknown-sample-type'
   | 'file-read-error';
@@ -269,6 +270,7 @@ function FilePanel() {
   );
   const [fileValidated, setFileValidated] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
+  const [esriMessage, setEsriMessage] = React.useState<string>('');
   const [missingAttributes, setMissingAttributes] = React.useState('');
 
   const [
@@ -346,6 +348,7 @@ function FilePanel() {
 
     // reset state management values
     setUploadStatus('fetching');
+    setEsriMessage('');
     setAnalyzeResponse(null);
     setGenerateResponse(null);
     setFeaturesAdded(false);
@@ -553,6 +556,7 @@ function FilePanel() {
       .then((res: any) => {
         if (res.error) {
           setUploadStatus('import-error');
+          setEsriMessage(res.error.message);
           return;
         }
         if (layerType.value !== 'VSP') {
@@ -1156,6 +1160,7 @@ function FilePanel() {
         onChange={(ev) => {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
+          setEsriMessage('');
         }}
         options={
           trainingMode
@@ -1317,7 +1322,8 @@ function FilePanel() {
                   )}
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
-                  {uploadStatus === 'import-error' && importErrorMessage}
+                  {uploadStatus === 'import-error' &&
+                    importErrorMessage(esriMessage)}
                   {uploadStatus === 'file-read-error' &&
                     fileReadErrorMessage(filename)}
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
