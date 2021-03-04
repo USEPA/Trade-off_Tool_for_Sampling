@@ -46,9 +46,6 @@ jobs:
             cd app
             cd public
             cp -a ../../../client/build/. .
-            cd ..
-            cd ..
-            cd ..
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
