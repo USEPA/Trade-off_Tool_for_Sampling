@@ -33,10 +33,21 @@ jobs:
     steps:
       - checkout
       - <<: *restore-cache
-      - run: npm install
+      - run:
+          name: client build
+          command: |
+            cd client
+            npm install
+            npm run build
+      - run:
+          name: server build
+          command: |
+            cd server
+            npm install
+            cd app
+            cd public
+            cp -a ../../../client/build/. .
       - <<: *save-cache
-      - run: npm test
-      - run: npm run build
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
@@ -49,10 +60,21 @@ jobs:
     steps:
       - checkout
       - <<: *restore-cache
-      - run: npm install
+      - run:
+          name: client build
+          command: |
+            cd client
+            npm install
+            npm run build
+      - run:
+          name: server build
+          command: |
+            cd server
+            npm install
+            cd app
+            cd public
+            cp -a ../../../client/build/. .
       - <<: *save-cache
-      - run: npm test
-      - run: npm run build
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
