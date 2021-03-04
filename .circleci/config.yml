@@ -46,11 +46,15 @@ jobs:
             cd app
             cd public
             cp -a ../../../client/build/. .
+            cd..
+            cd..
+            cd..
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
           name: Deploy to totsdev server
-          command: scp -r ./build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+          command: scp -r ./client/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+          command: scp -r ./server/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
 
   deploy-staging:
     <<: *set-container
