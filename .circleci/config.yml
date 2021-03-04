@@ -53,8 +53,9 @@ jobs:
       - run: *trust-server
       - run:
           name: Deploy to totsdev server
-          command: scp -r ./client/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
-          command: scp -r ./server/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+          command: |
+            scp -r ./client/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
+            scp -r ./server/build/* $SSH_USER@$SSH_HOST:/var/www/html/totsdev
 
   deploy-staging:
     <<: *set-container
