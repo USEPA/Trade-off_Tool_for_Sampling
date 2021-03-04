@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 orbs:
   aws-s3: circleci/aws-s3@1.0.16
@@ -12,6 +12,9 @@ jobs:
   deploy-develop:
     <<: *set-container
     working_directory: ~/repo/app
+    environment:
+      APP_NAME: tots-dev
+      APP_DOMAIN: app.cloud.gov
     steps:
       - checkout:
           path: ~/repo
@@ -84,6 +87,9 @@ jobs:
   deploy-staging:
     <<: *set-container
     working_directory: ~/repo/app
+    environment:
+      APP_NAME: tots-stage
+      APP_DOMAIN: app.cloud.gov
     steps:
       - checkout:
           path: ~/repo
