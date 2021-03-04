@@ -5,63 +5,6 @@ references:
     docker:
       - image: circleci/node:erbium-buster # node 12 on debian 10
 
-  restore-cache: &restore-cache
-    restore_cache:
-      - run: 
-        name: restore_cache_app
-        command: |
-          cd app
-      keys:
-        - deps-{{ checksum "package.json" }}
-        - deps-
-      - run: 
-        name: restore_cache_client
-        command: |
-          cd client
-      keys:
-        - deps-{{ checksum "package.json" }}
-        - deps-
-      - run: 
-        name: restore_cache_server
-        command: |
-          cd..
-          cd server
-      keys:
-        - deps-{{ checksum "package.json" }}
-        - deps-
-      - run: 
-        name: go_back_to_app_folder
-        command: |
-          cd..
-          cd..
-
-  save-cache: &save-cache
-    save_cache:
-      paths:
-        - node_modules
-      key: deps-{{ checksum "package.json" }}
-      
-      keys:
-        - deps-{{ checksum "package.json" }}
-      - run: 
-        name: save_cache_client
-        command: |
-          cd client
-      keys:
-        - deps-{{ checksum "package.json" }}
-      - run: 
-        name: save_cache_server
-        command: |
-          cd..
-          cd server
-      keys:
-        - deps-{{ checksum "package.json" }}
-      - run: 
-        name: go_back_to_app_folder
-        command: |
-          cd..
-          cd..
-
   add-ssh-keys: &add-ssh-keys
     add_ssh_keys:
       fingerprints:
@@ -74,10 +17,21 @@ references:
 jobs:
   deploy-develop:
     <<: *set-container
-    working_directory: ~/repo
+    working_directory: ~/repo/app
     steps:
-      - checkout
-      - <<: *restore-cache
+      - checkout:
+          path: ~/repo
+      - run:
+          name: update-npm
+          command: "sudo npm install -g npm@latest"
+      - run:
+          name: Check npm version
+          command: |
+            npm --version
+      - run:
+          name: Check node version
+          command: |
+            node --version
       - run:
           name: client build
           command: |
@@ -92,7 +46,6 @@ jobs:
             cd app
             cd public
             cp -a ../../../client/build/. .
-      - <<: *save-cache
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
@@ -101,10 +54,21 @@ jobs:
 
   deploy-staging:
     <<: *set-container
-    working_directory: ~/repo
+    working_directory: ~/repo/app
     steps:
-      - checkout
-      - <<: *restore-cache
+      - checkout:
+          path: ~/repo
+      - run:
+          name: update-npm
+          command: "sudo npm install -g npm@latest"
+      - run:
+          name: Check npm version
+          command: |
+            npm --version
+      - run:
+          name: Check node version
+          command: |
+            node --version
       - run:
           name: client build
           command: |
@@ -119,7 +83,6 @@ jobs:
             cd app
             cd public
             cp -a ../../../client/build/. .
-      - <<: *save-cache
       - <<: *add-ssh-keys
       - run: *trust-server
       - run:
