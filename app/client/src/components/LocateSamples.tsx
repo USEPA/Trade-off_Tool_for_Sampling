@@ -11,9 +11,12 @@ import MessageBox from 'components/MessageBox';
 import NavigationButton from 'components/NavigationButton';
 import Select from 'components/Select';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { DialogContext } from 'contexts/Dialog';
-import { useServicesContext } from 'contexts/LookupFiles';
+import { useEsriModulesContext } from 'contexts/EsriModules';
+import {
+  useSampleTypesContext,
+  useServicesContext,
+} from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -21,12 +24,7 @@ import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import {
-  sampleAttributes,
-  SampleSelectOptions,
-  SampleSelectType,
-  PolygonSymbol,
-} from 'config/sampleAttributes';
+import { SampleSelectType, PolygonSymbol } from 'config/sampleAttributes';
 import {
   cantUseWithVspMessage,
   featureNotAvailableMessage,
@@ -428,6 +426,7 @@ function LocateSamples() {
     sketchVM,
     aoiSketchVM,
     getGpMaxRecordCount,
+    sampleAttributes,
     userDefinedOptions,
     setUserDefinedOptions,
     userDefinedAttributes,
@@ -444,6 +443,7 @@ function LocateSamples() {
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
+  const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
   // Sets the sketchLayer to the first layer in the layer selection drop down,
@@ -507,7 +507,14 @@ function LocateSamples() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType>(SampleSelectOptions[0]);
+  ] = React.useState<SampleSelectType | null>(null);
+
+  // Initialize the selected sample type to the first option
+  React.useEffect(() => {
+    if (sampleTypeContext.status !== 'success') return;
+
+    setSampleType(sampleTypeContext.data.sampleSelectOptions[0]);
+  }, [sampleTypeContext]);
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
@@ -529,7 +536,7 @@ function LocateSamples() {
     }
 
     // determine whether the sketch button draws points or polygons
-    let shapeType = sampleAttributes[label].ShapeType;
+    let shapeType = sampleAttributes[label as any].ShapeType;
 
     // make the style of the button active
     const wasSet = activateSketchButton(label);
@@ -581,7 +588,7 @@ function LocateSamples() {
 
   // Handle a user generating random samples
   function randomSamples() {
-    if (!map || !sketchLayer || !getGpMaxRecordCount) return;
+    if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'
@@ -632,7 +639,7 @@ function LocateSamples() {
           fields: defaultLayerProps.fields,
           features: [
             {
-              attributes: sampleAttributes[sampleType.value],
+              attributes: sampleAttributes[sampleType.value as any],
             },
           ],
         };
@@ -790,21 +797,25 @@ function LocateSamples() {
 
     // Add in the standard sample types. Append "(edited)" to the
     // label if the user made changes to one of the standard types.
-    SampleSelectOptions.forEach((option) => {
-      allSampleOptions.push({
-        value: option.value,
-        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
-          ? `${option.value} (edited)`
-          : option.label,
-        isPredefined: option.isPredefined,
+    if (sampleTypeContext.status === 'success') {
+      const sampleSelectOptions = sampleTypeContext.data.sampleSelectOptions;
+      Object.keys(sampleSelectOptions).forEach((key: string) => {
+        const option: any = sampleSelectOptions[key];
+        allSampleOptions.push({
+          value: option.value,
+          label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+            ? `${option.value} (edited)`
+            : option.label,
+          isPredefined: option.isPredefined,
+        });
       });
-    });
+    }
 
     // Add on any user defined sample types
     allSampleOptions = allSampleOptions.concat(userDefinedOptions);
 
     setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes]);
+  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   const [
     userDefinedSampleType,
@@ -862,7 +873,7 @@ function LocateSamples() {
     // get the sample type name, for a clone operation
     // add a number to the end of the name.
     let sampleTypeName = userDefinedSampleType.value;
-    const attributes = sampleAttributes[sampleTypeName];
+    const attributes = sampleAttributes[sampleTypeName as any];
     if (editType === 'clone') {
       sampleTypeName = getSampleTypeName(allSampleOptions, sampleTypeName);
     }
@@ -1778,29 +1789,49 @@ function LocateSamples() {
                   <div>
                     <h3>Established Sample Types</h3>
                     <div css={sketchButtonContainerStyles}>
-                      {SampleSelectOptions.map((option, index) => {
-                        const sampleType = option.value;
-                        const shapeType =
-                          sampleAttributes[sampleType].ShapeType;
-                        const edited = userDefinedAttributes.attributes.hasOwnProperty(
-                          sampleType,
-                        );
-                        return (
-                          <SketchButton
-                            key={index}
-                            layers={layers}
-                            label={
-                              edited ? `${sampleType} (edited)` : sampleType
-                            }
-                            iconClass={
-                              shapeType === 'point'
-                                ? 'fas fa-pen-fancy'
-                                : 'fas fa-draw-polygon'
-                            }
-                            onClick={() => sketchButtonClick(sampleType)}
-                          />
-                        );
-                      })}
+                      {sampleTypeContext.status === 'fetching' && (
+                        <LoadingSpinner />
+                      )}
+                      {sampleTypeContext.status === 'failure' &&
+                        featureNotAvailableMessage('Established Sample Types')}
+                      {sampleTypeContext.status === 'success' && (
+                        <React.Fragment>
+                          {sampleTypeContext.data.sampleSelectOptions.map(
+                            (option: any, index: number) => {
+                              const sampleType = option.value;
+
+                              if (
+                                !sampleAttributes.hasOwnProperty(sampleType)
+                              ) {
+                                return null;
+                              }
+
+                              const shapeType =
+                                sampleAttributes[sampleType].ShapeType;
+                              const edited = userDefinedAttributes.attributes.hasOwnProperty(
+                                sampleType,
+                              );
+                              return (
+                                <SketchButton
+                                  key={index}
+                                  layers={layers}
+                                  label={
+                                    edited
+                                      ? `${sampleType} (edited)`
+                                      : sampleType
+                                  }
+                                  iconClass={
+                                    shapeType === 'point'
+                                      ? 'fas fa-pen-fancy'
+                                      : 'fas fa-draw-polygon'
+                                  }
+                                  onClick={() => sketchButtonClick(sampleType)}
+                                />
+                              );
+                            },
+                          )}
+                        </React.Fragment>
+                      )}
                     </div>
                   </div>
                   {userDefinedOptions.length > 0 && (
@@ -1813,7 +1844,7 @@ function LocateSamples() {
 
                           const sampleType = option.value;
                           const shapeType =
-                            sampleAttributes[sampleType].ShapeType;
+                            sampleAttributes[sampleType as any].ShapeType;
                           return (
                             <SketchButton
                               key={index}
@@ -1838,193 +1869,198 @@ function LocateSamples() {
                   {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
                   {sketchLayer?.layerType !== 'VSP' && (
                     <React.Fragment>
-                      {services.status === 'fetching' && <LoadingSpinner />}
-                      {services.status === 'failure' &&
+                      {(services.status === 'fetching' ||
+                        sampleTypeContext.status === 'fetching') && (
+                        <LoadingSpinner />
+                      )}
+                      {(services.status === 'failure' ||
+                        sampleTypeContext.status === 'failure') &&
                         featureNotAvailableMessage(
                           'Add Multiple Random Samples',
                         )}
-                      {services.status === 'success' && (
-                        <React.Fragment>
-                          <p>
-                            Select "Draw Sampling Mask" to draw a boundary on
-                            your map for placing samples or select "Use Imported
-                            Area of Interest" to use an Area of Interest file to
-                            place samples. Select a Sample Type from the menu
-                            and specify the number of samples to add. Click
-                            Submit to add samples.
-                          </p>
-                          <div>
-                            <input
-                              id="draw-aoi"
-                              type="radio"
-                              name="mode"
-                              value="Draw area of Interest"
-                              checked={generateRandomMode === 'draw'}
-                              onChange={(ev) => {
-                                setGenerateRandomMode('draw');
-
-                                const maskLayers = layers.filter(
-                                  (layer) =>
-                                    layer.layerType === 'Sampling Mask',
-                                );
-                                setAoiSketchLayer(maskLayers[0]);
-                              }}
-                            />
-                            <label htmlFor="draw-aoi" css={radioLabelStyles}>
-                              Draw Sampling Mask
-                            </label>
-                          </div>
-                          <div>
-                            <input
-                              id="use-aoi-file"
-                              type="radio"
-                              name="mode"
-                              value="Use Imported Area of Interest"
-                              checked={generateRandomMode === 'file'}
-                              onChange={(ev) => {
-                                setGenerateRandomMode('file');
-
-                                setAoiSketchLayer(null);
-
-                                if (!selectedAoiFile) {
-                                  const aoiLayers = layers.filter(
-                                    (layer) =>
-                                      layer.layerType === 'Area of Interest',
-                                  );
-                                  setSelectedAoiFile(aoiLayers[0]);
-                                }
-                              }}
-                            />
-                            <label
-                              htmlFor="use-aoi-file"
-                              css={radioLabelStyles}
-                            >
-                              Use Imported Area of Interest
-                            </label>
-                          </div>
-
-                          {generateRandomMode === 'draw' && (
-                            <button
-                              id="sampling-mask"
-                              title="Draw Sampling Mask"
-                              className="sketch-button"
-                              onClick={() => {
-                                if (!aoiSketchLayer) return;
-
-                                sketchAoiButtonClick();
-                              }}
-                              css={sketchAoiButtonStyles}
-                            >
-                              <span css={sketchAoiTextStyles}>
-                                <i className="fas fa-draw-polygon" />{' '}
-                                <span>Draw Sampling Mask</span>
-                              </span>
-                            </button>
-                          )}
-                          {generateRandomMode === 'file' && (
-                            <React.Fragment>
-                              <label htmlFor="aoi-mask-select-input">
-                                Area of Interest Mask
-                              </label>
-                              <div css={inlineMenuStyles}>
-                                <Select
-                                  id="aoi-mask-select"
-                                  inputId="aoi-mask-select-input"
-                                  css={inlineSelectStyles}
-                                  styles={reactSelectStyles}
-                                  isClearable={true}
-                                  value={selectedAoiFile}
-                                  onChange={(ev) =>
-                                    setSelectedAoiFile(ev as LayerType)
-                                  }
-                                  options={layers.filter(
-                                    (layer) =>
-                                      layer.layerType === 'Area of Interest',
-                                  )}
-                                />
-                                <button
-                                  css={addButtonStyles}
-                                  onClick={(ev) => {
-                                    setGoTo('addData');
-                                    setGoToOptions({
-                                      from: 'file',
-                                      layerType: 'Area of Interest',
-                                    });
-                                  }}
-                                >
-                                  Add
-                                </button>
-                              </div>
-                            </React.Fragment>
-                          )}
-                          {generateRandomMode && (
-                            <React.Fragment>
-                              <br />
-                              <label htmlFor="sample-type-select-input">
-                                Sample Type
-                              </label>
-                              <Select
-                                id="sample-type-select"
-                                inputId="sample-type-select-input"
-                                css={fullWidthSelectStyles}
-                                value={sampleType}
-                                onChange={(ev) =>
-                                  setSampleType(ev as SampleSelectType)
-                                }
-                                options={allSampleOptions}
-                              />
-                              <label htmlFor="number-of-samples-input">
-                                Number of Samples
-                              </label>
+                      {services.status === 'success' &&
+                        sampleTypeContext.status === 'success' && (
+                          <React.Fragment>
+                            <p>
+                              Select "Draw Sampling Mask" to draw a boundary on
+                              your map for placing samples or select "Use
+                              Imported Area of Interest" to use an Area of
+                              Interest file to place samples. Select a Sample
+                              Type from the menu and specify the number of
+                              samples to add. Click Submit to add samples.
+                            </p>
+                            <div>
                               <input
-                                id="number-of-samples-input"
-                                css={inputStyles}
-                                value={numberRandomSamples}
-                                onChange={(ev) =>
-                                  setNumberRandomSamples(ev.target.value)
-                                }
+                                id="draw-aoi"
+                                type="radio"
+                                name="mode"
+                                value="Draw area of Interest"
+                                checked={generateRandomMode === 'draw'}
+                                onChange={(ev) => {
+                                  setGenerateRandomMode('draw');
+
+                                  const maskLayers = layers.filter(
+                                    (layer) =>
+                                      layer.layerType === 'Sampling Mask',
+                                  );
+                                  setAoiSketchLayer(maskLayers[0]);
+                                }}
                               />
-                              {generateRandomResponse.status === 'success' &&
-                                sketchLayer &&
-                                generateRandomSuccessMessage(
-                                  generateRandomResponse.data.length,
-                                  sketchLayer.label,
-                                )}
-                              {generateRandomResponse.status === 'failure' &&
-                                webServiceErrorMessage}
-                              {generateRandomResponse.status ===
-                                'exceededTransferLimit' &&
-                                generateRandomExceededTransferLimitMessage}
-                              {((generateRandomMode === 'draw' &&
-                                numberRandomSamples &&
-                                aoiSketchLayer?.sketchLayer.type ===
-                                  'graphics' &&
-                                aoiSketchLayer.sketchLayer.graphics.length >
-                                  0) ||
-                                (generateRandomMode === 'file' &&
-                                  selectedAoiFile?.sketchLayer.type ===
-                                    'graphics' &&
-                                  selectedAoiFile.sketchLayer.graphics.length >
-                                    0)) && (
-                                <button
-                                  css={submitButtonStyles}
-                                  onClick={randomSamples}
-                                >
-                                  {generateRandomResponse.status !==
-                                    'fetching' && 'Submit'}
-                                  {generateRandomResponse.status ===
-                                    'fetching' && (
-                                    <React.Fragment>
-                                      <i className="fas fa-spinner fa-pulse" />
-                                      &nbsp;&nbsp;Loading...
-                                    </React.Fragment>
+                              <label htmlFor="draw-aoi" css={radioLabelStyles}>
+                                Draw Sampling Mask
+                              </label>
+                            </div>
+                            <div>
+                              <input
+                                id="use-aoi-file"
+                                type="radio"
+                                name="mode"
+                                value="Use Imported Area of Interest"
+                                checked={generateRandomMode === 'file'}
+                                onChange={(ev) => {
+                                  setGenerateRandomMode('file');
+
+                                  setAoiSketchLayer(null);
+
+                                  if (!selectedAoiFile) {
+                                    const aoiLayers = layers.filter(
+                                      (layer) =>
+                                        layer.layerType === 'Area of Interest',
+                                    );
+                                    setSelectedAoiFile(aoiLayers[0]);
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor="use-aoi-file"
+                                css={radioLabelStyles}
+                              >
+                                Use Imported Area of Interest
+                              </label>
+                            </div>
+
+                            {generateRandomMode === 'draw' && (
+                              <button
+                                id="sampling-mask"
+                                title="Draw Sampling Mask"
+                                className="sketch-button"
+                                onClick={() => {
+                                  if (!aoiSketchLayer) return;
+
+                                  sketchAoiButtonClick();
+                                }}
+                                css={sketchAoiButtonStyles}
+                              >
+                                <span css={sketchAoiTextStyles}>
+                                  <i className="fas fa-draw-polygon" />{' '}
+                                  <span>Draw Sampling Mask</span>
+                                </span>
+                              </button>
+                            )}
+                            {generateRandomMode === 'file' && (
+                              <React.Fragment>
+                                <label htmlFor="aoi-mask-select-input">
+                                  Area of Interest Mask
+                                </label>
+                                <div css={inlineMenuStyles}>
+                                  <Select
+                                    id="aoi-mask-select"
+                                    inputId="aoi-mask-select-input"
+                                    css={inlineSelectStyles}
+                                    styles={reactSelectStyles}
+                                    isClearable={true}
+                                    value={selectedAoiFile}
+                                    onChange={(ev) =>
+                                      setSelectedAoiFile(ev as LayerType)
+                                    }
+                                    options={layers.filter(
+                                      (layer) =>
+                                        layer.layerType === 'Area of Interest',
+                                    )}
+                                  />
+                                  <button
+                                    css={addButtonStyles}
+                                    onClick={(ev) => {
+                                      setGoTo('addData');
+                                      setGoToOptions({
+                                        from: 'file',
+                                        layerType: 'Area of Interest',
+                                      });
+                                    }}
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                              </React.Fragment>
+                            )}
+                            {generateRandomMode && (
+                              <React.Fragment>
+                                <br />
+                                <label htmlFor="sample-type-select-input">
+                                  Sample Type
+                                </label>
+                                <Select
+                                  id="sample-type-select"
+                                  inputId="sample-type-select-input"
+                                  css={fullWidthSelectStyles}
+                                  value={sampleType}
+                                  onChange={(ev) =>
+                                    setSampleType(ev as SampleSelectType)
+                                  }
+                                  options={allSampleOptions}
+                                />
+                                <label htmlFor="number-of-samples-input">
+                                  Number of Samples
+                                </label>
+                                <input
+                                  id="number-of-samples-input"
+                                  css={inputStyles}
+                                  value={numberRandomSamples}
+                                  onChange={(ev) =>
+                                    setNumberRandomSamples(ev.target.value)
+                                  }
+                                />
+                                {generateRandomResponse.status === 'success' &&
+                                  sketchLayer &&
+                                  generateRandomSuccessMessage(
+                                    generateRandomResponse.data.length,
+                                    sketchLayer.label,
                                   )}
-                                </button>
-                              )}
-                            </React.Fragment>
-                          )}
-                        </React.Fragment>
-                      )}
+                                {generateRandomResponse.status === 'failure' &&
+                                  webServiceErrorMessage}
+                                {generateRandomResponse.status ===
+                                  'exceededTransferLimit' &&
+                                  generateRandomExceededTransferLimitMessage}
+                                {((generateRandomMode === 'draw' &&
+                                  numberRandomSamples &&
+                                  aoiSketchLayer?.sketchLayer.type ===
+                                    'graphics' &&
+                                  aoiSketchLayer.sketchLayer.graphics.length >
+                                    0) ||
+                                  (generateRandomMode === 'file' &&
+                                    selectedAoiFile?.sketchLayer.type ===
+                                      'graphics' &&
+                                    selectedAoiFile.sketchLayer.graphics
+                                      .length > 0)) && (
+                                  <button
+                                    css={submitButtonStyles}
+                                    onClick={randomSamples}
+                                  >
+                                    {generateRandomResponse.status !==
+                                      'fetching' && 'Submit'}
+                                    {generateRandomResponse.status ===
+                                      'fetching' && (
+                                      <React.Fragment>
+                                        <i className="fas fa-spinner fa-pulse" />
+                                        &nbsp;&nbsp;Loading...
+                                      </React.Fragment>
+                                    )}
+                                  </button>
+                                )}
+                              </React.Fragment>
+                            )}
+                          </React.Fragment>
+                        )}
                     </React.Fragment>
                   )}
                 </div>
@@ -2504,7 +2540,7 @@ function LocateSamples() {
 
                                 // add/update the sample's attributes
                                 sampleAttributes[
-                                  sampleTypeName
+                                  sampleTypeName as any
                                 ] = newAttributes;
                                 setUserDefinedAttributes((item) => {
                                   item.attributes[

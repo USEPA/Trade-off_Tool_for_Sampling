@@ -6,9 +6,10 @@ import { jsx } from '@emotion/core';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
+import { useEsriModulesContext } from 'contexts/EsriModules';
+import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -35,9 +36,6 @@ import { PanelValueType } from 'config/navigation';
 import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
-  areaTolerance,
-  attributesToCheck,
-  sampleAttributes,
   SampleIssues,
   SampleIssuesOutput,
   SampleSelectType,
@@ -204,6 +202,7 @@ export function useStartOver() {
 //    loadedProjection - The esri projection library. Mainly used to test if the
 //                       library is ready for use.
 export function useGeometryTools() {
+  const sampleTypeContext = useSampleTypesContext();
   const {
     geometryEngine,
     Graphic,
@@ -390,21 +389,26 @@ export function useGeometryTools() {
           // check that area is within allowable tolerance
           const difference = area - graphic.attributes.SA;
           sampleWithIssues.difference = difference;
-          if (Math.abs(difference) > areaTolerance) {
+          if (Math.abs(difference) > sampleTypeContext.data.areaTolerance) {
             areaOutOfTolerance = true;
             sampleWithIssues.areaOutOfTolerance = true;
           }
         }
 
         // Check if the sample is a predefined type or not
-        if (sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)) {
+        if (
+          sampleTypeContext.status === 'success' &&
+          sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+            graphic.attributes.TYPE,
+          )
+        ) {
           performAreaToleranceCheck();
 
           // check sample attributes against predefined attributes
           const predefinedAttributes: any =
-            sampleAttributes[graphic.attributes.TYPE];
+            sampleTypeContext.data.sampleAttributes[graphic.attributes.TYPE];
           Object.keys(predefinedAttributes).forEach((key) => {
-            if (!attributesToCheck.includes(key)) return;
+            if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
             if (
               graphic.attributes.hasOwnProperty(key) &&
               predefinedAttributes[key] === graphic.attributes[key]
@@ -442,7 +446,7 @@ export function useGeometryTools() {
 
       return output;
     },
-    [calculateArea, Graphic, Polygon],
+    [calculateArea, Graphic, Polygon, sampleTypeContext],
   );
 
   return { calculateArea, createBuffer, loadedProjection, sampleValidation };
@@ -2096,10 +2100,13 @@ function useUserDefinedSampleOptionsStorage() {
 // Uses browser storage for holding the url layers that have been added.
 function useUserDefinedSampleAttributesStorage() {
   const key = 'tots_user_defined_sample_attributes';
+  const sampleTypeContext = useSampleTypesContext();
   const { setOptions } = React.useContext(DialogContext);
-  const { userDefinedAttributes, setUserDefinedAttributes } = React.useContext(
-    SketchContext,
-  );
+  const {
+    setSampleAttributes,
+    userDefinedAttributes,
+    setUserDefinedAttributes,
+  } = React.useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
   const [
@@ -2118,14 +2125,35 @@ function useUserDefinedSampleAttributesStorage() {
       userDefinedAttributesStr,
     );
 
-    // add the user defined attributes to the global attributes
-    Object.keys(userDefinedAttributesObj.attributes).forEach((key) => {
-      sampleAttributes[key] = userDefinedAttributesObj.attributes[key];
-    });
-
     // set the state
     setUserDefinedAttributes(userDefinedAttributesObj);
-  }, [localUserDefinedSamplesInitialized, setUserDefinedAttributes]);
+  }, [
+    localUserDefinedSamplesInitialized,
+    setUserDefinedAttributes,
+    sampleTypeContext,
+    setSampleAttributes,
+  ]);
+
+  // add the user defined attributes to the global attributes
+  React.useEffect(() => {
+    // add the user defined attributes to the global attributes
+    let newSampleAttributes: any = {};
+
+    if (sampleTypeContext.status === 'success') {
+      newSampleAttributes = { ...sampleTypeContext.data.sampleAttributes };
+    }
+
+    Object.keys(userDefinedAttributes.attributes).forEach((key) => {
+      newSampleAttributes[key] = userDefinedAttributes.attributes[key];
+    });
+
+    setSampleAttributes(newSampleAttributes);
+  }, [
+    localUserDefinedSamplesInitialized,
+    userDefinedAttributes,
+    sampleTypeContext,
+    setSampleAttributes,
+  ]);
 
   // Saves the url layers to browser storage everytime they change
   React.useEffect(() => {

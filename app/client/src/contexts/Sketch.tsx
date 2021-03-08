@@ -74,6 +74,8 @@ type SketchType = {
   setUserDefinedAttributes: React.Dispatch<
     React.SetStateAction<UserDefinedAttributes>
   >;
+  sampleAttributes: any[];
+  setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -127,6 +129,8 @@ export const SketchContext = React.createContext<SketchType>({
   setUserDefinedOptions: () => {},
   userDefinedAttributes: { editCount: 0, attributes: {} },
   setUserDefinedAttributes: () => {},
+  sampleAttributes: [],
+  setSampleAttributes: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -182,6 +186,14 @@ export function SketchProvider({ children }: Props) {
   const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
     UserDefinedAttributes
   >({ editCount: 0, attributes: {} });
+  const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
+
+  // Update totsSampleAttributes variable on the window object. This is a workaround
+  // to an issue where the sampleAttributes state variable is not available within esri
+  // event handlers.
+  React.useEffect(() => {
+    (window as any).totsSampleAttributes = sampleAttributes;
+  }, [sampleAttributes]);
 
   // define the context funtion for getting the max record count
   // of the gp server
@@ -258,6 +270,8 @@ export function SketchProvider({ children }: Props) {
         setUserDefinedOptions,
         userDefinedAttributes,
         setUserDefinedAttributes,
+        sampleAttributes,
+        setSampleAttributes,
       }}
     >
       {children}
