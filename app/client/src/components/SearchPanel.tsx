@@ -8,9 +8,10 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
+import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 // utils
 import {
   getAllFeatures,
@@ -28,12 +29,7 @@ import { escapeForLucene } from 'utils/utils';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
-import {
-  Attributes,
-  attributesToCheck,
-  sampleAttributes,
-  SampleSelectType,
-} from 'config/sampleAttributes';
+import { Attributes, SampleSelectType } from 'config/sampleAttributes';
 // config
 import {
   notLoggedInMessage,
@@ -750,6 +746,7 @@ function ResultCard({ result }: ResultCardProps) {
   const { portal } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const { trainingMode } = React.useContext(NavigationContext);
+  const sampleTypeContext = useSampleTypesContext();
   const {
     FeatureLayer,
     Field,
@@ -772,6 +769,7 @@ function ResultCard({ result }: ResultCardProps) {
     portalLayers,
     setPortalLayers,
     setReferenceLayers,
+    sampleAttributes,
     setSelectedScenario,
     setSketchLayer,
     setUserDefinedOptions,
@@ -805,6 +803,10 @@ function ResultCard({ result }: ResultCardProps) {
    */
   function addTotsLayer() {
     if (!map || !portal) return;
+    if (sampleTypeContext.status === 'failure') {
+      setStatus('error');
+      return;
+    }
 
     setStatus('loading');
 
@@ -868,7 +870,11 @@ function ResultCard({ result }: ResultCardProps) {
                     const predefinedAttributes: any =
                       sampleAttributes[graphic.attributes.TYPE];
                     Object.keys(predefinedAttributes).forEach((key) => {
-                      if (!attributesToCheck.includes(key)) return;
+                      if (
+                        !sampleTypeContext.data.attributesToCheck.includes(key)
+                      ) {
+                        return;
+                      }
 
                       graphic.attributes[key] = predefinedAttributes[key];
                     });
@@ -881,7 +887,7 @@ function ResultCard({ result }: ResultCardProps) {
                 setUserDefinedAttributes((item) => {
                   Object.keys(newAttributes).forEach((key) => {
                     const attributes = newAttributes[key];
-                    sampleAttributes[attributes.TYPE] = attributes;
+                    sampleAttributes[attributes.TYPE as any] = attributes;
                     item.attributes[attributes.TYPE] = attributes;
                   });
 
@@ -1160,7 +1166,10 @@ function ResultCard({ result }: ResultCardProps) {
                 setOptions({
                   title: 'Sample Issues',
                   ariaLabel: 'Sample Issues',
-                  description: sampleIssuesPopupMessage(output),
+                  description: sampleIssuesPopupMessage(
+                    output,
+                    sampleTypeContext.data.areaTolerance,
+                  ),
                   onContinue: () => finalizeLayerAdd(),
                   onCancel: () => setStatus('canceled'),
                 });

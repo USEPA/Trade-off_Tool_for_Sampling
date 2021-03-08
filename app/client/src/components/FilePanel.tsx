@@ -10,7 +10,10 @@ import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useServicesContext } from 'contexts/LookupFiles';
+import {
+  useSampleTypesContext,
+  useServicesContext,
+} from 'contexts/LookupFiles';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
@@ -27,11 +30,7 @@ import { chunkArray } from 'utils/utils';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import {
-  sampleAttributes,
-  SampleSelectOptions,
-  SampleSelectType,
-} from 'config/sampleAttributes';
+import { SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
   fileReadErrorMessage,
@@ -242,6 +241,7 @@ function FilePanel() {
     setReferenceLayers,
     polygonSymbol,
     getGpMaxRecordCount,
+    sampleAttributes,
     userDefinedOptions,
     userDefinedAttributes,
   } = React.useContext(SketchContext);
@@ -261,6 +261,7 @@ function FilePanel() {
 
   const getPopupTemplate = useDynamicPopup();
   const { sampleValidation } = useGeometryTools();
+  const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
   const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
@@ -298,11 +299,13 @@ function FilePanel() {
     SampleSelectType[]
   >([]);
   React.useEffect(() => {
+    if (sampleTypeContext.status !== 'success') return;
+
     let allSampleOptions: SampleSelectType[] = [];
 
     // Add in the standard sample types. Append "(edited)" to the
     // label if the user made changes to one of the standard types.
-    SampleSelectOptions.forEach((option) => {
+    sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
       allSampleOptions.push({
         value: option.value,
         label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
@@ -316,7 +319,7 @@ function FilePanel() {
     allSampleOptions = allSampleOptions.concat(userDefinedOptions);
 
     setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes]);
+  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -602,7 +605,7 @@ function FilePanel() {
           fields: defaultLayerProps.fields,
           features: [
             {
-              attributes: sampleAttributes[sampleType.value],
+              attributes: sampleAttributes[sampleType.value as any],
             },
           ],
         };
@@ -708,6 +711,7 @@ function FilePanel() {
     sampleType,
     getGpMaxRecordCount,
     services,
+    sampleAttributes,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
@@ -751,7 +755,10 @@ function FilePanel() {
       setOptions({
         title: 'Sample Issues',
         ariaLabel: 'Sample Issues',
-        description: sampleIssuesPopupMessage(output),
+        description: sampleIssuesPopupMessage(
+          output,
+          sampleTypeContext.data.areaTolerance,
+        ),
         onContinue: () => setFileValidated(true),
         onCancel: () => setUploadStatus('user-canceled'),
       });
@@ -767,6 +774,7 @@ function FilePanel() {
     fileValidated,
     map,
     mapView,
+    sampleTypeContext,
     sampleValidation,
     setOptions,
   ]);
@@ -980,6 +988,7 @@ function FilePanel() {
     map,
     mapView,
     polygonSymbol,
+    sampleAttributes,
     trainingMode,
   ]);
 
@@ -1206,36 +1215,48 @@ function FilePanel() {
         </React.Fragment>
       ) : (
         <React.Fragment>
-          {layerType.value === 'VSP' && (
-            <React.Fragment>
-              <label htmlFor="sample-type-select-input">Sample Type</label>
-              <Select
-                id="sample-type-select"
-                inputId="sample-type-select-input"
-                css={selectStyles}
-                value={sampleType}
-                onChange={(ev) => {
-                  setSampleType(ev as SampleSelectType);
-                  setUploadStatus('');
-                }}
-                options={allSampleOptions}
-              />
-              <p css={sectionParagraph}>
-                Add an externally-generated Visual Sample Plan (VSP) layer to
-                analyze and/or use in conjunction with targeted sampling. Once
-                added, you can select this layer in the next step,{' '}
-                <strong>Create Plan</strong>, and use it to create the Sampling
-                Plan.
-              </p>
-            </React.Fragment>
-          )}
-          {layerType.value === 'VSP' && services.status === 'fetching' && (
-            <LoadingSpinner />
-          )}
           {layerType.value === 'VSP' &&
-            services.status === 'failure' &&
+            services.status !== 'success' &&
+            sampleTypeContext.status !== 'success' && (
+              <React.Fragment>
+                <label htmlFor="sample-type-select-input">Sample Type</label>
+                <Select
+                  id="sample-type-select"
+                  inputId="sample-type-select-input"
+                  css={selectStyles}
+                  value={sampleType}
+                  onChange={(ev) => {
+                    setSampleType(ev as SampleSelectType);
+                    setUploadStatus('');
+                  }}
+                  options={allSampleOptions}
+                />
+                <p css={sectionParagraph}>
+                  Add an externally-generated Visual Sample Plan (VSP) layer to
+                  analyze and/or use in conjunction with targeted sampling. Once
+                  added, you can select this layer in the next step,{' '}
+                  <strong>Create Plan</strong>, and use it to create the
+                  Sampling Plan.
+                </p>
+              </React.Fragment>
+            )}
+          {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
+            (services.status === 'fetching' ||
+              sampleTypeContext.status === 'fetching') && <LoadingSpinner />}
+          {layerType.value === 'Samples' &&
+            (services.status === 'failure' ||
+              sampleTypeContext.status === 'failure') &&
+            featureNotAvailableMessage('Samples Import')}
+          {layerType.value === 'VSP' &&
+            (services.status === 'failure' ||
+              sampleTypeContext.status === 'failure') &&
             featureNotAvailableMessage('VSP Import')}
-          {(layerType.value !== 'VSP' ||
+          {(layerType.value === 'Area of Interest' ||
+            layerType.value === 'Reference Layer' ||
+            layerType.value === 'Contamination Map' ||
+            ((layerType.value === 'Samples' || layerType.value === 'VSP') &&
+              services.status === 'success' &&
+              sampleTypeContext.status === 'sucess') ||
             (layerType.value === 'VSP' &&
               sampleType &&
               services.status === 'success')) && (

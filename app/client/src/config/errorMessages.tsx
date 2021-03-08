@@ -3,7 +3,7 @@ import { jsx } from '@emotion/core';
 // components
 import MessageBox from 'components/MessageBox';
 // config
-import { areaTolerance, SampleIssuesOutput } from 'config/sampleAttributes';
+import { SampleIssuesOutput } from 'config/sampleAttributes';
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -145,7 +145,10 @@ export const uploadSuccessMessage = (
   );
 };
 
-export const sampleIssuesPopupMessage = (output: SampleIssuesOutput) => {
+export const sampleIssuesPopupMessage = (
+  output: SampleIssuesOutput,
+  areaTolerance: number,
+) => {
   let message = '';
   if (output.areaOutOfTolerance) {
     message += `The surface area associated with some of your samples is outside of the allowable tolerance (+- ${areaTolerance} sqin) of the provided reference area. TOTS will adjust the representation of each of your samples to account for the difference. `;

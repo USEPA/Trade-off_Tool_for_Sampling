@@ -7,8 +7,6 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType, LayerTypeName } from 'types/Layer';
-// config
-import { sampleAttributes } from 'config/sampleAttributes';
 // utils
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -293,7 +291,7 @@ function MapWidgets({ mapView }: Props) {
             };
           } else {
             graphic.attributes = {
-              ...sampleAttributes[id],
+              ...(window as any).totsSampleAttributes[id],
               DECISIONUNITUUID: graphic.layer.id,
               DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
