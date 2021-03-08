@@ -3,9 +3,11 @@
 import React, { ReactNode } from 'react';
 // utilities
 import { lookupFetch } from 'utils/fetchUtils';
+// config
+import { SampleSelectType } from 'config/sampleAttributes';
 
 // Common function for setting the context/state of lookup files.
-/* function getLookupFile(filename: string, setVariable: Function) {
+function getLookupFile(filename: string, setVariable: Function) {
   // fetch the lookup file
   lookupFetch(filename)
     .then((data) => {
@@ -15,7 +17,7 @@ import { lookupFetch } from 'utils/fetchUtils';
       console.error(err);
       setVariable({ status: 'failure', data: err });
     });
-} */
+}
 
 // --- components ---
 type LookupFile = {
@@ -24,11 +26,15 @@ type LookupFile = {
 };
 
 type LookupFiles = {
+  sampleTypes: any;
+  setSampleTypes: Function;
   services: LookupFile;
   setServices: Function;
 };
 
 const LookupFilesContext = React.createContext<LookupFiles>({
+  sampleTypes: { status: 'fetching', data: null },
+  setSampleTypes: () => {},
   services: { status: 'fetching', data: null },
   setServices: () => {},
 });
@@ -38,6 +44,10 @@ type Props = {
 };
 
 function LookupFilesProvider({ children }: Props) {
+  const [sampleTypes, setSampleTypes] = React.useState<LookupFile>({
+    status: 'fetching',
+    data: {},
+  });
   const [services, setServices] = React.useState<LookupFile>({
     status: 'fetching',
     data: {},
@@ -46,6 +56,8 @@ function LookupFilesProvider({ children }: Props) {
   return (
     <LookupFilesContext.Provider
       value={{
+        sampleTypes,
+        setSampleTypes,
         services,
         setServices,
       }}
@@ -78,4 +90,37 @@ function useServicesContext() {
   return services;
 }
 
-export { LookupFilesProvider, useServicesContext, LookupFilesContext };
+// Custom hook for the documentOrder.json lookup file.
+let sampleTyepsInitialized = false; // global var for ensuring fetch only happens once
+function useSampleTypesContext() {
+  const { sampleTypes, setSampleTypes } = React.useContext(LookupFilesContext);
+
+  // fetch the lookup file if necessary
+  if (!sampleTyepsInitialized) {
+    sampleTyepsInitialized = true;
+    getLookupFile('sampleTypes/sampleTypes.json', (newValue: LookupFile) => {
+      if (newValue.status !== 'success') {
+        setSampleTypes(newValue);
+        return;
+      }
+
+      const sampleSelectOptions: SampleSelectType[] = [];
+      const sampleAttributes = newValue.data.sampleAttributes;
+      Object.keys(sampleAttributes).forEach((key: any) => {
+        const value = sampleAttributes[key].TYPE;
+        sampleSelectOptions.push({ value, label: value, isPredefined: true });
+      });
+      newValue.data['sampleSelectOptions'] = sampleSelectOptions;
+      setSampleTypes(newValue);
+    });
+  }
+
+  return sampleTypes;
+}
+
+export {
+  LookupFilesContext,
+  LookupFilesProvider,
+  useSampleTypesContext,
+  useServicesContext,
+};
