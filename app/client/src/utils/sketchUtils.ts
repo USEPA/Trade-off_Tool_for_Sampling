@@ -9,7 +9,7 @@ import {
   ScenarioEditsType,
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
-import { PolygonSymbol } from 'config/sampleAttributes';
+import { DefaultSymbolsType } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -461,21 +461,30 @@ export function getDefaultSamplingMaskLayer(
 
 /**
  * Updates the symbols of all of the graphics within the provided
- * graphics layers with the provided polygonSymbol.
+ * graphics layers with the provided defaultSymbols.
  *
  * @param layers - The layers to update. FeatureLayers will be ignored.
- * @param polygonSymbol - The new polygon symbol.
+ * @param defaultSymbols - The new default symbols.
  */
 export function updatePolygonSymbol(
   layers: LayerType[],
-  polygonSymbol: PolygonSymbol,
+  defaultSymbols: DefaultSymbolsType,
 ) {
   layers.forEach((layer) => {
     if (layer.sketchLayer.type !== 'graphics') return;
 
     layer.sketchLayer.graphics.forEach((graphic) => {
       if (graphic.geometry.type !== 'polygon') return;
-      graphic.symbol = polygonSymbol as any;
+
+      let layerType = layer.layerType;
+      if (layerType === 'VSP') layerType = 'Samples';
+      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+      // set the symbol based on sample/layer type
+      graphic.symbol = defaultSymbols.symbols[layerType] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
+        graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE] as any;
+      }
     });
   });
 }

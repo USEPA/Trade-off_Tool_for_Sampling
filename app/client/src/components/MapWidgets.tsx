@@ -88,6 +88,7 @@ function MapWidgets({ mapView }: Props) {
     NavigationContext,
   );
   const {
+    defaultSymbols,
     edits,
     setEdits,
     homeWidget,
@@ -105,7 +106,6 @@ function MapWidgets({ mapView }: Props) {
     layers,
     setLayers,
     map,
-    polygonSymbol,
   } = React.useContext(SketchContext);
   const {
     Handles,
@@ -175,8 +175,8 @@ function MapWidgets({ mapView }: Props) {
     const svm = new SketchViewModel({
       layer: sketchLayer.sketchLayer,
       view: mapView,
-      polygonSymbol,
-      pointSymbol: polygonSymbol,
+      polygonSymbol: defaultSymbols.symbols['Samples'],
+      pointSymbol: defaultSymbols.symbols['Samples'],
     });
 
     const tempSvm = svm as any;
@@ -187,11 +187,11 @@ function MapWidgets({ mapView }: Props) {
     setSketchVM(svm);
   }, [
     SketchViewModel,
+    defaultSymbols,
     mapView,
     sketchVM,
     setSketchVM,
     sketchLayer,
-    polygonSymbol,
   ]);
 
   // Creates the SketchViewModel
@@ -201,8 +201,8 @@ function MapWidgets({ mapView }: Props) {
     const svm = new SketchViewModel({
       layer: aoiSketchLayer.sketchLayer,
       view: mapView,
-      polygonSymbol,
-      pointSymbol: polygonSymbol,
+      polygonSymbol: defaultSymbols.symbols['Area of Interest'],
+      pointSymbol: defaultSymbols.symbols['Area of Interest'],
     });
 
     const tempSvm = svm as any;
@@ -212,11 +212,11 @@ function MapWidgets({ mapView }: Props) {
     setAoiSketchVM(svm);
   }, [
     SketchViewModel,
+    defaultSymbols,
     mapView,
     aoiSketchVM,
     setAoiSketchVM,
     aoiSketchLayer,
-    polygonSymbol,
   ]);
 
   // Updates the selected layer of the sketchViewModel
@@ -228,14 +228,14 @@ function MapWidgets({ mapView }: Props) {
       sketchLayer?.sketchLayer?.type === 'graphics'
     ) {
       sketchVM.layer = sketchLayer.sketchLayer;
+
+      sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
     } else {
       // disable the sketch vm for any panel other than locateSamples
       sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-
-    sketchVM.polygonSymbol = polygonSymbol as any;
-    sketchVM.pointSymbol = polygonSymbol as any;
-  }, [currentPanel, sketchVM, sketchLayer, polygonSymbol]);
+  }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the aoiSketchViewModel
   React.useEffect(() => {
@@ -246,14 +246,18 @@ function MapWidgets({ mapView }: Props) {
       aoiSketchLayer?.sketchLayer?.type === 'graphics'
     ) {
       aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+
+      aoiSketchVM.polygonSymbol = defaultSymbols.symbols[
+        'Area of Interest'
+      ] as any;
+      aoiSketchVM.pointSymbol = defaultSymbols.symbols[
+        'Area of Interest'
+      ] as any;
     } else {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
     }
-
-    aoiSketchVM.polygonSymbol = polygonSymbol as any;
-    aoiSketchVM.pointSymbol = polygonSymbol as any;
-  }, [currentPanel, aoiSketchVM, aoiSketchLayer, polygonSymbol]);
+  }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const setupEvents = React.useCallback(

@@ -43,12 +43,10 @@ import {
   getScenarios,
   getSketchableLayers,
   updateLayerEdits,
-  updatePolygonSymbol,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { reactSelectStyles } from 'styles';
-import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
   value: string;
@@ -83,18 +81,6 @@ function getSampleTypeName(
   }
 
   return newName;
-}
-
-/**
- * Converts a number array (esri rgb color) to an rgb object (react-color).
- */
-function convertArrayToRgbColor(color: number[]) {
-  return {
-    r: color[0],
-    g: color[1],
-    b: color[2],
-    a: color.length > 3 ? color[3] : 1,
-  } as RGBColor;
 }
 
 function activateSketchButton(id: string) {
@@ -226,18 +212,6 @@ const inlineMenuStyles = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
-`;
-
-const colorSettingContainerStyles = css`
-  margin-bottom: 15px;
-`;
-
-const colorContainerStyles = css`
-  display: flex;
-`;
-
-const colorLabelStyles = css`
-  margin-right: 10px;
 `;
 
 const addButtonStyles = css`
@@ -409,14 +383,13 @@ function LocateSamples() {
   const {
     autoZoom,
     setAutoZoom,
+    defaultSymbols,
     edits,
     setEdits,
     layersInitialized,
     layers,
     setLayers,
     map,
-    polygonSymbol,
-    setPolygonSymbol,
     selectedScenario,
     setSelectedScenario,
     sketchLayer,
@@ -698,6 +671,12 @@ function LocateSamples() {
               // get the results from the response
               const results = res.results[0].value;
 
+              // set the sample styles
+              let symbol: PolygonSymbol = defaultSymbols.symbols['Samples'];
+              if (defaultSymbols.symbols.hasOwnProperty(sampleType.value)) {
+                symbol = defaultSymbols.symbols[sampleType.value];
+              }
+
               // build an array of graphics to draw on the map
               results.features.forEach((feature: any) => {
                 graphicsToAdd.push(
@@ -708,7 +687,7 @@ function LocateSamples() {
                       DECISIONUNITUUID: sketchLayer.uuid,
                       DECISIONUNIT: sketchLayer.label,
                     },
-                    symbol: polygonSymbol,
+                    symbol,
                     geometry: new Polygon({
                       rings: feature.geometry.rings,
                       spatialReference: results.spatialReference,
@@ -1727,50 +1706,10 @@ function LocateSamples() {
                 In the panels below, add targeted and/ or multiple samples to
                 the plan.
               </p>
-              <div css={colorSettingContainerStyles}>
-                <h3>Symbology Settings</h3>
-                <div css={inlineMenuStyles}>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Fill</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(polygonSymbol.color)}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          color: [color.r, color.g, color.b, alpha],
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Outline</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(
-                        polygonSymbol.outline.color,
-                      )}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          outline: {
-                            ...polygonSymbol.outline,
-                            color: [color.r, color.g, color.b, alpha],
-                          },
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              <ColorPicker
+                layerType="Samples"
+                title="Default Sample Symbology"
+              />
             </div>
             <AccordionList>
               <AccordionItem

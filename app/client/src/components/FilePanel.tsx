@@ -6,6 +6,7 @@ import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // components
+import ColorPicker from 'components/ColorPicker';
 import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -231,6 +232,7 @@ function FilePanel() {
     NavigationContext,
   );
   const {
+    defaultSymbols,
     edits,
     setEdits,
     layers,
@@ -239,7 +241,6 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
-    polygonSymbol,
     getGpMaxRecordCount,
     sampleAttributes,
     userDefinedOptions,
@@ -919,8 +920,16 @@ function FilePanel() {
           );
         }
 
+        // set the symbol styles based on the sample/layer type
         if (graphic?.geometry?.type === 'polygon') {
-          graphic.symbol = polygonSymbol;
+          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPE)) {
+            graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+          } else {
+            graphic.symbol =
+              defaultSymbols.symbols[
+                layerType.value === 'VSP' ? 'Samples' : layerType.value
+              ];
+          }
         }
 
         // add the popup template
@@ -975,6 +984,7 @@ function FilePanel() {
     PopupTemplate,
 
     // app
+    defaultSymbols,
     edits,
     setEdits,
     featuresAdded,
@@ -987,7 +997,6 @@ function FilePanel() {
     layerType,
     map,
     mapView,
-    polygonSymbol,
     sampleAttributes,
     trainingMode,
   ]);
@@ -1369,6 +1378,10 @@ function FilePanel() {
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
+                  {(layerType.value === 'Area of Interest' ||
+                    layerType.value === 'Contamination Map') && (
+                    <ColorPicker layerType={layerType.value} />
+                  )}
                   <input
                     id="generalize-features-input"
                     type="checkbox"

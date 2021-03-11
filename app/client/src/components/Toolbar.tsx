@@ -157,6 +157,7 @@ function Toolbar() {
   const { trainingMode } = React.useContext(NavigationContext);
   const {
     setBasemapWidget,
+    defaultSymbols,
     edits,
     setEdits,
     map,
@@ -173,7 +174,6 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
-    polygonSymbol,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -310,10 +310,17 @@ function Toolbar() {
                                 <defs></defs>
                                 <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
                                   <path
-                                    fill={`rgba(${polygonSymbol.color.toString()})`}
+                                    fill={`rgba(${defaultSymbols.symbols[
+                                      'Samples'
+                                    ].color.toString()})`}
                                     fillRule="evenodd"
-                                    stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
-                                    strokeWidth={polygonSymbol.outline.width}
+                                    stroke={`rgba(${defaultSymbols.symbols[
+                                      'Samples'
+                                    ].outline.color.toString()})`}
+                                    strokeWidth={
+                                      defaultSymbols.symbols['Samples'].outline
+                                        .width
+                                    }
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeDasharray="none"
@@ -369,10 +376,17 @@ function Toolbar() {
                               <defs></defs>
                               <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
                                 <path
-                                  fill={`rgba(${polygonSymbol.color.toString()})`}
+                                  fill={`rgba(${defaultSymbols.symbols[
+                                    'Samples'
+                                  ].color.toString()})`}
                                   fillRule="evenodd"
-                                  stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
-                                  strokeWidth={polygonSymbol.outline.width}
+                                  stroke={`rgba(${defaultSymbols.symbols[
+                                    'Samples'
+                                  ].outline.color.toString()})`}
+                                  strokeWidth={
+                                    defaultSymbols.symbols['Samples'].outline
+                                      .width
+                                  }
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeDasharray="none"
@@ -500,7 +514,7 @@ function Toolbar() {
     Slider,
     mapView,
     legendInitialized,
-    polygonSymbol,
+    defaultSymbols,
   ]);
 
   // Deletes layers from the map and session variables when the delete button is clicked

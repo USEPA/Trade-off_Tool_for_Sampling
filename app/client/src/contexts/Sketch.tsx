@@ -10,6 +10,7 @@ import { fetchCheck } from 'utils/fetchUtils';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
+  DefaultSymbolsType,
   UserDefinedAttributes,
   SampleSelectType,
   SelectedSampleType,
@@ -23,12 +24,12 @@ type SketchType = {
   setBasemapWidget: React.Dispatch<
     React.SetStateAction<__esri.BasemapGallery | null>
   >;
+  defaultSymbols: DefaultSymbolsType;
+  setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
-  polygonSymbol: PolygonSymbol;
-  setPolygonSymbol: React.Dispatch<React.SetStateAction<PolygonSymbol>>;
   symbolsInitialized: boolean;
   setSymbolsInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layersInitialized: boolean;
@@ -83,19 +84,15 @@ export const SketchContext = React.createContext<SketchType>({
   setAutoZoom: () => {},
   basemapWidget: null,
   setBasemapWidget: () => {},
+  defaultSymbols: {
+    symbols: {},
+    editCount: 0,
+  },
+  setDefaultSymbols: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
-  polygonSymbol: {
-    type: 'simple-fill',
-    color: [150, 150, 150, 0.2],
-    outline: {
-      color: [50, 50, 50],
-      width: 2,
-    },
-  },
-  setPolygonSymbol: () => {},
   symbolsInitialized: false,
   setSymbolsInitialized: () => {},
   layersInitialized: false,
@@ -138,11 +135,30 @@ type Props = { children: ReactNode };
 export function SketchProvider({ children }: Props) {
   const services = useServicesContext();
 
+  const defaultSymbol: PolygonSymbol = {
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  };
+
   const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
     setBasemapWidget, //
   ] = React.useState<__esri.BasemapGallery | null>(null);
+  const [defaultSymbols, setDefaultSymbols] = React.useState<
+    DefaultSymbolsType
+  >({
+    symbols: {
+      'Area of Interest': defaultSymbol,
+      'Contamination Map': defaultSymbol,
+      Samples: defaultSymbol,
+    },
+    editCount: 0,
+  });
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
@@ -154,14 +170,6 @@ export function SketchProvider({ children }: Props) {
     null,
   );
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
-  const [polygonSymbol, setPolygonSymbol] = React.useState<PolygonSymbol>({
-    type: 'simple-fill',
-    color: [150, 150, 150, 0.2],
-    outline: {
-      color: [50, 50, 50],
-      width: 2,
-    },
-  });
   const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
@@ -231,12 +239,12 @@ export function SketchProvider({ children }: Props) {
         setAutoZoom,
         basemapWidget,
         setBasemapWidget,
+        defaultSymbols,
+        setDefaultSymbols,
         edits,
         setEdits,
         homeWidget,
         setHomeWidget,
-        polygonSymbol,
-        setPolygonSymbol,
         symbolsInitialized,
         setSymbolsInitialized,
         layersInitialized,

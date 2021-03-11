@@ -7,6 +7,11 @@ export type PolygonSymbol = {
   };
 };
 
+export type DefaultSymbolsType = {
+  symbols: { [key: string]: PolygonSymbol };
+  editCount: number;
+};
+
 export type SelectedSampleType = {
   PERMANENT_IDENTIFIER: string;
   DECISIONUNITUUID: string;
@@ -48,6 +53,13 @@ export type AttributeItems = {
 
 export type Attributes = {
   [key: string]: AttributeItems;
+};
+
+export type UserDefinedConfig = {
+  [key: string]: {
+    attributes: AttributeItems;
+    symbol: PolygonSymbol;
+  };
 };
 
 export type UserDefinedAttributes = {
