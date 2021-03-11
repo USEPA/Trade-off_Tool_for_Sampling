@@ -1216,8 +1216,8 @@ function FilePanel() {
       ) : (
         <React.Fragment>
           {layerType.value === 'VSP' &&
-            services.status !== 'success' &&
-            sampleTypeContext.status !== 'success' && (
+            services.status === 'success' &&
+            sampleTypeContext.status === 'success' && (
               <React.Fragment>
                 <label htmlFor="sample-type-select-input">Sample Type</label>
                 <Select
