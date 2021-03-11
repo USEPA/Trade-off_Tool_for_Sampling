@@ -1256,7 +1256,7 @@ function FilePanel() {
             layerType.value === 'Contamination Map' ||
             ((layerType.value === 'Samples' || layerType.value === 'VSP') &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'sucess') ||
+              sampleTypeContext.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
               services.status === 'success')) && (
