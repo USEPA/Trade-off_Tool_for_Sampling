@@ -78,6 +78,7 @@ function Search() {
       container: 'search-container',
       locationEnabled: false,
       label: 'Search',
+      popupEnabled: false,
     });
 
     setSearchInitialized(true);
