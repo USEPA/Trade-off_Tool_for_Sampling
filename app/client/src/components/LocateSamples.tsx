@@ -1707,7 +1707,7 @@ function LocateSamples() {
                 the plan.
               </p>
               <ColorPicker
-                layerType="Samples"
+                symbolType="Samples"
                 title="Default Sample Symbology"
               />
             </div>
@@ -2245,6 +2245,12 @@ function LocateSamples() {
                   />
                   {editingStatus && (
                     <div>
+                      {userDefinedSampleType && (
+                        <ColorPicker
+                          symbolType={userDefinedSampleType.value}
+                          backupType="Samples"
+                        />
+                      )}
                       <div>
                         <label htmlFor="sample-type-name-input">
                           Sample Type Name

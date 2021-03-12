@@ -1380,7 +1380,7 @@ function FilePanel() {
                     uploadSuccessMessage(filename, newLayerName)}
                   {(layerType.value === 'Area of Interest' ||
                     layerType.value === 'Contamination Map') && (
-                    <ColorPicker layerType={layerType.value} />
+                    <ColorPicker symbolType={layerType.value} />
                   )}
                   <input
                     id="generalize-features-input"

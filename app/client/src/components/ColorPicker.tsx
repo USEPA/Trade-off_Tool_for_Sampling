@@ -169,14 +169,103 @@ const inlineMenuStyles = css`
 
 // --- components ---
 type Props = {
-  layerType: string;
+  symbolType: string;
+  backupType?: string;
   title?: string;
 };
 
-function ColorPicker({ layerType, title = 'Symbology Settings' }: Props) {
+function ColorPicker({
+  symbolType,
+  backupType = '',
+  title = 'Symbology Settings',
+}: Props) {
   const { defaultSymbols, setDefaultSymbols, layers } = React.useContext(
     SketchContext,
   );
+
+  const hasPrimary = defaultSymbols.symbols.hasOwnProperty(symbolType);
+  const internalSymbolType =
+    backupType && !hasPrimary ? backupType : symbolType;
+
+  function handleChange(color: RGBColor, type: 'fill' | 'outline') {
+    const alpha = color.a ? color.a : 1;
+
+    if (
+      (type === 'fill' &&
+        defaultSymbols.symbols[internalSymbolType].color ===
+          [color.r, color.g, color.b, alpha]) ||
+      (type === 'outline' &&
+        defaultSymbols.symbols[internalSymbolType].outline.color ===
+          [color.r, color.g, color.b, alpha])
+    ) {
+      return;
+    }
+
+    let newDefaultSymbols: DefaultSymbolsType | null = null;
+    if (type === 'fill') {
+      if (symbolType && !hasPrimary && backupType) {
+        newDefaultSymbols = {
+          editCount: defaultSymbols.editCount + 1,
+          symbols: {
+            ...defaultSymbols.symbols,
+            [symbolType]: {
+              ...defaultSymbols.symbols[backupType],
+              color: [color.r, color.g, color.b, alpha],
+            },
+          },
+        };
+      } else {
+        newDefaultSymbols = {
+          editCount: defaultSymbols.editCount + 1,
+          symbols: {
+            ...defaultSymbols.symbols,
+            [internalSymbolType]: {
+              ...defaultSymbols.symbols[internalSymbolType],
+              color: [color.r, color.g, color.b, alpha],
+            },
+          },
+        };
+      }
+    }
+    if (type === 'outline') {
+      if (symbolType && !hasPrimary && backupType) {
+        newDefaultSymbols = {
+          editCount: defaultSymbols.editCount + 1,
+          symbols: {
+            ...defaultSymbols.symbols,
+            [symbolType]: {
+              ...defaultSymbols.symbols[backupType],
+              outline: {
+                ...defaultSymbols.symbols[backupType].outline,
+                color: [color.r, color.g, color.b, alpha],
+              },
+            },
+          },
+        };
+      } else {
+        newDefaultSymbols = {
+          editCount: defaultSymbols.editCount + 1,
+          symbols: {
+            ...defaultSymbols.symbols,
+            [internalSymbolType]: {
+              ...defaultSymbols.symbols[internalSymbolType],
+              outline: {
+                ...defaultSymbols.symbols[internalSymbolType].outline,
+                color: [color.r, color.g, color.b, alpha],
+              },
+            },
+          },
+        };
+      }
+    }
+
+    if (!newDefaultSymbols) return;
+
+    setDefaultSymbols(newDefaultSymbols);
+
+    // update all of the symbols
+    updatePolygonSymbol(layers, newDefaultSymbols);
+  }
 
   return (
     <div css={colorSettingContainerStyles}>
@@ -186,31 +275,10 @@ function ColorPicker({ layerType, title = 'Symbology Settings' }: Props) {
           <span css={colorLabelStyles}>Fill</span>
           <SingleColorPicker
             color={convertArrayToRgbColor(
-              defaultSymbols.symbols[layerType].color,
+              defaultSymbols.symbols[internalSymbolType].color,
             )}
             onChange={(color: RGBColor) => {
-              const alpha = color.a ? color.a : 1;
-              if (
-                defaultSymbols.symbols[layerType].color ===
-                [color.r, color.g, color.b, alpha]
-              ) {
-                return;
-              }
-
-              const newDefaultSymbols: DefaultSymbolsType = {
-                editCount: defaultSymbols.editCount + 1,
-                symbols: {
-                  ...defaultSymbols.symbols,
-                  [layerType]: {
-                    ...defaultSymbols.symbols[layerType],
-                    color: [color.r, color.g, color.b, alpha],
-                  },
-                },
-              };
-              setDefaultSymbols(newDefaultSymbols);
-
-              // update all of the symbols
-              updatePolygonSymbol(layers, newDefaultSymbols);
+              handleChange(color, 'fill');
             }}
           />
         </div>
@@ -218,34 +286,10 @@ function ColorPicker({ layerType, title = 'Symbology Settings' }: Props) {
           <span css={colorLabelStyles}>Outline</span>
           <SingleColorPicker
             color={convertArrayToRgbColor(
-              defaultSymbols.symbols[layerType].outline.color,
+              defaultSymbols.symbols[internalSymbolType].outline.color,
             )}
             onChange={(color: RGBColor) => {
-              const alpha = color.a ? color.a : 1;
-              if (
-                defaultSymbols.symbols[layerType].outline.color ===
-                [color.r, color.g, color.b, alpha]
-              ) {
-                return;
-              }
-
-              const newDefaultSymbols: DefaultSymbolsType = {
-                editCount: defaultSymbols.editCount + 1,
-                symbols: {
-                  ...defaultSymbols.symbols,
-                  [layerType]: {
-                    ...defaultSymbols.symbols[layerType],
-                    outline: {
-                      ...defaultSymbols.symbols[layerType].outline,
-                      color: [color.r, color.g, color.b, alpha],
-                    },
-                  },
-                },
-              };
-              setDefaultSymbols(newDefaultSymbols);
-
-              // update all of the symbols
-              updatePolygonSymbol(layers, newDefaultSymbols);
+              handleChange(color, 'outline');
             }}
           />
         </div>
