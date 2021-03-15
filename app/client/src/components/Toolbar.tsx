@@ -258,7 +258,13 @@ function Toolbar() {
     setLayerToRemove, //
   ] = React.useState<__esri.Layer | null>(null);
   React.useEffect(() => {
-    if (!mapView || legendInitialized) return;
+    if (!mapView) return;
+
+    // clear out the legend container
+    const legendContainer: HTMLElement | null = document.getElementById(
+      'legend-container',
+    );
+    if (legendContainer) legendContainer.innerHTML = '';
 
     // create the layer list using the same styles and structure as the
     // esri version.
@@ -507,15 +513,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [
-    Collection,
-    LayerList,
-    Legend,
-    Slider,
-    mapView,
-    legendInitialized,
-    defaultSymbols,
-  ]);
+  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
