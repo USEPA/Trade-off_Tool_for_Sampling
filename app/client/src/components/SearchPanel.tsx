@@ -1157,6 +1157,11 @@ function ResultCard({ result }: ResultCardProps) {
               i += 2;
             }
 
+            // get the age of the layer in seconds
+            const created: number = new Date(result.created).getTime();
+            const curTime: number = Date.now();
+            const duration = (curTime - created) / 1000;
+
             // validate the area and attributes of features of the uploads. If there is an
             // issue, display a popup asking the user if they would like the samples to be updated.
             if (zoomToGraphics.length > 0) {
@@ -1176,6 +1181,15 @@ function ResultCard({ result }: ResultCardProps) {
               } else {
                 finalizeLayerAdd();
               }
+            } else if (zoomToGraphics.length === 0 && duration < 300) {
+              // display a message if the layer is empty and the layer is less
+              // than 5 minutes old
+              setOptions({
+                title: 'No Data',
+                ariaLabel: 'No Data',
+                description: `The "${result.title}" layer was recently added and currently does not have any data. This could be due to a delay in processing the new data. Please try again later.`,
+                onCancel: () => setStatus('no-data'),
+              });
             } else {
               finalizeLayerAdd();
             }
@@ -1367,6 +1381,7 @@ function ResultCard({ result }: ResultCardProps) {
           {status === 'loading' && 'Adding...'}
           {status === 'error' && 'Add Failed'}
           {status === 'canceled' && 'Canceled'}
+          {status === 'no-data' && 'No Data'}
         </span>
         {map && (
           <React.Fragment>

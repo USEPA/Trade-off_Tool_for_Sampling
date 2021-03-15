@@ -74,6 +74,43 @@ export function getFeatureService(
   });
 }
 
+export function getFeatureServiceRetry(
+  portal: __esri.Portal,
+  serviceMetaData: ServiceMetaDataType,
+) {
+  return new Promise((resolve, reject) => {
+    // Function that fetches the lookup file.
+    // This will retry the fetch 3 times if the fetch fails with a
+    // 1 second delay between each retry.
+    const fetchLookup = (retryCount: number = 0) => {
+      // check if the tots feature service already exists
+      getFeatureServiceWrapped(portal, serviceMetaData)
+        .then((service) => {
+          if (service) {
+            resolve(service);
+            return;
+          }
+
+          // resolve the request when the max retry count of 3 is hit
+          if (retryCount === 3) {
+            reject('No service');
+          } else {
+            // recursive retry (1 second between retries)
+            console.log(
+              `Failed to fetch feature service. Retrying (${
+                retryCount + 1
+              } of 3)...`,
+            );
+            setTimeout(() => fetchLookup(retryCount + 1), 1000);
+          }
+        })
+        .catch((err) => reject(err));
+    };
+
+    fetchLookup();
+  });
+}
+
 /**
  * Gets the hosted feature service and returns null if it it
  * doesn't already exist
@@ -186,7 +223,7 @@ export function createFeatureService(
           indata,
         ).then((res) => {
           // get the feature service from the portal and return it
-          getFeatureServiceWrapped(portal, serviceMetaData)
+          getFeatureServiceRetry(portal, serviceMetaData)
             .then((service) => resolve(service))
             .catch((err) => reject(err));
         });
