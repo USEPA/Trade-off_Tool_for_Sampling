@@ -404,6 +404,7 @@ function LocateSamples() {
     setUserDefinedOptions,
     userDefinedAttributes,
     setUserDefinedAttributes,
+    allSampleOptions,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -766,35 +767,6 @@ function LocateSamples() {
         setGenerateRandomResponse({ status: 'failure', data: [] });
       });
   }
-
-  // Keep the allSampleOptions array up to date
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    SampleSelectType[]
-  >([]);
-  React.useEffect(() => {
-    let allSampleOptions: SampleSelectType[] = [];
-
-    // Add in the standard sample types. Append "(edited)" to the
-    // label if the user made changes to one of the standard types.
-    if (sampleTypeContext.status === 'success') {
-      const sampleSelectOptions = sampleTypeContext.data.sampleSelectOptions;
-      Object.keys(sampleSelectOptions).forEach((key: string) => {
-        const option: any = sampleSelectOptions[key];
-        allSampleOptions.push({
-          value: option.value,
-          label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
-            ? `${option.value} (edited)`
-            : option.label,
-          isPredefined: option.isPredefined,
-        });
-      });
-    }
-
-    // Add on any user defined sample types
-    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
-
-    setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   const [
     userDefinedSampleType,

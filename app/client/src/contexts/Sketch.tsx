@@ -3,7 +3,10 @@
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
 // contexts
-import { useServicesContext } from 'contexts/LookupFiles';
+import {
+  useSampleTypesContext,
+  useServicesContext,
+} from 'contexts/LookupFiles';
 // utils
 import { fetchCheck } from 'utils/fetchUtils';
 // types
@@ -77,6 +80,8 @@ type SketchType = {
   >;
   sampleAttributes: any[];
   setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
+  allSampleOptions: SampleSelectType[];
+  setAllSampleOptions: React.Dispatch<React.SetStateAction<SampleSelectType[]>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -128,11 +133,14 @@ export const SketchContext = React.createContext<SketchType>({
   setUserDefinedAttributes: () => {},
   sampleAttributes: [],
   setSampleAttributes: () => {},
+  allSampleOptions: [],
+  setAllSampleOptions: () => {},
 });
 
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
   const defaultSymbol: PolygonSymbol = {
@@ -195,6 +203,9 @@ export function SketchProvider({ children }: Props) {
     UserDefinedAttributes
   >({ editCount: 0, attributes: {} });
   const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
 
   // Update totsSampleAttributes variable on the window object. This is a workaround
   // to an issue where the sampleAttributes state variable is not available within esri
@@ -202,6 +213,30 @@ export function SketchProvider({ children }: Props) {
   React.useEffect(() => {
     (window as any).totsSampleAttributes = sampleAttributes;
   }, [sampleAttributes]);
+
+  // Keep the allSampleOptions array up to date
+  React.useEffect(() => {
+    if (sampleTypeContext.status !== 'success') return;
+
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   // define the context funtion for getting the max record count
   // of the gp server
@@ -280,6 +315,8 @@ export function SketchProvider({ children }: Props) {
         setUserDefinedAttributes,
         sampleAttributes,
         setSampleAttributes,
+        allSampleOptions,
+        setAllSampleOptions,
       }}
     >
       {children}

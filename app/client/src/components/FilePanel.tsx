@@ -243,8 +243,7 @@ function FilePanel() {
     setReferenceLayers,
     getGpMaxRecordCount,
     sampleAttributes,
-    userDefinedOptions,
-    userDefinedAttributes,
+    allSampleOptions,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -294,33 +293,6 @@ function FilePanel() {
 
     setGoToOptions(null);
   }, [goToOptions, setGoToOptions]);
-
-  // Keep the allSampleOptions array up to date
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    SampleSelectType[]
-  >([]);
-  React.useEffect(() => {
-    if (sampleTypeContext.status !== 'success') return;
-
-    let allSampleOptions: SampleSelectType[] = [];
-
-    // Add in the standard sample types. Append "(edited)" to the
-    // label if the user made changes to one of the standard types.
-    sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
-      allSampleOptions.push({
-        value: option.value,
-        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
-          ? `${option.value} (edited)`
-          : option.label,
-        isPredefined: option.isPredefined,
-      });
-    });
-
-    // Add on any user defined sample types
-    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
-
-    setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
