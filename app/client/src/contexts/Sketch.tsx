@@ -3,13 +3,18 @@
 import React, { ReactNode } from 'react';
 import { jsx } from '@emotion/core';
 // contexts
-import { useServicesContext } from 'contexts/LookupFiles';
+import {
+  useSampleTypesContext,
+  useServicesContext,
+} from 'contexts/LookupFiles';
 // utils
 import { fetchCheck } from 'utils/fetchUtils';
+import { updatePolygonSymbol } from 'utils/sketchUtils';
 // types
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
+  DefaultSymbolsType,
   UserDefinedAttributes,
   SampleSelectType,
   SelectedSampleType,
@@ -23,12 +28,13 @@ type SketchType = {
   setBasemapWidget: React.Dispatch<
     React.SetStateAction<__esri.BasemapGallery | null>
   >;
+  defaultSymbols: DefaultSymbolsType;
+  setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
+  setDefaultSymbolSingle: Function;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
   setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
-  polygonSymbol: PolygonSymbol;
-  setPolygonSymbol: React.Dispatch<React.SetStateAction<PolygonSymbol>>;
   symbolsInitialized: boolean;
   setSymbolsInitialized: React.Dispatch<React.SetStateAction<boolean>>;
   layersInitialized: boolean;
@@ -76,6 +82,8 @@ type SketchType = {
   >;
   sampleAttributes: any[];
   setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
+  allSampleOptions: SampleSelectType[];
+  setAllSampleOptions: React.Dispatch<React.SetStateAction<SampleSelectType[]>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -83,19 +91,16 @@ export const SketchContext = React.createContext<SketchType>({
   setAutoZoom: () => {},
   basemapWidget: null,
   setBasemapWidget: () => {},
+  defaultSymbols: {
+    symbols: {},
+    editCount: 0,
+  },
+  setDefaultSymbols: () => {},
+  setDefaultSymbolSingle: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
   setHomeWidget: () => {},
-  polygonSymbol: {
-    type: 'simple-fill',
-    color: [150, 150, 150, 0.2],
-    outline: {
-      color: [50, 50, 50],
-      width: 2,
-    },
-  },
-  setPolygonSymbol: () => {},
   symbolsInitialized: false,
   setSymbolsInitialized: () => {},
   layersInitialized: false,
@@ -131,18 +136,40 @@ export const SketchContext = React.createContext<SketchType>({
   setUserDefinedAttributes: () => {},
   sampleAttributes: [],
   setSampleAttributes: () => {},
+  allSampleOptions: [],
+  setAllSampleOptions: () => {},
 });
 
 type Props = { children: ReactNode };
 
 export function SketchProvider({ children }: Props) {
+  const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
+
+  const defaultSymbol: PolygonSymbol = {
+    type: 'simple-fill',
+    color: [150, 150, 150, 0.2],
+    outline: {
+      color: [50, 50, 50],
+      width: 2,
+    },
+  };
 
   const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
     setBasemapWidget, //
   ] = React.useState<__esri.BasemapGallery | null>(null);
+  const [defaultSymbols, setDefaultSymbols] = React.useState<
+    DefaultSymbolsType
+  >({
+    symbols: {
+      'Area of Interest': defaultSymbol,
+      'Contamination Map': defaultSymbol,
+      Samples: defaultSymbol,
+    },
+    editCount: 0,
+  });
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
@@ -154,14 +181,6 @@ export function SketchProvider({ children }: Props) {
     null,
   );
   const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
-  const [polygonSymbol, setPolygonSymbol] = React.useState<PolygonSymbol>({
-    type: 'simple-fill',
-    color: [150, 150, 150, 0.2],
-    outline: {
-      color: [50, 50, 50],
-      width: 2,
-    },
-  });
   const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
   const [map, setMap] = React.useState<__esri.Map | null>(null);
   const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
@@ -187,6 +206,9 @@ export function SketchProvider({ children }: Props) {
     UserDefinedAttributes
   >({ editCount: 0, attributes: {} });
   const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
+  const [allSampleOptions, setAllSampleOptions] = React.useState<
+    SampleSelectType[]
+  >([]);
 
   // Update totsSampleAttributes variable on the window object. This is a workaround
   // to an issue where the sampleAttributes state variable is not available within esri
@@ -194,6 +216,49 @@ export function SketchProvider({ children }: Props) {
   React.useEffect(() => {
     (window as any).totsSampleAttributes = sampleAttributes;
   }, [sampleAttributes]);
+
+  // Update totsLayers variable on the window object. This is a workaround
+  // to an issue where the layers state variable is not available within esri
+  // event handlers.
+  React.useEffect(() => {
+    (window as any).totsLayers = layers;
+  }, [layers]);
+
+  // Update totsDefaultSymbols variable on the window object. This is a workaround
+  // to an issue where the defaultSymbols state variable is not available within esri
+  // event handlers.
+  React.useEffect(() => {
+    (window as any).totsDefaultSymbols = defaultSymbols;
+  }, [defaultSymbols]);
+
+  // Keep the allSampleOptions array up to date
+  React.useEffect(() => {
+    if (sampleTypeContext.status !== 'success') return;
+
+    let allSampleOptions: SampleSelectType[] = [];
+
+    // Add in the standard sample types. Append "(edited)" to the
+    // label if the user made changes to one of the standard types.
+    sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
+      allSampleOptions.push({
+        value: option.value,
+        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+          ? `${option.value} (edited)`
+          : option.label,
+        isPredefined: option.isPredefined,
+      });
+    });
+
+    // Add on any user defined sample types
+    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    // Update totsAllSampleOptions variable on the window object. This is a workaround
+    // to an issue where the allSampleOptions state variable is not available within esri
+    // event handlers.
+    (window as any).totsAllSampleOptions = allSampleOptions;
+
+    setAllSampleOptions(allSampleOptions);
+  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   // define the context funtion for getting the max record count
   // of the gp server
@@ -224,6 +289,23 @@ export function SketchProvider({ children }: Props) {
     });
   }
 
+  // Updates an individual symbol within the defaultSymbols state variable
+  function setDefaultSymbolSingle(type: string, symbol: PolygonSymbol) {
+    let newDefaultSymbols: DefaultSymbolsType | null = null;
+    newDefaultSymbols = {
+      editCount: defaultSymbols.editCount + 1,
+      symbols: {
+        ...defaultSymbols.symbols,
+        [type]: symbol,
+      },
+    };
+
+    setDefaultSymbols(newDefaultSymbols);
+
+    // update all of the symbols
+    updatePolygonSymbol(layers, newDefaultSymbols);
+  }
+
   return (
     <SketchContext.Provider
       value={{
@@ -231,12 +313,13 @@ export function SketchProvider({ children }: Props) {
         setAutoZoom,
         basemapWidget,
         setBasemapWidget,
+        defaultSymbols,
+        setDefaultSymbols,
+        setDefaultSymbolSingle,
         edits,
         setEdits,
         homeWidget,
         setHomeWidget,
-        polygonSymbol,
-        setPolygonSymbol,
         symbolsInitialized,
         setSymbolsInitialized,
         layersInitialized,
@@ -272,6 +355,8 @@ export function SketchProvider({ children }: Props) {
         setUserDefinedAttributes,
         sampleAttributes,
         setSampleAttributes,
+        allSampleOptions,
+        setAllSampleOptions,
       }}
     >
       {children}

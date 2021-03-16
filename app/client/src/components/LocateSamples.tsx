@@ -43,12 +43,10 @@ import {
   getScenarios,
   getSketchableLayers,
   updateLayerEdits,
-  updatePolygonSymbol,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 // styles
 import { reactSelectStyles } from 'styles';
-import { RGBColor } from 'react-color';
 
 type ShapeTypeSelect = {
   value: string;
@@ -83,18 +81,6 @@ function getSampleTypeName(
   }
 
   return newName;
-}
-
-/**
- * Converts a number array (esri rgb color) to an rgb object (react-color).
- */
-function convertArrayToRgbColor(color: number[]) {
-  return {
-    r: color[0],
-    g: color[1],
-    b: color[2],
-    a: color.length > 3 ? color[3] : 1,
-  } as RGBColor;
 }
 
 function activateSketchButton(id: string) {
@@ -226,18 +212,6 @@ const inlineMenuStyles = css`
   display: flex;
   align-items: center;
   justify-content: space-between;
-`;
-
-const colorSettingContainerStyles = css`
-  margin-bottom: 15px;
-`;
-
-const colorContainerStyles = css`
-  display: flex;
-`;
-
-const colorLabelStyles = css`
-  margin-right: 10px;
 `;
 
 const addButtonStyles = css`
@@ -409,14 +383,14 @@ function LocateSamples() {
   const {
     autoZoom,
     setAutoZoom,
+    defaultSymbols,
+    setDefaultSymbolSingle,
     edits,
     setEdits,
     layersInitialized,
     layers,
     setLayers,
     map,
-    polygonSymbol,
-    setPolygonSymbol,
     selectedScenario,
     setSelectedScenario,
     sketchLayer,
@@ -431,6 +405,7 @@ function LocateSamples() {
     setUserDefinedOptions,
     userDefinedAttributes,
     setUserDefinedAttributes,
+    allSampleOptions,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -540,6 +515,12 @@ function LocateSamples() {
 
     // make the style of the button active
     const wasSet = activateSketchButton(label);
+
+    // update the sketchVM symbol
+    let symbolType = 'Samples';
+    if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
+    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
 
     if (wasSet) {
       // let the user draw/place the shape
@@ -698,6 +679,12 @@ function LocateSamples() {
               // get the results from the response
               const results = res.results[0].value;
 
+              // set the sample styles
+              let symbol: PolygonSymbol = defaultSymbols.symbols['Samples'];
+              if (defaultSymbols.symbols.hasOwnProperty(sampleType.value)) {
+                symbol = defaultSymbols.symbols[sampleType.value];
+              }
+
               // build an array of graphics to draw on the map
               results.features.forEach((feature: any) => {
                 graphicsToAdd.push(
@@ -708,7 +695,7 @@ function LocateSamples() {
                       DECISIONUNITUUID: sketchLayer.uuid,
                       DECISIONUNIT: sketchLayer.label,
                     },
-                    symbol: polygonSymbol,
+                    symbol,
                     geometry: new Polygon({
                       rings: feature.geometry.rings,
                       spatialReference: results.spatialReference,
@@ -787,35 +774,6 @@ function LocateSamples() {
         setGenerateRandomResponse({ status: 'failure', data: [] });
       });
   }
-
-  // Keep the allSampleOptions array up to date
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    SampleSelectType[]
-  >([]);
-  React.useEffect(() => {
-    let allSampleOptions: SampleSelectType[] = [];
-
-    // Add in the standard sample types. Append "(edited)" to the
-    // label if the user made changes to one of the standard types.
-    if (sampleTypeContext.status === 'success') {
-      const sampleSelectOptions = sampleTypeContext.data.sampleSelectOptions;
-      Object.keys(sampleSelectOptions).forEach((key: string) => {
-        const option: any = sampleSelectOptions[key];
-        allSampleOptions.push({
-          value: option.value,
-          label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
-            ? `${option.value} (edited)`
-            : option.label,
-          isPredefined: option.isPredefined,
-        });
-      });
-    }
-
-    // Add on any user defined sample types
-    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
-
-    setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   const [
     userDefinedSampleType,
@@ -1113,6 +1071,19 @@ function LocateSamples() {
     label: 'Unlinked Layers',
     options: getSketchableLayers(layers, edits.edits),
   });
+
+  // Initialize the local user defined type symbol. Also updates this variable
+  // when the user changes the user defined sample type selection.
+  const [udtSymbol, setUdtSymbol] = React.useState<PolygonSymbol | null>(null);
+  React.useEffect(() => {
+    if (!userDefinedSampleType) return;
+
+    if (defaultSymbols.symbols.hasOwnProperty(userDefinedSampleType.value)) {
+      setUdtSymbol(defaultSymbols.symbols[userDefinedSampleType.value]);
+    } else {
+      setUdtSymbol(defaultSymbols.symbols['Samples']);
+    }
+  }, [defaultSymbols, userDefinedSampleType]);
 
   return (
     <div css={panelContainer}>
@@ -1727,50 +1698,13 @@ function LocateSamples() {
                 In the panels below, add targeted and/ or multiple samples to
                 the plan.
               </p>
-              <div css={colorSettingContainerStyles}>
-                <h3>Symbology Settings</h3>
-                <div css={inlineMenuStyles}>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Fill</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(polygonSymbol.color)}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          color: [color.r, color.g, color.b, alpha],
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                  <div css={colorContainerStyles}>
-                    <span css={colorLabelStyles}>Outline</span>
-                    <ColorPicker
-                      color={convertArrayToRgbColor(
-                        polygonSymbol.outline.color,
-                      )}
-                      onChange={(color: RGBColor) => {
-                        const alpha = color.a ? color.a : 1;
-                        const newPolygonSymbol: PolygonSymbol = {
-                          ...polygonSymbol,
-                          outline: {
-                            ...polygonSymbol.outline,
-                            color: [color.r, color.g, color.b, alpha],
-                          },
-                        };
-                        setPolygonSymbol(newPolygonSymbol);
-
-                        // update all of the symbols
-                        updatePolygonSymbol(layers, newPolygonSymbol);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              <ColorPicker
+                title="Default Sample Symbology"
+                symbol={defaultSymbols.symbols['Samples']}
+                onChange={(symbol: PolygonSymbol) => {
+                  setDefaultSymbolSingle('Samples', symbol);
+                }}
+              />
             </div>
             <AccordionList>
               <AccordionItem
@@ -2180,6 +2114,13 @@ function LocateSamples() {
                             onClick={(ev) => {
                               if (editingStatus === 'clone') {
                                 setEditingStatus(null);
+                                if (userDefinedSampleType) {
+                                  setUdtSymbol(
+                                    defaultSymbols.symbols[
+                                      userDefinedSampleType.value
+                                    ],
+                                  );
+                                }
                                 return;
                               }
 
@@ -2306,6 +2247,14 @@ function LocateSamples() {
                   />
                   {editingStatus && (
                     <div>
+                      {udtSymbol && (
+                        <ColorPicker
+                          symbol={udtSymbol}
+                          onChange={(symbol: PolygonSymbol) => {
+                            setUdtSymbol(symbol);
+                          }}
+                        />
+                      )}
                       <div>
                         <label htmlFor="sample-type-name-input">
                           Sample Type Name
@@ -2481,10 +2430,26 @@ function LocateSamples() {
                         >
                           {editingStatus === 'view' ? 'Hide' : 'Cancel'}
                         </button>
-                        {editingStatus !== 'view' && (
+                        {(editingStatus !== 'view' ||
+                          (editingStatus === 'view' &&
+                            udtSymbol &&
+                            userDefinedSampleType &&
+                            JSON.stringify(udtSymbol) !==
+                              JSON.stringify(
+                                defaultSymbols.symbols[
+                                  userDefinedSampleType.value
+                                ],
+                              ))) && (
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
+                              if (udtSymbol)
+                                setDefaultSymbolSingle(
+                                  sampleTypeName,
+                                  udtSymbol,
+                                );
+                              if (editingStatus === 'view') return;
+
                               const isValid = validateEdits();
                               const predefinedEdited =
                                 editingStatus === 'edit' &&

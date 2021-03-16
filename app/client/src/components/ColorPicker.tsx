@@ -3,6 +3,20 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { SketchPicker, RGBColor } from 'react-color';
+// config
+import { PolygonSymbol } from 'config/sampleAttributes';
+
+/**
+ * Converts a number array (esri rgb color) to an rgb object (react-color).
+ */
+function convertArrayToRgbColor(color: number[]) {
+  return {
+    r: color[0],
+    g: color[1],
+    b: color[2],
+    a: color.length > 3 ? color[3] : 1,
+  } as RGBColor;
+}
 
 // --- styled components ---
 const colorStyles = (color: RGBColor) => {
@@ -41,12 +55,15 @@ const coverStyles = css`
 `;
 
 // --- components ---
-type Props = {
+type SingleColorPickerProps = {
   color: RGBColor;
   onChange: Function;
 };
 
-function ColorPicker({ color, onChange = () => {} }: Props) {
+function SingleColorPicker({
+  color,
+  onChange = () => {},
+}: SingleColorPickerProps) {
   const [colorPickerVisible, setColorPickerVisible] = React.useState(false);
   const [colorState, setColorState] = React.useState<RGBColor>(color);
 
@@ -122,6 +139,77 @@ function ColorPicker({ color, onChange = () => {} }: Props) {
           color={colorState}
           onChange={(color) => setColorState(color.rgb)}
         />
+      </div>
+    </div>
+  );
+}
+
+// --- styled components ---
+const colorSettingContainerStyles = css`
+  margin-bottom: 15px;
+`;
+
+const colorContainerStyles = css`
+  display: flex;
+`;
+
+const colorLabelStyles = css`
+  margin-right: 10px;
+`;
+
+const inlineMenuStyles = css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+// --- components ---
+type Props = {
+  symbol: PolygonSymbol;
+  title?: string;
+  onChange?: Function;
+};
+
+function ColorPicker({
+  symbol,
+  title = 'Symbology Settings',
+  onChange = () => {},
+}: Props) {
+  return (
+    <div css={colorSettingContainerStyles}>
+      <h3>{title}</h3>
+      <div css={inlineMenuStyles}>
+        <div css={colorContainerStyles}>
+          <span css={colorLabelStyles}>Fill</span>
+          <SingleColorPicker
+            color={convertArrayToRgbColor(symbol.color)}
+            onChange={(color: RGBColor) => {
+              const alpha = color.a ? color.a : 1;
+              const newSymbol = {
+                ...symbol,
+                color: [color.r, color.g, color.b, alpha],
+              };
+              if (onChange) onChange(newSymbol);
+            }}
+          />
+        </div>
+        <div css={colorContainerStyles}>
+          <span css={colorLabelStyles}>Outline</span>
+          <SingleColorPicker
+            color={convertArrayToRgbColor(symbol.outline.color)}
+            onChange={(color: RGBColor) => {
+              const alpha = color.a ? color.a : 1;
+              const newSymbol = {
+                ...symbol,
+                outline: {
+                  ...symbol.outline,
+                  color: [color.r, color.g, color.b, alpha],
+                },
+              };
+              if (onChange) onChange(newSymbol);
+            }}
+          />
+        </div>
       </div>
     </div>
   );
