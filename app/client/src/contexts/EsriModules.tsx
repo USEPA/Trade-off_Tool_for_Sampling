@@ -271,6 +271,31 @@ function EsriModulesProvider({ children }: Props) {
             urlPrefix: 'http://ags.erg.com',
           });
         }
+
+        if (!config?.request?.interceptors) return;
+
+        // intercept esri calls to gispub
+        const urls: string[] = ['https://www.arcgis.com/sharing/rest/'];
+        config.request.interceptors.push({
+          urls,
+
+          // Workaround for ESRI CORS cacheing issue, when switching between
+          // environments.
+          before: function (params) {
+            // map the environment to a phony variable
+            const envStringMap: any = {
+              localhost: 'onlocalhost',
+              'tots-dev.app.cloud.gov': 'ondev',
+              'tots-stage.app.cloud.gov': 'onstage',
+            };
+
+            // if this environment has a phony variable use it
+            const envString = envStringMap[window.location.hostname];
+            if (envString) {
+              params.requestOptions.query[envString] = 1;
+            }
+          },
+        });
       },
     );
   }, [modules, services]);
