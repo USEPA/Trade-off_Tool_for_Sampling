@@ -31,7 +31,7 @@ import { chunkArray } from 'utils/utils';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import { SampleSelectType } from 'config/sampleAttributes';
+import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
   fileReadErrorMessage,
@@ -233,6 +233,7 @@ function FilePanel() {
   );
   const {
     defaultSymbols,
+    setDefaultSymbolSingle,
     edits,
     setEdits,
     layers,
@@ -1350,9 +1351,21 @@ function FilePanel() {
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
-                  {(layerType.value === 'Area of Interest' ||
-                    layerType.value === 'Contamination Map') && (
-                    <ColorPicker symbolType={layerType.value} />
+                  {layerType.value === 'Area of Interest' && (
+                    <ColorPicker
+                      symbol={defaultSymbols.symbols['Area of Interest']}
+                      onChange={(symbol: PolygonSymbol) => {
+                        setDefaultSymbolSingle('Area of Interest', symbol);
+                      }}
+                    />
+                  )}
+                  {layerType.value === 'Contamination Map' && (
+                    <ColorPicker
+                      symbol={defaultSymbols.symbols['Contamination Map']}
+                      onChange={(symbol: PolygonSymbol) => {
+                        setDefaultSymbolSingle('Contamination Map', symbol);
+                      }}
+                    />
                   )}
                   <input
                     id="generalize-features-input"

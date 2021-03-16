@@ -24,7 +24,7 @@ const buttonStyles = css`
 `;
 
 function TestingToolbar() {
-  const { layers, map, mapView } = React.useContext(SketchContext);
+  const { layers, map, mapView, sketchVM } = React.useContext(SketchContext);
 
   return (
     <div css={toolbarStyles}>
@@ -39,6 +39,12 @@ function TestingToolbar() {
         onClick={() => console.log('layers: ', layers)}
       >
         Log Layers
+      </button>
+      <button
+        css={buttonStyles}
+        onClick={() => console.log('sketchVM: ', sketchVM)}
+      >
+        Log SketchVM
       </button>
       <button
         css={buttonStyles}

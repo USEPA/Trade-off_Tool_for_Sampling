@@ -3,12 +3,8 @@
 import React from 'react';
 import { jsx, css } from '@emotion/core';
 import { SketchPicker, RGBColor } from 'react-color';
-// contexts
-import { SketchContext } from 'contexts/Sketch';
-// utils
-import { updatePolygonSymbol } from 'utils/sketchUtils';
 // config
-import { DefaultSymbolsType } from 'config/sampleAttributes';
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * Converts a number array (esri rgb color) to an rgb object (react-color).
@@ -169,104 +165,16 @@ const inlineMenuStyles = css`
 
 // --- components ---
 type Props = {
-  symbolType: string;
-  backupType?: string;
+  symbol: PolygonSymbol;
   title?: string;
+  onChange?: Function;
 };
 
 function ColorPicker({
-  symbolType,
-  backupType = '',
+  symbol,
   title = 'Symbology Settings',
+  onChange = () => {},
 }: Props) {
-  const { defaultSymbols, setDefaultSymbols, layers } = React.useContext(
-    SketchContext,
-  );
-
-  const hasPrimary = defaultSymbols.symbols.hasOwnProperty(symbolType);
-  const internalSymbolType =
-    backupType && !hasPrimary ? backupType : symbolType;
-
-  function handleChange(color: RGBColor, type: 'fill' | 'outline') {
-    const alpha = color.a ? color.a : 1;
-
-    if (
-      (type === 'fill' &&
-        defaultSymbols.symbols[internalSymbolType].color ===
-          [color.r, color.g, color.b, alpha]) ||
-      (type === 'outline' &&
-        defaultSymbols.symbols[internalSymbolType].outline.color ===
-          [color.r, color.g, color.b, alpha])
-    ) {
-      return;
-    }
-
-    let newDefaultSymbols: DefaultSymbolsType | null = null;
-    if (type === 'fill') {
-      if (symbolType && !hasPrimary && backupType) {
-        newDefaultSymbols = {
-          editCount: defaultSymbols.editCount + 1,
-          symbols: {
-            ...defaultSymbols.symbols,
-            [symbolType]: {
-              ...defaultSymbols.symbols[backupType],
-              color: [color.r, color.g, color.b, alpha],
-            },
-          },
-        };
-      } else {
-        newDefaultSymbols = {
-          editCount: defaultSymbols.editCount + 1,
-          symbols: {
-            ...defaultSymbols.symbols,
-            [internalSymbolType]: {
-              ...defaultSymbols.symbols[internalSymbolType],
-              color: [color.r, color.g, color.b, alpha],
-            },
-          },
-        };
-      }
-    }
-    if (type === 'outline') {
-      if (symbolType && !hasPrimary && backupType) {
-        newDefaultSymbols = {
-          editCount: defaultSymbols.editCount + 1,
-          symbols: {
-            ...defaultSymbols.symbols,
-            [symbolType]: {
-              ...defaultSymbols.symbols[backupType],
-              outline: {
-                ...defaultSymbols.symbols[backupType].outline,
-                color: [color.r, color.g, color.b, alpha],
-              },
-            },
-          },
-        };
-      } else {
-        newDefaultSymbols = {
-          editCount: defaultSymbols.editCount + 1,
-          symbols: {
-            ...defaultSymbols.symbols,
-            [internalSymbolType]: {
-              ...defaultSymbols.symbols[internalSymbolType],
-              outline: {
-                ...defaultSymbols.symbols[internalSymbolType].outline,
-                color: [color.r, color.g, color.b, alpha],
-              },
-            },
-          },
-        };
-      }
-    }
-
-    if (!newDefaultSymbols) return;
-
-    setDefaultSymbols(newDefaultSymbols);
-
-    // update all of the symbols
-    updatePolygonSymbol(layers, newDefaultSymbols);
-  }
-
   return (
     <div css={colorSettingContainerStyles}>
       <h3>{title}</h3>
@@ -274,22 +182,31 @@ function ColorPicker({
         <div css={colorContainerStyles}>
           <span css={colorLabelStyles}>Fill</span>
           <SingleColorPicker
-            color={convertArrayToRgbColor(
-              defaultSymbols.symbols[internalSymbolType].color,
-            )}
+            color={convertArrayToRgbColor(symbol.color)}
             onChange={(color: RGBColor) => {
-              handleChange(color, 'fill');
+              const alpha = color.a ? color.a : 1;
+              const newSymbol = {
+                ...symbol,
+                color: [color.r, color.g, color.b, alpha],
+              };
+              if (onChange) onChange(newSymbol);
             }}
           />
         </div>
         <div css={colorContainerStyles}>
           <span css={colorLabelStyles}>Outline</span>
           <SingleColorPicker
-            color={convertArrayToRgbColor(
-              defaultSymbols.symbols[internalSymbolType].outline.color,
-            )}
+            color={convertArrayToRgbColor(symbol.outline.color)}
             onChange={(color: RGBColor) => {
-              handleChange(color, 'outline');
+              const alpha = color.a ? color.a : 1;
+              const newSymbol = {
+                ...symbol,
+                outline: {
+                  ...symbol.outline,
+                  color: [color.r, color.g, color.b, alpha],
+                },
+              };
+              if (onChange) onChange(newSymbol);
             }}
           />
         </div>

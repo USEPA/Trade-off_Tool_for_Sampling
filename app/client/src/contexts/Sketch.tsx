@@ -9,6 +9,7 @@ import {
 } from 'contexts/LookupFiles';
 // utils
 import { fetchCheck } from 'utils/fetchUtils';
+import { updatePolygonSymbol } from 'utils/sketchUtils';
 // types
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
@@ -29,6 +30,7 @@ type SketchType = {
   >;
   defaultSymbols: DefaultSymbolsType;
   setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
+  setDefaultSymbolSingle: Function;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
@@ -94,6 +96,7 @@ export const SketchContext = React.createContext<SketchType>({
     editCount: 0,
   },
   setDefaultSymbols: () => {},
+  setDefaultSymbolSingle: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
@@ -214,6 +217,20 @@ export function SketchProvider({ children }: Props) {
     (window as any).totsSampleAttributes = sampleAttributes;
   }, [sampleAttributes]);
 
+  // Update totsLayers variable on the window object. This is a workaround
+  // to an issue where the layers state variable is not available within esri
+  // event handlers.
+  React.useEffect(() => {
+    (window as any).totsLayers = layers;
+  }, [layers]);
+
+  // Update totsDefaultSymbols variable on the window object. This is a workaround
+  // to an issue where the defaultSymbols state variable is not available within esri
+  // event handlers.
+  React.useEffect(() => {
+    (window as any).totsDefaultSymbols = defaultSymbols;
+  }, [defaultSymbols]);
+
   // Keep the allSampleOptions array up to date
   React.useEffect(() => {
     if (sampleTypeContext.status !== 'success') return;
@@ -234,6 +251,11 @@ export function SketchProvider({ children }: Props) {
 
     // Add on any user defined sample types
     allSampleOptions = allSampleOptions.concat(userDefinedOptions);
+
+    // Update totsAllSampleOptions variable on the window object. This is a workaround
+    // to an issue where the allSampleOptions state variable is not available within esri
+    // event handlers.
+    (window as any).totsAllSampleOptions = allSampleOptions;
 
     setAllSampleOptions(allSampleOptions);
   }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
@@ -267,6 +289,23 @@ export function SketchProvider({ children }: Props) {
     });
   }
 
+  // Updates an individual symbol within the defaultSymbols state variable
+  function setDefaultSymbolSingle(type: string, symbol: PolygonSymbol) {
+    let newDefaultSymbols: DefaultSymbolsType | null = null;
+    newDefaultSymbols = {
+      editCount: defaultSymbols.editCount + 1,
+      symbols: {
+        ...defaultSymbols.symbols,
+        [type]: symbol,
+      },
+    };
+
+    setDefaultSymbols(newDefaultSymbols);
+
+    // update all of the symbols
+    updatePolygonSymbol(layers, newDefaultSymbols);
+  }
+
   return (
     <SketchContext.Provider
       value={{
@@ -276,6 +315,7 @@ export function SketchProvider({ children }: Props) {
         setBasemapWidget,
         defaultSymbols,
         setDefaultSymbols,
+        setDefaultSymbolSingle,
         edits,
         setEdits,
         homeWidget,

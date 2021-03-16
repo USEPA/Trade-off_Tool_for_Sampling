@@ -16,6 +16,12 @@ import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
 import { colors } from 'styles';
+import {
+  DefaultSymbolsType,
+  PolygonSymbol,
+  SampleSelectType,
+} from 'config/sampleAttributes';
+import { LayerType } from 'types/Layer';
 
 const toolBarHeight = '40px';
 
@@ -45,6 +51,12 @@ const basemapNames = [
   'Firefly Imagery Hybrid',
   'USA Topo Maps',
 ];
+
+type LegendRowType = {
+  title: string;
+  value: string;
+  symbol: PolygonSymbol;
+};
 
 // --- styles (Toolbar) ---
 const toolBarTitle = css`
@@ -292,50 +304,104 @@ function Toolbar() {
         slider.on('thumb-change', sliderChange);
         slider.on('thumb-drag', sliderChange);
 
+        // find the layer type (i.e., Samples, VSP, AOI, etc.)
+        let subtitle = '';
+        const legendItems: LegendRowType[] = [];
+        const layer = (window as any).totsLayers?.find(
+          (layer: LayerType) => layer.layerId === item?.layer?.id,
+        );
+
+        const defaultSymbols: DefaultSymbolsType = (window as any)
+          .totsDefaultSymbols;
+
+        // build the data for building the legend
+        if (
+          layer?.layerType === 'Area of Interest' ||
+          layer?.layerType === 'Sampling Mask'
+        ) {
+          legendItems.push({
+            value: 'Area of Interest',
+            title: 'Area of Interest',
+            symbol: defaultSymbols.symbols['Area of Interest'],
+          });
+        }
+        if (layer?.layerType === 'Contamination Map') {
+          legendItems.push({
+            value: 'Contamination Map',
+            title: 'Contamination Map',
+            symbol: defaultSymbols.symbols['Contamination Map'],
+          });
+        }
+        if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
+          subtitle = 'Sample Type';
+
+          (window as any).totsAllSampleOptions?.forEach(
+            (option: SampleSelectType) => {
+              if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
+                legendItems.push({
+                  value: option.value,
+                  title: option.label,
+                  symbol: defaultSymbols.symbols[option.value],
+                });
+              } else {
+                legendItems.push({
+                  value: 'Samples',
+                  title: option.label,
+                  symbol: defaultSymbols.symbols['Samples'],
+                });
+              }
+            },
+          );
+        }
+
+        // sort the legend items
+        legendItems.sort((a, b) => a.title.localeCompare(b.title));
+
         const container = document.createElement('div');
         container.append(slider.domNode);
-
         const content = (
           <div className="esri-legend esri-widget--panel esri-widget">
             <div className="esri-legend__layer">
               <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+                {subtitle && (
+                  <div className="esri-legend__layer-caption">{subtitle}</div>
+                )}
                 <div className="esri-legend__layer-body">
-                  <div className="esri-legend__layer-row">
-                    <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
-                      <div className="esri-legend__symbol">
-                        <div css={graphicsIconStyles}>
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="22"
-                            height="22"
-                          >
-                            <defs></defs>
-                            <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
-                              <path
-                                fill={`rgba(${defaultSymbols.symbols[
-                                  'Samples'
-                                ].color.toString()})`}
-                                fillRule="evenodd"
-                                stroke={`rgba(${defaultSymbols.symbols[
-                                  'Samples'
-                                ].outline.color.toString()})`}
-                                strokeWidth={
-                                  defaultSymbols.symbols['Samples'].outline
-                                    .width
-                                }
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeDasharray="none"
-                                strokeMiterlimit="4"
-                                d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
-                              />
-                            </g>
-                          </svg>
+                  {legendItems.map((row, index) => {
+                    return (
+                      <div key={index} className="esri-legend__layer-row">
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
+                          <div className="esri-legend__symbol">
+                            <div css={graphicsIconStyles}>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="22"
+                                height="22"
+                              >
+                                <defs></defs>
+                                <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
+                                  <path
+                                    fill={`rgba(${row.symbol.color.toString()})`}
+                                    fillRule="evenodd"
+                                    stroke={`rgba(${row.symbol.outline.color.toString()})`}
+                                    strokeWidth={row.symbol.outline.width}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeDasharray="none"
+                                    strokeMiterlimit="4"
+                                    d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
+                                  />
+                                </g>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
+                          {row.title}
                         </div>
                       </div>
-                    </div>
-                    <div className="esri-legend__layer-cell esri-legend__layer-cell--info"></div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

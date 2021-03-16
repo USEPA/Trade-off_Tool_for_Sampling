@@ -384,6 +384,7 @@ function LocateSamples() {
     autoZoom,
     setAutoZoom,
     defaultSymbols,
+    setDefaultSymbolSingle,
     edits,
     setEdits,
     layersInitialized,
@@ -514,6 +515,12 @@ function LocateSamples() {
 
     // make the style of the button active
     const wasSet = activateSketchButton(label);
+
+    // update the sketchVM symbol
+    let symbolType = 'Samples';
+    if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
+    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
 
     if (wasSet) {
       // let the user draw/place the shape
@@ -1064,6 +1071,19 @@ function LocateSamples() {
     label: 'Unlinked Layers',
     options: getSketchableLayers(layers, edits.edits),
   });
+
+  // Initialize the local user defined type symbol. Also updates this variable
+  // when the user changes the user defined sample type selection.
+  const [udtSymbol, setUdtSymbol] = React.useState<PolygonSymbol | null>(null);
+  React.useEffect(() => {
+    if (!userDefinedSampleType) return;
+
+    if (defaultSymbols.symbols.hasOwnProperty(userDefinedSampleType.value)) {
+      setUdtSymbol(defaultSymbols.symbols[userDefinedSampleType.value]);
+    } else {
+      setUdtSymbol(defaultSymbols.symbols['Samples']);
+    }
+  }, [defaultSymbols, userDefinedSampleType]);
 
   return (
     <div css={panelContainer}>
@@ -1679,8 +1699,11 @@ function LocateSamples() {
                 the plan.
               </p>
               <ColorPicker
-                symbolType="Samples"
                 title="Default Sample Symbology"
+                symbol={defaultSymbols.symbols['Samples']}
+                onChange={(symbol: PolygonSymbol) => {
+                  setDefaultSymbolSingle('Samples', symbol);
+                }}
               />
             </div>
             <AccordionList>
@@ -2091,6 +2114,13 @@ function LocateSamples() {
                             onClick={(ev) => {
                               if (editingStatus === 'clone') {
                                 setEditingStatus(null);
+                                if (userDefinedSampleType) {
+                                  setUdtSymbol(
+                                    defaultSymbols.symbols[
+                                      userDefinedSampleType.value
+                                    ],
+                                  );
+                                }
                                 return;
                               }
 
@@ -2217,10 +2247,12 @@ function LocateSamples() {
                   />
                   {editingStatus && (
                     <div>
-                      {userDefinedSampleType && (
+                      {udtSymbol && (
                         <ColorPicker
-                          symbolType={userDefinedSampleType.value}
-                          backupType="Samples"
+                          symbol={udtSymbol}
+                          onChange={(symbol: PolygonSymbol) => {
+                            setUdtSymbol(symbol);
+                          }}
                         />
                       )}
                       <div>
@@ -2398,10 +2430,26 @@ function LocateSamples() {
                         >
                           {editingStatus === 'view' ? 'Hide' : 'Cancel'}
                         </button>
-                        {editingStatus !== 'view' && (
+                        {(editingStatus !== 'view' ||
+                          (editingStatus === 'view' &&
+                            udtSymbol &&
+                            userDefinedSampleType &&
+                            JSON.stringify(udtSymbol) !==
+                              JSON.stringify(
+                                defaultSymbols.symbols[
+                                  userDefinedSampleType.value
+                                ],
+                              ))) && (
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
+                              if (udtSymbol)
+                                setDefaultSymbolSingle(
+                                  sampleTypeName,
+                                  udtSymbol,
+                                );
+                              if (editingStatus === 'view') return;
+
                               const isValid = validateEdits();
                               const predefinedEdited =
                                 editingStatus === 'edit' &&

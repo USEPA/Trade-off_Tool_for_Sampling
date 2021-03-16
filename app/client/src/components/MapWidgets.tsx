@@ -228,9 +228,6 @@ function MapWidgets({ mapView }: Props) {
       sketchLayer?.sketchLayer?.type === 'graphics'
     ) {
       sketchVM.layer = sketchLayer.sketchLayer;
-
-      sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-      sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
     } else {
       // disable the sketch vm for any panel other than locateSamples
       sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
