@@ -12,6 +12,13 @@ type ServiceMetaDataType = {
   description: string;
 };
 
+const envStringMap: any = {
+  localhost: 'onlocalhost',
+  'tots-dev.app.cloud.gov': 'ondev',
+  'tots-stage.app.cloud.gov': 'onstage',
+};
+const envString = envStringMap[window.location.hostname];
+
 /**
  * Checks if the feature service name is available.
  *
@@ -28,6 +35,7 @@ export function isServiceNameAvailable(
 
     // check if the tots feature service already exists
     const params = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       name: serviceName,
@@ -142,7 +150,7 @@ function getFeatureServiceWrapped(
           // Workaround for esri.Portal not having credential
           const tempPortal: any = portal;
           fetchCheck(
-            `${portalService.url}?f=json&token=${tempPortal.credential.token}`,
+            `${portalService.url}?f=json&${envString}=1&token=${tempPortal.credential.token}`,
           )
             .then((res) => {
               const returnValue = {
@@ -177,6 +185,7 @@ export function createFeatureService(
 
     // feature service creation parameters
     const data = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       outputType: 'featureService',
@@ -211,6 +220,7 @@ export function createFeatureService(
         // in the ArcGIS Online portal and found that ESRI is also doing a separate update
         // call to add metadata (tags in this case).
         const indata = {
+          [envString]: 1,
           f: 'json',
           token: tempPortal.credential.token,
 
@@ -242,7 +252,7 @@ export function createFeatureService(
  */
 export function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
-    fetchCheck(`${serviceUrl}?f=json&token=${token}`)
+    fetchCheck(`${serviceUrl}?f=json&${envString}=1&token=${token}`)
       .then((res: any) => {
         if (res) resolve(res.layers);
         else resolve([]);
@@ -261,7 +271,7 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
  */
 export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
-    fetchCheck(`${serviceUrl}/${id}?f=json&token=${token}`)
+    fetchCheck(`${serviceUrl}/${id}?f=json&${envString}=1&token=${token}`)
       .then((layer: any) => {
         resolve(layer);
       })
@@ -344,6 +354,7 @@ export function createFeatureLayers(
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
     const data = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       addToDefinition: {
@@ -388,6 +399,7 @@ export function deleteFeatureLayer(
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
     const data = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       deleteFromDefinition: {
@@ -419,6 +431,7 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
     const query = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       where: '0=0',
@@ -442,6 +455,7 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
         // fire off the requests for the features with geometry
         chunkedObjectIds.forEach((chunk: Array<string>) => {
           const data = {
+            [envString]: 1,
             f: 'json',
             token: tempPortal.credential.token,
             where: `OBJECTID in (${chunk.join(',')})`,
@@ -520,6 +534,7 @@ export function applyEdits({
 
     // run the webserivce call to update ArcGIS Online
     const data = {
+      [envString]: 1,
       f: 'json',
       token: tempPortal.credential.token,
       edits: changes,
