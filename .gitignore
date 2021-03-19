@@ -1,12 +1,18 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
+npm-debug.log
+.tmp
 /.pnp
 .pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # testing
-/coverage
+coverage/
+.nyc_output
 
 # production
 /build
@@ -18,6 +24,11 @@
 .env.test.local
 .env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# other_resources
+other_resources/**/*.gdb
+other_resources/**/*.ags
+other_resources/**/*.sde
+other_resources/**/Index
+other_resources/**/scratch
+other_resources/**/ImportLog
+other_resources/**/~*.xlsx

@@ -1,0 +1,107 @@
+{
+  "displayFieldName" : "",
+  "fieldAliases" : {
+    "OBJECTID" : "OBJECTID",
+    "Shape_Length" : "Shape_Length",
+    "Shape_Area" : "Shape_Area",
+    "GLOBALID" : "GlobalID",
+    "PERMANENT_IDENTIFIER": "Permanent_Identifier",
+    "NOTES" : "Notes"
+  },
+  "geometryType" : "esriGeometryPolygon",
+  "spatialReference" : {
+    "wkid" : 102100,
+    "latestWkid" : 3857
+  },
+  "fields" : [
+    {
+      "name" : "OBJECTID",
+      "type" : "esriFieldTypeOID",
+      "alias" : "OBJECTID"
+    },
+    {
+      "name" : "Shape_Length",
+      "type" : "esriFieldTypeDouble",
+      "alias" : "Shape_Length"
+    },
+    {
+      "name" : "Shape_Area",
+      "type" : "esriFieldTypeDouble",
+      "alias" : "Shape_Area"
+    },
+    {
+      "name" : "GLOBALID",
+      "type" : "esriFieldTypeGUID",
+      "alias" : "GlobalID"
+    },
+    {
+      "name" : "PERMANENT_IDENTIFIER",
+      "type" : "esriFieldTypeGUID",
+      "alias" : "Permanent_Identifier"
+    },
+    {
+      "name" : "NOTES",
+      "type" : "esriFieldTypeString",
+      "alias" : "Notes",
+      "length" : 255
+    }
+  ],
+  "features" : [
+    {
+      "attributes" : {
+        "OBJECTID" : 1,
+        "Shape_Length" : 1355.7831642420276,
+        "Shape_Area" : 106812.19606400309,
+        "GLOBALID" : "{f7335f53-7029-4d42-8c4f-bdaf8b32a6c7}",
+        "PERMANENT_IDENTIFIER" : "{10b1694e-cce6-4720-a4aa-a7f94f7ac5a8}",
+        "NOTES" : null
+      },
+      "geometry" : {
+        "rings" : [
+          [
+            [
+              -9779798.9723000005,
+              5252221.7965999991
+            ],
+            [
+              -9779766.5607999992,
+              5251986.9783999994
+            ],
+            [
+              -9779789.7118999995,
+              5251868.5771000013
+            ],
+            [
+              -9779849.2433000002,
+              5251778.6186000034
+            ],
+            [
+              -9779949.1237000003,
+              5251785.2331999987
+            ],
+            [
+              -9779952.4309999999,
+              5251830.8738999963
+            ],
+            [
+              -9779977.5664000008,
+              5251838.1499999985
+            ],
+            [
+              -9780042.3894999996,
+              5251813.675999999
+            ],
+            [
+              -9780039.0822000001,
+              5252222.4580999985
+            ],
+            [
+              -9779798.9723000005,
+              5252221.7965999991
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
