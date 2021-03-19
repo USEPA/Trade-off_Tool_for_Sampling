@@ -6,6 +6,7 @@ import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // components
+import ColorPicker from 'components/ColorPicker';
 import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -18,6 +19,7 @@ import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
+import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -30,7 +32,7 @@ import { chunkArray } from 'utils/utils';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import { SampleSelectType } from 'config/sampleAttributes';
+import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
   fileReadErrorMessage,
@@ -231,6 +233,8 @@ function FilePanel() {
     NavigationContext,
   );
   const {
+    defaultSymbols,
+    setDefaultSymbolSingle,
     edits,
     setEdits,
     layers,
@@ -239,11 +243,9 @@ function FilePanel() {
     mapView,
     referenceLayers,
     setReferenceLayers,
-    polygonSymbol,
     getGpMaxRecordCount,
     sampleAttributes,
-    userDefinedOptions,
-    userDefinedAttributes,
+    allSampleOptions,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -293,33 +295,6 @@ function FilePanel() {
 
     setGoToOptions(null);
   }, [goToOptions, setGoToOptions]);
-
-  // Keep the allSampleOptions array up to date
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    SampleSelectType[]
-  >([]);
-  React.useEffect(() => {
-    if (sampleTypeContext.status !== 'success') return;
-
-    let allSampleOptions: SampleSelectType[] = [];
-
-    // Add in the standard sample types. Append "(edited)" to the
-    // label if the user made changes to one of the standard types.
-    sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
-      allSampleOptions.push({
-        value: option.value,
-        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
-          ? `${option.value} (edited)`
-          : option.label,
-        isPredefined: option.isPredefined,
-      });
-    });
-
-    // Add on any user defined sample types
-    allSampleOptions = allSampleOptions.concat(userDefinedOptions);
-
-    setAllSampleOptions(allSampleOptions);
-  }, [userDefinedOptions, userDefinedAttributes, sampleTypeContext]);
 
   // Handles the user uploading a file
   const [file, setFile] = React.useState<any>(null);
@@ -464,6 +439,7 @@ function FilePanel() {
       fileType: file.file.esriFileType,
       analyzeParameters: analyzeParams,
     };
+    appendEnvironmentObjectParam(params);
 
     const analyzeUrl = `${sharingUrl}/content/features/analyze`;
     fetchPostFile(analyzeUrl, params, file.file)
@@ -558,6 +534,8 @@ function FilePanel() {
       filetype: fileTypeToSend,
       publishParameters,
     };
+    appendEnvironmentObjectParam(params);
+
     fetchPostFile(generateUrl, params, file.file)
       .then((res: any) => {
         if (res.error) {
@@ -640,6 +618,8 @@ function FilePanel() {
                 Sample_Type: sampleType.value,
                 Sample_Type_Parameters: sampleTypeFeatureSet,
               };
+              appendEnvironmentObjectParam(params);
+
               const request = geoprocessorFetch({
                 Geoprocessor,
                 url: `${services.data.totsGPServer}/VSP%20Import`,
@@ -919,8 +899,16 @@ function FilePanel() {
           );
         }
 
+        // set the symbol styles based on the sample/layer type
         if (graphic?.geometry?.type === 'polygon') {
-          graphic.symbol = polygonSymbol;
+          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPE)) {
+            graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+          } else {
+            graphic.symbol =
+              defaultSymbols.symbols[
+                layerType.value === 'VSP' ? 'Samples' : layerType.value
+              ];
+          }
         }
 
         // add the popup template
@@ -975,6 +963,7 @@ function FilePanel() {
     PopupTemplate,
 
     // app
+    defaultSymbols,
     edits,
     setEdits,
     featuresAdded,
@@ -987,7 +976,6 @@ function FilePanel() {
     layerType,
     map,
     mapView,
-    polygonSymbol,
     sampleAttributes,
     trainingMode,
   ]);
@@ -1142,6 +1130,8 @@ function FilePanel() {
         folders: '',
         outSR: mapView.spatialReference,
       };
+      appendEnvironmentObjectParam(params);
+
       fetchPost(kmlUrl, params)
         .then((res: any) => {
           setGenerateResponse(res);
@@ -1369,6 +1359,22 @@ function FilePanel() {
                   {uploadStatus === 'failure' && webServiceErrorMessage}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
+                  {layerType.value === 'Area of Interest' && (
+                    <ColorPicker
+                      symbol={defaultSymbols.symbols['Area of Interest']}
+                      onChange={(symbol: PolygonSymbol) => {
+                        setDefaultSymbolSingle('Area of Interest', symbol);
+                      }}
+                    />
+                  )}
+                  {layerType.value === 'Contamination Map' && (
+                    <ColorPicker
+                      symbol={defaultSymbols.symbols['Contamination Map']}
+                      onChange={(symbol: PolygonSymbol) => {
+                        setDefaultSymbolSingle('Contamination Map', symbol);
+                      }}
+                    />
+                  )}
                   <input
                     id="generalize-features-input"
                     type="checkbox"

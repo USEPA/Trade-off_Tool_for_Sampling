@@ -760,12 +760,12 @@ function ResultCard({ result }: ResultCardProps) {
     watchUtils,
   } = useEsriModulesContext();
   const {
+    defaultSymbols,
     edits,
     setEdits,
     setLayers,
     map,
     mapView,
-    polygonSymbol,
     portalLayers,
     setPortalLayers,
     setReferenceLayers,
@@ -958,7 +958,15 @@ function ResultCard({ result }: ResultCardProps) {
                     wkid: 3857,
                   };
                   graphic.popupTemplate = popupTemplate;
-                  graphic.symbol = polygonSymbol;
+                  graphic.symbol = defaultSymbols.symbols['Samples'];
+                  if (
+                    defaultSymbols.symbols.hasOwnProperty(
+                      feature.attributes.TYPE,
+                    )
+                  ) {
+                    graphic.symbol =
+                      defaultSymbols.symbols[feature.attributes.TYPE];
+                  }
 
                   // Add the user defined type if it does not exist
                   if (

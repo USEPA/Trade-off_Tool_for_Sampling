@@ -27,6 +27,7 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
+import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
@@ -523,6 +524,8 @@ function Calculate() {
             Input_Sampling_Unit: featureSet,
             Contamination_Map: contamMapSet,
           };
+          appendEnvironmentObjectParam(params);
+
           const request = geoprocessorFetch({
             Geoprocessor,
             url: `${services.data.totsGPServer}/Contamination Results`,

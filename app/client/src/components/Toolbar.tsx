@@ -10,12 +10,19 @@ import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
+import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
 import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
 // types
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
 import { colors } from 'styles';
+import {
+  DefaultSymbolsType,
+  PolygonSymbol,
+  SampleSelectType,
+} from 'config/sampleAttributes';
+import { LayerType } from 'types/Layer';
 
 const toolBarHeight = '40px';
 
@@ -45,6 +52,12 @@ const basemapNames = [
   'Firefly Imagery Hybrid',
   'USA Topo Maps',
 ];
+
+type LegendRowType = {
+  title: string;
+  value: string;
+  symbol: PolygonSymbol;
+};
 
 // --- styles (Toolbar) ---
 const toolBarTitle = css`
@@ -157,6 +170,7 @@ function Toolbar() {
   const { trainingMode } = React.useContext(NavigationContext);
   const {
     setBasemapWidget,
+    defaultSymbols,
     edits,
     setEdits,
     map,
@@ -173,7 +187,6 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
-    polygonSymbol,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -242,7 +255,9 @@ function Toolbar() {
 
     const tempPortal: any = portal;
     fetchCheck(
-      `${tempPortal.user.url}?f=json&token=${tempPortal.credential.token}`,
+      `${tempPortal.user.url}?f=json${getEnvironmentStringParam()}&token=${
+        tempPortal.credential.token
+      }`,
     )
       .then((res) => {
         setUserInfo(res);
@@ -258,7 +273,13 @@ function Toolbar() {
     setLayerToRemove, //
   ] = React.useState<__esri.Layer | null>(null);
   React.useEffect(() => {
-    if (!mapView || legendInitialized) return;
+    if (!mapView) return;
+
+    // clear out the legend container
+    const legendContainer: HTMLElement | null = document.getElementById(
+      'legend-container',
+    );
+    if (legendContainer) legendContainer.innerHTML = '';
 
     // create the layer list using the same styles and structure as the
     // esri version.
@@ -286,19 +307,72 @@ function Toolbar() {
         slider.on('thumb-change', sliderChange);
         slider.on('thumb-drag', sliderChange);
 
+        // find the layer type (i.e., Samples, VSP, AOI, etc.)
+        let subtitle = '';
+        const legendItems: LegendRowType[] = [];
+        const layer = (window as any).totsLayers?.find(
+          (layer: LayerType) => layer.layerId === item?.layer?.id,
+        );
+
+        const defaultSymbols: DefaultSymbolsType = (window as any)
+          .totsDefaultSymbols;
+
+        // build the data for building the legend
+        if (
+          layer?.layerType === 'Area of Interest' ||
+          layer?.layerType === 'Sampling Mask'
+        ) {
+          legendItems.push({
+            value: 'Area of Interest',
+            title: 'Area of Interest',
+            symbol: defaultSymbols.symbols['Area of Interest'],
+          });
+        }
+        if (layer?.layerType === 'Contamination Map') {
+          legendItems.push({
+            value: 'Contamination Map',
+            title: 'Contamination Map',
+            symbol: defaultSymbols.symbols['Contamination Map'],
+          });
+        }
+        if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
+          subtitle = 'Sample Type';
+
+          (window as any).totsAllSampleOptions?.forEach(
+            (option: SampleSelectType) => {
+              if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
+                legendItems.push({
+                  value: option.value,
+                  title: option.label,
+                  symbol: defaultSymbols.symbols[option.value],
+                });
+              } else {
+                legendItems.push({
+                  value: 'Samples',
+                  title: option.label,
+                  symbol: defaultSymbols.symbols['Samples'],
+                });
+              }
+            },
+          );
+        }
+
+        // sort the legend items
+        legendItems.sort((a, b) => a.title.localeCompare(b.title));
+
         const container = document.createElement('div');
         container.append(slider.domNode);
-
-        // item is a sub layer, just add the legend
-        if (item.parent) {
-          if (item.layer.type === 'graphics') {
-            const legendContainer = document.createElement('div');
-            const content = (
-              <div className="esri-legend esri-widget--panel esri-widget">
-                <div className="esri-legend__layer">
-                  <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
-                    <div className="esri-legend__layer-body">
-                      <div className="esri-legend__layer-row">
+        const content = (
+          <div className="esri-legend esri-widget--panel esri-widget">
+            <div className="esri-legend__layer">
+              <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+                {subtitle && (
+                  <div className="esri-legend__layer-caption">{subtitle}</div>
+                )}
+                <div className="esri-legend__layer-body">
+                  {legendItems.map((row, index) => {
+                    return (
+                      <div key={index} className="esri-legend__layer-row">
                         <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
                           <div className="esri-legend__symbol">
                             <div css={graphicsIconStyles}>
@@ -310,10 +384,10 @@ function Toolbar() {
                                 <defs></defs>
                                 <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
                                   <path
-                                    fill={`rgba(${polygonSymbol.color.toString()})`}
+                                    fill={`rgba(${row.symbol.color.toString()})`}
                                     fillRule="evenodd"
-                                    stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
-                                    strokeWidth={polygonSymbol.outline.width}
+                                    stroke={`rgba(${row.symbol.outline.color.toString()})`}
+                                    strokeWidth={row.symbol.outline.width}
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeDasharray="none"
@@ -325,13 +399,22 @@ function Toolbar() {
                             </div>
                           </div>
                         </div>
-                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info"></div>
+                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
+                          {row.title}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
+            </div>
+          </div>
+        );
+
+        // item is a sub layer, just add the legend
+        if (item.parent) {
+          if (item.layer.type === 'graphics') {
+            const legendContainer = document.createElement('div');
             ReactDOM.render(content, legendContainer);
             container.append(legendContainer);
 
@@ -352,45 +435,6 @@ function Toolbar() {
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
           const legendContainer = document.createElement('div');
-          const content = (
-            <div className="esri-legend esri-widget--panel esri-widget">
-              <div className="esri-legend__layer">
-                <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
-                  <div className="esri-legend__layer-body">
-                    <div className="esri-legend__layer-row">
-                      <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
-                        <div className="esri-legend__symbol">
-                          <div css={graphicsIconStyles}>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="22"
-                              height="22"
-                            >
-                              <defs></defs>
-                              <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
-                                <path
-                                  fill={`rgba(${polygonSymbol.color.toString()})`}
-                                  fillRule="evenodd"
-                                  stroke={`rgba(${polygonSymbol.outline.color.toString()})`}
-                                  strokeWidth={polygonSymbol.outline.width}
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeDasharray="none"
-                                  strokeMiterlimit="4"
-                                  d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
-                                />
-                              </g>
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="esri-legend__layer-cell esri-legend__layer-cell--info"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
           ReactDOM.render(content, legendContainer);
           container.append(legendContainer);
 
@@ -493,15 +537,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [
-    Collection,
-    LayerList,
-    Legend,
-    Slider,
-    mapView,
-    legendInitialized,
-    polygonSymbol,
-  ]);
+  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {

@@ -1092,8 +1092,8 @@ function useGraphicColor() {
 
   const { setOptions } = React.useContext(DialogContext);
   const {
-    polygonSymbol,
-    setPolygonSymbol,
+    defaultSymbols,
+    setDefaultSymbols,
     setSymbolsInitialized,
   } = React.useContext(SketchContext);
 
@@ -1116,16 +1116,16 @@ function useGraphicColor() {
     const polygon = JSON.parse(polygonStr);
 
     // validate the polygon
-    setPolygonSymbol(polygon);
+    setDefaultSymbols(polygon);
     setSymbolsInitialized(true);
-  }, [localPolygonInitialized, setPolygonSymbol, setSymbolsInitialized]);
+  }, [localPolygonInitialized, setDefaultSymbols, setSymbolsInitialized]);
 
   React.useEffect(() => {
     if (!localPolygonInitialized) return;
 
-    const polygonObj = polygonSymbol as object;
+    const polygonObj = defaultSymbols as object;
     writeToStorage(key, polygonObj, setOptions);
-  }, [polygonSymbol, localPolygonInitialized, setOptions]);
+  }, [defaultSymbols, localPolygonInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the training mode selection.
@@ -1170,6 +1170,7 @@ function useEditsLayerStorage() {
     Polygon,
   } = useEsriModulesContext();
   const {
+    defaultSymbols,
     edits,
     setEdits,
     layersInitialized,
@@ -1177,7 +1178,6 @@ function useEditsLayerStorage() {
     layers,
     setLayers,
     map,
-    polygonSymbol,
     symbolsInitialized,
   } = React.useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
@@ -1253,10 +1253,20 @@ function useEditsLayerStorage() {
 
       // add graphics to the map
       displayedFeatures.forEach((graphic) => {
+        let layerType = editsLayer.layerType;
+        if (layerType === 'VSP') layerType = 'Samples';
+        if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+        // set the symbol styles based on sample/layer type
+        let symbol = defaultSymbols.symbols[layerType];
+        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
+          symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+        }
+
         features.push(
           new Graphic({
             attributes: { ...graphic.attributes },
-            symbol: polygonSymbol,
+            symbol,
             geometry: new Polygon({
               spatialReference: {
                 wkid: 3857,
@@ -1330,6 +1340,7 @@ function useEditsLayerStorage() {
     GraphicsLayer,
     GroupLayer,
     Polygon,
+    defaultSymbols,
     setEdits,
     getPopupTemplate,
     setLayers,
@@ -1337,7 +1348,6 @@ function useEditsLayerStorage() {
     layersInitialized,
     setLayersInitialized,
     map,
-    polygonSymbol,
     symbolsInitialized,
   ]);
 
