@@ -13,6 +13,47 @@ type ServiceMetaDataType = {
 };
 
 /**
+ * Returns an environment string to be passed as a parameter
+ * to ESRI web service calls in order to avoid CORS errors.
+ *
+ * @returns envString The environment string to avoid
+ *          CORS errors
+ */
+export function getEnvironmentString() {
+  const envStringMap: any = {
+    localhost: 'onlocalhost',
+    'tots-dev.app.cloud.gov': 'ondev',
+    'tots-stage.app.cloud.gov': 'onstage',
+  };
+  return envStringMap[window.location.hostname];
+}
+
+/**
+ * Returns an environment string query parameter to be passed into
+ * ESRI web service calls in order to avoid CORS errors.
+ *
+ * @returns A string to be used as a parameter to ESRI REST services
+ *          to avoid CORS errors
+ */
+export function getEnvironmentStringParam() {
+  const environmentStr = getEnvironmentString();
+  return environmentStr ? `&${environmentStr}=1` : '';
+}
+
+/**
+ * Appends the environment specific parameter to the provided
+ * parameters, if necessary. This is intended to be used with Esri
+ * web services to avoid CORS issues.
+ *
+ * @param params The web service parameters to append the environment
+ *               variable to
+ */
+export function appendEnvironmentObjectParam(params: any) {
+  const environmentStr = getEnvironmentString();
+  if (environmentStr) params[environmentStr] = 1;
+}
+
+/**
  * Checks if the feature service name is available.
  *
  * @param portal The portal object to check against.
@@ -27,12 +68,14 @@ export function isServiceNameAvailable(
     const tempPortal: any = portal;
 
     // check if the tots feature service already exists
-    const params = {
+    const params: any = {
       f: 'json',
       token: tempPortal.credential.token,
       name: serviceName,
       type: 'Feature Service',
     };
+    appendEnvironmentObjectParam(params);
+
     fetchPost(
       `${portal.restUrl}/portals/${portal.id}/isServiceNameAvailable`,
       params,
@@ -142,7 +185,9 @@ function getFeatureServiceWrapped(
           // Workaround for esri.Portal not having credential
           const tempPortal: any = portal;
           fetchCheck(
-            `${portalService.url}?f=json&token=${tempPortal.credential.token}`,
+            `${portalService.url}?f=json${getEnvironmentStringParam()}&token=${
+              tempPortal.credential.token
+            }`,
           )
             .then((res) => {
               const returnValue = {
@@ -200,6 +245,7 @@ export function createFeatureService(
         },
       },
     };
+    appendEnvironmentObjectParam(data);
 
     // create the feature service
     fetchPost(`${portal.user.userContentUrl}/createService`, data)
@@ -218,6 +264,8 @@ export function createFeatureService(
           // just being a reference layer.
           categories: 'contains-epa-tots-sample-layer',
         };
+        appendEnvironmentObjectParam(indata);
+
         fetchPost(
           `${portal.user.userContentUrl}/items/${res.itemId}/update`,
           indata,
@@ -242,7 +290,9 @@ export function createFeatureService(
  */
 export function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
-    fetchCheck(`${serviceUrl}?f=json&token=${token}`)
+    fetchCheck(
+      `${serviceUrl}?f=json&${getEnvironmentStringParam()}=1&token=${token}`,
+    )
       .then((res: any) => {
         if (res) resolve(res.layers);
         else resolve([]);
@@ -261,7 +311,9 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
  */
 export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
-    fetchCheck(`${serviceUrl}/${id}?f=json&token=${token}`)
+    fetchCheck(
+      `${serviceUrl}/${id}?f=json&${getEnvironmentStringParam()}=1&token=${token}`,
+    )
       .then((layer: any) => {
         resolve(layer);
       })
@@ -350,6 +402,7 @@ export function createFeatureLayers(
         layers: layersParams,
       },
     };
+    appendEnvironmentObjectParam(data);
 
     if (layersParams.length === 0) {
       resolve({
@@ -394,6 +447,7 @@ export function deleteFeatureLayer(
         layers: [{ id: id.toString() }],
       },
     };
+    appendEnvironmentObjectParam(data);
 
     // inject /admin into rest/services to be able to call
     const adminServiceUrl = servicUrl.replace(
@@ -425,6 +479,7 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
       returnIdsOnly: true,
       returnGeometry: false,
     };
+    appendEnvironmentObjectParam(query);
 
     fetchPost(`${serviceUrl}/query`, query)
       .then((objectIds: any) => {
@@ -448,6 +503,8 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
             outFields: '*',
             returnGeometry: true,
           };
+          appendEnvironmentObjectParam(data);
+
           const request = fetchPost(`${serviceUrl}/query`, data);
           requests.push(request);
         });
@@ -526,6 +583,8 @@ export function applyEdits({
       honorSequenceOfEdits: true,
       useGlobalIds: true,
     };
+    appendEnvironmentObjectParam(data);
+
     fetchPost(`${serviceUrl}/applyEdits`, data)
       .then((res) => resolve(res))
       .catch((err) => reject(err));

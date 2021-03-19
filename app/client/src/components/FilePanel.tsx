@@ -19,6 +19,7 @@ import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
+import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -438,6 +439,7 @@ function FilePanel() {
       fileType: file.file.esriFileType,
       analyzeParameters: analyzeParams,
     };
+    appendEnvironmentObjectParam(params);
 
     const analyzeUrl = `${sharingUrl}/content/features/analyze`;
     fetchPostFile(analyzeUrl, params, file.file)
@@ -532,6 +534,8 @@ function FilePanel() {
       filetype: fileTypeToSend,
       publishParameters,
     };
+    appendEnvironmentObjectParam(params);
+
     fetchPostFile(generateUrl, params, file.file)
       .then((res: any) => {
         if (res.error) {
@@ -614,6 +618,8 @@ function FilePanel() {
                 Sample_Type: sampleType.value,
                 Sample_Type_Parameters: sampleTypeFeatureSet,
               };
+              appendEnvironmentObjectParam(params);
+
               const request = geoprocessorFetch({
                 Geoprocessor,
                 url: `${services.data.totsGPServer}/VSP%20Import`,
@@ -1124,6 +1130,8 @@ function FilePanel() {
         folders: '',
         outSR: mapView.spatialReference,
       };
+      appendEnvironmentObjectParam(params);
+
       fetchPost(kmlUrl, params)
         .then((res: any) => {
           setGenerateResponse(res);
