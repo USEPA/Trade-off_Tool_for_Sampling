@@ -22,6 +22,7 @@ export type AttributeItems = {
   OBJECTID: string | null;
   PERMANENT_IDENTIFIER: string | null;
   GLOBALID: string | null;
+  TYPEUUID: string | null;
   TYPE: string;
   ShapeType: string;
   SA: number | null;

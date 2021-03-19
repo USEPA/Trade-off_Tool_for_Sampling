@@ -54,6 +54,17 @@ export const defaultLayerProps = {
       defaultValue: 'NEWID() WITH VALUES',
     },
     {
+      name: 'TYPEUUID',
+      type: 'esriFieldTypeString',
+      alias: 'TYPEUUID',
+      sqlType: 'sqlTypeNVarchar',
+      length: 255,
+      nullable: true,
+      editable: true,
+      domain: null,
+      defaultValue: '',
+    },
+    {
       name: 'TYPE',
       type: 'esriFieldTypeString',
       actualType: 'nvarchar',

@@ -399,14 +399,16 @@ export function useGeometryTools() {
         if (
           sampleTypeContext.status === 'success' &&
           sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-            graphic.attributes.TYPE,
+            graphic.attributes.TYPEUUID,
           )
         ) {
           performAreaToleranceCheck();
 
           // check sample attributes against predefined attributes
           const predefinedAttributes: any =
-            sampleTypeContext.data.sampleAttributes[graphic.attributes.TYPE];
+            sampleTypeContext.data.sampleAttributes[
+              graphic.attributes.TYPEUUID
+            ];
           Object.keys(predefinedAttributes).forEach((key) => {
             if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
             if (
@@ -1259,8 +1261,10 @@ function useEditsLayerStorage() {
 
         // set the symbol styles based on sample/layer type
         let symbol = defaultSymbols.symbols[layerType];
-        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
-          symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+        if (
+          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+        ) {
+          symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         }
 
         features.push(

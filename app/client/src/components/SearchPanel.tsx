@@ -863,12 +863,14 @@ function ResultCard({ result }: ResultCardProps) {
 
                   tempLayer.graphics.forEach((graphic) => {
                     if (
-                      !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                      !sampleAttributes.hasOwnProperty(
+                        graphic.attributes.TYPEUUID,
+                      )
                     )
                       return;
 
                     const predefinedAttributes: any =
-                      sampleAttributes[graphic.attributes.TYPE];
+                      sampleAttributes[graphic.attributes.TYPEUUID];
                     Object.keys(predefinedAttributes).forEach((key) => {
                       if (
                         !sampleTypeContext.data.attributesToCheck.includes(key)
@@ -887,8 +889,8 @@ function ResultCard({ result }: ResultCardProps) {
                 setUserDefinedAttributes((item) => {
                   Object.keys(newAttributes).forEach((key) => {
                     const attributes = newAttributes[key];
-                    sampleAttributes[attributes.TYPE as any] = attributes;
-                    item.attributes[attributes.TYPE] = attributes;
+                    sampleAttributes[attributes.TYPEUUID as any] = attributes;
+                    item.attributes[attributes.TYPEUUID as any] = attributes;
                   });
 
                   return {
@@ -961,27 +963,30 @@ function ResultCard({ result }: ResultCardProps) {
                   graphic.symbol = defaultSymbols.symbols['Samples'];
                   if (
                     defaultSymbols.symbols.hasOwnProperty(
-                      feature.attributes.TYPE,
+                      feature.attributes.TYPEUUID,
                     )
                   ) {
                     graphic.symbol =
-                      defaultSymbols.symbols[feature.attributes.TYPE];
+                      defaultSymbols.symbols[feature.attributes.TYPEUUID];
                   }
 
                   // Add the user defined type if it does not exist
                   if (
-                    !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                    !sampleAttributes.hasOwnProperty(
+                      graphic.attributes.TYPEUUID,
+                    )
                   ) {
                     const attributes = graphic.attributes;
                     newUserSampleTypes.push({
-                      value: attributes.TYPE,
+                      value: attributes.TYPEUUID,
                       label: attributes.TYPE,
                       isPredefined: false,
                     });
-                    newAttributes[attributes.TYPE] = {
+                    newAttributes[attributes.TYPEUUID] = {
                       OBJECTID: '-1',
                       PERMANENT_IDENTIFIER: null,
                       GLOBALID: null,
+                      TYPEUUID: attributes.TYPEUUID,
                       TYPE: attributes.TYPE,
                       ShapeType: attributes.ShapeType,
                       TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,

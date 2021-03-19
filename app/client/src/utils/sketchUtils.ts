@@ -482,8 +482,10 @@ export function updatePolygonSymbol(
 
       // set the symbol based on sample/layer type
       graphic.symbol = defaultSymbols.symbols[layerType] as any;
-      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
-        graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+        graphic.symbol = defaultSymbols.symbols[
+          graphic.attributes.TYPEUUID
+        ] as any;
       }
     });
   });
