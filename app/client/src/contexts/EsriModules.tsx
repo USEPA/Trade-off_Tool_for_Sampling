@@ -4,6 +4,8 @@ import { loadModules } from 'esri-loader';
 import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
 import { useServicesContext } from 'contexts/LookupFiles';
+// utils
+import { getEnvironmentString } from 'utils/arcGisRestUtils';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriConstructors = [
@@ -282,15 +284,8 @@ function EsriModulesProvider({ children }: Props) {
           // Workaround for ESRI CORS cacheing issue, when switching between
           // environments.
           before: function (params) {
-            // map the environment to a phony variable
-            const envStringMap: any = {
-              localhost: 'onlocalhost',
-              'tots-dev.app.cloud.gov': 'ondev',
-              'tots-stage.app.cloud.gov': 'onstage',
-            };
-
             // if this environment has a phony variable use it
-            const envString = envStringMap[window.location.hostname];
+            const envString = getEnvironmentString();
             if (envString) {
               params.requestOptions.query[envString] = 1;
             }

@@ -34,6 +34,7 @@ import {
   webServiceErrorMessage,
 } from 'config/errorMessages';
 // utils
+import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   findLayerInEdits,
@@ -645,6 +646,8 @@ function LocateSamples() {
             Area_of_Interest_Mask: featureSet.toJSON(),
             Sample_Type_Parameters: sampleTypeFeatureSet,
           };
+          appendEnvironmentObjectParam(props);
+
           const request = geoprocessorFetch({
             Geoprocessor,
             url: `${services.data.totsGPServer}/Generate%20Random`,

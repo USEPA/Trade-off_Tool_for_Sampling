@@ -10,6 +10,7 @@ import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
+import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
 import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
 // types
@@ -254,7 +255,9 @@ function Toolbar() {
 
     const tempPortal: any = portal;
     fetchCheck(
-      `${tempPortal.user.url}?f=json&token=${tempPortal.credential.token}`,
+      `${tempPortal.user.url}?f=json${getEnvironmentStringParam()}&token=${
+        tempPortal.credential.token
+      }`,
     )
       .then((res) => {
         setUserInfo(res);
