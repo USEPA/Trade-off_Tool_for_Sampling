@@ -21,6 +21,7 @@ import {
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   deepCopyObject,
+  generateUUID,
   getNextScenarioLayer,
   getSimplePopupTemplate,
   updateLayerEdits,
@@ -773,6 +774,7 @@ function ResultCard({ result }: ResultCardProps) {
     setSelectedScenario,
     setSketchLayer,
     setUserDefinedOptions,
+    userDefinedAttributes,
     setUserDefinedAttributes,
   } = React.useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
@@ -960,14 +962,59 @@ function ResultCard({ result }: ResultCardProps) {
                     wkid: 3857,
                   };
                   graphic.popupTemplate = popupTemplate;
-                  graphic.symbol = defaultSymbols.symbols['Samples'];
-                  if (
-                    defaultSymbols.symbols.hasOwnProperty(
-                      feature.attributes.TYPEUUID,
-                    )
-                  ) {
-                    graphic.symbol =
-                      defaultSymbols.symbols[feature.attributes.TYPEUUID];
+
+                  // get the type uuid or generate it if necessary
+                  const attributes = graphic.attributes;
+                  let typeUuid = attributes.TYPEUUID;
+                  if (!typeUuid) {
+                    const keysToCheck = [
+                      'TYPE',
+                      'ShapeType',
+                      'TTPK',
+                      'TTC',
+                      'TTA',
+                      'TTPS',
+                      'LOD_P',
+                      'LOD_NON',
+                      'MCPS',
+                      'TCPS',
+                      'WVPS',
+                      'WWPS',
+                      'SA',
+                      'ALC',
+                      'AMC',
+                    ];
+                    // check if the udt has already been added
+                    Object.values(userDefinedAttributes.attributes).forEach(
+                      (udt: any) => {
+                        const tempUdt: any = {};
+                        const tempAtt: any = {};
+                        keysToCheck.forEach((key) => {
+                          tempUdt[key] = udt[key];
+                          tempAtt[key] = attributes[key];
+                        });
+
+                        if (
+                          JSON.stringify(tempUdt) === JSON.stringify(tempAtt)
+                        ) {
+                          typeUuid = udt.TYPEUUID;
+                        }
+                      },
+                    );
+
+                    if (!typeUuid) {
+                      if (
+                        sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+                          attributes.TYPE,
+                        )
+                      ) {
+                        typeUuid = attributes.TYPE;
+                      } else {
+                        typeUuid = generateUUID();
+                      }
+                    }
+
+                    graphic.attributes['TYPEUUID'] = typeUuid;
                   }
 
                   // Add the user defined type if it does not exist
@@ -976,9 +1023,8 @@ function ResultCard({ result }: ResultCardProps) {
                       graphic.attributes.TYPEUUID,
                     )
                   ) {
-                    const attributes = graphic.attributes;
                     newUserSampleTypes.push({
-                      value: attributes.TYPEUUID,
+                      value: typeUuid,
                       label: attributes.TYPE,
                       isPredefined: false,
                     });
@@ -1017,6 +1063,16 @@ function ResultCard({ result }: ResultCardProps) {
                       DECISIONUNIT: null,
                       DECISIONUNITSORT: null,
                     };
+                  }
+
+                  graphic.symbol = defaultSymbols.symbols['Samples'];
+                  if (
+                    defaultSymbols.symbols.hasOwnProperty(
+                      feature.attributes.TYPEUUID,
+                    )
+                  ) {
+                    graphic.symbol =
+                      defaultSymbols.symbols[feature.attributes.TYPEUUID];
                   }
 
                   zoomToGraphics.push(graphic);
