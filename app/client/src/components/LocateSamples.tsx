@@ -24,7 +24,11 @@ import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import { SampleSelectType, PolygonSymbol } from 'config/sampleAttributes';
+import {
+  AttributeItems,
+  SampleSelectType,
+  PolygonSymbol,
+} from 'config/sampleAttributes';
 import {
   cantUseWithVspMessage,
   featureNotAvailableMessage,
@@ -1750,7 +1754,7 @@ function LocateSamples() {
 
                               const shapeType =
                                 sampleAttributes[sampleTypeUuid].ShapeType;
-                              const edited = userDefinedAttributes.attributes.hasOwnProperty(
+                              const edited = userDefinedAttributes.sampleTypes.hasOwnProperty(
                                 sampleTypeUuid,
                               );
                               return (
@@ -2054,10 +2058,9 @@ function LocateSamples() {
                                           const newUserDefined = {
                                             ...userDefined,
                                           };
-                                          delete newUserDefined.attributes[
+                                          newUserDefined.sampleTypes[
                                             sampleTypeUuid
-                                          ];
-                                          newUserDefined.editCount += 1;
+                                          ].status = 'delete';
                                           return newUserDefined;
                                         },
                                       );
@@ -2490,7 +2493,7 @@ function LocateSamples() {
                                 }
 
                                 // update the sample attributes
-                                const newAttributes = {
+                                const newAttributes: AttributeItems = {
                                   OBJECTID: '-1',
                                   PERMANENT_IDENTIFIER: null,
                                   GLOBALID: null,
@@ -2523,17 +2526,53 @@ function LocateSamples() {
                                   DECISIONUNIT: null,
                                   DECISIONUNITSORT: null,
                                 };
+                                if (
+                                  userDefinedAttributes.sampleTypes.hasOwnProperty(
+                                    typeUuid,
+                                  )
+                                ) {
+                                  const sampleType =
+                                    userDefinedAttributes.sampleTypes[typeUuid]
+                                      .attributes;
+                                  if (sampleType.OBJECTID)
+                                    newAttributes.OBJECTID =
+                                      sampleType.OBJECTID;
+                                  if (sampleType.GLOBALID)
+                                    newAttributes.GLOBALID =
+                                      sampleType.GLOBALID;
+                                }
 
                                 // add/update the sample's attributes
                                 sampleAttributes[
                                   typeUuid as any
                                 ] = newAttributes;
                                 setUserDefinedAttributes((item) => {
-                                  item.attributes[typeUuid] = newAttributes;
+                                  let status:
+                                    | 'add'
+                                    | 'edit'
+                                    | 'delete'
+                                    | 'published' = 'add';
+                                  if (
+                                    item.sampleTypes[typeUuid]?.status ===
+                                    'published'
+                                  ) {
+                                    status = 'edit';
+                                  }
+                                  if (
+                                    item.sampleTypes[typeUuid]?.status ===
+                                    'delete'
+                                  ) {
+                                    status = 'delete';
+                                  }
+
+                                  item.sampleTypes[typeUuid] = {
+                                    status,
+                                    attributes: newAttributes,
+                                  };
 
                                   return {
                                     editCount: item.editCount + 1,
-                                    attributes: item.attributes,
+                                    sampleTypes: item.sampleTypes,
                                   };
                                 });
 

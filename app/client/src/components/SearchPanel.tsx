@@ -891,13 +891,16 @@ function ResultCard({ result }: ResultCardProps) {
                 setUserDefinedAttributes((item) => {
                   Object.keys(newAttributes).forEach((key) => {
                     const attributes = newAttributes[key];
-                    sampleAttributes[attributes.TYPEUUID as any] = attributes;
-                    item.attributes[attributes.TYPEUUID as any] = attributes;
+                    sampleAttributes[attributes.attributes.TYPEUUID as any] =
+                      attributes.attributes;
+                    item.sampleTypes[
+                      attributes.attributes.TYPEUUID as any
+                    ] = attributes;
                   });
 
                   return {
                     editCount: item.editCount + 1,
-                    attributes: item.attributes,
+                    sampleTypes: item.sampleTypes,
                   };
                 });
 
@@ -985,7 +988,7 @@ function ResultCard({ result }: ResultCardProps) {
                       'AMC',
                     ];
                     // check if the udt has already been added
-                    Object.values(userDefinedAttributes.attributes).forEach(
+                    Object.values(userDefinedAttributes.sampleTypes).forEach(
                       (udt: any) => {
                         const tempUdt: any = {};
                         const tempAtt: any = {};
@@ -1029,39 +1032,46 @@ function ResultCard({ result }: ResultCardProps) {
                       isPredefined: false,
                     });
                     newAttributes[attributes.TYPEUUID] = {
-                      OBJECTID: '-1',
-                      PERMANENT_IDENTIFIER: null,
-                      GLOBALID: null,
-                      TYPEUUID: attributes.TYPEUUID,
-                      TYPE: attributes.TYPE,
-                      ShapeType: attributes.ShapeType,
-                      TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
-                      TTC: attributes.TTC ? Number(attributes.TTC) : null,
-                      TTA: attributes.TTA ? Number(attributes.TTA) : null,
-                      TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
-                      LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
-                      LOD_NON: attributes.LOD_NON
-                        ? Number(attributes.LOD_NON)
-                        : null,
-                      MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
-                      TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
-                      WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
-                      WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
-                      SA: attributes.SA ? Number(attributes.SA) : null,
-                      AA: null,
-                      ALC: attributes.ALC ? Number(attributes.ALC) : null,
-                      AMC: attributes.AMC ? Number(attributes.AMC) : null,
-                      Notes: '',
-                      CONTAMTYPE: null,
-                      CONTAMVAL: null,
-                      CONTAMUNIT: null,
-                      CREATEDDATE: null,
-                      UPDATEDDATE: null,
-                      USERNAME: null,
-                      ORGANIZATION: null,
-                      DECISIONUNITUUID: null,
-                      DECISIONUNIT: null,
-                      DECISIONUNITSORT: null,
+                      status: newAttributes[attributes.TYPEUUID]?.status
+                        ? newAttributes[attributes.TYPEUUID].status
+                        : 'add',
+                      attributes: {
+                        OBJECTID: '-1',
+                        PERMANENT_IDENTIFIER: null,
+                        GLOBALID: null,
+                        TYPEUUID: attributes.TYPEUUID,
+                        TYPE: attributes.TYPE,
+                        ShapeType: attributes.ShapeType,
+                        TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                        TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                        TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                        TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                        LOD_P: attributes.LOD_P
+                          ? Number(attributes.LOD_P)
+                          : null,
+                        LOD_NON: attributes.LOD_NON
+                          ? Number(attributes.LOD_NON)
+                          : null,
+                        MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                        TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                        WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                        WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                        SA: attributes.SA ? Number(attributes.SA) : null,
+                        AA: null,
+                        ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                        AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                        Notes: '',
+                        CONTAMTYPE: null,
+                        CONTAMVAL: null,
+                        CONTAMUNIT: null,
+                        CREATEDDATE: null,
+                        UPDATEDDATE: null,
+                        USERNAME: null,
+                        ORGANIZATION: null,
+                        DECISIONUNITUUID: null,
+                        DECISIONUNIT: null,
+                        DECISIONUNITSORT: null,
+                      },
                     };
                   }
 

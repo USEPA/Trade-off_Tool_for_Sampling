@@ -143,7 +143,7 @@ export function useStartOver() {
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
-    setUserDefinedAttributes({ editCount: 0, attributes: {} });
+    setUserDefinedAttributes({ editCount: 0, sampleTypes: {} });
     setUserDefinedOptions([]);
 
     // clear navigation
@@ -2157,8 +2157,9 @@ function useUserDefinedSampleAttributesStorage() {
       newSampleAttributes = { ...sampleTypeContext.data.sampleAttributes };
     }
 
-    Object.keys(userDefinedAttributes.attributes).forEach((key) => {
-      newSampleAttributes[key] = userDefinedAttributes.attributes[key];
+    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
+      newSampleAttributes[key] =
+        userDefinedAttributes.sampleTypes[key].attributes;
     });
 
     setSampleAttributes(newSampleAttributes);

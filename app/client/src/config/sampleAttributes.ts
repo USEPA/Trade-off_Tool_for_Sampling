@@ -53,7 +53,10 @@ export type AttributeItems = {
 };
 
 export type Attributes = {
-  [key: string]: AttributeItems;
+  [key: string]: {
+    attributes: AttributeItems;
+    status: 'add' | 'edit' | 'delete' | 'published';
+  };
 };
 
 export type UserDefinedConfig = {
@@ -65,7 +68,7 @@ export type UserDefinedConfig = {
 
 export type UserDefinedAttributes = {
   editCount: number;
-  attributes: Attributes;
+  sampleTypes: Attributes;
 };
 
 export type SampleIssues = {

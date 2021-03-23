@@ -132,7 +132,7 @@ export const SketchContext = React.createContext<SketchType>({
   getGpMaxRecordCount: null,
   userDefinedOptions: [],
   setUserDefinedOptions: () => {},
-  userDefinedAttributes: { editCount: 0, attributes: {} },
+  userDefinedAttributes: { editCount: 0, sampleTypes: {} },
   setUserDefinedAttributes: () => {},
   sampleAttributes: [],
   setSampleAttributes: () => {},
@@ -204,7 +204,7 @@ export function SketchProvider({ children }: Props) {
   >([]);
   const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
     UserDefinedAttributes
-  >({ editCount: 0, attributes: {} });
+  >({ editCount: 0, sampleTypes: {} });
   const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
   const [allSampleOptions, setAllSampleOptions] = React.useState<
     SampleSelectType[]
@@ -242,7 +242,7 @@ export function SketchProvider({ children }: Props) {
     sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
       allSampleOptions.push({
         value: option.value,
-        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+        label: userDefinedAttributes.sampleTypes.hasOwnProperty(option.value)
           ? `${option.value} (edited)`
           : option.label,
         isPredefined: option.isPredefined,

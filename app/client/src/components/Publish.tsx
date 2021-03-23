@@ -13,7 +13,11 @@ import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
-import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
+import {
+  isServiceNameAvailable,
+  publish,
+  publishTable,
+} from 'utils/arcGisRestUtils';
 import { findLayerInEdits } from 'utils/sketchUtils';
 // types
 import {
@@ -92,7 +96,13 @@ function Publish() {
     setLayers,
     sketchLayer,
     selectedScenario,
+    userDefinedAttributes,
+    setUserDefinedAttributes,
   } = React.useContext(SketchContext);
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// START - Publish Layers ///////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
 
   // Checks browser storage to determine if the user clicked publish and logged in.
   const [publishButtonClicked, setPublishButtonClicked] = React.useState(false);
@@ -609,6 +619,259 @@ function Publish() {
     selectedScenario,
   ]);
 
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// END - Publish Layers /////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// START - Publish Sample Types /////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  // Checks browser storage to determine if the user clicked publish and logged in.
+  const [
+    publishSamplesButtonClicked,
+    setPublishSamplesButtonClicked,
+  ] = React.useState(false);
+  const [
+    continueSamplesInitialized,
+    setContinueSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (continueSamplesInitialized) return;
+
+    // continue publish is not true, exit early
+    if (!goToOptions?.continueSamplesPublish) {
+      setContinueSamplesInitialized(true);
+      return;
+    }
+
+    // wait until TOTS is signed in before trying to continue the publish
+    if (!portal || !signedIn) return;
+
+    // continue with publishing
+    setPublishSamplesButtonClicked(true);
+    setGoToOptions({ continueSamplesPublish: false });
+    setContinueSamplesInitialized(true);
+  }, [
+    portal,
+    signedIn,
+    goToOptions,
+    setGoToOptions,
+    continueSamplesInitialized,
+  ]);
+
+  // Sign in if necessary
+  React.useEffect(() => {
+    if (!oAuthInfo || !publishSamplesButtonClicked) return;
+
+    // have the user login if necessary
+    if (!portal || !signedIn) {
+      setGoToOptions({ continueSamplesPublish: true });
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+    }
+  }, [
+    IdentityManager,
+    setGoToOptions,
+    portal,
+    signedIn,
+    oAuthInfo,
+    publishSamplesButtonClicked,
+  ]);
+
+  // Run the publish
+  const [publishSamplesResponse, setPublishSamplesResponse] = React.useState<
+    PublishType
+  >({
+    status: 'none',
+    summary: { success: '', failed: '' },
+    rawData: null,
+  });
+  React.useEffect(() => {
+    if (!oAuthInfo || !portal || !signedIn) return;
+    if (
+      Object.keys(userDefinedAttributes.sampleTypes).length === 0 ||
+      !publishSamplesButtonClicked
+    ) {
+      return;
+    }
+
+    setPublishSamplesButtonClicked(false);
+
+    setPublishSamplesResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
+
+    const changes: {
+      id: number;
+      adds: any[];
+      updates: any[];
+      deletes: any[];
+    } = {
+      id: -1,
+      adds: [],
+      updates: [],
+      deletes: [],
+    };
+
+    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
+      const sampleType = userDefinedAttributes.sampleTypes[key];
+      const item = {
+        attributes: sampleType.attributes,
+      };
+      if (sampleType.status === 'add') changes.adds.push(item);
+      if (sampleType.status === 'edit') changes.updates.push(item);
+      if (sampleType.status === 'delete') changes.deletes.push(item);
+    });
+
+    // exit early if there are no edits
+    if (
+      changes.adds.length === 0 &&
+      changes.updates.length === 0 &&
+      changes.deletes.length === 0
+    ) {
+      setPublishSamplesResponse({
+        status: 'fetch-failure',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+      return;
+    }
+
+    publishTable({
+      portal,
+      changes,
+      serviceMetaData: {
+        name: 'User Defined Samples',
+        description: 'User Defined Samples Description',
+      },
+    })
+      .then((res: any) => {
+        // get totals
+        const totals = {
+          added: 0,
+          updated: 0,
+          deleted: 0,
+          failed: 0,
+        };
+
+        const newUserDefinedAttributes = { ...userDefinedAttributes };
+
+        // need to loop through each array and check the success flag
+        if (res.addResults) {
+          res.addResults.forEach((item: any, index: number) => {
+            item.success ? (totals.added += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.adds[index];
+            const origUdt =
+              newUserDefinedAttributes.sampleTypes[
+                origItem.attributes.TYPEUUID
+              ];
+            if (item.success) {
+              origUdt.status = 'published';
+              origUdt.attributes.GLOBALID = item.globalId;
+              origUdt.attributes.OBJECTID = item.objectId;
+            }
+          });
+        }
+        if (res.updateResults) {
+          res.updateResults.forEach((item: any, index: number) => {
+            item.success ? (totals.updated += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.updates[index];
+            const origUdt =
+              newUserDefinedAttributes.sampleTypes[
+                origItem.attributes.TYPEUUID
+              ];
+            if (item.success) {
+              origUdt.status = 'published';
+              origUdt.attributes.GLOBALID = item.globalId;
+              origUdt.attributes.OBJECTID = item.objectId;
+            }
+          });
+        }
+        if (res.deleteResults) {
+          res.deleteResults.forEach((item: any, index: number) => {
+            item.success ? (totals.deleted += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.deletes[index];
+            delete newUserDefinedAttributes.sampleTypes[
+              origItem.attributes.TYPEUUID
+            ];
+          });
+        }
+
+        // create the message string for each type of change (add, update and delete)
+        const successParts = [];
+        if (totals.added) {
+          successParts.push(`${totals.added} item(s) added`);
+        }
+        if (totals.updated) {
+          successParts.push(`${totals.updated} item(s) updated`);
+        }
+        if (totals.deleted) {
+          successParts.push(`${totals.deleted} item(s) deleted`);
+        }
+
+        // combine the messages
+        let success = '';
+        if (successParts.length === 1) {
+          success = successParts[0];
+        }
+        if (successParts.length > 1) {
+          success =
+            successParts.slice(0, -1).join(', ') +
+            ' and ' +
+            successParts.slice(-1);
+        }
+
+        // create the failed status message
+        const failed = totals.failed
+          ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
+          : '';
+        if (failed) console.error('Some items failed to publish: ', res);
+
+        setPublishSamplesResponse({
+          status: 'success',
+          summary: { success, failed },
+          rawData: res,
+        });
+        setUserDefinedAttributes(newUserDefinedAttributes);
+      })
+      .catch((err) => {
+        console.error('publishTable error', err);
+        setPublishSamplesResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: err,
+        });
+      });
+  }, [
+    GraphicsLayer,
+    IdentityManager,
+    portal,
+    oAuthInfo,
+    setGoToOptions,
+    signedIn,
+    publishSamplesButtonClicked,
+    userDefinedAttributes,
+    setUserDefinedAttributes,
+  ]);
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// END - Publish Sample Types ///////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  // determine if any user defined sample types were edited
+  let hasSampleTypeEdits = false;
+  Object.values(userDefinedAttributes.sampleTypes).forEach((sampleType) => {
+    if (sampleType.status !== 'published') hasSampleTypeEdits = true;
+  });
+
   return (
     <div css={panelContainer}>
       <h2>Publish Plan</h2>
@@ -709,6 +972,31 @@ function Publish() {
               onClick={() => setPublishButtonClicked(true)}
             >
               Publish
+            </button>
+          </div>
+        )}
+
+      {publishSamplesResponse.status === 'fetching' && <LoadingSpinner />}
+      {publishSamplesResponse.status === 'fetch-failure' &&
+        webServiceErrorMessage}
+      {publishSamplesResponse.status === 'success' &&
+        publishSamplesResponse.summary.failed && (
+          <MessageBox
+            severity="error"
+            title="Some item(s) failed to publish"
+            message={publishSamplesResponse.summary.failed}
+          />
+        )}
+      {publishSamplesResponse.summary.success && pulblishSuccessMessage}
+      {!signedIn && notLoggedInMessage}
+      {publishSamplesResponse.status !== 'name-not-available' &&
+        hasSampleTypeEdits && (
+          <div css={publishButtonContainerStyles}>
+            <button
+              css={publishButtonStyles}
+              onClick={() => setPublishSamplesButtonClicked(true)}
+            >
+              Publish User Defined Sample Types
             </button>
           </div>
         )}
