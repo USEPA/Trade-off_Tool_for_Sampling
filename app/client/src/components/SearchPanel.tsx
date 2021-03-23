@@ -17,6 +17,7 @@ import {
   getAllFeatures,
   getFeatureLayer,
   getFeatureLayers,
+  getFeatureTables,
 } from 'utils/arcGisRestUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -1285,6 +1286,190 @@ function ResultCard({ result }: ResultCardProps) {
   }
 
   /**
+   * Adds user defined sample types that were published through TOTS.
+   */
+  function addTotsSampleType() {
+    if (!portal) return;
+    if (sampleTypeContext.status === 'failure') {
+      setStatus('error');
+      return;
+    }
+
+    setStatus('loading');
+
+    const tempPortal = portal as any;
+    const token = tempPortal.credential.token;
+
+    // get the list of feature layers in this feature server
+    getFeatureTables(result.url, token)
+      .then((res: any) => {
+        // fire off requests to get the details and features for each layer
+        const layerPromises: Promise<any>[] = [];
+        res.forEach((layer: any) => {
+          // get the layer features promise
+          const featuresCall = getAllFeatures(
+            portal,
+            result.url + '/' + layer.id,
+          );
+          layerPromises.push(featuresCall);
+        });
+
+        // wait for all of the promises to resolve
+        Promise.all(layerPromises)
+          .then((responses) => {
+            // define items used for updating states
+            const newAttributes: Attributes = {};
+            const newUserSampleTypes: SampleSelectType[] = [];
+
+            // create the user defined sample types to be added to TOTS
+            responses.forEach((layerFeatures) => {
+              // get the graphics from the layer
+              layerFeatures.features.forEach((feature: any) => {
+                const graphic: any = Graphic.fromJSON(feature);
+
+                // get the type uuid or generate it if necessary
+                const attributes = graphic.attributes;
+                let typeUuid = attributes.TYPEUUID;
+                if (!typeUuid) {
+                  const keysToCheck = [
+                    'TYPE',
+                    'ShapeType',
+                    'TTPK',
+                    'TTC',
+                    'TTA',
+                    'TTPS',
+                    'LOD_P',
+                    'LOD_NON',
+                    'MCPS',
+                    'TCPS',
+                    'WVPS',
+                    'WWPS',
+                    'SA',
+                    'ALC',
+                    'AMC',
+                  ];
+                  // check if the udt has already been added
+                  Object.values(userDefinedAttributes.sampleTypes).forEach(
+                    (udt: any) => {
+                      const tempUdt: any = {};
+                      const tempAtt: any = {};
+                      keysToCheck.forEach((key) => {
+                        tempUdt[key] = udt[key];
+                        tempAtt[key] = attributes[key];
+                      });
+
+                      if (JSON.stringify(tempUdt) === JSON.stringify(tempAtt)) {
+                        typeUuid = udt.TYPEUUID;
+                      }
+                    },
+                  );
+
+                  if (!typeUuid) {
+                    if (
+                      sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+                        attributes.TYPE,
+                      )
+                    ) {
+                      typeUuid = attributes.TYPE;
+                    } else {
+                      typeUuid = generateUUID();
+                    }
+                  }
+
+                  graphic.attributes['TYPEUUID'] = typeUuid;
+                }
+
+                // Add the user defined type if it does not exist
+                if (
+                  !sampleAttributes.hasOwnProperty(graphic.attributes.TYPEUUID)
+                ) {
+                  newUserSampleTypes.push({
+                    value: typeUuid,
+                    label: attributes.TYPE,
+                    isPredefined: false,
+                  });
+                  newAttributes[attributes.TYPEUUID] = {
+                    status: newAttributes[attributes.TYPEUUID]?.status
+                      ? newAttributes[attributes.TYPEUUID].status
+                      : 'add',
+                    attributes: {
+                      OBJECTID: '-1',
+                      PERMANENT_IDENTIFIER: null,
+                      GLOBALID: null,
+                      TYPEUUID: attributes.TYPEUUID,
+                      TYPE: attributes.TYPE,
+                      ShapeType: attributes.ShapeType,
+                      TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                      TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                      TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                      TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                      LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
+                      LOD_NON: attributes.LOD_NON
+                        ? Number(attributes.LOD_NON)
+                        : null,
+                      MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                      TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                      WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                      WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                      SA: attributes.SA ? Number(attributes.SA) : null,
+                      AA: null,
+                      ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                      AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                      Notes: '',
+                      CONTAMTYPE: null,
+                      CONTAMVAL: null,
+                      CONTAMUNIT: null,
+                      CREATEDDATE: null,
+                      UPDATEDDATE: null,
+                      USERNAME: null,
+                      ORGANIZATION: null,
+                      DECISIONUNITUUID: null,
+                      DECISIONUNIT: null,
+                      DECISIONUNITSORT: null,
+                    },
+                  };
+                }
+              });
+            });
+
+            // add custom sample types to browser storage
+            if (newUserSampleTypes.length > 0) {
+              setUserDefinedAttributes((item) => {
+                Object.keys(newAttributes).forEach((key) => {
+                  const attributes = newAttributes[key];
+                  sampleAttributes[attributes.attributes.TYPEUUID as any] =
+                    attributes.attributes;
+                  item.sampleTypes[
+                    attributes.attributes.TYPEUUID as any
+                  ] = attributes;
+                });
+
+                return {
+                  editCount: item.editCount + 1,
+                  sampleTypes: item.sampleTypes,
+                };
+              });
+
+              setUserDefinedOptions((options) => {
+                return [...options, ...newUserSampleTypes];
+              });
+            }
+
+            // reset the status
+            setStatus('');
+          })
+          .catch((err) => {
+            console.error(err);
+            setStatus('error');
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        setStatus('error');
+      });
+  }
+
+  /**
    * Adds non-tots layers as reference portal layers.
    */
   function addRefLayer() {
@@ -1472,10 +1657,20 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  categories?.includes('contains-epa-tots-sample-layer') ||
-                  categories?.includes('contains-epa-tots-vsp-layer')
-                    ? addTotsLayer()
-                    : addRefLayer();
+                  if (
+                    categories?.includes('contains-epa-tots-sample-layer') ||
+                    categories?.includes('contains-epa-tots-vsp-layer')
+                  ) {
+                    addTotsLayer();
+                  } else if (
+                    categories?.includes(
+                      'contains-epa-tots-user-defined-sample-types',
+                    )
+                  ) {
+                    addTotsSampleType();
+                  } else {
+                    addRefLayer();
+                  }
                 }}
               >
                 Add

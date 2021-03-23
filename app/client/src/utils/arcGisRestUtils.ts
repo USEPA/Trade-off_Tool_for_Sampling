@@ -297,10 +297,31 @@ export function createFeatureService(
 export function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
     fetchCheck(
-      `${serviceUrl}?f=json&${getEnvironmentStringParam()}=1&token=${token}`,
+      `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
     )
       .then((res: any) => {
         if (res) resolve(res.layers);
+        else resolve([]);
+      })
+      .catch((err) => reject(err));
+  });
+}
+
+/**
+ * Gets all of the feature tables associated with the service
+ *
+ * @param service Object representing the hosted feature service
+ * @param token Security token
+ * @returns A promise that resolves to the layers on the hosted
+ *  feature service
+ */
+export function getFeatureTables(serviceUrl: string, token: string) {
+  return new Promise((resolve, reject) => {
+    fetchCheck(
+      `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
+    )
+      .then((res: any) => {
+        if (res) resolve(res.tables);
         else resolve([]);
       })
       .catch((err) => reject(err));
