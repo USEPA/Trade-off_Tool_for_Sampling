@@ -54,8 +54,9 @@ export type AttributeItems = {
 
 export type Attributes = {
   [key: string]: {
-    attributes: AttributeItems;
     status: 'add' | 'edit' | 'delete' | 'published';
+    serviceId: string;
+    attributes: AttributeItems;
   };
 };
 

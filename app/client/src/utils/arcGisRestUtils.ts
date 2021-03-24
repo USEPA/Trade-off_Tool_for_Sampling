@@ -800,7 +800,12 @@ export function publishTable({
         // publish the edits
         function localApplyEdits() {
           applyEditsTable({ portal, serviceUrl, changes })
-            .then((res) => resolve(res))
+            .then((res) =>
+              resolve({
+                service,
+                edits: res,
+              }),
+            )
             .catch((err) => reject(err));
         }
 

@@ -30,6 +30,7 @@ import {
 import {
   notLoggedInMessage,
   pulblishSuccessMessage,
+  pulblishSamplesSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 import { LayerType } from 'types/Layer';
@@ -759,8 +760,8 @@ function Publish() {
         const newUserDefinedAttributes = { ...userDefinedAttributes };
 
         // need to loop through each array and check the success flag
-        if (res.addResults) {
-          res.addResults.forEach((item: any, index: number) => {
+        if (res.edits.addResults) {
+          res.edits.addResults.forEach((item: any, index: number) => {
             item.success ? (totals.added += 1) : (totals.failed += 1);
 
             // update the edits arrays
@@ -771,13 +772,14 @@ function Publish() {
               ];
             if (item.success) {
               origUdt.status = 'published';
+              origUdt.serviceId = res.service.featureService.serviceItemId;
               origUdt.attributes.GLOBALID = item.globalId;
               origUdt.attributes.OBJECTID = item.objectId;
             }
           });
         }
-        if (res.updateResults) {
-          res.updateResults.forEach((item: any, index: number) => {
+        if (res.edits.updateResults) {
+          res.edits.updateResults.forEach((item: any, index: number) => {
             item.success ? (totals.updated += 1) : (totals.failed += 1);
 
             // update the edits arrays
@@ -788,13 +790,14 @@ function Publish() {
               ];
             if (item.success) {
               origUdt.status = 'published';
+              origUdt.serviceId = res.service.featureService.serviceItemId;
               origUdt.attributes.GLOBALID = item.globalId;
               origUdt.attributes.OBJECTID = item.objectId;
             }
           });
         }
-        if (res.deleteResults) {
-          res.deleteResults.forEach((item: any, index: number) => {
+        if (res.edits.deleteResults) {
+          res.edits.deleteResults.forEach((item: any, index: number) => {
             item.success ? (totals.deleted += 1) : (totals.failed += 1);
 
             // update the edits arrays
@@ -833,12 +836,14 @@ function Publish() {
         const failed = totals.failed
           ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
           : '';
-        if (failed) console.error('Some items failed to publish: ', res);
+        if (failed) console.error('Some items failed to publish: ', res.edits);
 
+        newUserDefinedAttributes.editCount =
+          newUserDefinedAttributes.editCount + 1;
         setPublishSamplesResponse({
           status: 'success',
           summary: { success, failed },
-          rawData: res,
+          rawData: res.edits,
         });
         setUserDefinedAttributes(newUserDefinedAttributes);
       })
@@ -987,7 +992,7 @@ function Publish() {
             message={publishSamplesResponse.summary.failed}
           />
         )}
-      {publishSamplesResponse.summary.success && pulblishSuccessMessage}
+      {publishSamplesResponse.summary.success && pulblishSamplesSuccessMessage}
       {!signedIn && notLoggedInMessage}
       {publishSamplesResponse.status !== 'name-not-available' &&
         hasSampleTypeEdits && (

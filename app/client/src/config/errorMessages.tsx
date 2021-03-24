@@ -283,6 +283,18 @@ export const pulblishSuccessMessage = (
   />
 );
 
+export const pulblishSamplesSuccessMessage = (
+  <MessageBox
+    severity="info"
+    title="Publish Succeeded"
+    message={
+      'To view or share your sample types with others, go to the ' +
+      'My Content menu in the Content section of your ArcGIS ' +
+      'Online organization.'
+    }
+  />
+);
+
 // scenario name / description component messages
 export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox

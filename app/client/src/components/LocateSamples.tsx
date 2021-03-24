@@ -2058,9 +2058,25 @@ function LocateSamples() {
                                           const newUserDefined = {
                                             ...userDefined,
                                           };
-                                          newUserDefined.sampleTypes[
-                                            sampleTypeUuid
-                                          ].status = 'delete';
+
+                                          // mark to delete if this is a published sample type
+                                          // otherwise just remove it
+                                          if (
+                                            newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ].serviceId
+                                          ) {
+                                            newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ].status = 'delete';
+                                          } else {
+                                            delete newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ];
+                                          }
+
+                                          newUserDefined.editCount =
+                                            newUserDefined.editCount + 1;
                                           return newUserDefined;
                                         },
                                       );
@@ -2107,9 +2123,6 @@ function LocateSamples() {
                                       });
 
                                       setEdits(editsCopy);
-
-                                      // TODO: Add code for deleteing the user defined type
-                                      //       from ArcGIS Online.
 
                                       setUserDefinedSampleType(null);
                                     },
@@ -2568,6 +2581,11 @@ function LocateSamples() {
                                   item.sampleTypes[typeUuid] = {
                                     status,
                                     attributes: newAttributes,
+                                    serviceId: item.sampleTypes.hasOwnProperty(
+                                      typeUuid,
+                                    )
+                                      ? item.sampleTypes[typeUuid].serviceId
+                                      : '',
                                   };
 
                                   return {

@@ -750,6 +750,7 @@ function ResultCard({ result }: ResultCardProps) {
   const { trainingMode } = React.useContext(NavigationContext);
   const sampleTypeContext = useSampleTypesContext();
   const {
+    Collection,
     FeatureLayer,
     Field,
     Graphic,
@@ -765,6 +766,7 @@ function ResultCard({ result }: ResultCardProps) {
     defaultSymbols,
     edits,
     setEdits,
+    layers,
     setLayers,
     map,
     mapView,
@@ -774,6 +776,7 @@ function ResultCard({ result }: ResultCardProps) {
     sampleAttributes,
     setSelectedScenario,
     setSketchLayer,
+    userDefinedOptions,
     setUserDefinedOptions,
     userDefinedAttributes,
     setUserDefinedAttributes,
@@ -784,11 +787,17 @@ function ResultCard({ result }: ResultCardProps) {
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = React.useState(false);
   React.useEffect(() => {
-    const added =
+    let added =
       portalLayers.findIndex((portalLayer) => portalLayer.id === result.id) !==
       -1;
+
+    // check if result was added as a user defined sample type
+    Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
+      if (sample.serviceId === result.id) added = true;
+    });
+
     setAdded(added);
-  }, [portalLayers, result]);
+  }, [portalLayers, result, userDefinedAttributes]);
 
   // removes the esri watch handle when the card is removed from the DOM.
   const [status, setStatus] = React.useState('');
@@ -1036,6 +1045,7 @@ function ResultCard({ result }: ResultCardProps) {
                       status: newAttributes[attributes.TYPEUUID]?.status
                         ? newAttributes[attributes.TYPEUUID].status
                         : 'add',
+                      serviceId: '',
                       attributes: {
                         OBJECTID: '-1',
                         PERMANENT_IDENTIFIER: null,
@@ -1392,6 +1402,7 @@ function ResultCard({ result }: ResultCardProps) {
                     status: newAttributes[attributes.TYPEUUID]?.status
                       ? newAttributes[attributes.TYPEUUID].status
                       : 'add',
+                    serviceId: result.id,
                     attributes: {
                       OBJECTID: '-1',
                       PERMANENT_IDENTIFIER: null,
@@ -1604,6 +1615,106 @@ function ResultCard({ result }: ResultCardProps) {
   }
 
   /**
+   * Removes user defined sample types that were published through TOTS.
+   */
+  function removeTotsSampleType() {
+    // Build list of sample types that need to be removed
+    const typesToRemove: string[] = [];
+    Object.values(userDefinedAttributes.sampleTypes).forEach((type) => {
+      if (type.serviceId === result.id && type?.attributes?.TYPEUUID) {
+        typesToRemove.push(type.attributes.TYPEUUID);
+      }
+    });
+
+    type RemovalObject = {
+      layer: LayerType;
+      graphics: __esri.Graphic[];
+    };
+    const removalObject: RemovalObject[] = [];
+
+    // check if any of these sample types have been used
+    layers.forEach((layer) => {
+      if (
+        !['Samples', 'VSP'].includes(layer.layerType) ||
+        layer.sketchLayer.type !== 'graphics'
+      ) {
+        return;
+      }
+
+      const graphicsToRemove: __esri.Graphic[] = [];
+      layer.sketchLayer.graphics.forEach((graphic) => {
+        if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+          graphicsToRemove.push(graphic);
+        }
+      });
+
+      if (graphicsToRemove.length > 0) {
+        removalObject.push({
+          layer: layer,
+          graphics: graphicsToRemove,
+        });
+      }
+    });
+
+    function removeFromUdtOptions() {
+      setUserDefinedOptions(
+        userDefinedOptions.filter(
+          (option) => !typesToRemove.includes(option.value),
+        ),
+      );
+      setUserDefinedAttributes((userDefined) => {
+        const newUserDefined = {
+          ...userDefined,
+        };
+
+        typesToRemove.forEach((typeUuid) => {
+          delete newUserDefined.sampleTypes[typeUuid];
+        });
+        newUserDefined.editCount = newUserDefined.editCount + 1;
+
+        return newUserDefined;
+      });
+    }
+
+    // no related samples have been added, delete the sample
+    // types associated with result.id (i.e. serviceId === result.id)
+    if (removalObject.length === 0) {
+      removeFromUdtOptions();
+      return;
+    }
+
+    // some samples have been placed using these sample types
+    // ask the user if they would like to continue with deleting
+    setOptions({
+      title: 'Would you like to continue?',
+      ariaLabel: 'Would you like to continue?',
+      description:
+        'Samples using one or more of these sample types have been placed on the map. This operation will delete any samples associated with these sample types.',
+      onContinue: () => {
+        // Update the attributes of the graphics on the map on edits
+        let editsCopy: EditsType = edits;
+        removalObject.forEach((object) => {
+          if (object.layer.sketchLayer.type === 'graphics') {
+            object.layer.sketchLayer.removeMany(object.graphics);
+
+            const collection = new Collection<__esri.Graphic>();
+            collection.addMany(object.graphics);
+            editsCopy = updateLayerEdits({
+              edits: editsCopy,
+              layer: object.layer,
+              type: 'delete',
+              changes: collection,
+            });
+          }
+        });
+
+        setEdits(editsCopy);
+        removeFromUdtOptions();
+      },
+    });
+  }
+
+  /**
    * Removes the reference portal layers.
    */
   function removeRefLayer() {
@@ -1628,6 +1739,13 @@ function ResultCard({ result }: ResultCardProps) {
     }
   }
 
+  let type = result.type;
+  if (
+    result?.categories?.includes('contains-epa-tots-user-defined-sample-types')
+  ) {
+    type = 'Sample Types';
+  }
+
   return (
     <div>
       <img
@@ -1637,7 +1755,7 @@ function ResultCard({ result }: ResultCardProps) {
       />
       <h3 css={cardTitleStyles}>{result.title}</h3>
       <span css={cardInfoStyles}>
-        {result.type} by {result.owner}
+        {type} by {result.owner}
       </span>
       <br />
       <div css={cardButtonContainerStyles}>
@@ -1683,10 +1801,20 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  categories?.includes('contains-epa-tots-sample-layer') ||
-                  categories?.includes('contains-epa-tots-vsp-layer')
-                    ? removeTotsLayer()
-                    : removeRefLayer();
+                  if (
+                    categories?.includes('contains-epa-tots-sample-layer') ||
+                    categories?.includes('contains-epa-tots-vsp-layer')
+                  ) {
+                    removeTotsLayer();
+                  } else if (
+                    categories?.includes(
+                      'contains-epa-tots-user-defined-sample-types',
+                    )
+                  ) {
+                    removeTotsSampleType();
+                  } else {
+                    removeRefLayer();
+                  }
                 }}
               >
                 Remove
