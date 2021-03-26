@@ -11,6 +11,7 @@ import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -22,6 +23,7 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
+  ServiceMetaDataType,
 } from 'types/Edits';
 import {
   FieldInfos,
@@ -30,6 +32,7 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
@@ -2224,6 +2227,81 @@ function useTablePanelStorage() {
   }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
 }
 
+// Uses browser storage for holding the currently selected sample layer.
+function usePublishStorage() {
+  const key = 'tots_sample_type_selections';
+  const key2 = 'tots_sample_table_metadata';
+  const key3 = 'tots_publish_samples_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    publishSamplesMode,
+    setPublishSamplesMode,
+    sampleTypeSelections,
+    setSampleTypeSelections,
+    sampleTableMetaData,
+    setSampleTableMetaData,
+  } = React.useContext(PublishContext);
+
+  // Retreives the selected sample layer (sketchLayer) from browser storage
+  // when the app loads
+  const [
+    localSampleTypeInitialized,
+    setLocalSampleTypeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localSampleTypeInitialized) return;
+
+    setLocalSampleTypeInitialized(true);
+
+    // set the selected scenario first
+    const sampleSelectionsStr = readFromStorage(key);
+    if (sampleSelectionsStr) {
+      const sampleSelections = JSON.parse(sampleSelectionsStr);
+      setSampleTypeSelections(sampleSelections as SampleTypeOptions);
+    }
+
+    // set the selected scenario first
+    const sampleMetaDataStr = readFromStorage(key2);
+    if (sampleMetaDataStr) {
+      const sampleMetaData = JSON.parse(sampleMetaDataStr);
+      setSampleTableMetaData(sampleMetaData as ServiceMetaDataType);
+    }
+
+    // set the selected scenario first
+    const publishSamplesMode = readFromStorage(key3);
+    if (publishSamplesMode !== null)
+      setPublishSamplesMode(publishSamplesMode as any);
+  }, [
+    setPublishSamplesMode,
+    setSampleTableMetaData,
+    setSampleTypeSelections,
+    localSampleTypeInitialized,
+  ]);
+
+  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key, sampleTypeSelections, setOptions);
+  }, [sampleTypeSelections, localSampleTypeInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    const data = sampleTableMetaData ? sampleTableMetaData : '';
+    writeToStorage(key2, data, setOptions);
+  }, [sampleTableMetaData, localSampleTypeInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key3, publishSamplesMode, setOptions);
+  }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -2243,4 +2321,5 @@ export function useSessionStorage() {
   useUserDefinedSampleOptionsStorage();
   useUserDefinedSampleAttributesStorage();
   useTablePanelStorage();
+  usePublishStorage();
 }

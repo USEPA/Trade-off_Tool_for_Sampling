@@ -19,6 +19,7 @@ import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
 import { LookupFilesProvider } from 'contexts/LookupFiles';
 import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
+import { PublishProvider } from 'contexts/Publish';
 import { SketchProvider, SketchContext } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
@@ -664,9 +665,11 @@ export default function AppContainer() {
           <AuthenticationProvider>
             <CalculateProvider>
               <NavigationProvider>
-                <SketchProvider>
-                  <App />
-                </SketchProvider>
+                <PublishProvider>
+                  <SketchProvider>
+                    <App />
+                  </SketchProvider>
+                </PublishProvider>
               </NavigationProvider>
             </CalculateProvider>
           </AuthenticationProvider>

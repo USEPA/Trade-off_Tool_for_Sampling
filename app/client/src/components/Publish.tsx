@@ -6,11 +6,13 @@ import { jsx, css } from '@emotion/core';
 import { EditScenario } from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
+import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -26,14 +28,21 @@ import {
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import {
+  featureServiceTakenMessage,
   notLoggedInMessage,
   pulblishSuccessMessage,
   pulblishSamplesSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 import { LayerType } from 'types/Layer';
+
+type FeatureServices = {
+  status: 'fetching' | 'failure' | 'success';
+  data: SelectedService[];
+};
 
 type PublishResults = {
   [key: string]: {
@@ -44,29 +53,6 @@ type PublishResults = {
   };
 };
 
-// --- styles (Publish) ---
-const panelContainer = css`
-  padding: 20px;
-`;
-
-const publishButtonContainerStyles = css`
-  display: flex;
-  justify-content: flex-end;
-`;
-
-const publishButtonStyles = css`
-  margin-top: 10px;
-`;
-
-const sectionContainer = css`
-  margin-bottom: 10px;
-`;
-
-const layerInfo = css`
-  padding-bottom: 0.5em;
-`;
-
-// --- components (Publish) ---
 type PublishType = {
   status:
     | 'none'
@@ -82,14 +68,79 @@ type PublishType = {
   rawData: any;
 };
 
+type SelectedService = {
+  description: string;
+  label: string;
+  value: string;
+};
+
+// --- styles (Publish) ---
+const panelContainer = css`
+  padding: 20px;
+`;
+
+const publishButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const publishButtonStyles = css`
+  margin-top: 10px;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.65;
+  }
+`;
+
+const sectionContainer = css`
+  margin-bottom: 10px;
+`;
+
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
+const radioLabelStyles = css`
+  padding-left: 0.375rem;
+`;
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
+const multiSelectStyles = css`
+  ${fullWidthSelectStyles}
+  margin-bottom: 10px;
+`;
+
+const inputStyles = css`
+  width: 100%;
+  height: 36px;
+  margin: 0 0 10px 0;
+  padding-left: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+`;
+
+// --- components (Publish) ---
 function Publish() {
-  const { GraphicsLayer, IdentityManager } = useEsriModulesContext();
+  const { GraphicsLayer, IdentityManager, Portal } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
     signedIn, //
   } = React.useContext(AuthenticationContext);
   const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
+  const {
+    publishSamplesMode,
+    setPublishSamplesMode,
+    sampleTableMetaData,
+    setSampleTableMetaData,
+    sampleTypeSelections,
+    setSampleTypeSelections,
+  } = React.useContext(PublishContext);
   const {
     edits,
     setEdits,
@@ -628,6 +679,11 @@ function Publish() {
   //////////////////////////// START - Publish Sample Types /////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
+  const [
+    selectedService,
+    setSelectedService,
+  ] = React.useState<SelectedService | null>(null);
+
   // Checks browser storage to determine if the user clicked publish and logged in.
   const [
     publishSamplesButtonClicked,
@@ -679,6 +735,69 @@ function Publish() {
     publishSamplesButtonClicked,
   ]);
 
+  const [sampleTableName, setSampleTableName] = React.useState('');
+  const [sampleTableDescription, setSampleTableDescription] = React.useState(
+    '',
+  );
+
+  // Check if the feature service name is available
+  const [
+    hasSamplesNameBeenChecked,
+    setHasSamplesNameBeenChecked,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (
+      !portal ||
+      !publishSamplesButtonClicked ||
+      !sampleTableMetaData ||
+      hasSamplesNameBeenChecked
+    ) {
+      return;
+    }
+
+    setPublishSamplesResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
+
+    if (publishSamplesMode === 'existing' && sampleTableMetaData.id) {
+      setHasSamplesNameBeenChecked(true);
+      return;
+    }
+
+    // check if the service (scenario) name is availble before continuing
+    isServiceNameAvailable(portal, sampleTableMetaData.name)
+      .then((res: any) => {
+        if (!res.available) {
+          setPublishSamplesButtonClicked(false);
+          setPublishSamplesResponse({
+            status: 'name-not-available',
+            summary: { success: '', failed: '' },
+            rawData: null,
+          });
+          return;
+        }
+
+        setHasSamplesNameBeenChecked(true);
+      })
+      .catch((err) => {
+        console.error('isServiceNameAvailable error', err);
+        setPublishSamplesResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: err,
+        });
+      });
+  }, [
+    portal,
+    publishSamplesMode,
+    publishSamplesButtonClicked,
+    hasSamplesNameBeenChecked,
+    layers,
+    sampleTableMetaData,
+  ]);
+
   // Run the publish
   const [publishSamplesResponse, setPublishSamplesResponse] = React.useState<
     PublishType
@@ -690,8 +809,10 @@ function Publish() {
   React.useEffect(() => {
     if (!oAuthInfo || !portal || !signedIn) return;
     if (
-      Object.keys(userDefinedAttributes.sampleTypes).length === 0 ||
-      !publishSamplesButtonClicked
+      Object.keys(sampleTypeSelections).length === 0 ||
+      !sampleTableMetaData ||
+      !publishSamplesButtonClicked ||
+      !hasSamplesNameBeenChecked
     ) {
       return;
     }
@@ -716,14 +837,29 @@ function Publish() {
       deletes: [],
     };
 
-    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
-      const sampleType = userDefinedAttributes.sampleTypes[key];
+    sampleTypeSelections.forEach((type) => {
+      if (!type.value) return;
+
+      const sampleType = userDefinedAttributes.sampleTypes[type.value];
       const item = {
         attributes: sampleType.attributes,
       };
-      if (sampleType.status === 'add') changes.adds.push(item);
-      if (sampleType.status === 'edit') changes.updates.push(item);
-      if (sampleType.status === 'delete') changes.deletes.push(item);
+      if (publishSamplesMode === 'new') {
+        changes.adds.push(item);
+      } else if (publishSamplesMode === 'existing' && selectedService) {
+        if (selectedService.value === type.serviceId) {
+          if (sampleType.status === 'add') changes.adds.push(item);
+          if (
+            sampleType.status === 'edit' ||
+            sampleType.status === 'published'
+          ) {
+            changes.updates.push(item);
+          }
+          if (sampleType.status === 'delete') changes.deletes.push(item);
+        } else {
+          changes.adds.push(item);
+        }
+      }
     });
 
     // exit early if there are no edits
@@ -743,10 +879,7 @@ function Publish() {
     publishTable({
       portal,
       changes,
-      serviceMetaData: {
-        name: 'User Defined Samples',
-        description: 'User Defined Samples Description',
-      },
+      serviceMetaData: sampleTableMetaData,
     })
       .then((res: any) => {
         // get totals
@@ -862,19 +995,61 @@ function Publish() {
     oAuthInfo,
     setGoToOptions,
     signedIn,
+    sampleTableMetaData,
     publishSamplesButtonClicked,
+    hasSamplesNameBeenChecked,
     userDefinedAttributes,
     setUserDefinedAttributes,
+    publishSamplesMode,
+    sampleTypeSelections,
+    selectedService,
   ]);
+
+  const [queryInitialized, setQueryInitialized] = React.useState(false);
+  const [featureServices, setFeatureServices] = React.useState<FeatureServices>(
+    { status: 'fetching', data: [] },
+  );
+  React.useEffect(() => {
+    if (queryInitialized) return;
+
+    setQueryInitialized(true);
+
+    const tmpPortal = portal ? portal : new Portal();
+    tmpPortal
+      .queryItems({
+        categories: ['contains-epa-tots-user-defined-sample-types'],
+        sortField: 'title',
+        sortOrder: 'asc',
+      })
+      .then((res: __esri.PortalQueryResult) => {
+        const data = res.results.map((item) => {
+          return {
+            description: item.description,
+            label: item.title,
+            value: item.id,
+          };
+        });
+        setFeatureServices({ status: 'success', data });
+      })
+      .catch((err) => {
+        console.error(err);
+        setFeatureServices({ status: 'failure', data: [] });
+      });
+  }, [Portal, portal, queryInitialized]);
 
   ///////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// END - Publish Sample Types ///////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  // determine if any user defined sample types were edited
-  let hasSampleTypeEdits = false;
-  Object.values(userDefinedAttributes.sampleTypes).forEach((sampleType) => {
-    if (sampleType.status !== 'published') hasSampleTypeEdits = true;
+  const sampleTypeOptions: SampleTypeOptions = Object.values(
+    userDefinedAttributes.sampleTypes,
+  ).map((type) => {
+    return {
+      label: type.attributes.TYPE,
+      value: type.attributes.TYPEUUID,
+      serviceId: type.serviceId,
+      status: type.status,
+    };
   });
 
   return (
@@ -981,30 +1156,151 @@ function Publish() {
           </div>
         )}
 
-      {publishSamplesResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishSamplesResponse.status === 'fetch-failure' &&
-        webServiceErrorMessage}
-      {publishSamplesResponse.status === 'success' &&
-        publishSamplesResponse.summary.failed && (
-          <MessageBox
-            severity="error"
-            title="Some item(s) failed to publish"
-            message={publishSamplesResponse.summary.failed}
+      <div>
+        <p>
+          Publish user defined sample types to ArcGIS Online. Select the user
+          defined sample types you would like to publish. Then select whether
+          you would like to publish to a new or existing feature service.
+        </p>
+        <div>
+          <label htmlFor="publish-sample-select">Samples to Publish</label>
+          <Select
+            inputId="publish-sample-select"
+            isMulti
+            isSearchable={false}
+            options={sampleTypeOptions as any}
+            value={sampleTypeSelections as any}
+            onChange={(ev) => setSampleTypeSelections(ev as SampleTypeOptions)}
+            css={multiSelectStyles}
           />
+        </div>
+
+        <div>
+          {publishSamplesResponse.status === 'name-not-available' &&
+            featureServiceTakenMessage(sampleTableName ? sampleTableName : '')}
+          <input
+            id="draw-aoi"
+            type="radio"
+            name="mode"
+            value="Publish to Existing Service"
+            checked={publishSamplesMode === 'new'}
+            onChange={(ev) => {
+              setPublishSamplesMode('new');
+            }}
+          />
+          <label htmlFor="draw-aoi" css={radioLabelStyles}>
+            Publish to new Feature Service
+          </label>
+        </div>
+        <div>
+          <input
+            id="use-aoi-file"
+            type="radio"
+            name="mode"
+            value="Publish to New Service"
+            checked={publishSamplesMode === 'existing'}
+            onChange={(ev) => {
+              setPublishSamplesMode('existing');
+            }}
+          />
+          <label htmlFor="use-aoi-file" css={radioLabelStyles}>
+            Publish to existing Feature Service
+          </label>
+        </div>
+
+        {publishSamplesMode === 'new' && (
+          <React.Fragment>
+            <label htmlFor="sample-table-name-input">Sample Table Name</label>
+            <input
+              id="sample-table-name-input"
+              css={inputStyles}
+              maxLength={250}
+              placeholder="Enter Sample Table Name"
+              value={sampleTableName}
+              onChange={(ev) => {
+                setSampleTableName(ev.target.value);
+              }}
+            />
+            <label htmlFor="scenario-description-input">Plan Description</label>
+            <input
+              id="scenario-description-input"
+              css={inputStyles}
+              maxLength={2048}
+              placeholder="Enter Plan Description (2048 characters)"
+              value={sampleTableDescription}
+              onChange={(ev) => {
+                setSampleTableDescription(ev.target.value);
+              }}
+            />
+          </React.Fragment>
         )}
-      {publishSamplesResponse.summary.success && pulblishSamplesSuccessMessage}
-      {!signedIn && notLoggedInMessage}
-      {publishSamplesResponse.status !== 'name-not-available' &&
-        hasSampleTypeEdits && (
+        {publishSamplesMode === 'existing' && (
+          <div>
+            {featureServices.status === 'fetching' && <LoadingSpinner />}
+            {featureServices.status === 'failure' && <p>Error!</p>}
+            {featureServices.status === 'success' && (
+              <React.Fragment>
+                <label htmlFor="feature-service-select">
+                  Feature Service Select
+                </label>
+                <Select
+                  inputId="feature-service-select"
+                  css={fullWidthSelectStyles}
+                  value={selectedService}
+                  onChange={(ev) => setSelectedService(ev as SelectedService)}
+                  options={featureServices.data}
+                />
+              </React.Fragment>
+            )}
+          </div>
+        )}
+        {publishSamplesResponse.status === 'fetching' && <LoadingSpinner />}
+        {publishSamplesResponse.status === 'fetch-failure' &&
+          webServiceErrorMessage}
+        {publishSamplesResponse.status === 'success' &&
+          publishSamplesResponse.summary.failed && (
+            <MessageBox
+              severity="error"
+              title="Some item(s) failed to publish"
+              message={publishSamplesResponse.summary.failed}
+            />
+          )}
+        {publishSamplesResponse.summary.success &&
+          pulblishSamplesSuccessMessage}
+        {!signedIn && notLoggedInMessage}
+        {publishSamplesMode && (
           <div css={publishButtonContainerStyles}>
             <button
               css={publishButtonStyles}
-              onClick={() => setPublishSamplesButtonClicked(true)}
+              disabled={
+                !sampleTypeSelections ||
+                sampleTypeSelections.length === 0 ||
+                (publishSamplesMode === 'new' && !sampleTableName) ||
+                (publishSamplesMode === 'existing' && !selectedService)
+              }
+              onClick={() => {
+                if (publishSamplesMode === 'existing' && selectedService) {
+                  setSampleTableMetaData({
+                    id: selectedService.value,
+                    name: selectedService.label,
+                    description: selectedService.description,
+                  });
+                } else if (publishSamplesMode === 'new') {
+                  setSampleTableMetaData({
+                    id: '',
+                    name: sampleTableName,
+                    description: sampleTableDescription,
+                  });
+                }
+
+                setPublishSamplesButtonClicked(true);
+              }}
             >
               Publish User Defined Sample Types
             </button>
           </div>
         )}
+      </div>
     </div>
   );
 }

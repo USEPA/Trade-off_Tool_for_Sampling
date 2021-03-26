@@ -1,16 +1,11 @@
 // types
-import { LayerEditsType } from 'types/Edits';
+import { LayerEditsType, ServiceMetaDataType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps, defaultTableProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
-
-type ServiceMetaDataType = {
-  name: string;
-  description: string;
-};
 
 /**
  * Returns an environment string to be passed as a parameter
@@ -170,11 +165,13 @@ function getFeatureServiceWrapped(
   serviceMetaData: ServiceMetaDataType,
 ) {
   return new Promise((resolve, reject) => {
+    let query = `orgid:${escapeForLucene(portal.user.orgId)}`;
+    query += serviceMetaData.id
+      ? ` AND id:${serviceMetaData.id}`
+      : ` AND name:${serviceMetaData.name}`;
     portal
       .queryItems({
-        query: `orgid:${escapeForLucene(portal.user.orgId)} AND name:${
-          serviceMetaData.name
-        }`,
+        query,
       })
       .then((res) => {
         const exactMatch = res.results.find(

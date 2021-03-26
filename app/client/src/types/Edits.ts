@@ -65,3 +65,9 @@ export type DeleteFeatureType = {
   GLOBALID: string;
   DECISIONUNITUUID: string;
 };
+
+export type ServiceMetaDataType = {
+  id?: string;
+  name: string;
+  description: string;
+};
