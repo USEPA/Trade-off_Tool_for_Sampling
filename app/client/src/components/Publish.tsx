@@ -27,6 +27,7 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
+  ServiceMetaDataType,
 } from 'types/Edits';
 import { SampleTypeOptions } from 'types/Publish';
 // config
@@ -136,10 +137,14 @@ function Publish() {
   const {
     publishSamplesMode,
     setPublishSamplesMode,
-    sampleTableMetaData,
-    setSampleTableMetaData,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
     sampleTypeSelections,
     setSampleTypeSelections,
+    selectedService,
+    setSelectedService,
   } = React.useContext(PublishContext);
   const {
     edits,
@@ -399,7 +404,8 @@ function Publish() {
       layers: publishLayers,
       edits: [layerEdits],
       serviceMetaData: {
-        name: editsScenario.scenarioName,
+        value: '',
+        label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
       },
     })
@@ -679,11 +685,6 @@ function Publish() {
   //////////////////////////// START - Publish Sample Types /////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  const [
-    selectedService,
-    setSelectedService,
-  ] = React.useState<SelectedService | null>(null);
-
   // Checks browser storage to determine if the user clicked publish and logged in.
   const [
     publishSamplesButtonClicked,
@@ -735,10 +736,10 @@ function Publish() {
     publishSamplesButtonClicked,
   ]);
 
-  const [sampleTableName, setSampleTableName] = React.useState('');
-  const [sampleTableDescription, setSampleTableDescription] = React.useState(
-    '',
-  );
+  const [
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+  ] = React.useState<ServiceMetaDataType | null>(null);
 
   // Check if the feature service name is available
   const [
@@ -746,10 +747,14 @@ function Publish() {
     setHasSamplesNameBeenChecked,
   ] = React.useState(false);
   React.useEffect(() => {
+    console.log('portal: ', portal);
+    console.log('publishSamplesButtonClicked: ', publishSamplesButtonClicked);
+    console.log('publishSampleTableMetaData: ', publishSampleTableMetaData);
+    console.log('hasSamplesNameBeenChecked: ', hasSamplesNameBeenChecked);
     if (
       !portal ||
       !publishSamplesButtonClicked ||
-      !sampleTableMetaData ||
+      !publishSampleTableMetaData ||
       hasSamplesNameBeenChecked
     ) {
       return;
@@ -761,13 +766,13 @@ function Publish() {
       rawData: null,
     });
 
-    if (publishSamplesMode === 'existing' && sampleTableMetaData.id) {
+    if (publishSamplesMode === 'existing' && publishSampleTableMetaData.value) {
       setHasSamplesNameBeenChecked(true);
       return;
     }
 
     // check if the service (scenario) name is availble before continuing
-    isServiceNameAvailable(portal, sampleTableMetaData.name)
+    isServiceNameAvailable(portal, publishSampleTableMetaData.label)
       .then((res: any) => {
         if (!res.available) {
           setPublishSamplesButtonClicked(false);
@@ -795,7 +800,7 @@ function Publish() {
     publishSamplesButtonClicked,
     hasSamplesNameBeenChecked,
     layers,
-    sampleTableMetaData,
+    publishSampleTableMetaData,
   ]);
 
   // Run the publish
@@ -807,10 +812,20 @@ function Publish() {
     rawData: null,
   });
   React.useEffect(() => {
+    console.log('oAuthInfo: ', oAuthInfo);
+    console.log('portal: ', portal);
+    console.log('signedIn: ', signedIn);
+    console.log(
+      'Object.keys(sampleTypeSelections).length: ',
+      Object.keys(sampleTypeSelections).length,
+    );
+    console.log('publishSampleTableMetaData: ', publishSampleTableMetaData);
+    console.log('publishSamplesButtonClicked: ', publishSamplesButtonClicked);
+    console.log('hasSamplesNameBeenChecked: ', hasSamplesNameBeenChecked);
     if (!oAuthInfo || !portal || !signedIn) return;
     if (
       Object.keys(sampleTypeSelections).length === 0 ||
-      !sampleTableMetaData ||
+      !publishSampleTableMetaData ||
       !publishSamplesButtonClicked ||
       !hasSamplesNameBeenChecked
     ) {
@@ -879,7 +894,7 @@ function Publish() {
     publishTable({
       portal,
       changes,
-      serviceMetaData: sampleTableMetaData,
+      serviceMetaData: publishSampleTableMetaData,
     })
       .then((res: any) => {
         // get totals
@@ -979,6 +994,14 @@ function Publish() {
           rawData: res.edits,
         });
         setUserDefinedAttributes(newUserDefinedAttributes);
+
+        if (publishSamplesMode === 'new') {
+          setSampleTableDescription('');
+          setSampleTableName('');
+        }
+        if (publishSamplesMode === 'existing') {
+          setSelectedService(null);
+        }
       })
       .catch((err) => {
         console.error('publishTable error', err);
@@ -995,7 +1018,7 @@ function Publish() {
     oAuthInfo,
     setGoToOptions,
     signedIn,
-    sampleTableMetaData,
+    publishSampleTableMetaData,
     publishSamplesButtonClicked,
     hasSamplesNameBeenChecked,
     userDefinedAttributes,
@@ -1003,6 +1026,9 @@ function Publish() {
     publishSamplesMode,
     sampleTypeSelections,
     selectedService,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSelectedService,
   ]);
 
   const [queryInitialized, setQueryInitialized] = React.useState(false);
@@ -1217,9 +1243,7 @@ function Publish() {
               maxLength={250}
               placeholder="Enter Sample Table Name"
               value={sampleTableName}
-              onChange={(ev) => {
-                setSampleTableName(ev.target.value);
-              }}
+              onChange={(ev) => setSampleTableName(ev.target.value)}
             />
             <label htmlFor="scenario-description-input">Plan Description</label>
             <input
@@ -1228,9 +1252,7 @@ function Publish() {
               maxLength={2048}
               placeholder="Enter Plan Description (2048 characters)"
               value={sampleTableDescription}
-              onChange={(ev) => {
-                setSampleTableDescription(ev.target.value);
-              }}
+              onChange={(ev) => setSampleTableDescription(ev.target.value)}
             />
           </React.Fragment>
         )}
@@ -1280,15 +1302,11 @@ function Publish() {
               }
               onClick={() => {
                 if (publishSamplesMode === 'existing' && selectedService) {
-                  setSampleTableMetaData({
-                    id: selectedService.value,
-                    name: selectedService.label,
-                    description: selectedService.description,
-                  });
+                  setPublishSampleTableMetaData(selectedService);
                 } else if (publishSamplesMode === 'new') {
-                  setSampleTableMetaData({
-                    id: '',
-                    name: sampleTableName,
+                  setPublishSampleTableMetaData({
+                    value: '',
+                    label: sampleTableName,
                     description: sampleTableDescription,
                   });
                 }

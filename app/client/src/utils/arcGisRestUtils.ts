@@ -166,16 +166,16 @@ function getFeatureServiceWrapped(
 ) {
   return new Promise((resolve, reject) => {
     let query = `orgid:${escapeForLucene(portal.user.orgId)}`;
-    query += serviceMetaData.id
-      ? ` AND id:${serviceMetaData.id}`
-      : ` AND name:${serviceMetaData.name}`;
+    query += serviceMetaData.value
+      ? ` AND id:${serviceMetaData.value}`
+      : ` AND name:${serviceMetaData.label}`;
     portal
       .queryItems({
         query,
       })
       .then((res) => {
         const exactMatch = res.results.find(
-          (layer: any) => layer.name === serviceMetaData.name,
+          (layer: any) => layer.name === serviceMetaData.label,
         );
 
         if (exactMatch) {
@@ -229,7 +229,7 @@ export function createFeatureService(
       description: serviceMetaData.description,
       snippet: serviceMetaData.description,
       createParameters: {
-        name: serviceMetaData.name,
+        name: serviceMetaData.label,
         hasStaticData: false,
         maxRecordCount: 1000,
         supportedQueryFormats: 'JSON',
@@ -391,7 +391,7 @@ export function createFeatureLayers(
 
       layersParams.push({
         ...defaultLayerProps,
-        name: serviceMetaData.name,
+        name: serviceMetaData.label,
         description: serviceMetaData.description,
         extent: graphicsExtent,
 
@@ -467,7 +467,7 @@ export function createFeatureTables(
     tableParams.push({
       ...defaultTableProps,
       type: 'Table',
-      name: serviceMetaData.name,
+      name: serviceMetaData.label,
       description: serviceMetaData.description,
     });
 
@@ -739,7 +739,7 @@ export function publish({
             res.layers.forEach((layer: any) => {
               const layerEdits = edits.find(
                 (layerEdit) =>
-                  layerEdit.id === -1 && serviceMetaData.name === layer.name,
+                  layerEdit.id === -1 && serviceMetaData.label === layer.name,
               );
 
               const mapLayer = layers.find(
@@ -807,7 +807,7 @@ export function publishTable({
         }
 
         for (let table of service.featureService.tables) {
-          if (table.name === serviceMetaData.name) {
+          if (table.name === serviceMetaData.label) {
             changes.id = table.id;
             break;
           }

@@ -67,7 +67,7 @@ export type DeleteFeatureType = {
 };
 
 export type ServiceMetaDataType = {
-  id?: string;
-  name: string;
-  description: string;
+  value: string; // sample type uuid
+  label: string; // sample type name
+  description: string; // sample type description
 };

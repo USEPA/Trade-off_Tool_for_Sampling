@@ -11,12 +11,16 @@ type PublishType = {
   setPublishSamplesMode: React.Dispatch<
     React.SetStateAction<'new' | 'existing' | ''>
   >;
+  sampleTableDescription: string;
+  setSampleTableDescription: React.Dispatch<React.SetStateAction<string>>;
+  sampleTableName: string;
+  setSampleTableName: React.Dispatch<React.SetStateAction<string>>;
   sampleTypeSelections: SampleTypeOptions;
   setSampleTypeSelections: React.Dispatch<
     React.SetStateAction<SampleTypeOptions>
   >;
-  sampleTableMetaData: ServiceMetaDataType | null;
-  setSampleTableMetaData: React.Dispatch<
+  selectedService: ServiceMetaDataType | null;
+  setSelectedService: React.Dispatch<
     React.SetStateAction<ServiceMetaDataType | null>
   >;
 };
@@ -24,10 +28,14 @@ type PublishType = {
 export const PublishContext = React.createContext<PublishType>({
   publishSamplesMode: '',
   setPublishSamplesMode: () => {},
+  sampleTableDescription: '',
+  setSampleTableDescription: () => {},
+  sampleTableName: '',
+  setSampleTableName: () => {},
   sampleTypeSelections: [],
   setSampleTypeSelections: () => {},
-  sampleTableMetaData: null,
-  setSampleTableMetaData: () => {},
+  selectedService: null,
+  setSelectedService: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -36,12 +44,16 @@ export function PublishProvider({ children }: Props) {
   const [publishSamplesMode, setPublishSamplesMode] = React.useState<
     'new' | 'existing' | ''
   >('');
+  const [sampleTableDescription, setSampleTableDescription] = React.useState(
+    '',
+  );
+  const [sampleTableName, setSampleTableName] = React.useState('');
   const [sampleTypeSelections, setSampleTypeSelections] = React.useState<
     SampleTypeOptions
   >([]);
   const [
-    sampleTableMetaData,
-    setSampleTableMetaData,
+    selectedService,
+    setSelectedService,
   ] = React.useState<ServiceMetaDataType | null>(null);
 
   return (
@@ -49,10 +61,14 @@ export function PublishProvider({ children }: Props) {
       value={{
         publishSamplesMode,
         setPublishSamplesMode,
+        sampleTableDescription,
+        setSampleTableDescription,
+        sampleTableName,
+        setSampleTableName,
         sampleTypeSelections,
         setSampleTypeSelections,
-        sampleTableMetaData,
-        setSampleTableMetaData,
+        selectedService,
+        setSelectedService,
       }}
     >
       {children}

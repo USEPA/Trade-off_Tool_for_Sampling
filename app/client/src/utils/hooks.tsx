@@ -116,6 +116,13 @@ export function useStartOver() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    setPublishSamplesMode,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+  const {
     basemapWidget,
     map,
     mapView,
@@ -164,6 +171,13 @@ export function useStartOver() {
 
     // set the calculate settings back to defaults
     resetCalculateContext();
+
+    // clear publish
+    setPublishSamplesMode('');
+    setSampleTableDescription('');
+    setSampleTableName('');
+    setSampleTypeSelections([]);
+    setSelectedService(null);
 
     // reset the zoom
     if (mapView) {
@@ -2227,6 +2241,12 @@ function useTablePanelStorage() {
   }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
 }
 
+type SampleMetaDataType = {
+  sampleTableDescription: string;
+  sampleTableName: string;
+  selectedService: ServiceMetaDataType | null;
+};
+
 // Uses browser storage for holding the currently selected sample layer.
 function usePublishStorage() {
   const key = 'tots_sample_type_selections';
@@ -2237,10 +2257,14 @@ function usePublishStorage() {
   const {
     publishSamplesMode,
     setPublishSamplesMode,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
     sampleTypeSelections,
     setSampleTypeSelections,
-    sampleTableMetaData,
-    setSampleTableMetaData,
+    selectedService,
+    setSelectedService,
   } = React.useContext(PublishContext);
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
@@ -2264,19 +2288,24 @@ function usePublishStorage() {
     // set the selected scenario first
     const sampleMetaDataStr = readFromStorage(key2);
     if (sampleMetaDataStr) {
-      const sampleMetaData = JSON.parse(sampleMetaDataStr);
-      setSampleTableMetaData(sampleMetaData as ServiceMetaDataType);
+      const sampleMetaData: SampleMetaDataType = JSON.parse(sampleMetaDataStr);
+      setSampleTableDescription(sampleMetaData.sampleTableDescription);
+      setSampleTableName(sampleMetaData.sampleTableName);
+      setSelectedService(sampleMetaData.selectedService);
     }
 
     // set the selected scenario first
     const publishSamplesMode = readFromStorage(key3);
-    if (publishSamplesMode !== null)
+    if (publishSamplesMode !== null) {
       setPublishSamplesMode(publishSamplesMode as any);
+    }
   }, [
-    setPublishSamplesMode,
-    setSampleTableMetaData,
-    setSampleTypeSelections,
     localSampleTypeInitialized,
+    setPublishSamplesMode,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
   ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
@@ -2290,9 +2319,19 @@ function usePublishStorage() {
   React.useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
-    const data = sampleTableMetaData ? sampleTableMetaData : '';
+    const data = {
+      sampleTableDescription,
+      sampleTableName,
+      selectedService,
+    };
     writeToStorage(key2, data, setOptions);
-  }, [sampleTableMetaData, localSampleTypeInitialized, setOptions]);
+  }, [
+    localSampleTypeInitialized,
+    sampleTableDescription,
+    sampleTableName,
+    selectedService,
+    setOptions,
+  ]);
 
   // Saves the selected scenario to browser storage whenever it changes
   React.useEffect(() => {
