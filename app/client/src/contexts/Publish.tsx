@@ -11,6 +11,10 @@ type PublishType = {
   setPublishSamplesMode: React.Dispatch<
     React.SetStateAction<'new' | 'existing' | ''>
   >;
+  publishSampleTableMetaData: ServiceMetaDataType | null;
+  setPublishSampleTableMetaData: React.Dispatch<
+    React.SetStateAction<ServiceMetaDataType | null>
+  >;
   sampleTableDescription: string;
   setSampleTableDescription: React.Dispatch<React.SetStateAction<string>>;
   sampleTableName: string;
@@ -28,6 +32,8 @@ type PublishType = {
 export const PublishContext = React.createContext<PublishType>({
   publishSamplesMode: '',
   setPublishSamplesMode: () => {},
+  publishSampleTableMetaData: null,
+  setPublishSampleTableMetaData: () => {},
   sampleTableDescription: '',
   setSampleTableDescription: () => {},
   sampleTableName: '',
@@ -44,6 +50,10 @@ export function PublishProvider({ children }: Props) {
   const [publishSamplesMode, setPublishSamplesMode] = React.useState<
     'new' | 'existing' | ''
   >('');
+  const [
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+  ] = React.useState<ServiceMetaDataType | null>(null);
   const [sampleTableDescription, setSampleTableDescription] = React.useState(
     '',
   );
@@ -61,6 +71,8 @@ export function PublishProvider({ children }: Props) {
       value={{
         publishSamplesMode,
         setPublishSamplesMode,
+        publishSampleTableMetaData,
+        setPublishSampleTableMetaData,
         sampleTableDescription,
         setSampleTableDescription,
         sampleTableName,

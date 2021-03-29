@@ -8,10 +8,11 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 // utils
 import {
   getAllFeatures,
@@ -748,6 +749,7 @@ function ResultCard({ result }: ResultCardProps) {
   const { portal } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const { trainingMode } = React.useContext(NavigationContext);
+  const { setSampleTypeSelections } = React.useContext(PublishContext);
   const sampleTypeContext = useSampleTypesContext();
   const {
     Collection,
@@ -1657,6 +1659,7 @@ function ResultCard({ result }: ResultCardProps) {
     });
 
     function removeFromUdtOptions() {
+      setSampleTypeSelections([]);
       setUserDefinedOptions(
         userDefinedOptions.filter(
           (option) => !typesToRemove.includes(option.value),

@@ -117,6 +117,7 @@ export function useStartOver() {
   } = React.useContext(NavigationContext);
   const {
     setPublishSamplesMode,
+    setPublishSampleTableMetaData,
     setSampleTableDescription,
     setSampleTableName,
     setSampleTypeSelections,
@@ -174,6 +175,7 @@ export function useStartOver() {
 
     // clear publish
     setPublishSamplesMode('');
+    setPublishSampleTableMetaData(null);
     setSampleTableDescription('');
     setSampleTableName('');
     setSampleTypeSelections([]);
@@ -2242,6 +2244,7 @@ function useTablePanelStorage() {
 }
 
 type SampleMetaDataType = {
+  publishSampleTableMetaData: ServiceMetaDataType | null;
   sampleTableDescription: string;
   sampleTableName: string;
   selectedService: ServiceMetaDataType | null;
@@ -2257,6 +2260,8 @@ function usePublishStorage() {
   const {
     publishSamplesMode,
     setPublishSamplesMode,
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
     sampleTableDescription,
     setSampleTableDescription,
     sampleTableName,
@@ -2289,6 +2294,7 @@ function usePublishStorage() {
     const sampleMetaDataStr = readFromStorage(key2);
     if (sampleMetaDataStr) {
       const sampleMetaData: SampleMetaDataType = JSON.parse(sampleMetaDataStr);
+      setPublishSampleTableMetaData(sampleMetaData.publishSampleTableMetaData);
       setSampleTableDescription(sampleMetaData.sampleTableDescription);
       setSampleTableName(sampleMetaData.sampleTableName);
       setSelectedService(sampleMetaData.selectedService);
@@ -2302,6 +2308,7 @@ function usePublishStorage() {
   }, [
     localSampleTypeInitialized,
     setPublishSamplesMode,
+    setPublishSampleTableMetaData,
     setSampleTableDescription,
     setSampleTableName,
     setSampleTypeSelections,
@@ -2320,6 +2327,7 @@ function usePublishStorage() {
     if (!localSampleTypeInitialized) return;
 
     const data = {
+      publishSampleTableMetaData,
       sampleTableDescription,
       sampleTableName,
       selectedService,
@@ -2327,6 +2335,7 @@ function usePublishStorage() {
     writeToStorage(key2, data, setOptions);
   }, [
     localSampleTypeInitialized,
+    publishSampleTableMetaData,
     sampleTableDescription,
     sampleTableName,
     selectedService,

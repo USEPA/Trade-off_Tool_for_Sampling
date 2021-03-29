@@ -27,7 +27,6 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
-  ServiceMetaDataType,
 } from 'types/Edits';
 import { SampleTypeOptions } from 'types/Publish';
 // config
@@ -137,6 +136,8 @@ function Publish() {
   const {
     publishSamplesMode,
     setPublishSamplesMode,
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
     sampleTableDescription,
     setSampleTableDescription,
     sampleTableName,
@@ -736,21 +737,12 @@ function Publish() {
     publishSamplesButtonClicked,
   ]);
 
-  const [
-    publishSampleTableMetaData,
-    setPublishSampleTableMetaData,
-  ] = React.useState<ServiceMetaDataType | null>(null);
-
   // Check if the feature service name is available
   const [
     hasSamplesNameBeenChecked,
     setHasSamplesNameBeenChecked,
   ] = React.useState(false);
   React.useEffect(() => {
-    console.log('portal: ', portal);
-    console.log('publishSamplesButtonClicked: ', publishSamplesButtonClicked);
-    console.log('publishSampleTableMetaData: ', publishSampleTableMetaData);
-    console.log('hasSamplesNameBeenChecked: ', hasSamplesNameBeenChecked);
     if (
       !portal ||
       !publishSamplesButtonClicked ||
@@ -812,16 +804,6 @@ function Publish() {
     rawData: null,
   });
   React.useEffect(() => {
-    console.log('oAuthInfo: ', oAuthInfo);
-    console.log('portal: ', portal);
-    console.log('signedIn: ', signedIn);
-    console.log(
-      'Object.keys(sampleTypeSelections).length: ',
-      Object.keys(sampleTypeSelections).length,
-    );
-    console.log('publishSampleTableMetaData: ', publishSampleTableMetaData);
-    console.log('publishSamplesButtonClicked: ', publishSamplesButtonClicked);
-    console.log('hasSamplesNameBeenChecked: ', hasSamplesNameBeenChecked);
     if (!oAuthInfo || !portal || !signedIn) return;
     if (
       Object.keys(sampleTypeSelections).length === 0 ||

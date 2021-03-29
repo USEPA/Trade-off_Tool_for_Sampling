@@ -18,6 +18,7 @@ import {
   useServicesContext,
 } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
@@ -388,6 +389,7 @@ function LocateSamples() {
     trainingMode,
     setTrainingMode,
   } = React.useContext(NavigationContext);
+  const { setSampleTypeSelections } = React.useContext(PublishContext);
   const {
     autoZoom,
     setAutoZoom,
@@ -2080,6 +2082,7 @@ function LocateSamples() {
                                           return newUserDefined;
                                         },
                                       );
+                                      setSampleTypeSelections([]);
 
                                       // Update the attributes of the graphics on the map on edits
                                       let editsCopy: EditsType = edits;
