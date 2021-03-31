@@ -2538,10 +2538,9 @@ function LocateSamples() {
                                   ) > -1;
                                 if (
                                   !hasSample &&
-                                  userDefinedSampleType &&
                                   (editingStatus !== 'edit' ||
                                     (editingStatus === 'edit' &&
-                                      !userDefinedSampleType.isPredefined))
+                                      !userDefinedSampleType?.isPredefined))
                                 ) {
                                   setUserDefinedOptions((options) => {
                                     if (!didSampleTypeNameChange()) {
@@ -2554,7 +2553,7 @@ function LocateSamples() {
                                       if (
                                         didSampleTypeNameChange() &&
                                         option.value ===
-                                          userDefinedSampleType.value
+                                          userDefinedSampleType?.value
                                       ) {
                                         newOptions.push(newSampleType);
                                         return;
