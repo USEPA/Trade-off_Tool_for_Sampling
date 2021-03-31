@@ -1020,10 +1020,10 @@ export function useDynamicPopup() {
         { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
         { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
         { fieldName: 'AC', label: 'Equivalent TOTS Samples' },
-        {
-          fieldName: 'TCPS',
-          label: 'Total Cost Per Sample (Labor + Material + Waste)',
-        },
+        // {
+        //   fieldName: 'TCPS',
+        //   label: 'Total Cost Per Sample (Labor + Material + Waste)',
+        // },
         { fieldName: 'Notes', label: 'Notes' },
         { fieldName: 'ALC', label: 'Analysis Labor Cost' },
         { fieldName: 'AMC', label: 'Analysis Material Cost' },
@@ -1034,10 +1034,10 @@ export function useDynamicPopup() {
         },
         { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
         { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
-        {
-          fieldName: 'TTPS',
-          label: 'Total Time per Sample (person hrs/sample)',
-        },
+        // {
+        //   fieldName: 'TTPS',
+        //   label: 'Total Time per Sample (person hrs/sample)',
+        // },
         { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
         {
           fieldName: 'LOD_NON',

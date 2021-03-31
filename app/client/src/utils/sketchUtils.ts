@@ -633,11 +633,11 @@ export function getSampleTableColumns({
       accessor: 'AC',
       width: baseColumnWidth,
     },
-    {
-      Header: 'Total Cost Per Sample (Labor + Material + Waste)',
-      accessor: 'TCPS',
-      width: baseColumnWidth,
-    },
+    // {
+    //   Header: 'Total Cost Per Sample (Labor + Material + Waste)',
+    //   accessor: 'TCPS',
+    //   width: baseColumnWidth,
+    // },
     {
       Header: 'Notes',
       accessor: 'Notes',
@@ -673,11 +673,11 @@ export function getSampleTableColumns({
       accessor: 'TTA',
       width: baseColumnWidth,
     },
-    {
-      Header: 'Total Time per Sample (person hrs/sample)',
-      accessor: 'TTPS',
-      width: baseColumnWidth,
-    },
+    // {
+    //   Header: 'Total Time per Sample (person hrs/sample)',
+    //   accessor: 'TTPS',
+    //   width: baseColumnWidth,
+    // },
     {
       Header: 'Limit of Detection (CFU) Porous',
       accessor: 'LOD_P',

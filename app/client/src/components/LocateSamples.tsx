@@ -2328,7 +2328,7 @@ function LocateSamples() {
                           value={tta ? tta : ''}
                           onChange={(ev) => setTta(ev.target.value)}
                         />
-                        <label htmlFor="ttps-input">
+                        {/* <label htmlFor="ttps-input">
                           Total Time per Sample <em>(person hrs/sample)</em>
                         </label>
                         <input
@@ -2337,7 +2337,7 @@ function LocateSamples() {
                           css={inputStyles}
                           value={ttps ? ttps : ''}
                           onChange={(ev) => setTtps(ev.target.value)}
-                        />
+                        /> */}
                         <label htmlFor="lod_p-input">
                           Limit of Detection (CFU) Porous{' '}
                           <em>(only used for reference)</em>
@@ -2370,7 +2370,7 @@ function LocateSamples() {
                           value={mcps ? mcps : ''}
                           onChange={(ev) => setMcps(ev.target.value)}
                         />
-                        <label htmlFor="tcps-input">
+                        {/* <label htmlFor="tcps-input">
                           Total Cost per Sample{' '}
                           <em>(Labor + Material + Waste)</em>
                         </label>
@@ -2380,7 +2380,7 @@ function LocateSamples() {
                           css={inputStyles}
                           value={tcps ? tcps : ''}
                           onChange={(ev) => setTcps(ev.target.value)}
-                        />
+                        /> */}
                         <label htmlFor="wvps-input">
                           Waste Volume <em>(L/sample)</em>
                         </label>
@@ -2538,10 +2538,9 @@ function LocateSamples() {
                                   ) > -1;
                                 if (
                                   !hasSample &&
-                                  userDefinedSampleType &&
                                   (editingStatus !== 'edit' ||
                                     (editingStatus === 'edit' &&
-                                      !userDefinedSampleType.isPredefined))
+                                      !userDefinedSampleType?.isPredefined))
                                 ) {
                                   setUserDefinedOptions((options) => {
                                     if (!didSampleTypeNameChange()) {
@@ -2554,7 +2553,7 @@ function LocateSamples() {
                                       if (
                                         didSampleTypeNameChange() &&
                                         option.value ===
-                                          userDefinedSampleType.value
+                                          userDefinedSampleType?.value
                                       ) {
                                         newOptions.push(newSampleType);
                                         return;
