@@ -15,6 +15,7 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
 import { findLayerInEdits } from 'utils/sketchUtils';
+import { createErrorObject } from 'utils/utils';
 // types
 import {
   DeleteFeatureType,
@@ -22,6 +23,7 @@ import {
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 // config
 import {
   notLoggedInMessage,
@@ -74,6 +76,7 @@ type PublishType = {
     success: string;
     failed: string;
   };
+  error?: ErrorType;
   rawData: any;
 };
 
@@ -159,6 +162,20 @@ function Publish() {
     // check if the service (scenario) name is availble before continuing
     isServiceNameAvailable(portal, selectedScenario.scenarioName)
       .then((res: any) => {
+        if (res.error) {
+          setPublishButtonClicked(false);
+          setPublishResponse({
+            status: 'fetch-failure',
+            summary: { success: '', failed: '' },
+            error: {
+              error: createErrorObject(res),
+              message: res.error.message,
+            },
+            rawData: null,
+          });
+          return;
+        }
+
         if (!res.available) {
           setPublishButtonClicked(false);
           setPublishResponse({
@@ -176,6 +193,10 @@ function Publish() {
         setPublishResponse({
           status: 'fetch-failure',
           summary: { success: '', failed: '' },
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           rawData: err,
         });
       });
@@ -228,6 +249,7 @@ function Publish() {
       setPublishResponse({
         status: 'fetch-failure',
         summary: { success: '', failed: '' },
+        error: { error: null, message: 'No data to publish.' },
         rawData: null,
       });
       return;
@@ -590,6 +612,10 @@ function Publish() {
         setPublishResponse({
           status: 'fetch-failure',
           summary: { success: '', failed: '' },
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           rawData: err,
         });
       });
@@ -687,7 +713,8 @@ function Publish() {
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishResponse.status === 'fetch-failure' && webServiceErrorMessage}
+      {publishResponse.status === 'fetch-failure' &&
+        webServiceErrorMessage(publishResponse.error)}
       {publishResponse.status === 'success' &&
         publishResponse.summary.failed && (
           <MessageBox

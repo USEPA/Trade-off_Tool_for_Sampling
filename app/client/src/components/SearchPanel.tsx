@@ -25,10 +25,11 @@ import {
   getSimplePopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { escapeForLucene } from 'utils/utils';
+import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 import { Attributes, SampleSelectType } from 'config/sampleAttributes';
 // config
 import {
@@ -183,6 +184,7 @@ type SortByType = {
 
 type SearchResultsType = {
   status: 'none' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
+  error?: ErrorType;
   data: __esri.PortalQueryResult | null;
 };
 
@@ -354,7 +356,14 @@ function SearchPanel() {
       })
       .catch((err) => {
         console.error(err);
-        setSearchResults({ status: 'failure', data: null });
+        setSearchResults({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: null,
+        });
       });
   }, [
     currentExtent,
@@ -408,7 +417,14 @@ function SearchPanel() {
       })
       .catch((err) => {
         console.error(err);
-        setSearchResults({ status: 'failure', data: null });
+        setSearchResults({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: null,
+        });
       });
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
@@ -631,7 +647,8 @@ function SearchPanel() {
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
         {searchResults.status === 'not-logged-in' && notLoggedInMessage}
-        {searchResults.status === 'failure' && webServiceErrorMessage}
+        {searchResults.status === 'failure' &&
+          webServiceErrorMessage(searchResults.error)}
         {searchResults.status === 'success' && (
           <React.Fragment>
             <div>
