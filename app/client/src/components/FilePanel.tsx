@@ -442,7 +442,7 @@ function FilePanel() {
     appendEnvironmentObjectParam(params);
 
     const analyzeUrl = `${sharingUrl}/content/features/analyze`;
-    fetchPostFile(analyzeUrl, params, null)
+    fetchPostFile(analyzeUrl, params, file.file)
       .then((res: any) => {
         setAnalyzeResponse(res);
       })
