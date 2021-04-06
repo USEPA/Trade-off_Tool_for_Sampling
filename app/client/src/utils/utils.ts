@@ -65,9 +65,6 @@ export function chunkArray(array: any, chunkLength: number): Array<Array<any>> {
  */
 export function createErrorObject(error: any) {
   const errorObj = new Error(error);
-  console.log('error: ', error);
-  console.log(typeof error);
-  console.log(Object.keys(error));
 
   let result = {
     name: errorObj.name,
