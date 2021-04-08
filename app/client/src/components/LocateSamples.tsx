@@ -22,6 +22,7 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 import { SampleSelectType, PolygonSymbol } from 'config/sampleAttributes';
@@ -46,6 +47,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
+import { createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -370,6 +372,7 @@ const radioLabelStyles = css`
 // --- components (LocateSamples) ---
 type GenerateRandomType = {
   status: 'none' | 'fetching' | 'success' | 'failure' | 'exceededTransferLimit';
+  error?: ErrorType;
   data: __esri.Graphic[];
 };
 
@@ -667,7 +670,14 @@ function LocateSamples() {
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
-                setGenerateRandomResponse({ status: 'failure', data: [] });
+                setGenerateRandomResponse({
+                  status: 'failure',
+                  error: {
+                    error: createErrorObject(res),
+                    message: 'No data',
+                  },
+                  data: [],
+                });
                 return;
               }
 
@@ -769,12 +779,26 @@ function LocateSamples() {
           })
           .catch((err) => {
             console.error(err);
-            setGenerateRandomResponse({ status: 'failure', data: [] });
+            setGenerateRandomResponse({
+              status: 'failure',
+              error: {
+                error: createErrorObject(err),
+                message: err.message,
+              },
+              data: [],
+            });
           });
       })
       .catch((err: any) => {
         console.error(err);
-        setGenerateRandomResponse({ status: 'failure', data: [] });
+        setGenerateRandomResponse({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: [],
+        });
       });
   }
 
@@ -1964,7 +1988,9 @@ function LocateSamples() {
                                     sketchLayer.label,
                                   )}
                                 {generateRandomResponse.status === 'failure' &&
-                                  webServiceErrorMessage}
+                                  webServiceErrorMessage(
+                                    generateRandomResponse.error,
+                                  )}
                                 {generateRandomResponse.status ===
                                   'exceededTransferLimit' &&
                                   generateRandomExceededTransferLimitMessage}

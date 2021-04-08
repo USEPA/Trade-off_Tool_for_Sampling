@@ -55,3 +55,29 @@ export function chunkArray(array: any, chunkLength: number): Array<Array<any>> {
   }
   return chunks;
 }
+
+/**
+ * Utility for creating an error object from the async catch function
+ * (i.e. something.then().catch()), to be displayed in textareas.
+ *
+ * @param error The error from the catch
+ * @returns An object representing the error
+ */
+export function createErrorObject(error: any) {
+  const errorObj = new Error(error);
+
+  let result = {
+    name: errorObj.name,
+    message: errorObj.message,
+    stack: errorObj.stack,
+  };
+
+  if (typeof error === 'object' && Object.keys(error).length > 0) {
+    result = {
+      ...error,
+      ...result,
+    };
+  }
+
+  return result;
+}

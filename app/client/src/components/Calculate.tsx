@@ -16,6 +16,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
+import { ErrorType } from 'types/Misc';
 // config
 import {
   contaminationHitsSuccessMessage,
@@ -32,7 +33,7 @@ import { CalculateResultsType } from 'types/CalculateResults';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
 import { updateLayerEdits } from 'utils/sketchUtils';
-import { chunkArray } from 'utils/utils';
+import { chunkArray, createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -46,6 +47,7 @@ type ContaminationResultsType = {
     | 'fetching'
     | 'success'
     | 'failure';
+  error?: ErrorType;
   data: any[] | null;
 };
 
@@ -548,6 +550,10 @@ function Calculate() {
                 console.error(res.error);
                 setContaminationResults({
                   status: 'failure',
+                  error: {
+                    error: createErrorObject(res),
+                    message: res.error.message,
+                  },
                   data: null,
                 });
                 return;
@@ -666,6 +672,10 @@ function Calculate() {
 
             setContaminationResults({
               status: 'failure',
+              error: {
+                error: createErrorObject(err),
+                message: err.message,
+              },
               data: null,
             });
           });
@@ -678,6 +688,10 @@ function Calculate() {
 
         setContaminationResults({
           status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           data: null,
         });
       });
@@ -910,7 +924,7 @@ function Calculate() {
                         <LoadingSpinner />
                       )}
                       {contaminationResults.status === 'failure' &&
-                        webServiceErrorMessage}
+                        webServiceErrorMessage(contaminationResults.error)}
                       {contaminationResults.status === 'no-map' &&
                         noContaminationMapMessage}
                       {contaminationResults.status === 'no-layer' &&
