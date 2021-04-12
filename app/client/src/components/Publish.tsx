@@ -26,8 +26,9 @@ import {
 import { ErrorType } from 'types/Misc';
 // config
 import {
+  noSamplesPublishMessage,
   notLoggedInMessage,
-  pulblishSuccessMessage,
+  publishSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 import { LayerType } from 'types/Layer';
@@ -635,6 +636,18 @@ function Publish() {
     selectedScenario,
   ]);
 
+  // count the number of samples of the selected sampling plan
+  let sampleCount = 0;
+  if (selectedScenario?.scenarioName) {
+    layers.forEach((layer) => {
+      if (layer.layerType !== 'Samples' && layer.layerType !== 'VSP') return;
+      if (layer.sketchLayer.type === 'feature') return;
+      if (layer.parentLayer?.title !== selectedScenario.scenarioName) return;
+
+      sampleCount += layer.sketchLayer.graphics.length;
+    });
+  }
+
   return (
     <div css={panelContainer}>
       <h2>Publish Plan</h2>
@@ -725,11 +738,13 @@ function Publish() {
         )}
       {(publishResponse.summary.success ||
         sketchLayer?.status === 'published') &&
-        pulblishSuccessMessage}
+        publishSuccessMessage}
       {!signedIn && notLoggedInMessage}
+      {sampleCount === 0 && noSamplesPublishMessage}
       {publishResponse.status !== 'name-not-available' &&
         sketchLayer &&
-        sketchLayer.status !== 'published' && (
+        sketchLayer.status !== 'published' &&
+        sampleCount !== 0 && (
           <div css={publishButtonContainerStyles}>
             <button
               css={publishButtonStyles}

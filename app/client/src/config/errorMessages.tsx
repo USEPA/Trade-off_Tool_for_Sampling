@@ -318,7 +318,15 @@ export const downloadSuccessMessage = (
 );
 
 // publish plan tab
-export const pulblishSuccessMessage = (
+export const noSamplesPublishMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Samples to Publish"
+    message="There are no samples to publish. Please add some samples to the plan and try again."
+  />
+);
+
+export const publishSuccessMessage = (
   <MessageBox
     severity="info"
     title="Publish Succeeded"
