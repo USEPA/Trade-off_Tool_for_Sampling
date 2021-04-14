@@ -1856,6 +1856,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Draw area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'draw'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('draw');
@@ -1877,6 +1880,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Use Imported Area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'file'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('file');
@@ -1905,6 +1911,9 @@ function LocateSamples() {
                                 id="sampling-mask"
                                 title="Draw Sampling Mask"
                                 className="sketch-button"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 onClick={() => {
                                   if (!aoiSketchLayer) return;
 
@@ -1941,6 +1950,10 @@ function LocateSamples() {
                                   />
                                   <button
                                     css={addButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={(ev) => {
                                       setGoTo('addData');
                                       setGoToOptions({
@@ -2007,6 +2020,10 @@ function LocateSamples() {
                                       .length > 0)) && (
                                   <button
                                     css={submitButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={randomSamples}
                                   >
                                     {generateRandomResponse.status !==

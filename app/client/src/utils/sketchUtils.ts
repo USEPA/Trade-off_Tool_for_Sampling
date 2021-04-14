@@ -212,6 +212,7 @@ export function updateLayerEdits({
   if (editsScenario) editsScenario.hasContaminationRan = hasContaminationRan;
   editsLayer.hasContaminationRan = hasContaminationRan;
 
+  console.log('changes1: ', changes);
   if (changes) {
     // Add new graphics
     if (type === 'add') {
@@ -272,6 +273,8 @@ export function updateLayerEdits({
       // adds array, since it hasn't been published yet
       changes.forEach((change) => {
         // attempt to find this id in adds
+        console.log('editsLayer.adds: ', editsLayer.adds);
+        console.log('change: ', change);
         const addChangeIndex = editsLayer.adds.findIndex(
           (graphic) =>
             graphic.attributes.PERMANENT_IDENTIFIER ===
@@ -295,6 +298,8 @@ export function updateLayerEdits({
             graphic.attributes.PERMANENT_IDENTIFIER !==
             change.attributes.PERMANENT_IDENTIFIER,
         );
+
+        console.log('change: ', change);
 
         // add the objectids to delete to the deletes array
         editsLayer.deletes.push({
