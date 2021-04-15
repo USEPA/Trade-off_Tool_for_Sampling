@@ -564,16 +564,24 @@ function LocateSamples() {
       sketchVM.cancel();
     }
 
-    // activate the sketch tool
-    aoiSketchVM.create('polygon');
-
     // make the style of the button active
-    activateSketchButton('sampling-mask');
+    const wasSet = activateSketchButton('sampling-mask');
+
+    if (wasSet) {
+      // let the user draw/place the shape
+      aoiSketchVM.create('polygon');
+    } else {
+      aoiSketchVM.cancel();
+    }
   }
 
   // Handle a user generating random samples
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
+
+    activateSketchButton('disable-all-buttons');
+    sketchVM?.cancel();
+    aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'
