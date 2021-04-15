@@ -976,6 +976,15 @@ export function useDynamicPopup() {
     includeContaminationFields: boolean = false,
   ) {
     if (type === 'Sampling Mask') {
+      const actions = new Collection<any>();
+      actions.addMany([
+        {
+          title: 'Delete Sample',
+          id: 'delete',
+          className: 'esri-icon-trash',
+        },
+      ]);
+
       return {
         title: '',
         content: [
@@ -984,6 +993,7 @@ export function useDynamicPopup() {
             fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
           },
         ],
+        actions,
       };
     }
     if (type === 'Area of Interest') {
