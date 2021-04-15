@@ -431,15 +431,17 @@ export function createSampleLayer(
 export function getDefaultSamplingMaskLayer(
   GraphicsLayer: __esri.GraphicsLayerConstructor,
 ) {
+  const layerUuid = generateUUID();
   const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
     title: 'Sketched Sampling Mask',
     listMode: 'hide',
   });
 
   return {
     id: -1,
-    uuid: '',
-    layerId: graphicsLayer.id,
+    uuid: layerUuid,
+    layerId: layerUuid,
     portalId: '',
     value: 'sketchAoi',
     name: 'Sketched Sampling Mask',
