@@ -78,7 +78,7 @@ const gloablStyles = css`
   }
 
   .esri-popup__main-container {
-    min-height: 450px !important;
+    max-height: 465px !important;
     min-width: 460px !important;
   }
 
