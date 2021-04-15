@@ -29,7 +29,8 @@ const containerStyles = css`
 `;
 
 const noteStyles = css`
-  height: 75px;
+  resize: vertical;
+  min-height: 75px;
   width: 100%;
 `;
 
