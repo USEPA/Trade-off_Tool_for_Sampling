@@ -564,16 +564,24 @@ function LocateSamples() {
       sketchVM.cancel();
     }
 
-    // activate the sketch tool
-    aoiSketchVM.create('polygon');
-
     // make the style of the button active
-    activateSketchButton('sampling-mask');
+    const wasSet = activateSketchButton('sampling-mask');
+
+    if (wasSet) {
+      // let the user draw/place the shape
+      aoiSketchVM.create('polygon');
+    } else {
+      aoiSketchVM.cancel();
+    }
   }
 
   // Handle a user generating random samples
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
+
+    activateSketchButton('disable-all-buttons');
+    sketchVM?.cancel();
+    aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'
@@ -1856,6 +1864,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Draw area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'draw'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('draw');
@@ -1877,6 +1888,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Use Imported Area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'file'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('file');
@@ -1905,6 +1919,9 @@ function LocateSamples() {
                                 id="sampling-mask"
                                 title="Draw Sampling Mask"
                                 className="sketch-button"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 onClick={() => {
                                   if (!aoiSketchLayer) return;
 
@@ -1941,6 +1958,10 @@ function LocateSamples() {
                                   />
                                   <button
                                     css={addButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={(ev) => {
                                       setGoTo('addData');
                                       setGoToOptions({
@@ -2007,6 +2028,10 @@ function LocateSamples() {
                                       .length > 0)) && (
                                   <button
                                     css={submitButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={randomSamples}
                                   >
                                     {generateRandomResponse.status !==
