@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -896,7 +896,7 @@ function Calculate() {
                           id="contamination-map-select"
                           inputId="contamination-map-select-input"
                           css={fullWidthSelectStyles}
-                          styles={reactSelectStyles}
+                          styles={reactSelectStyles as any}
                           value={contaminationMap}
                           onChange={(ev) =>
                             setContaminationMap(ev as LayerType)

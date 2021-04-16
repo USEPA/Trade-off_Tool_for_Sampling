@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -949,6 +949,18 @@ function ResultCard({ result }: ResultCardProps) {
               setStatus('');
             }
 
+            let isSampleLayer = false;
+            let isVspLayer = false;
+            const typesLoop = (type: __esri.FeatureType) => {
+              if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
+              if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
+            };
+
+            let fields: __esri.Field[] = [];
+            const fieldsLoop = (field: __esri.Field) => {
+              fields.push(Field.fromJSON(field));
+            };
+
             // create the layers to be added to the map
             for (let i = 0; i < responses.length; ) {
               const layerDetails = responses[i];
@@ -956,13 +968,10 @@ function ResultCard({ result }: ResultCardProps) {
               const scenarioName = layerDetails.name;
 
               // figure out if this layer is a sample layer or not
-              let isSampleLayer = false;
-              let isVspLayer = false;
+              isSampleLayer = false;
+              isVspLayer = false;
               if (layerDetails?.types) {
-                layerDetails.types.forEach((type: __esri.FeatureType) => {
-                  if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
-                  if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
-                });
+                layerDetails.types.forEach(typesLoop);
               }
 
               // add sample layers as graphics layers
@@ -1127,10 +1136,8 @@ function ResultCard({ result }: ResultCardProps) {
                 mapLayersToAdd.push(groupLayer); // replace with group layer
               } else {
                 // add non-sample layers as feature layers
-                const fields: __esri.Field[] = [];
-                layerFeatures.fields.forEach((field: __esri.Field) => {
-                  fields.push(Field.fromJSON(field));
-                });
+                fields = [];
+                layerFeatures.fields.forEach(fieldsLoop);
 
                 const source: __esri.Graphic[] = [];
                 layerFeatures.features.forEach((feature: any) => {

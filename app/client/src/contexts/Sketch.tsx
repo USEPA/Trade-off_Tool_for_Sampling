@@ -1,7 +1,6 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React, { ReactNode } from 'react';
-import { jsx } from '@emotion/core';
 // contexts
 import {
   useSampleTypesContext,

@@ -1,8 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { jsx } from '@emotion/core';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
