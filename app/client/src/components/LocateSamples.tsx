@@ -2495,12 +2495,22 @@ function LocateSamples() {
                           (editingStatus === 'view' &&
                             udtSymbol &&
                             userDefinedSampleType &&
-                            JSON.stringify(udtSymbol) !==
-                              JSON.stringify(
-                                defaultSymbols.symbols[
-                                  userDefinedSampleType.value
-                                ],
-                              ))) && (
+                            ((defaultSymbols.symbols.hasOwnProperty(
+                              userDefinedSampleType.value,
+                            ) &&
+                              JSON.stringify(udtSymbol) !==
+                                JSON.stringify(
+                                  defaultSymbols.symbols[
+                                    userDefinedSampleType.value
+                                  ],
+                                )) ||
+                              (!defaultSymbols.symbols.hasOwnProperty(
+                                userDefinedSampleType.value,
+                              ) &&
+                                JSON.stringify(udtSymbol) !==
+                                  JSON.stringify(
+                                    defaultSymbols.symbols['Samples'],
+                                  ))))) && (
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
