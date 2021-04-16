@@ -108,7 +108,7 @@ function NavButton({
       <div
         css={verticalButtonBar(panelIndex < 1 ? 'transparent' : color)}
       ></div>
-      <button onClick={onClick} css={navButtonStyles(selected)}>
+      <button data-testid={value} onClick={onClick} css={navButtonStyles(selected)}>
         <i className={iconClass} css={navIconStyles(color)} />
         <span css={navTextStyles}>{label}</span>
       </button>
