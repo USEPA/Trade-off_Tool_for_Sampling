@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -1952,7 +1952,7 @@ function LocateSamples() {
                                     id="aoi-mask-select"
                                     inputId="aoi-mask-select-input"
                                     css={inlineSelectStyles}
-                                    styles={reactSelectStyles}
+                                    styles={reactSelectStyles as any}
                                     isClearable={true}
                                     value={selectedAoiFile}
                                     onChange={(ev) =>

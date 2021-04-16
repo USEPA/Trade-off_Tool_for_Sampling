@@ -1,4 +1,4 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 // contexts
@@ -585,11 +585,6 @@ function MapWidgets({ mapView }: Props) {
   }, [PopupTemplate, getPopupTemplate, trainingMode, layers]);
 
   // Gets the graphics to be highlighted and highlights them
-  type HighlightType = {
-    graphics: __esri.Graphic[];
-    handle: __esri.Handle | null;
-  };
-
   const [handles] = React.useState(new Handles());
   React.useEffect(() => {
     if (!map || !selectedScenario || selectedScenario.layers.length === 0) {

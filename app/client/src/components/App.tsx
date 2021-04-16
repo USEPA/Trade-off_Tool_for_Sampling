@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { Global, jsx, css } from '@emotion/core';
+import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
 // components
 import AlertDialog from 'components/AlertDialog';

@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React, { ReactNode } from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import xl from 'excel4node';
 import { saveAs } from 'file-saver';
 // components

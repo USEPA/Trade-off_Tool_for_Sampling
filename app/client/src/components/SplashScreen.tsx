@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import Cookies from 'universal-cookie';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // contexts
