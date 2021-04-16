@@ -711,10 +711,17 @@ function LocateSamples() {
                 graphicsToAdd.push(
                   new Graphic({
                     attributes: {
-                      ...feature.attributes,
+                      ...(window as any).totsSampleAttributes[
+                        feature.attributes.TYPE
+                      ],
                       CREATEDDATE: timestamp,
                       DECISIONUNITUUID: sketchLayer.uuid,
                       DECISIONUNIT: sketchLayer.label,
+                      OBJECTID: feature.attributes.OBJECTID,
+                      GLOBALID: feature.attributes.GLOBALID,
+                      PERMANENT_IDENTIFIER:
+                        feature.attributes.PERMANENT_IDENTIFIER,
+                      UPDATEDDATE: timestamp,
                     },
                     symbol,
                     geometry: new Polygon({

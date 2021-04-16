@@ -635,6 +635,7 @@ function FilePanel() {
               requests.push(request);
             });
 
+            const timestamp = getCurrentDateTime();
             Promise.all(requests)
               .then((responses) => {
                 // get the first result for filling in metadata
@@ -643,7 +644,24 @@ function FilePanel() {
 
                 // build an array with all of the features
                 responses.forEach((res) => {
-                  features.push(...res.results[0].value.features);
+                  const innerFeatures: any[] = [];
+                  res.results[0].value.features.forEach((feature: any) => {
+                    innerFeatures.push({
+                      geometry: feature.geometry,
+                      attributes: {
+                        ...(window as any).totsSampleAttributes[
+                          feature.attributes.TYPE
+                        ],
+                        CREATEDDATE: timestamp,
+                        OBJECTID: feature.attributes.OBJECTID,
+                        GLOBALID: feature.attributes.GLOBALID,
+                        PERMANENT_IDENTIFIER:
+                          feature.attributes.PERMANENT_IDENTIFIER,
+                        UPDATEDDATE: timestamp,
+                      },
+                    });
+                  });
+                  features.push(...innerFeatures);
                 });
 
                 const layers: any[] = [];
