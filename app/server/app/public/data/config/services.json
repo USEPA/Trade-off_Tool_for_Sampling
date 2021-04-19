@@ -23,38 +23,47 @@
       "name": "s3 lookup - sample types"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://arcgis.com/sharing/rest/community/users/*",
       "name": "ArcGIS - User logged in check"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/generate",
       "name": "ArcGIS - Convert ShapeFile to Feature Layer"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/analyze",
       "name": "ArcGIS - Validate CSV file"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://utility.arcgis.com/sharing/kml",
       "name": "ArcGIS - KML file upload"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://www.arcgis.com/sharing/rest/portals/*/isServiceNameAvailable",
       "name": "ArcGIS - is service name available"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/applyEdits",
       "name": "ArcGIS - Apply Edits to Feature Server"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/addToDefinition",
       "name": "ArcGIS - Add Layer to Feature Server"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer",
       "name": "ArcGIS - Feature Server"
     },
     {
+      "urlLookup": "ArcGIS",
       "wildcardUrl": "https://services5.arcgis.com/*",
       "name": "ArcGIS"
     }
