@@ -159,9 +159,10 @@ export function SketchProvider({ children }: Props) {
     basemapWidget,
     setBasemapWidget, //
   ] = React.useState<__esri.BasemapGallery | null>(null);
-  const [defaultSymbols, setDefaultSymbols] = React.useState<
-    DefaultSymbolsType
-  >({
+  const [
+    defaultSymbols,
+    setDefaultSymbols,
+  ] = React.useState<DefaultSymbolsType>({
     symbols: {
       'Area of Interest': defaultSymbol,
       'Contamination Map': defaultSymbol,
@@ -201,9 +202,10 @@ export function SketchProvider({ children }: Props) {
   const [userDefinedOptions, setUserDefinedOptions] = React.useState<
     SampleSelectType[]
   >([]);
-  const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
-    UserDefinedAttributes
-  >({ editCount: 0, attributes: {} });
+  const [
+    userDefinedAttributes,
+    setUserDefinedAttributes,
+  ] = React.useState<UserDefinedAttributes>({ editCount: 0, attributes: {} });
   const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
   const [allSampleOptions, setAllSampleOptions] = React.useState<
     SampleSelectType[]
@@ -284,7 +286,10 @@ export function SketchProvider({ children }: Props) {
           setGpMaxRecordCount(maxRecordCount);
           resolve(maxRecordCount);
         })
-        .catch((err) => reject(err));
+        .catch((err) => {
+          window.logErrorToGa(err);
+          reject(err);
+        });
     });
   }
 

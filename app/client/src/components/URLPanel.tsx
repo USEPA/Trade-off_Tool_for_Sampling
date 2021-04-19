@@ -139,6 +139,8 @@ function URLPanel() {
         .catch((err) => {
           console.error(err);
           setStatus('failure');
+
+          window.logErrorToGa(err);
         });
       return;
     }

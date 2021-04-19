@@ -16,6 +16,8 @@ function getLookupFile(filename: string, setVariable: Function) {
     .catch((err) => {
       console.error(err);
       setVariable({ status: 'failure', data: err });
+
+      window.logErrorToGa(err);
     });
 }
 
@@ -84,6 +86,8 @@ function useServicesContext() {
       .catch((err) => {
         console.error(err);
         setServices({ status: 'failure', data: err });
+
+        window.logErrorToGa(err);
       });
   }
 

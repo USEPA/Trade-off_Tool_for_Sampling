@@ -364,6 +364,8 @@ function SearchPanel() {
           },
           data: null,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     currentExtent,
@@ -425,6 +427,8 @@ function SearchPanel() {
           },
           data: null,
         });
+
+        window.logErrorToGa(err);
       });
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
@@ -1229,11 +1233,15 @@ function ResultCard({ result }: ResultCardProps) {
           .catch((err) => {
             console.error(err);
             setStatus('error');
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
         console.error(err);
         setStatus('error');
+
+        window.logErrorToGa(err);
       });
   }
 

@@ -30,6 +30,14 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error) {
     console.warn(error);
+
+    try {
+      throw error;
+    } catch (err) {
+      if (!window.gaTarget) return;
+
+      window.logErrorToGa(err, true);
+    }
   }
 
   render() {

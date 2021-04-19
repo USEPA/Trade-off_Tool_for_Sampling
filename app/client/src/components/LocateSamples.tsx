@@ -802,6 +802,8 @@ function LocateSamples() {
               },
               data: [],
             });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err: any) => {
@@ -814,6 +816,8 @@ function LocateSamples() {
           },
           data: [],
         });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -2136,9 +2140,7 @@ function LocateSamples() {
                                         );
 
                                         if (graphicsToRemove.length > 0) {
-                                          const collection = new Collection<
-                                            __esri.Graphic
-                                          >();
+                                          const collection = new Collection<__esri.Graphic>();
                                           collection.addMany(graphicsToRemove);
                                           editsCopy = updateLayerEdits({
                                             edits: editsCopy,
@@ -2659,9 +2661,7 @@ function LocateSamples() {
                                     });
 
                                     if (editedGraphics.length > 0) {
-                                      const collection = new Collection<
-                                        __esri.Graphic
-                                      >();
+                                      const collection = new Collection<__esri.Graphic>();
                                       collection.addMany(editedGraphics);
                                       editsCopy = updateLayerEdits({
                                         edits: editsCopy,

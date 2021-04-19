@@ -66,6 +66,11 @@ export async function writeToStorage(
       ariaLabel: 'Session Storage Limit Reached',
       description: message,
     });
+
+    window.logToGa('send', 'exception', {
+      exDescription: `${key}:${message}`,
+      exFatal: false,
+    });
   }
 }
 
@@ -1490,7 +1495,11 @@ function useUrlLayerStorage() {
               return [...urlLayers, urlLayer];
             });
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+
+            window.logErrorToGa(err);
+          });
         return;
       }
       if (type === 'WMS') {
