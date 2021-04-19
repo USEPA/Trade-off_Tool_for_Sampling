@@ -101,6 +101,7 @@ function useServicesContext() {
           }
 
           let wildcardUrl = item.wildcardUrl;
+          wildcardUrl = wildcardUrl.replace(/\{proxyUrl\}/g, data.proxyUrl);
           wildcardUrl = wildcardUrl.replace(/\{urlLookup\}/g, urlLookup);
 
           googleAnalyticsMapping.push({

@@ -4,18 +4,23 @@
   "googleAnalyticsMapping": [
     {
       "urlLookup": "totsGPServer",
-      "wildcardUrl": "{totsGPServer}Contamination%20Results*",
+      "wildcardUrl": "{urlLookup}/Contamination Results*",
       "name": "GP Server - Contamination Results"
     },
     {
       "urlLookup": "totsGPServer",
-      "wildcardUrl": "{totsGPServer}Generate%20Random*",
+      "wildcardUrl": "{urlLookup}/Generate%20Random*",
       "name": "GP Server - Generate Random"
     },
     {
       "urlLookup": "totsGPServer",
-      "wildcardUrl": "{totsGPServer}VSP%20Import*",
+      "wildcardUrl": "{urlLookup}/VSP%20Import*",
       "name": "GP Server - VSP Import"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{proxyUrl}{urlLookup}*",
+      "name": "GP Server"
     },
     {
       "urlLookup": "origin",

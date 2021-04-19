@@ -198,6 +198,8 @@ export function geoprocessorFetch({
   outSpatialReference?: any;
 }): Promise<any> {
   return new Promise<any>((resolve, reject) => {
+    const startTime = performance.now();
+
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
@@ -206,9 +208,14 @@ export function geoprocessorFetch({
     geoprocessor
       .execute(inputParameters)
       .then((res) => {
+        logCallToGoogleAnalytics(url, res.status, startTime);
         resolve(res);
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        console.error(err);
+        logCallToGoogleAnalytics(url, err, startTime);
+        return checkResponse(err);
+      });
   });
 }
 
