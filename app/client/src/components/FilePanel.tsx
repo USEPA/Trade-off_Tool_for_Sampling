@@ -453,6 +453,8 @@ function FilePanel() {
           error: createErrorObject(err),
           message: err.message,
         });
+
+        window.logErrorToGa(err);
       });
   }, [file, firstGeocodeService, portal, sharingUrl]);
 
@@ -688,6 +690,8 @@ function FilePanel() {
                   error: createErrorObject(err),
                   message: err.message,
                 });
+
+                window.logErrorToGa(err);
               });
           })
           .catch((err) => {
@@ -697,6 +701,8 @@ function FilePanel() {
               error: createErrorObject(err),
               message: err.message,
             });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
@@ -706,6 +712,8 @@ function FilePanel() {
           error: createErrorObject(err),
           message: err.message,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     // esri modules
@@ -1184,6 +1192,8 @@ function FilePanel() {
             error: createErrorObject(err),
             message: err.message,
           });
+
+          window.logErrorToGa(err);
         });
     };
 
@@ -1192,6 +1202,8 @@ function FilePanel() {
     } catch (ex) {
       console.error('File Read Error: ', ex);
       setUploadStatus('file-read-error');
+
+      window.logErrorToGa(ex);
     }
   }, [KMLLayer, mapView, file]);
 

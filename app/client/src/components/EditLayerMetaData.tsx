@@ -287,6 +287,8 @@ function EditScenario({
           status: 'failure',
           error: { error: createErrorObject(err), message: err.message },
         });
+
+        window.logErrorToGa(err);
       });
   }
 

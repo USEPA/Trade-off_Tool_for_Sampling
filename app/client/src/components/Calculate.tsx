@@ -678,6 +678,8 @@ function Calculate() {
               },
               data: null,
             });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
@@ -694,6 +696,8 @@ function Calculate() {
           },
           data: null,
         });
+
+        window.logErrorToGa(err);
       });
   }
 

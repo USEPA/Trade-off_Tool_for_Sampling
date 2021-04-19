@@ -200,6 +200,8 @@ function Publish() {
           },
           rawData: err,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     portal,
@@ -619,6 +621,8 @@ function Publish() {
           },
           rawData: err,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     GraphicsLayer,
