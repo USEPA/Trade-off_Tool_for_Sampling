@@ -1,4 +1,62 @@
 {
   "totsGPServer": "https://ags.erg.com/arcgis/rest/services/TOTS_Dev/GPServer",
-  "proxyUrl": "https://app7.erg.com/PHP/proxy.php?"
+  "proxyUrl": "https://app7.erg.com/PHP/proxy.php?",
+  "googleAnalyticsMapping": [
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{totsGPServer}Contamination%20Results*",
+      "name": "GP Server - Contamination Results"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{totsGPServer}Generate%20Random*",
+      "name": "GP Server - Generate Random"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{totsGPServer}VSP%20Import*",
+      "name": "GP Server - VSP Import"
+    },
+    {
+      "urlLookup": "origin",
+      "wildcardUrl": "{urlLookup}/proxy?url={urlLookup}/data/sampleTypes/sampleTypes.json",
+      "name": "s3 lookup - sample types"
+    },
+    {
+      "wildcardUrl": "https://arcgis.com/sharing/rest/community/users/*",
+      "name": "ArcGIS - User logged in check"
+    },
+    {
+      "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/generate",
+      "name": "ArcGIS - Convert ShapeFile to Feature Layer"
+    },
+    {
+      "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/analyze",
+      "name": "ArcGIS - Validate CSV file"
+    },
+    {
+      "wildcardUrl": "https://utility.arcgis.com/sharing/kml",
+      "name": "ArcGIS - KML file upload"
+    },
+    {
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/portals/*/isServiceNameAvailable",
+      "name": "ArcGIS - is service name available"
+    },
+    {
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/applyEdits",
+      "name": "ArcGIS - Apply Edits to Feature Server"
+    },
+    {
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/addToDefinition",
+      "name": "ArcGIS - Add Layer to Feature Server"
+    },
+    {
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer",
+      "name": "ArcGIS - Feature Server"
+    },
+    {
+      "wildcardUrl": "https://services5.arcgis.com/*",
+      "name": "ArcGIS"
+    }
+  ]
 }
