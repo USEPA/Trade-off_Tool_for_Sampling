@@ -81,3 +81,13 @@ export function createErrorObject(error: any) {
 
   return result;
 }
+
+/**
+ * Sanitizes regex strings.
+ *
+ * @param str The regex string to be sanitized
+ * @returns The sanitized regex string
+ */
+export function escapeRegex(str: string) {
+  return str.replace(/([.*+?^=!:${}()|\]\\])/g, '\\$1');
+}

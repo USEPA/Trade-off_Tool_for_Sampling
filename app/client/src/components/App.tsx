@@ -36,6 +36,16 @@ const expandButtonHeight = 32;
 const minMapHeight = 180;
 var startY = 0;
 
+declare global {
+  interface Window {
+    ga: Function;
+    gaTarget: string;
+    googleAnalyticsMapping: any[];
+    logErrorToGa: Function;
+    logToGa: Function;
+  }
+}
+
 const gloablStyles = css`
   html {
     /* overwrite EPA's html font-size so rem units are based on 16px */
