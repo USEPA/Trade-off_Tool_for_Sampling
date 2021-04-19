@@ -24,17 +24,17 @@
     },
     {
       "urlLookup": "ArcGIS",
-      "wildcardUrl": "https://arcgis.com/sharing/rest/community/users/*",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/community/users/*",
       "name": "ArcGIS - User logged in check"
     },
     {
       "urlLookup": "ArcGIS",
-      "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/generate",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/features/generate",
       "name": "ArcGIS - Convert ShapeFile to Feature Layer"
     },
     {
       "urlLookup": "ArcGIS",
-      "wildcardUrl": "https://arcgis.com/sharing/rest/content/features/analyze",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/features/analyze",
       "name": "ArcGIS - Validate CSV file"
     },
     {
