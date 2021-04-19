@@ -6,6 +6,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import { useServicesContext } from 'contexts/LookupFiles';
 // utils
 import { getEnvironmentString } from 'utils/arcGisRestUtils';
+import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
 
 // map types from @types/arcgis-js-api to our use of esri-loader's loadModules
 type EsriConstructors = [
@@ -262,6 +263,9 @@ function EsriModulesProvider({ children }: Props) {
           SketchViewModel,
         });
 
+        var callId = 0;
+        var callDurations: any = {};
+
         if (services.status === 'success') {
           // Have ESRI use the proxy for communicating with the TOTS GP Server
           urlUtils.addProxyRule({
@@ -289,6 +293,43 @@ function EsriModulesProvider({ children }: Props) {
             if (envString) {
               params.requestOptions.query[envString] = 1;
             }
+
+            // add the callId to the query so we can tie the response back
+            params.requestOptions.query['callId'] = callId;
+
+            // add the call's start time to the dictionary
+            callDurations[callId] = performance.now();
+
+            // increment the callId
+            callId = callId + 1;
+          },
+
+          // Log esri api calls to Google Analytics
+          after: function (response: any) {
+            // get the execution time for the call
+            const callId = response.requestOptions.query.callId;
+            const startTime = callDurations[callId];
+
+            logCallToGoogleAnalytics(response.url, 200, startTime);
+
+            // delete the execution time from the dictionary
+            delete callDurations[callId];
+          },
+
+          error: function (error) {
+            // get the execution time for the call
+            const details = error.details;
+            const callId = details.requestOptions.query.callId;
+            const startTime = callDurations[callId];
+
+            logCallToGoogleAnalytics(
+              details.url,
+              details.httpStatus ? details.httpStatus : error.message,
+              startTime,
+            );
+
+            // delete the execution time from the dictionary
+            delete callDurations[callId];
           },
         });
       },
