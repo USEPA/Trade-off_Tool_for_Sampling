@@ -39,10 +39,12 @@ var startY = 0;
 declare global {
   interface Window {
     ga: Function;
+    gtag: Function;
     gaTarget: string;
     googleAnalyticsMapping: any[];
     logErrorToGa: Function;
     logToGa: Function;
+    logToGTag: Function;
   }
 }
 

@@ -104,9 +104,25 @@
         );
       }
 
+      function addGlobalSiteTag(trackingId) {
+        let gaScript = document.createElement('script');
+        gaScript.setAttribute('async', 'true');
+        gaScript.setAttribute('src', `https://www.googletagmanager.com/gtag/js?id=${ trackingId }`);
+        
+        let gaScript2 = document.createElement('script');
+        gaScript2.innerText = `window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'${ trackingId }\', { \'groups\': \'ERG\' });`;
+
+        document.documentElement.firstChild.appendChild(gaScript);
+        document.documentElement.firstChild.appendChild(gaScript2);
+      }
+
       // Wrapper for logging to GA which adds the target to the command
       function logToGa(command, ...props) {
         ga(`${window.gaTarget}.${command}`, ...props);
+      }
+
+      function logToGTag(command, ...props) {
+        gtag(`${command}`, ...props);
       }
 
       function logErrorToGa(err, fatal = false) {
@@ -114,6 +130,11 @@
         window.logToGa('send', 'exception', {
           exDescription: `${error.name}:${error.message}:${error.stack}`,
           exFatal: fatal,
+        });
+        window.logToGTag('event', 'exception', {
+          exDescription: `${error.name}:${error.message}:${error.stack}`,
+          exFatal: fatal,
+          send_to: 'ERG',
         });
       }
 
@@ -146,14 +167,28 @@
         ga('create', '269507856', 'auto', 'ERG'); //Stage
         window.gaTarget = 'ERG';
         logToGa('send', 'pageview');
+        logToGTag('event', 'page_view', {
+          page_location: 'tots-stage.app.cloud.gov',
+          page_path: '/',
+          page_title: 'Trade-Off Tool for Sampling TOTS | US EPA',
+          send_to: 'ERG',
+        });
       } else if (
         document.location.hostname === 'tots-dev.app.cloud.gov' ||
         document.location.hostname === 'localhost'
       ) {
         addGoogleAnalyticsObject();
         ga('create', 'UA-37504877-8', 'auto', 'ERG'); //Dev
+        addGlobalSiteTag('G-8Q6PMVCDHZ');
+        ga('create', 'G-8Q6PMVCDHZ', 'auto', 'ERG'); //Dev
         window.gaTarget = 'ERG';
         logToGa('send', 'pageview');
+        logToGTag('event', 'page_view', {
+          page_location: 'tots-stage.app.cloud.gov',
+          page_path: '/',
+          page_title: 'Trade-Off Tool for Sampling TOTS | US EPA',
+          send_to: 'ERG',
+        })
       }
 
       //Only setup the logging for public sites, ie don't log from localhost
@@ -216,6 +251,15 @@
               action,
               window.location.pathname,
             );
+            logToGTag(
+              'event',
+              'buttonClick',
+              {
+                event_category: action,
+                event_label: window.location.pathname,
+                send_to: 'ERG',
+              }
+            );
           }
 
           //Link clicks
@@ -249,6 +293,11 @@
 
             //Log to Google Analytics
             logToGa('send', 'event', category, action, href);
+            logToGTag('event', category, { 
+              event_category: action, 
+              event_label: href,
+              send_to: 'ERG',
+            });
           }
         });
 
@@ -256,6 +305,11 @@
           window.logToGa('send', 'exception', {
             exDescription: `${event.error.message}${event.error.stack}`,
             exFatal: true,
+          });
+          window.logToGTag('event', 'exception', {
+            exDescription: `${event.error.message}${event.error.stack}`,
+            exFatal: true,
+            send_to: 'ERG',
           });
 
           return true;
