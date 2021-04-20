@@ -214,7 +214,7 @@ export function geoprocessorFetch({
       .catch((err) => {
         console.error(err);
         logCallToGoogleAnalytics(url, err, startTime);
-        return checkResponse(err);
+        reject(err);
       });
   });
 }
@@ -253,6 +253,11 @@ export function logCallToGoogleAnalytics(
 
   // log to google analytics if it has been setup
   window.logToGa('send', 'event', 'Web-service', eventAction, eventLabel);
+  window.logToGTag('event', 'Web-service', { 
+    event_category: eventAction, 
+    event_label: eventLabel,
+    send_to: 'ERG',
+  });
 }
 
 /**
