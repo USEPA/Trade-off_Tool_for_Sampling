@@ -214,7 +214,7 @@ export function geoprocessorFetch({
       .catch((err) => {
         console.error(err);
         logCallToGoogleAnalytics(url, err, startTime);
-        return checkResponse(err);
+        reject(err);
       });
   });
 }
