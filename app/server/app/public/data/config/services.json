@@ -71,6 +71,36 @@
       "urlLookup": "ArcGIS",
       "wildcardUrl": "https://services5.arcgis.com/*",
       "name": "ArcGIS"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/community/groups*",
+      "name": "ArcGIS - Community Groups"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/groups*",
+      "name": "ArcGIS - Content Groups"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/items*",
+      "name": "ArcGIS - Content Items"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/portals*",
+      "name": "ArcGIS - Portals"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/search*",
+      "name": "ArcGIS - Search"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/users/*",
+      "name": "ArcGIS - User logged in check"
     }
   ]
 }
