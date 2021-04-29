@@ -1,4 +1,4 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import { v4 as uuidv4 } from 'uuid';
 // types
@@ -431,15 +431,17 @@ export function createSampleLayer(
 export function getDefaultSamplingMaskLayer(
   GraphicsLayer: __esri.GraphicsLayerConstructor,
 ) {
+  const layerUuid = generateUUID();
   const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
     title: 'Sketched Sampling Mask',
     listMode: 'hide',
   });
 
   return {
     id: -1,
-    uuid: '',
-    layerId: graphicsLayer.id,
+    uuid: layerUuid,
+    layerId: layerUuid,
     portalId: '',
     value: 'sketchAoi',
     name: 'Sketched Sampling Mask',
@@ -635,11 +637,11 @@ export function getSampleTableColumns({
       accessor: 'AC',
       width: baseColumnWidth,
     },
-    {
-      Header: 'Total Cost Per Sample (Labor + Material + Waste)',
-      accessor: 'TCPS',
-      width: baseColumnWidth,
-    },
+    // {
+    //   Header: 'Total Cost Per Sample (Labor + Material + Waste)',
+    //   accessor: 'TCPS',
+    //   width: baseColumnWidth,
+    // },
     {
       Header: 'Notes',
       accessor: 'Notes',
@@ -675,11 +677,11 @@ export function getSampleTableColumns({
       accessor: 'TTA',
       width: baseColumnWidth,
     },
-    {
-      Header: 'Total Time per Sample (person hrs/sample)',
-      accessor: 'TTPS',
-      width: baseColumnWidth,
-    },
+    // {
+    //   Header: 'Total Time per Sample (person hrs/sample)',
+    //   accessor: 'TTPS',
+    //   width: baseColumnWidth,
+    // },
     {
       Header: 'Limit of Detection (CFU) Porous',
       accessor: 'LOD_P',

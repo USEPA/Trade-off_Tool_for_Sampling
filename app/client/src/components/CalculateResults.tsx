@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React, { ReactNode } from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import xl from 'excel4node';
 import { saveAs } from 'file-saver';
 // components
@@ -184,6 +184,8 @@ function CalculateResults() {
               map.layers.forEach((layer) => {
                 layer.visible = originalVisiblity[layer.id];
               });
+
+              window.logErrorToGa(err);
             });
         }, 3000);
       });
@@ -291,6 +293,8 @@ function CalculateResults() {
       .catch((err: any) => {
         console.error(err);
         setDownloadStatus('excel-failure');
+
+        window.logErrorToGa(err);
       });
 
     // --- functions for creating the content for each sheet ---

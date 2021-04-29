@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -28,10 +28,11 @@ import {
   getSimplePopupTemplate,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { escapeForLucene } from 'utils/utils';
+import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 import { Attributes, SampleSelectType } from 'config/sampleAttributes';
 // config
 import {
@@ -186,6 +187,7 @@ type SortByType = {
 
 type SearchResultsType = {
   status: 'none' | 'fetching' | 'success' | 'failure' | 'not-logged-in';
+  error?: ErrorType;
   data: __esri.PortalQueryResult | null;
 };
 
@@ -357,7 +359,16 @@ function SearchPanel() {
       })
       .catch((err) => {
         console.error(err);
-        setSearchResults({ status: 'failure', data: null });
+        setSearchResults({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: null,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [
     currentExtent,
@@ -411,7 +422,16 @@ function SearchPanel() {
       })
       .catch((err) => {
         console.error(err);
-        setSearchResults({ status: 'failure', data: null });
+        setSearchResults({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: null,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
 
@@ -634,7 +654,8 @@ function SearchPanel() {
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
         {searchResults.status === 'not-logged-in' && notLoggedInMessage}
-        {searchResults.status === 'failure' && webServiceErrorMessage}
+        {searchResults.status === 'failure' &&
+          webServiceErrorMessage(searchResults.error)}
         {searchResults.status === 'success' && (
           <React.Fragment>
             <div>
@@ -951,6 +972,18 @@ function ResultCard({ result }: ResultCardProps) {
               setStatus('');
             }
 
+            let isSampleLayer = false;
+            let isVspLayer = false;
+            const typesLoop = (type: __esri.FeatureType) => {
+              if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
+              if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
+            };
+
+            let fields: __esri.Field[] = [];
+            const fieldsLoop = (field: __esri.Field) => {
+              fields.push(Field.fromJSON(field));
+            };
+
             // create the layers to be added to the map
             for (let i = 0; i < responses.length; ) {
               const layerDetails = responses[i];
@@ -958,13 +991,10 @@ function ResultCard({ result }: ResultCardProps) {
               const scenarioName = layerDetails.name;
 
               // figure out if this layer is a sample layer or not
-              let isSampleLayer = false;
-              let isVspLayer = false;
+              isSampleLayer = false;
+              isVspLayer = false;
               if (layerDetails?.types) {
-                layerDetails.types.forEach((type: __esri.FeatureType) => {
-                  if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
-                  if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
-                });
+                layerDetails.types.forEach(typesLoop);
               }
 
               // add sample layers as graphics layers
@@ -1194,10 +1224,8 @@ function ResultCard({ result }: ResultCardProps) {
                 mapLayersToAdd.push(groupLayer); // replace with group layer
               } else {
                 // add non-sample layers as feature layers
-                const fields: __esri.Field[] = [];
-                layerFeatures.fields.forEach((field: __esri.Field) => {
-                  fields.push(Field.fromJSON(field));
-                });
+                fields = [];
+                layerFeatures.fields.forEach(fieldsLoop);
 
                 const source: __esri.Graphic[] = [];
                 layerFeatures.features.forEach((feature: any) => {
@@ -1289,11 +1317,15 @@ function ResultCard({ result }: ResultCardProps) {
           .catch((err) => {
             console.error(err);
             setStatus('error');
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
         console.error(err);
         setStatus('error');
+
+        window.logErrorToGa(err);
       });
   }
 

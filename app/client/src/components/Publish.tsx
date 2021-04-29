@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import { EditScenario } from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -21,6 +21,7 @@ import {
   publishTable,
 } from 'utils/arcGisRestUtils';
 import { findLayerInEdits } from 'utils/sketchUtils';
+import { createErrorObject } from 'utils/utils';
 // types
 import {
   DeleteFeatureType,
@@ -28,12 +29,14 @@ import {
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 import { SampleTypeOptions } from 'types/Publish';
 // config
 import {
+  noSamplesPublishMessage,
   featureServiceTakenMessage,
   notLoggedInMessage,
-  pulblishSuccessMessage,
+  publishSuccessMessage,
   pulblishSamplesSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
@@ -65,6 +68,7 @@ type PublishType = {
     success: string;
     failed: string;
   };
+  error?: ErrorType;
   rawData: any;
 };
 
@@ -227,6 +231,20 @@ function Publish() {
     // check if the service (scenario) name is availble before continuing
     isServiceNameAvailable(portal, selectedScenario.scenarioName)
       .then((res: any) => {
+        if (res.error) {
+          setPublishButtonClicked(false);
+          setPublishResponse({
+            status: 'fetch-failure',
+            summary: { success: '', failed: '' },
+            error: {
+              error: createErrorObject(res),
+              message: res.error.message,
+            },
+            rawData: null,
+          });
+          return;
+        }
+
         if (!res.available) {
           setPublishButtonClicked(false);
           setPublishResponse({
@@ -244,8 +262,14 @@ function Publish() {
         setPublishResponse({
           status: 'fetch-failure',
           summary: { success: '', failed: '' },
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           rawData: err,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     portal,
@@ -296,6 +320,7 @@ function Publish() {
       setPublishResponse({
         status: 'fetch-failure',
         summary: { success: '', failed: '' },
+        error: { error: null, message: 'No data to publish.' },
         rawData: null,
       });
       return;
@@ -659,8 +684,14 @@ function Publish() {
         setPublishResponse({
           status: 'fetch-failure',
           summary: { success: '', failed: '' },
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           rawData: err,
         });
+
+        window.logErrorToGa(err);
       });
   }, [
     GraphicsLayer,
@@ -796,9 +827,10 @@ function Publish() {
   ]);
 
   // Run the publish
-  const [publishSamplesResponse, setPublishSamplesResponse] = React.useState<
-    PublishType
-  >({
+  const [
+    publishSamplesResponse,
+    setPublishSamplesResponse,
+  ] = React.useState<PublishType>({
     status: 'none',
     summary: { success: '', failed: '' },
     rawData: null,
@@ -1060,6 +1092,18 @@ function Publish() {
     };
   });
 
+  // count the number of samples of the selected sampling plan
+  let sampleCount = 0;
+  if (selectedScenario?.scenarioName) {
+    layers.forEach((layer) => {
+      if (layer.layerType !== 'Samples' && layer.layerType !== 'VSP') return;
+      if (layer.sketchLayer.type === 'feature') return;
+      if (layer.parentLayer?.title !== selectedScenario.scenarioName) return;
+
+      sampleCount += layer.sketchLayer.graphics.length;
+    });
+  }
+
   return (
     <div css={panelContainer}>
       <h2>Publish Plan</h2>
@@ -1138,7 +1182,8 @@ function Publish() {
       </div>
 
       {publishResponse.status === 'fetching' && <LoadingSpinner />}
-      {publishResponse.status === 'fetch-failure' && webServiceErrorMessage}
+      {publishResponse.status === 'fetch-failure' &&
+        webServiceErrorMessage(publishResponse.error)}
       {publishResponse.status === 'success' &&
         publishResponse.summary.failed && (
           <MessageBox
@@ -1149,11 +1194,13 @@ function Publish() {
         )}
       {(publishResponse.summary.success ||
         sketchLayer?.status === 'published') &&
-        pulblishSuccessMessage}
+        publishSuccessMessage}
       {!signedIn && notLoggedInMessage}
+      {sampleCount === 0 && noSamplesPublishMessage}
       {publishResponse.status !== 'name-not-available' &&
         sketchLayer &&
-        sketchLayer.status !== 'published' && (
+        sketchLayer.status !== 'published' &&
+        sampleCount !== 0 && (
           <div css={publishButtonContainerStyles}>
             <button
               css={publishButtonStyles}
@@ -1174,11 +1221,11 @@ function Publish() {
           <label htmlFor="publish-sample-select">Samples to Publish</label>
           <Select
             inputId="publish-sample-select"
-            isMulti
+            isMulti={true as any}
             isSearchable={false}
             options={sampleTypeOptions as any}
             value={sampleTypeSelections as any}
-            onChange={(ev) => setSampleTypeSelections(ev as SampleTypeOptions)}
+            onChange={(ev) => setSampleTypeSelections(ev as any)}
             css={multiSelectStyles}
           />
         </div>

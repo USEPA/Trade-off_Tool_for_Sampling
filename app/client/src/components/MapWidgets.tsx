@@ -1,4 +1,4 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 // contexts
@@ -55,14 +55,17 @@ function getUpdateEventInfo(
   // Get the layer from the event. It's better to get the layer from the graphics
   // since that will persist when changing tabs. For delete events we have to get
   // the layer from the target, since delete events never have the layer on the graphic.
-  const eventLayer = type === 'delete' ? event.target.layer : changes[0].layer;
+  const eventLayer = type === 'delete' ? event.target?.layer : changes[0].layer;
 
   // look up the layer for this event
   let updateLayer: LayerType | null = null;
   let updateLayerIndex = -1;
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (layer.layerId === eventLayer.id) {
+    if (
+      (eventLayer && layer.layerId === eventLayer.id) ||
+      (!eventLayer && layer.layerId === changes[0].attributes?.DECISIONUNITUUID)
+    ) {
       updateLayer = layer;
       updateLayerIndex = i;
       break;
@@ -286,6 +289,8 @@ function MapWidgets({ mapView }: Props) {
           if (id === 'sampling-mask') {
             layerType = 'Sampling Mask';
             graphic.attributes = {
+              DECISIONUNITUUID: graphic.layer.id,
+              DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               TYPE: layerType,
@@ -580,11 +585,6 @@ function MapWidgets({ mapView }: Props) {
   }, [PopupTemplate, getPopupTemplate, trainingMode, layers]);
 
   // Gets the graphics to be highlighted and highlights them
-  type HighlightType = {
-    graphics: __esri.Graphic[];
-    handle: __esri.Handle | null;
-  };
-
   const [handles] = React.useState(new Handles());
   React.useEffect(() => {
     if (!map || !selectedScenario || selectedScenario.layers.length === 0) {

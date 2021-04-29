@@ -1,8 +1,8 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -667,7 +667,7 @@ function Toolbar() {
       filterFunction: (basemap: __esri.Basemap) => {
         return basemapNames.indexOf(basemap.portalItem.title) !== -1;
       },
-      updateBasemapsCallback: (basemaps: __esri.Collection<__esri.Basemap>) => {
+      updateBasemapsCallback: (basemaps: __esri.Basemap[]) => {
         // sort the basemaps based on the ordering of basemapNames
         return basemaps.sort((a, b) => {
           return (

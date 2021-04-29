@@ -80,6 +80,7 @@ export function isServiceNameAvailable(
       })
       .catch((err) => {
         console.error(err);
+        window.logErrorToGa(err);
         reject(err);
       });
   });
@@ -107,10 +108,16 @@ export function getFeatureService(
         else {
           createFeatureService(portal, serviceMetaData, isTable)
             .then((service) => resolve(service))
-            .catch((err) => reject(err));
+            .catch((err) => {
+              window.logErrorToGa(err);
+              reject(err);
+            });
         }
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -144,7 +151,10 @@ export function getFeatureServiceRetry(
             setTimeout(() => fetchLookup(retryCount + 1), 1000);
           }
         })
-        .catch((err) => reject(err));
+        .catch((err) => {
+          window.logErrorToGa(err);
+          reject(err);
+        });
     };
 
     fetchLookup();
@@ -195,12 +205,18 @@ function getFeatureServiceWrapped(
               };
               resolve(returnValue);
             })
-            .catch((err) => reject(err));
+            .catch((err) => {
+              window.logErrorToGa(err);
+              reject(err);
+            });
         } else {
           resolve(null);
         }
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -276,10 +292,16 @@ export function createFeatureService(
           // get the feature service from the portal and return it
           getFeatureServiceRetry(portal, serviceMetaData)
             .then((service) => resolve(service))
-            .catch((err) => reject(err));
+            .catch((err) => {
+              window.logErrorToGa(err);
+              reject(err);
+            });
         });
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -300,7 +322,10 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
         if (res) resolve(res.layers);
         else resolve([]);
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -341,7 +366,10 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
       .then((layer: any) => {
         resolve(layer);
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -443,7 +471,10 @@ export function createFeatureLayers(
     );
     fetchPost(`${adminServiceUrl}/addToDefinition`, data)
       .then((res) => resolve(res))
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -526,7 +557,10 @@ export function deleteFeatureLayer(
     );
     fetchPost(`${adminServiceUrl}/deleteFromDefinition`, data)
       .then((res) => resolve(res))
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -599,9 +633,15 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 
             resolve(result);
           })
-          .catch((err) => reject(err));
+          .catch((err) => {
+            window.logErrorToGa(err);
+            reject(err);
+          });
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -657,7 +697,10 @@ export function applyEdits({
 
     fetchPost(`${serviceUrl}/applyEdits`, data)
       .then((res) => resolve(res))
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -754,11 +797,20 @@ export function publish({
             // publish the edits
             applyEdits({ portal, serviceUrl, edits })
               .then((res) => resolve(res))
-              .catch((err) => reject(err));
+              .catch((err) => {
+                window.logErrorToGa(err);
+                reject(err);
+              });
           })
-          .catch((err) => reject(err));
+          .catch((err) => {
+            window.logErrorToGa(err);
+            reject(err);
+          });
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 

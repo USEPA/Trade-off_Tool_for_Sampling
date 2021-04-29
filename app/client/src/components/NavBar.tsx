@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import AddData from 'components/AddData';
 import Calculate from 'components/Calculate';
@@ -109,7 +108,7 @@ function NavButton({
       <div
         css={verticalButtonBar(panelIndex < 1 ? 'transparent' : color)}
       ></div>
-      <button onClick={onClick} css={navButtonStyles(selected)}>
+      <button data-testid={value} onClick={onClick} css={navButtonStyles(selected)}>
         <i className={iconClass} css={navIconStyles(color)} />
         <span css={navTextStyles}>{label}</span>
       </button>

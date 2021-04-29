@@ -1,3 +1,5 @@
+import { escapeRegex } from 'utils/utils';
+
 /**
  * Performs a fetch and validates the http status.
  *
@@ -5,7 +7,20 @@
  * @returns A promise that resolves to the fetch response.
  */
 export function fetchCheck(url: string) {
-  return fetch(url).then(checkResponse);
+  const startTime = performance.now();
+  return fetch(url)
+    .then((response: any) => {
+      logCallToGoogleAnalytics(url, response.status, startTime);
+      return checkResponse(response);
+    })
+    .catch((err) => {
+      console.error(err);
+
+      let status = err;
+      if (err && err.status) status = err.status;
+      logCallToGoogleAnalytics(url, status, startTime);
+      return checkResponse(err);
+    });
 }
 
 /**
@@ -75,6 +90,8 @@ export function fetchPost(
   data: object,
   headers: any = { 'content-type': 'application/x-www-form-urlencoded' },
 ) {
+  const startTime = performance.now();
+
   // build the url search params
   const body = new URLSearchParams();
   for (let [key, value] of Object.entries(data)) {
@@ -91,7 +108,16 @@ export function fetchPost(
     method: 'POST',
     headers,
     body,
-  }).then(checkResponse);
+  })
+    .then((response) => {
+      logCallToGoogleAnalytics(url, response.status, startTime);
+      return checkResponse(response);
+    })
+    .catch((err) => {
+      console.error(err);
+      logCallToGoogleAnalytics(url, err, startTime);
+      return checkResponse(err);
+    });
 }
 
 /**
@@ -103,6 +129,8 @@ export function fetchPost(
  * @returns A promise that resolves to the fetch response.
  */
 export function fetchPostFile(url: string, data: object, file: any) {
+  const startTime = performance.now();
+
   // build the url search params
   const body = new FormData();
   for (let [key, value] of Object.entries(data)) {
@@ -119,7 +147,16 @@ export function fetchPostFile(url: string, data: object, file: any) {
   return fetch(url, {
     method: 'POST',
     body,
-  }).then(checkResponse);
+  })
+    .then((response) => {
+      logCallToGoogleAnalytics(url, response.status, startTime);
+      return checkResponse(response);
+    })
+    .catch((err) => {
+      console.error(err);
+      logCallToGoogleAnalytics(url, err, startTime);
+      return checkResponse(err);
+    });
 }
 
 /**
@@ -161,6 +198,8 @@ export function geoprocessorFetch({
   outSpatialReference?: any;
 }): Promise<any> {
   return new Promise<any>((resolve, reject) => {
+    const startTime = performance.now();
+
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
@@ -169,8 +208,78 @@ export function geoprocessorFetch({
     geoprocessor
       .execute(inputParameters)
       .then((res) => {
+        logCallToGoogleAnalytics(url, res.status, startTime);
         resolve(res);
       })
-      .catch((err) => reject(err));
+      .catch((err) => {
+        console.error(err);
+        logCallToGoogleAnalytics(url, err, startTime);
+        reject(err);
+      });
   });
 }
+
+/**
+ * Logs webservice calls to Google Analytics along with timing information.
+ *
+ * @param url The url of the web service call
+ * @param status The response status code of the service call
+ * @param startTime The time the web service was called
+ * @returns
+ */
+export function logCallToGoogleAnalytics(
+  url: string,
+  status: number,
+  startTime: number,
+) {
+  if (!window.gaTarget) return;
+  if (!window.ga) return;
+
+  const duration = performance.now() - startTime;
+
+  // combine the web service and map service mappings
+  let mapping = window.googleAnalyticsMapping;
+
+  // get the short name from the url
+  let eventAction = 'UNKNOWN';
+  mapping.forEach((item: any) => {
+    if (eventAction === 'UNKNOWN' && wildcardIncludes(url, item.wildcardUrl)) {
+      eventAction = item.name;
+    }
+  });
+  eventAction = `ow-tots1-${eventAction}`;
+
+  const eventLabel = `${url} | status:${status} | time:${duration}`;
+
+  // log to google analytics if it has been setup
+  window.logToGa('send', 'event', 'Web-service', eventAction, eventLabel);
+}
+
+/**
+ * Determines if a string includes another substring with the
+ * support of wildcards.
+ *
+ * @param str The string to search in
+ * @param rule The string to find with or without wildcards
+ * @returns True if the string does containe the substring, otherwise false
+ */
+function wildcardIncludes(str: string, rule: string) {
+  return new RegExp(
+    '^' + rule.split('*').map(escapeRegex).join('.*') + '$',
+  ).test(str);
+}
+
+/**
+ * Gets a string representing what environment the app is running on
+ *
+ * @returns A string representing the current environment
+ */
+export const getEnvironmentString = function () {
+  const envStringMap: any = {
+    localhost: 'onlocalhost',
+    'tots-dev.app.cloud.gov': 'ondev',
+    'tots-stage.app.cloud.gov': 'onstage',
+  };
+
+  return envStringMap[window.location.hostname];
+};

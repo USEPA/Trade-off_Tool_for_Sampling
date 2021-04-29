@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { Global, jsx, css } from '@emotion/core';
+import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
 // components
 import AlertDialog from 'components/AlertDialog';
@@ -37,6 +36,16 @@ const esrifooterheight = 16;
 const expandButtonHeight = 32;
 const minMapHeight = 180;
 var startY = 0;
+
+declare global {
+  interface Window {
+    ga: Function;
+    gaTarget: string;
+    googleAnalyticsMapping: any[];
+    logErrorToGa: Function;
+    logToGa: Function;
+  }
+}
 
 const gloablStyles = css`
   html {
@@ -79,7 +88,7 @@ const gloablStyles = css`
   }
 
   .esri-popup__main-container {
-    min-height: 450px !important;
+    max-height: 465px !important;
     min-width: 460px !important;
   }
 

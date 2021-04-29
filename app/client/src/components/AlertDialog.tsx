@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import * as React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // contexts
 import { DialogContext } from 'contexts/Dialog';

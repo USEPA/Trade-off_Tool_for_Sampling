@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -23,6 +23,7 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
+import { ErrorType } from 'types/Misc';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 import {
@@ -52,6 +53,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
+import { createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -378,6 +380,7 @@ const radioLabelStyles = css`
 // --- components (LocateSamples) ---
 type GenerateRandomType = {
   status: 'none' | 'fetching' | 'success' | 'failure' | 'exceededTransferLimit';
+  error?: ErrorType;
   data: __esri.Graphic[];
 };
 
@@ -570,16 +573,24 @@ function LocateSamples() {
       sketchVM.cancel();
     }
 
-    // activate the sketch tool
-    aoiSketchVM.create('polygon');
-
     // make the style of the button active
-    activateSketchButton('sampling-mask');
+    const wasSet = activateSketchButton('sampling-mask');
+
+    if (wasSet) {
+      // let the user draw/place the shape
+      aoiSketchVM.create('polygon');
+    } else {
+      aoiSketchVM.cancel();
+    }
   }
 
   // Handle a user generating random samples
   function randomSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
+
+    activateSketchButton('disable-all-buttons');
+    sketchVM?.cancel();
+    aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'
@@ -676,7 +687,14 @@ function LocateSamples() {
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
-                setGenerateRandomResponse({ status: 'failure', data: [] });
+                setGenerateRandomResponse({
+                  status: 'failure',
+                  error: {
+                    error: createErrorObject(res),
+                    message: 'No data',
+                  },
+                  data: [],
+                });
                 return;
               }
 
@@ -702,10 +720,17 @@ function LocateSamples() {
                 graphicsToAdd.push(
                   new Graphic({
                     attributes: {
-                      ...feature.attributes,
+                      ...(window as any).totsSampleAttributes[
+                        feature.attributes.TYPE
+                      ],
                       CREATEDDATE: timestamp,
                       DECISIONUNITUUID: sketchLayer.uuid,
                       DECISIONUNIT: sketchLayer.label,
+                      OBJECTID: feature.attributes.OBJECTID,
+                      GLOBALID: feature.attributes.GLOBALID,
+                      PERMANENT_IDENTIFIER:
+                        feature.attributes.PERMANENT_IDENTIFIER,
+                      UPDATEDDATE: timestamp,
                     },
                     symbol,
                     geometry: new Polygon({
@@ -778,12 +803,30 @@ function LocateSamples() {
           })
           .catch((err) => {
             console.error(err);
-            setGenerateRandomResponse({ status: 'failure', data: [] });
+            setGenerateRandomResponse({
+              status: 'failure',
+              error: {
+                error: createErrorObject(err),
+                message: err.message,
+              },
+              data: [],
+            });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err: any) => {
         console.error(err);
-        setGenerateRandomResponse({ status: 'failure', data: [] });
+        setGenerateRandomResponse({
+          status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
+          data: [],
+        });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -1847,6 +1890,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Draw area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'draw'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('draw');
@@ -1868,6 +1914,9 @@ function LocateSamples() {
                                 type="radio"
                                 name="mode"
                                 value="Use Imported Area of Interest"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 checked={generateRandomMode === 'file'}
                                 onChange={(ev) => {
                                   setGenerateRandomMode('file');
@@ -1896,6 +1945,9 @@ function LocateSamples() {
                                 id="sampling-mask"
                                 title="Draw Sampling Mask"
                                 className="sketch-button"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
                                 onClick={() => {
                                   if (!aoiSketchLayer) return;
 
@@ -1919,7 +1971,7 @@ function LocateSamples() {
                                     id="aoi-mask-select"
                                     inputId="aoi-mask-select-input"
                                     css={inlineSelectStyles}
-                                    styles={reactSelectStyles}
+                                    styles={reactSelectStyles as any}
                                     isClearable={true}
                                     value={selectedAoiFile}
                                     onChange={(ev) =>
@@ -1932,6 +1984,10 @@ function LocateSamples() {
                                   />
                                   <button
                                     css={addButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={(ev) => {
                                       setGoTo('addData');
                                       setGoToOptions({
@@ -1979,7 +2035,9 @@ function LocateSamples() {
                                     sketchLayer.label,
                                   )}
                                 {generateRandomResponse.status === 'failure' &&
-                                  webServiceErrorMessage}
+                                  webServiceErrorMessage(
+                                    generateRandomResponse.error,
+                                  )}
                                 {generateRandomResponse.status ===
                                   'exceededTransferLimit' &&
                                   generateRandomExceededTransferLimitMessage}
@@ -1996,6 +2054,10 @@ function LocateSamples() {
                                       .length > 0)) && (
                                   <button
                                     css={submitButtonStyles}
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
                                     onClick={randomSamples}
                                   >
                                     {generateRandomResponse.status !==
@@ -2112,9 +2174,7 @@ function LocateSamples() {
                                         );
 
                                         if (graphicsToRemove.length > 0) {
-                                          const collection = new Collection<
-                                            __esri.Graphic
-                                          >();
+                                          const collection = new Collection<__esri.Graphic>();
                                           collection.addMany(graphicsToRemove);
                                           editsCopy = updateLayerEdits({
                                             edits: editsCopy,
@@ -2359,7 +2419,7 @@ function LocateSamples() {
                           value={tta ? tta : ''}
                           onChange={(ev) => setTta(ev.target.value)}
                         />
-                        <label htmlFor="ttps-input">
+                        {/* <label htmlFor="ttps-input">
                           Total Time per Sample <em>(person hrs/sample)</em>
                         </label>
                         <input
@@ -2368,7 +2428,7 @@ function LocateSamples() {
                           css={inputStyles}
                           value={ttps ? ttps : ''}
                           onChange={(ev) => setTtps(ev.target.value)}
-                        />
+                        /> */}
                         <label htmlFor="lod_p-input">
                           Limit of Detection (CFU) Porous{' '}
                           <em>(only used for reference)</em>
@@ -2401,7 +2461,7 @@ function LocateSamples() {
                           value={mcps ? mcps : ''}
                           onChange={(ev) => setMcps(ev.target.value)}
                         />
-                        <label htmlFor="tcps-input">
+                        {/* <label htmlFor="tcps-input">
                           Total Cost per Sample{' '}
                           <em>(Labor + Material + Waste)</em>
                         </label>
@@ -2411,7 +2471,7 @@ function LocateSamples() {
                           css={inputStyles}
                           value={tcps ? tcps : ''}
                           onChange={(ev) => setTcps(ev.target.value)}
-                        />
+                        /> */}
                         <label htmlFor="wvps-input">
                           Waste Volume <em>(L/sample)</em>
                         </label>
@@ -2468,12 +2528,22 @@ function LocateSamples() {
                           (editingStatus === 'view' &&
                             udtSymbol &&
                             userDefinedSampleType &&
-                            JSON.stringify(udtSymbol) !==
-                              JSON.stringify(
-                                defaultSymbols.symbols[
-                                  userDefinedSampleType.value
-                                ],
-                              ))) && (
+                            ((defaultSymbols.symbols.hasOwnProperty(
+                              userDefinedSampleType.value,
+                            ) &&
+                              JSON.stringify(udtSymbol) !==
+                                JSON.stringify(
+                                  defaultSymbols.symbols[
+                                    userDefinedSampleType.value
+                                  ],
+                                )) ||
+                              (!defaultSymbols.symbols.hasOwnProperty(
+                                userDefinedSampleType.value,
+                              ) &&
+                                JSON.stringify(udtSymbol) !==
+                                  JSON.stringify(
+                                    defaultSymbols.symbols['Samples'],
+                                  ))))) && (
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
@@ -2599,10 +2669,9 @@ function LocateSamples() {
 
                                 // add the new option to the dropdown if it doesn't exist
                                 if (
-                                  userDefinedSampleType &&
                                   (editingStatus !== 'edit' ||
                                     (editingStatus === 'edit' &&
-                                      !userDefinedSampleType.isPredefined))
+                                      !userDefinedSampleType?.isPredefined))
                                 ) {
                                   setUserDefinedOptions((options) => {
                                     if (editingStatus !== 'edit') {
@@ -2615,7 +2684,7 @@ function LocateSamples() {
                                       if (
                                         didSampleTypeNameChange() &&
                                         option.value ===
-                                          userDefinedSampleType.value
+                                          userDefinedSampleType?.value
                                       ) {
                                         newOptions.push(newSampleType);
                                         return;
@@ -2653,9 +2722,7 @@ function LocateSamples() {
                                     });
 
                                     if (editedGraphics.length > 0) {
-                                      const collection = new Collection<
-                                        __esri.Graphic
-                                      >();
+                                      const collection = new Collection<__esri.Graphic>();
                                       collection.addMany(editedGraphics);
                                       editsCopy = updateLayerEdits({
                                         edits: editsCopy,

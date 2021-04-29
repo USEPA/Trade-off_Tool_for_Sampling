@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // styles
 import { colors } from 'styles';

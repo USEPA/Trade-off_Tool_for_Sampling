@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
@@ -16,7 +16,9 @@ import {
   createSampleLayer,
   updateLayerEdits,
 } from 'utils/sketchUtils';
+import { createErrorObject } from 'utils/utils';
 // types
+import { ErrorType } from 'types/Misc';
 import { LayerType } from 'types/Layer';
 // config
 import {
@@ -35,6 +37,11 @@ export type SaveStatusType =
   | 'failure'
   | 'fetch-failure'
   | 'name-not-available';
+
+export type SaveResultsType = {
+  status: SaveStatusType;
+  error?: ErrorType;
+};
 
 // --- styles (EditScenario) ---
 const inputStyles = css`
@@ -104,7 +111,7 @@ function EditScenario({
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveStatusType>(initialStatus);
+  ] = React.useState<SaveResultsType>({ status: initialStatus });
 
   const [scenarioName, setScenarioName] = React.useState(
     initialScenario ? initialScenario.scenarioName : '',
@@ -235,7 +242,7 @@ function EditScenario({
       map.add(groupLayer);
     }
 
-    setSaveStatus('success');
+    setSaveStatus({ status: 'success' });
 
     if (onSave) onSave();
   }
@@ -250,14 +257,25 @@ function EditScenario({
       return;
     }
 
-    setSaveStatus('fetching');
+    setSaveStatus({ status: 'fetching' });
 
     // if the user is signed in, go ahead and check if the
     // service (scenario) name is availble before continuing
     isServiceNameAvailable(portal, scenarioName)
       .then((res: any) => {
+        if (res.error) {
+          setSaveStatus({
+            status: 'failure',
+            error: {
+              error: createErrorObject(res),
+              message: res.error.message,
+            },
+          });
+          return;
+        }
+
         if (!res.available) {
-          setSaveStatus('name-not-available');
+          setSaveStatus({ status: 'name-not-available' });
           return;
         }
 
@@ -265,7 +283,12 @@ function EditScenario({
       })
       .catch((err: any) => {
         console.error('isServiceNameAvailable error', err);
-        setSaveStatus('failure');
+        setSaveStatus({
+          status: 'failure',
+          error: { error: createErrorObject(err), message: err.message },
+        });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -287,7 +310,7 @@ function EditScenario({
         value={scenarioName}
         onChange={(ev) => {
           setScenarioName(ev.target.value);
-          setSaveStatus('changes');
+          setSaveStatus({ status: 'changes' });
         }}
       />
       <label htmlFor="scenario-description-input">Plan Description</label>
@@ -302,38 +325,39 @@ function EditScenario({
         value={scenarioDescription}
         onChange={(ev) => {
           setScenarioDescription(ev.target.value);
-          setSaveStatus('changes');
+          setSaveStatus({ status: 'changes' });
         }}
       />
 
-      {saveStatus === 'fetching' && <LoadingSpinner />}
-      {saveStatus === 'failure' && webServiceErrorMessage}
-      {saveStatus === 'name-not-available' &&
+      {saveStatus.status === 'fetching' && <LoadingSpinner />}
+      {saveStatus.status === 'failure' &&
+        webServiceErrorMessage(saveStatus.error)}
+      {saveStatus.status === 'name-not-available' &&
         scenarioNameTakenMessage(scenarioName ? scenarioName : '')}
       {(!initialScenario || initialScenario.status === 'added') && (
         <div css={saveButtonContainerStyles}>
           <button
-            css={saveButtonStyles(saveStatus)}
+            css={saveButtonStyles(saveStatus.status)}
             type="submit"
             disabled={
-              saveStatus === 'none' ||
-              saveStatus === 'fetching' ||
-              saveStatus === 'success'
+              saveStatus.status === 'none' ||
+              saveStatus.status === 'fetching' ||
+              saveStatus.status === 'success'
             }
             onClick={handleSave}
           >
-            {(saveStatus === 'none' ||
-              saveStatus === 'changes' ||
-              saveStatus === 'fetching') &&
+            {(saveStatus.status === 'none' ||
+              saveStatus.status === 'changes' ||
+              saveStatus.status === 'fetching') &&
               buttonText}
-            {saveStatus === 'success' && (
+            {saveStatus.status === 'success' && (
               <React.Fragment>
                 <i className="fas fa-check" /> Saved
               </React.Fragment>
             )}
-            {(saveStatus === 'failure' ||
-              saveStatus === 'fetch-failure' ||
-              saveStatus === 'name-not-available') && (
+            {(saveStatus.status === 'failure' ||
+              saveStatus.status === 'fetch-failure' ||
+              saveStatus.status === 'name-not-available') && (
               <React.Fragment>
                 <i className="fas fa-exclamation-triangle" /> Error
               </React.Fragment>

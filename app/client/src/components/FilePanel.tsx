@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -27,16 +27,16 @@ import {
   getCurrentDateTime,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { chunkArray } from 'utils/utils';
+import { chunkArray, createErrorObject } from 'utils/utils';
 // types
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
+import { ErrorType } from 'types/Misc';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
   fileReadErrorMessage,
-  importErrorMessage,
   invalidFileTypeMessage,
   missingAttributesMessage,
   noDataMessage,
@@ -275,7 +275,7 @@ function FilePanel() {
   );
   const [fileValidated, setFileValidated] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
-  const [esriMessage, setEsriMessage] = React.useState<string>('');
+  const [error, setError] = React.useState<ErrorType | null>(null);
   const [missingAttributes, setMissingAttributes] = React.useState('');
 
   const [
@@ -328,7 +328,7 @@ function FilePanel() {
 
     // reset state management values
     setUploadStatus('fetching');
-    setEsriMessage('');
+    setError(null);
     setAnalyzeResponse(null);
     setGenerateResponse(null);
     setFeaturesAdded(false);
@@ -449,6 +449,12 @@ function FilePanel() {
       .catch((err) => {
         console.error(err);
         setUploadStatus('failure');
+        setError({
+          error: createErrorObject(err),
+          message: err.message,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [file, firstGeocodeService, portal, sharingUrl]);
 
@@ -540,7 +546,10 @@ function FilePanel() {
       .then((res: any) => {
         if (res.error) {
           setUploadStatus('import-error');
-          setEsriMessage(res.error.message);
+          setError({
+            error: createErrorObject(res.error),
+            message: res.error.message,
+          });
           return;
         }
         if (layerType.value !== 'VSP') {
@@ -628,6 +637,7 @@ function FilePanel() {
               requests.push(request);
             });
 
+            const timestamp = getCurrentDateTime();
             Promise.all(requests)
               .then((responses) => {
                 // get the first result for filling in metadata
@@ -636,7 +646,24 @@ function FilePanel() {
 
                 // build an array with all of the features
                 responses.forEach((res) => {
-                  features.push(...res.results[0].value.features);
+                  const innerFeatures: any[] = [];
+                  res.results[0].value.features.forEach((feature: any) => {
+                    innerFeatures.push({
+                      geometry: feature.geometry,
+                      attributes: {
+                        ...(window as any).totsSampleAttributes[
+                          feature.attributes.TYPE
+                        ],
+                        CREATEDDATE: timestamp,
+                        OBJECTID: feature.attributes.OBJECTID,
+                        GLOBALID: feature.attributes.GLOBALID,
+                        PERMANENT_IDENTIFIER:
+                          feature.attributes.PERMANENT_IDENTIFIER,
+                        UPDATEDDATE: timestamp,
+                      },
+                    });
+                  });
+                  features.push(...innerFeatures);
                 });
 
                 const layers: any[] = [];
@@ -659,16 +686,34 @@ function FilePanel() {
               .catch((err) => {
                 console.error(err);
                 setUploadStatus('failure');
+                setError({
+                  error: createErrorObject(err),
+                  message: err.message,
+                });
+
+                window.logErrorToGa(err);
               });
           })
           .catch((err) => {
             console.error(err);
             setUploadStatus('failure');
+            setError({
+              error: createErrorObject(err),
+              message: err.message,
+            });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
         console.error(err);
         setUploadStatus('failure');
+        setError({
+          error: createErrorObject(err),
+          message: err.message,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [
     // esri modules
@@ -1118,6 +1163,10 @@ function FilePanel() {
       if (reader.error || !event || !reader.result) {
         console.error('File Read Error: ', reader.error);
         setUploadStatus('file-read-error');
+        setError({
+          error: createErrorObject(reader.error),
+          message: reader.error?.message ? reader.error.message : '',
+        });
         return;
       }
 
@@ -1140,6 +1189,12 @@ function FilePanel() {
         .catch((err) => {
           console.error(err);
           setUploadStatus('failure');
+          setError({
+            error: createErrorObject(err),
+            message: err.message,
+          });
+
+          window.logErrorToGa(err);
         });
     };
 
@@ -1148,6 +1203,8 @@ function FilePanel() {
     } catch (ex) {
       console.error('File Read Error: ', ex);
       setUploadStatus('file-read-error');
+
+      window.logErrorToGa(ex);
     }
   }, [KMLLayer, mapView, file]);
 
@@ -1164,7 +1221,7 @@ function FilePanel() {
         onChange={(ev) => {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
-          setEsriMessage('');
+          setError(null);
         }}
         options={
           trainingMode
@@ -1222,13 +1279,15 @@ function FilePanel() {
                   }}
                   options={allSampleOptions}
                 />
-                <p css={sectionParagraph}>
-                  Add an externally-generated Visual Sample Plan (VSP) layer to
-                  analyze and/or use in conjunction with targeted sampling. Once
-                  added, you can select this layer in the next step,{' '}
-                  <strong>Create Plan</strong>, and use it to create the
-                  Sampling Plan.
-                </p>
+                {sampleType && (
+                  <p css={sectionParagraph}>
+                    Add an externally-generated Visual Sample Plan (VSP) layer to
+                    analyze and/or use in conjunction with targeted sampling. Once
+                    added, you can select this layer in the next step,{' '}
+                    <strong>Create Plan</strong>, and use it to create the
+                    Sampling Plan.
+                  </p>
+                )}
               </React.Fragment>
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
@@ -1245,12 +1304,13 @@ function FilePanel() {
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
-            ((layerType.value === 'Samples' || layerType.value === 'VSP') &&
+            (layerType.value === 'Samples' &&
               services.status === 'success' &&
               sampleTypeContext.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
-              services.status === 'success')) && (
+              services.status === 'success' &&
+              sampleTypeContext.status === 'success')) && (
             <React.Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
@@ -1347,7 +1407,8 @@ function FilePanel() {
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
                   {uploadStatus === 'import-error' &&
-                    importErrorMessage(esriMessage)}
+                    error &&
+                    webServiceErrorMessage(error, 'File Upload Error')}
                   {uploadStatus === 'file-read-error' &&
                     fileReadErrorMessage(filename)}
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
@@ -1357,7 +1418,9 @@ function FilePanel() {
                     missingAttributesMessage(filename, missingAttributes)}
                   {uploadStatus === 'unknown-sample-type' &&
                     unknownSampleTypeMessage}
-                  {uploadStatus === 'failure' && webServiceErrorMessage}
+                  {uploadStatus === 'failure' &&
+                    error &&
+                    webServiceErrorMessage(error)}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
                   {layerType.value === 'Area of Interest' && (

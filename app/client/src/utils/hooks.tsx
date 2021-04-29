@@ -1,8 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { jsx } from '@emotion/core';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
@@ -69,6 +68,11 @@ export async function writeToStorage(
       title: 'Session Storage Limit Reached',
       ariaLabel: 'Session Storage Limit Reached',
       description: message,
+    });
+
+    window.logToGa('send', 'exception', {
+      exDescription: `${key}:${message}`,
+      exFatal: false,
     });
   }
 }
@@ -997,6 +1001,15 @@ export function useDynamicPopup() {
     includeContaminationFields: boolean = false,
   ) {
     if (type === 'Sampling Mask') {
+      const actions = new Collection<any>();
+      actions.addMany([
+        {
+          title: 'Delete Sample',
+          id: 'delete',
+          className: 'esri-icon-trash',
+        },
+      ]);
+
       return {
         title: '',
         content: [
@@ -1005,6 +1018,7 @@ export function useDynamicPopup() {
             fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
           },
         ],
+        actions,
       };
     }
     if (type === 'Area of Interest') {
@@ -1041,10 +1055,10 @@ export function useDynamicPopup() {
         { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
         { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
         { fieldName: 'AC', label: 'Equivalent TOTS Samples' },
-        {
-          fieldName: 'TCPS',
-          label: 'Total Cost Per Sample (Labor + Material + Waste)',
-        },
+        // {
+        //   fieldName: 'TCPS',
+        //   label: 'Total Cost Per Sample (Labor + Material + Waste)',
+        // },
         { fieldName: 'Notes', label: 'Notes' },
         { fieldName: 'ALC', label: 'Analysis Labor Cost' },
         { fieldName: 'AMC', label: 'Analysis Material Cost' },
@@ -1055,10 +1069,10 @@ export function useDynamicPopup() {
         },
         { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
         { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
-        {
-          fieldName: 'TTPS',
-          label: 'Total Time per Sample (person hrs/sample)',
-        },
+        // {
+        //   fieldName: 'TTPS',
+        //   label: 'Total Time per Sample (person hrs/sample)',
+        // },
         { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
         {
           fieldName: 'LOD_NON',
@@ -1504,7 +1518,11 @@ function useUrlLayerStorage() {
               return [...urlLayers, urlLayer];
             });
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+
+            window.logErrorToGa(err);
+          });
         return;
       }
       if (type === 'WMS') {

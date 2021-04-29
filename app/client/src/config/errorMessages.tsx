@@ -1,9 +1,19 @@
-/** @jsx jsx */
-import { jsx } from '@emotion/core';
+/** @jsxImportSource @emotion/react */
+
+import React from 'react';
+import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
+import ShowLessMore from 'components/ShowLessMore';
 // config
 import { SampleIssuesOutput } from 'config/sampleAttributes';
+// types
+import { ErrorType } from 'types/Misc';
+
+const textAreaStyles = css`
+  height: 200px;
+  width: 100%;
+`;
 
 export const unsupportedBrowserMessage = (
   <MessageBox
@@ -14,12 +24,53 @@ export const unsupportedBrowserMessage = (
 );
 
 export const webServiceErrorMessage = (
-  <MessageBox
-    severity="error"
-    title="Web Service Error"
-    message="An error occurred in the web service"
-  />
-);
+  error: ErrorType = {
+    error: {},
+    message: 'An error occurred in the web service',
+  },
+  title: string = 'Web Service Error',
+) => {
+  const id = `error-copy-input-${Date.now() + Math.random()}`;
+
+  return (
+    <MessageBox
+      severity="error"
+      title={title}
+      message={
+        <React.Fragment>
+          <span>{error.message}</span>
+          <br />
+          <ShowLessMore
+            text={
+              <textarea
+                id={id}
+                css={textAreaStyles}
+                value={JSON.stringify(error, null, '\t')}
+              />
+            }
+            charLimit={0}
+          />
+          <br />
+          <button
+            onClick={() => {
+              // get the text area input
+              const textArea = document.getElementById(id) as HTMLInputElement;
+              if (!textArea) return;
+
+              // select all of the text
+              textArea.select();
+
+              // copy the text to the clipboard
+              document.execCommand('copy');
+            }}
+          >
+            Copy Detailed Error
+          </button>
+        </React.Fragment>
+      }
+    />
+  );
+};
 
 export const errorBoundaryMessage = (
   <MessageBox
@@ -77,10 +128,6 @@ export const invalidFileTypeMessage = (filename: string) => (
     title="Invalid File Type"
     message={`${filename} is an invalid file type. The accepted file types are .zip, .csv, .kml, .gpx, .goe.json and .geojson`}
   />
-);
-
-export const importErrorMessage = (message: string) => (
-  <MessageBox severity="error" title="File Upload Error" message={message} />
 );
 
 export const fileReadErrorMessage = (filename: string) => (
@@ -271,7 +318,15 @@ export const downloadSuccessMessage = (
 );
 
 // publish plan tab
-export const pulblishSuccessMessage = (
+export const noSamplesPublishMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Samples to Publish"
+    message="There are no samples to publish. Please add some samples to the plan and try again."
+  />
+);
+
+export const publishSuccessMessage = (
   <MessageBox
     severity="info"
     title="Publish Succeeded"

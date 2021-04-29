@@ -114,7 +114,11 @@ function MapMouseEvents({ mapView }: Props) {
             });
           }
         })
-        .catch((err: any) => console.error(err));
+        .catch((err: any) => {
+          console.error(err);
+
+          window.logErrorToGa(err);
+        });
     },
     [setSelectedSampleIds],
   );
