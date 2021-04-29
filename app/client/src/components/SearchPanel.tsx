@@ -1435,12 +1435,12 @@ function ResultCard({ result }: ResultCardProps) {
                   newAttributes[attributes.TYPEUUID] = {
                     status: newAttributes[attributes.TYPEUUID]?.status
                       ? newAttributes[attributes.TYPEUUID].status
-                      : 'add',
+                      : 'published',
                     serviceId: result.id,
                     attributes: {
-                      OBJECTID: '-1',
+                      OBJECTID: attributes.OBJECTID,
                       PERMANENT_IDENTIFIER: null,
-                      GLOBALID: null,
+                      GLOBALID: attributes.GLOBALID,
                       TYPEUUID: attributes.TYPEUUID,
                       TYPE: attributes.TYPE,
                       ShapeType: attributes.ShapeType,
