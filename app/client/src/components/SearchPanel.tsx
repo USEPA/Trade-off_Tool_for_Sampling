@@ -8,19 +8,22 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
+import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 // utils
 import {
   getAllFeatures,
   getFeatureLayer,
   getFeatureLayers,
+  getFeatureTables,
 } from 'utils/arcGisRestUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   deepCopyObject,
+  generateUUID,
   getNextScenarioLayer,
   getSimplePopupTemplate,
   updateLayerEdits,
@@ -767,8 +770,10 @@ function ResultCard({ result }: ResultCardProps) {
   const { portal } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const { trainingMode } = React.useContext(NavigationContext);
+  const { setSampleTypeSelections } = React.useContext(PublishContext);
   const sampleTypeContext = useSampleTypesContext();
   const {
+    Collection,
     FeatureLayer,
     Field,
     Graphic,
@@ -784,6 +789,7 @@ function ResultCard({ result }: ResultCardProps) {
     defaultSymbols,
     edits,
     setEdits,
+    layers,
     setLayers,
     map,
     mapView,
@@ -793,7 +799,9 @@ function ResultCard({ result }: ResultCardProps) {
     sampleAttributes,
     setSelectedScenario,
     setSketchLayer,
+    userDefinedOptions,
     setUserDefinedOptions,
+    userDefinedAttributes,
     setUserDefinedAttributes,
   } = React.useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
@@ -802,11 +810,17 @@ function ResultCard({ result }: ResultCardProps) {
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = React.useState(false);
   React.useEffect(() => {
-    const added =
+    let added =
       portalLayers.findIndex((portalLayer) => portalLayer.id === result.id) !==
       -1;
+
+    // check if result was added as a user defined sample type
+    Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
+      if (sample.serviceId === result.id) added = true;
+    });
+
     setAdded(added);
-  }, [portalLayers, result]);
+  }, [portalLayers, result, userDefinedAttributes]);
 
   // removes the esri watch handle when the card is removed from the DOM.
   const [status, setStatus] = React.useState('');
@@ -884,12 +898,14 @@ function ResultCard({ result }: ResultCardProps) {
 
                   tempLayer.graphics.forEach((graphic) => {
                     if (
-                      !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                      !sampleAttributes.hasOwnProperty(
+                        graphic.attributes.TYPEUUID,
+                      )
                     )
                       return;
 
                     const predefinedAttributes: any =
-                      sampleAttributes[graphic.attributes.TYPE];
+                      sampleAttributes[graphic.attributes.TYPEUUID];
                     Object.keys(predefinedAttributes).forEach((key) => {
                       if (
                         !sampleTypeContext.data.attributesToCheck.includes(key)
@@ -908,13 +924,16 @@ function ResultCard({ result }: ResultCardProps) {
                 setUserDefinedAttributes((item) => {
                   Object.keys(newAttributes).forEach((key) => {
                     const attributes = newAttributes[key];
-                    sampleAttributes[attributes.TYPE as any] = attributes;
-                    item.attributes[attributes.TYPE] = attributes;
+                    sampleAttributes[attributes.attributes.TYPEUUID as any] =
+                      attributes.attributes;
+                    item.sampleTypes[
+                      attributes.attributes.TYPEUUID as any
+                    ] = attributes;
                   });
 
                   return {
                     editCount: item.editCount + 1,
-                    attributes: item.attributes,
+                    sampleTypes: item.sampleTypes,
                   };
                 });
 
@@ -988,60 +1007,125 @@ function ResultCard({ result }: ResultCardProps) {
                     wkid: 3857,
                   };
                   graphic.popupTemplate = popupTemplate;
-                  graphic.symbol = defaultSymbols.symbols['Samples'];
-                  if (
-                    defaultSymbols.symbols.hasOwnProperty(
-                      feature.attributes.TYPE,
-                    )
-                  ) {
-                    graphic.symbol =
-                      defaultSymbols.symbols[feature.attributes.TYPE];
+
+                  // get the type uuid or generate it if necessary
+                  const attributes = graphic.attributes;
+                  let typeUuid = attributes.TYPEUUID;
+                  if (!typeUuid) {
+                    const keysToCheck = [
+                      'TYPE',
+                      'ShapeType',
+                      'TTPK',
+                      'TTC',
+                      'TTA',
+                      'TTPS',
+                      'LOD_P',
+                      'LOD_NON',
+                      'MCPS',
+                      'TCPS',
+                      'WVPS',
+                      'WWPS',
+                      'SA',
+                      'ALC',
+                      'AMC',
+                    ];
+                    // check if the udt has already been added
+                    Object.values(userDefinedAttributes.sampleTypes).forEach(
+                      (udt: any) => {
+                        const tempUdt: any = {};
+                        const tempAtt: any = {};
+                        keysToCheck.forEach((key) => {
+                          tempUdt[key] = udt[key];
+                          tempAtt[key] = attributes[key];
+                        });
+
+                        if (
+                          JSON.stringify(tempUdt) === JSON.stringify(tempAtt)
+                        ) {
+                          typeUuid = udt.TYPEUUID;
+                        }
+                      },
+                    );
+
+                    if (!typeUuid) {
+                      if (
+                        sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+                          attributes.TYPE,
+                        )
+                      ) {
+                        typeUuid = attributes.TYPE;
+                      } else {
+                        typeUuid = generateUUID();
+                      }
+                    }
+
+                    graphic.attributes['TYPEUUID'] = typeUuid;
                   }
 
                   // Add the user defined type if it does not exist
                   if (
-                    !sampleAttributes.hasOwnProperty(graphic.attributes.TYPE)
+                    !sampleAttributes.hasOwnProperty(
+                      graphic.attributes.TYPEUUID,
+                    )
                   ) {
-                    const attributes = graphic.attributes;
                     newUserSampleTypes.push({
-                      value: attributes.TYPE,
+                      value: typeUuid,
                       label: attributes.TYPE,
                       isPredefined: false,
                     });
-                    newAttributes[attributes.TYPE] = {
-                      OBJECTID: '-1',
-                      PERMANENT_IDENTIFIER: null,
-                      GLOBALID: null,
-                      TYPE: attributes.TYPE,
-                      ShapeType: attributes.ShapeType,
-                      TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
-                      TTC: attributes.TTC ? Number(attributes.TTC) : null,
-                      TTA: attributes.TTA ? Number(attributes.TTA) : null,
-                      TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
-                      LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
-                      LOD_NON: attributes.LOD_NON
-                        ? Number(attributes.LOD_NON)
-                        : null,
-                      MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
-                      TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
-                      WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
-                      WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
-                      SA: attributes.SA ? Number(attributes.SA) : null,
-                      AA: null,
-                      ALC: attributes.ALC ? Number(attributes.ALC) : null,
-                      AMC: attributes.AMC ? Number(attributes.AMC) : null,
-                      Notes: '',
-                      CONTAMTYPE: null,
-                      CONTAMVAL: null,
-                      CONTAMUNIT: null,
-                      CREATEDDATE: null,
-                      UPDATEDDATE: null,
-                      USERNAME: null,
-                      ORGANIZATION: null,
-                      DECISIONUNITUUID: null,
-                      DECISIONUNIT: null,
-                      DECISIONUNITSORT: null,
+                    newAttributes[attributes.TYPEUUID] = {
+                      status: newAttributes[attributes.TYPEUUID]?.status
+                        ? newAttributes[attributes.TYPEUUID].status
+                        : 'add',
+                      serviceId: '',
+                      attributes: {
+                        OBJECTID: '-1',
+                        PERMANENT_IDENTIFIER: null,
+                        GLOBALID: null,
+                        TYPEUUID: attributes.TYPEUUID,
+                        TYPE: attributes.TYPE,
+                        ShapeType: attributes.ShapeType,
+                        TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                        TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                        TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                        TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                        LOD_P: attributes.LOD_P
+                          ? Number(attributes.LOD_P)
+                          : null,
+                        LOD_NON: attributes.LOD_NON
+                          ? Number(attributes.LOD_NON)
+                          : null,
+                        MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                        TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                        WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                        WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                        SA: attributes.SA ? Number(attributes.SA) : null,
+                        AA: null,
+                        ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                        AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                        Notes: '',
+                        CONTAMTYPE: null,
+                        CONTAMVAL: null,
+                        CONTAMUNIT: null,
+                        CREATEDDATE: null,
+                        UPDATEDDATE: null,
+                        USERNAME: null,
+                        ORGANIZATION: null,
+                        DECISIONUNITUUID: null,
+                        DECISIONUNIT: null,
+                        DECISIONUNITSORT: null,
+                      },
                     };
+                  }
+
+                  graphic.symbol = defaultSymbols.symbols['Samples'];
+                  if (
+                    defaultSymbols.symbols.hasOwnProperty(
+                      feature.attributes.TYPEUUID,
+                    )
+                  ) {
+                    graphic.symbol =
+                      defaultSymbols.symbols[feature.attributes.TYPEUUID];
                   }
 
                   zoomToGraphics.push(graphic);
@@ -1246,6 +1330,191 @@ function ResultCard({ result }: ResultCardProps) {
   }
 
   /**
+   * Adds user defined sample types that were published through TOTS.
+   */
+  function addTotsSampleType() {
+    if (!portal) return;
+    if (sampleTypeContext.status === 'failure') {
+      setStatus('error');
+      return;
+    }
+
+    setStatus('loading');
+
+    const tempPortal = portal as any;
+    const token = tempPortal.credential.token;
+
+    // get the list of feature layers in this feature server
+    getFeatureTables(result.url, token)
+      .then((res: any) => {
+        // fire off requests to get the details and features for each layer
+        const layerPromises: Promise<any>[] = [];
+        res.forEach((layer: any) => {
+          // get the layer features promise
+          const featuresCall = getAllFeatures(
+            portal,
+            result.url + '/' + layer.id,
+          );
+          layerPromises.push(featuresCall);
+        });
+
+        // wait for all of the promises to resolve
+        Promise.all(layerPromises)
+          .then((responses) => {
+            // define items used for updating states
+            const newAttributes: Attributes = {};
+            const newUserSampleTypes: SampleSelectType[] = [];
+
+            // create the user defined sample types to be added to TOTS
+            responses.forEach((layerFeatures) => {
+              // get the graphics from the layer
+              layerFeatures.features.forEach((feature: any) => {
+                const graphic: any = Graphic.fromJSON(feature);
+
+                // get the type uuid or generate it if necessary
+                const attributes = graphic.attributes;
+                let typeUuid = attributes.TYPEUUID;
+                if (!typeUuid) {
+                  const keysToCheck = [
+                    'TYPE',
+                    'ShapeType',
+                    'TTPK',
+                    'TTC',
+                    'TTA',
+                    'TTPS',
+                    'LOD_P',
+                    'LOD_NON',
+                    'MCPS',
+                    'TCPS',
+                    'WVPS',
+                    'WWPS',
+                    'SA',
+                    'ALC',
+                    'AMC',
+                  ];
+                  // check if the udt has already been added
+                  Object.values(userDefinedAttributes.sampleTypes).forEach(
+                    (udt: any) => {
+                      const tempUdt: any = {};
+                      const tempAtt: any = {};
+                      keysToCheck.forEach((key) => {
+                        tempUdt[key] = udt[key];
+                        tempAtt[key] = attributes[key];
+                      });
+
+                      if (JSON.stringify(tempUdt) === JSON.stringify(tempAtt)) {
+                        typeUuid = udt.TYPEUUID;
+                      }
+                    },
+                  );
+
+                  if (!typeUuid) {
+                    if (
+                      sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+                        attributes.TYPE,
+                      )
+                    ) {
+                      typeUuid = attributes.TYPE;
+                    } else {
+                      typeUuid = generateUUID();
+                    }
+                  }
+
+                  graphic.attributes['TYPEUUID'] = typeUuid;
+                }
+
+                // Add the user defined type if it does not exist
+                if (
+                  !sampleAttributes.hasOwnProperty(graphic.attributes.TYPEUUID)
+                ) {
+                  newUserSampleTypes.push({
+                    value: typeUuid,
+                    label: attributes.TYPE,
+                    isPredefined: false,
+                  });
+                  newAttributes[attributes.TYPEUUID] = {
+                    status: newAttributes[attributes.TYPEUUID]?.status
+                      ? newAttributes[attributes.TYPEUUID].status
+                      : 'published',
+                    serviceId: result.id,
+                    attributes: {
+                      OBJECTID: attributes.OBJECTID,
+                      PERMANENT_IDENTIFIER: null,
+                      GLOBALID: attributes.GLOBALID,
+                      TYPEUUID: attributes.TYPEUUID,
+                      TYPE: attributes.TYPE,
+                      ShapeType: attributes.ShapeType,
+                      TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                      TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                      TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                      TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                      LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
+                      LOD_NON: attributes.LOD_NON
+                        ? Number(attributes.LOD_NON)
+                        : null,
+                      MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                      TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                      WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                      WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                      SA: attributes.SA ? Number(attributes.SA) : null,
+                      AA: null,
+                      ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                      AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                      Notes: '',
+                      CONTAMTYPE: null,
+                      CONTAMVAL: null,
+                      CONTAMUNIT: null,
+                      CREATEDDATE: null,
+                      UPDATEDDATE: null,
+                      USERNAME: null,
+                      ORGANIZATION: null,
+                      DECISIONUNITUUID: null,
+                      DECISIONUNIT: null,
+                      DECISIONUNITSORT: null,
+                    },
+                  };
+                }
+              });
+            });
+
+            // add custom sample types to browser storage
+            if (newUserSampleTypes.length > 0) {
+              setUserDefinedAttributes((item) => {
+                Object.keys(newAttributes).forEach((key) => {
+                  const attributes = newAttributes[key];
+                  sampleAttributes[attributes.attributes.TYPEUUID as any] =
+                    attributes.attributes;
+                  item.sampleTypes[
+                    attributes.attributes.TYPEUUID as any
+                  ] = attributes;
+                });
+
+                return {
+                  editCount: item.editCount + 1,
+                  sampleTypes: item.sampleTypes,
+                };
+              });
+
+              setUserDefinedOptions((options) => {
+                return [...options, ...newUserSampleTypes];
+              });
+            }
+
+            // reset the status
+            setStatus('');
+          })
+          .catch((err) => {
+            console.error(err);
+            setStatus('error');
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        setStatus('error');
+      });
+  }
+
+  /**
    * Adds non-tots layers as reference portal layers.
    */
   function addRefLayer() {
@@ -1380,6 +1649,107 @@ function ResultCard({ result }: ResultCardProps) {
   }
 
   /**
+   * Removes user defined sample types that were published through TOTS.
+   */
+  function removeTotsSampleType() {
+    // Build list of sample types that need to be removed
+    const typesToRemove: string[] = [];
+    Object.values(userDefinedAttributes.sampleTypes).forEach((type) => {
+      if (type.serviceId === result.id && type?.attributes?.TYPEUUID) {
+        typesToRemove.push(type.attributes.TYPEUUID);
+      }
+    });
+
+    type RemovalObject = {
+      layer: LayerType;
+      graphics: __esri.Graphic[];
+    };
+    const removalObject: RemovalObject[] = [];
+
+    // check if any of these sample types have been used
+    layers.forEach((layer) => {
+      if (
+        !['Samples', 'VSP'].includes(layer.layerType) ||
+        layer.sketchLayer.type !== 'graphics'
+      ) {
+        return;
+      }
+
+      const graphicsToRemove: __esri.Graphic[] = [];
+      layer.sketchLayer.graphics.forEach((graphic) => {
+        if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+          graphicsToRemove.push(graphic);
+        }
+      });
+
+      if (graphicsToRemove.length > 0) {
+        removalObject.push({
+          layer: layer,
+          graphics: graphicsToRemove,
+        });
+      }
+    });
+
+    function removeFromUdtOptions() {
+      setSampleTypeSelections([]);
+      setUserDefinedOptions(
+        userDefinedOptions.filter(
+          (option) => !typesToRemove.includes(option.value),
+        ),
+      );
+      setUserDefinedAttributes((userDefined) => {
+        const newUserDefined = {
+          ...userDefined,
+        };
+
+        typesToRemove.forEach((typeUuid) => {
+          delete newUserDefined.sampleTypes[typeUuid];
+        });
+        newUserDefined.editCount = newUserDefined.editCount + 1;
+
+        return newUserDefined;
+      });
+    }
+
+    // no related samples have been added, delete the sample
+    // types associated with result.id (i.e. serviceId === result.id)
+    if (removalObject.length === 0) {
+      removeFromUdtOptions();
+      return;
+    }
+
+    // some samples have been placed using these sample types
+    // ask the user if they would like to continue with deleting
+    setOptions({
+      title: 'Would you like to continue?',
+      ariaLabel: 'Would you like to continue?',
+      description:
+        'Samples using one or more of these sample types have been placed on the map. This operation will delete any samples associated with these sample types.',
+      onContinue: () => {
+        // Update the attributes of the graphics on the map on edits
+        let editsCopy: EditsType = edits;
+        removalObject.forEach((object) => {
+          if (object.layer.sketchLayer.type === 'graphics') {
+            object.layer.sketchLayer.removeMany(object.graphics);
+
+            const collection = new Collection<__esri.Graphic>();
+            collection.addMany(object.graphics);
+            editsCopy = updateLayerEdits({
+              edits: editsCopy,
+              layer: object.layer,
+              type: 'delete',
+              changes: collection,
+            });
+          }
+        });
+
+        setEdits(editsCopy);
+        removeFromUdtOptions();
+      },
+    });
+  }
+
+  /**
    * Removes the reference portal layers.
    */
   function removeRefLayer() {
@@ -1404,6 +1774,13 @@ function ResultCard({ result }: ResultCardProps) {
     }
   }
 
+  let type = result.type;
+  if (
+    result?.categories?.includes('contains-epa-tots-user-defined-sample-types')
+  ) {
+    type = 'Sample Types';
+  }
+
   return (
     <div>
       <img
@@ -1413,7 +1790,7 @@ function ResultCard({ result }: ResultCardProps) {
       />
       <h3 css={cardTitleStyles}>{result.title}</h3>
       <span css={cardInfoStyles}>
-        {result.type} by {result.owner}
+        {type} by {result.owner}
       </span>
       <br />
       <div css={cardButtonContainerStyles}>
@@ -1433,10 +1810,20 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  categories?.includes('contains-epa-tots-sample-layer') ||
-                  categories?.includes('contains-epa-tots-vsp-layer')
-                    ? addTotsLayer()
-                    : addRefLayer();
+                  if (
+                    categories?.includes('contains-epa-tots-sample-layer') ||
+                    categories?.includes('contains-epa-tots-vsp-layer')
+                  ) {
+                    addTotsLayer();
+                  } else if (
+                    categories?.includes(
+                      'contains-epa-tots-user-defined-sample-types',
+                    )
+                  ) {
+                    addTotsSampleType();
+                  } else {
+                    addRefLayer();
+                  }
                 }}
               >
                 Add
@@ -1449,10 +1836,20 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  categories?.includes('contains-epa-tots-sample-layer') ||
-                  categories?.includes('contains-epa-tots-vsp-layer')
-                    ? removeTotsLayer()
-                    : removeRefLayer();
+                  if (
+                    categories?.includes('contains-epa-tots-sample-layer') ||
+                    categories?.includes('contains-epa-tots-vsp-layer')
+                  ) {
+                    removeTotsLayer();
+                  } else if (
+                    categories?.includes(
+                      'contains-epa-tots-user-defined-sample-types',
+                    )
+                  ) {
+                    removeTotsSampleType();
+                  } else {
+                    removeRefLayer();
+                  }
                 }}
               >
                 Remove

@@ -18,6 +18,7 @@ import {
   useServicesContext,
 } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
@@ -25,7 +26,11 @@ import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 // config
 import { defaultLayerProps } from 'config/layerProps';
-import { SampleSelectType, PolygonSymbol } from 'config/sampleAttributes';
+import {
+  AttributeItems,
+  SampleSelectType,
+  PolygonSymbol,
+} from 'config/sampleAttributes';
 import {
   cantUseWithVspMessage,
   featureNotAvailableMessage,
@@ -39,6 +44,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   findLayerInEdits,
+  generateUUID,
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
   getNextScenarioLayer,
@@ -71,7 +77,7 @@ function getSampleTypeName(
   // get a list of names in use
   let usedNames: string[] = [];
   sampleTypes.forEach((sampleType) => {
-    usedNames.push(sampleType.value);
+    usedNames.push(sampleType.label);
   });
 
   // Find a name where there is not a collision.
@@ -253,6 +259,7 @@ const sampleCountStyles = css`
 
 // --- components (SketchButton) ---
 type SketchButtonProps = {
+  value: string;
   label: string;
   iconClass: string;
   layers: LayerType[];
@@ -260,6 +267,7 @@ type SketchButtonProps = {
 };
 
 function SketchButton({
+  value,
   label,
   iconClass,
   layers,
@@ -274,13 +282,13 @@ function SketchButton({
     if (layer.sketchLayer.type === 'feature') return;
 
     layer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.attributes.TYPE === label) count += 1;
+      if (graphic.attributes.TYPEUUID === value) count += 1;
     });
   });
 
   return (
     <button
-      id={label}
+      id={value}
       title={`Draw a ${label}: ${count}`}
       className="sketch-button"
       onClick={() => onClick()}
@@ -384,6 +392,7 @@ function LocateSamples() {
     trainingMode,
     setTrainingMode,
   } = React.useContext(NavigationContext);
+  const { setSampleTypeSelections } = React.useContext(PublishContext);
   const {
     autoZoom,
     setAutoZoom,
@@ -876,8 +885,9 @@ function LocateSamples() {
 
     // get the sample type name, for a clone operation
     // add a number to the end of the name.
-    let sampleTypeName = userDefinedSampleType.value;
-    const attributes = sampleAttributes[sampleTypeName as any];
+    let sampleTypeUuid = userDefinedSampleType.value;
+    let sampleTypeName = userDefinedSampleType.label;
+    const attributes = sampleAttributes[sampleTypeUuid as any];
     if (editType === 'clone') {
       sampleTypeName = getSampleTypeName(allSampleOptions, sampleTypeName);
     }
@@ -996,7 +1006,7 @@ function LocateSamples() {
     return (
       editingStatus === 'edit' &&
       userDefinedSampleType &&
-      sampleTypeName !== userDefinedSampleType.value
+      sampleTypeName !== userDefinedSampleType.label
     );
   }
 
@@ -1013,7 +1023,7 @@ function LocateSamples() {
     const editedGraphics: __esri.Graphic[] = [];
     graphics.forEach((graphic: __esri.Graphic) => {
       // update attributes for the edited type
-      if (graphic.attributes.TYPE === oldType) {
+      if (graphic.attributes.TYPEUUID === oldType) {
         const areaChanged = graphic.attributes.SA !== newAttributes.SA;
         const shapeTypeChanged =
           graphic.attributes.ShapeType !== newAttributes.ShapeType;
@@ -1778,23 +1788,25 @@ function LocateSamples() {
                         <React.Fragment>
                           {sampleTypeContext.data.sampleSelectOptions.map(
                             (option: any, index: number) => {
-                              const sampleType = option.value;
+                              const sampleTypeUuid = option.value;
+                              const sampleType = option.label;
 
                               if (
-                                !sampleAttributes.hasOwnProperty(sampleType)
+                                !sampleAttributes.hasOwnProperty(sampleTypeUuid)
                               ) {
                                 return null;
                               }
 
                               const shapeType =
-                                sampleAttributes[sampleType].ShapeType;
-                              const edited = userDefinedAttributes.attributes.hasOwnProperty(
-                                sampleType,
+                                sampleAttributes[sampleTypeUuid].ShapeType;
+                              const edited = userDefinedAttributes.sampleTypes.hasOwnProperty(
+                                sampleTypeUuid,
                               );
                               return (
                                 <SketchButton
                                   key={index}
                                   layers={layers}
+                                  value={sampleTypeUuid}
                                   label={
                                     edited
                                       ? `${sampleType} (edited)`
@@ -1805,7 +1817,9 @@ function LocateSamples() {
                                       ? 'fas fa-pen-fancy'
                                       : 'fas fa-draw-polygon'
                                   }
-                                  onClick={() => sketchButtonClick(sampleType)}
+                                  onClick={() =>
+                                    sketchButtonClick(sampleTypeUuid)
+                                  }
                                 />
                               );
                             },
@@ -1822,20 +1836,21 @@ function LocateSamples() {
                         {userDefinedOptions.map((option, index) => {
                           if (option.isPredefined) return null;
 
-                          const sampleType = option.value;
+                          const sampleTypeUuid = option.value;
                           const shapeType =
-                            sampleAttributes[sampleType as any].ShapeType;
+                            sampleAttributes[sampleTypeUuid as any].ShapeType;
                           return (
                             <SketchButton
                               key={index}
-                              label={sampleType}
+                              value={sampleTypeUuid}
+                              label={option.label}
                               layers={layers}
                               iconClass={
                                 shapeType === 'point'
                                   ? 'fas fa-pen-fancy'
                                   : 'fas fa-draw-polygon'
                               }
-                              onClick={() => sketchButtonClick(sampleType)}
+                              onClick={() => sketchButtonClick(sampleTypeUuid)}
                             />
                           );
                         })}
@@ -2087,7 +2102,7 @@ function LocateSamples() {
                                 css={iconButtonStyles}
                                 title="Delete Sample Type"
                                 onClick={() => {
-                                  const sampleTypeName =
+                                  const sampleTypeUuid =
                                     userDefinedSampleType.value;
 
                                   setOptions({
@@ -2099,18 +2114,37 @@ function LocateSamples() {
                                       setUserDefinedOptions(
                                         userDefinedOptions.filter(
                                           (option) =>
-                                            option.value !== sampleTypeName,
+                                            option.value !== sampleTypeUuid,
                                         ),
                                       );
                                       setUserDefinedAttributes(
                                         (userDefined) => {
-                                          delete userDefined.attributes[
-                                            sampleTypeName
-                                          ];
-                                          userDefined.editCount += 1;
-                                          return userDefined;
+                                          const newUserDefined = {
+                                            ...userDefined,
+                                          };
+
+                                          // mark to delete if this is a published sample type
+                                          // otherwise just remove it
+                                          if (
+                                            newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ].serviceId
+                                          ) {
+                                            newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ].status = 'delete';
+                                          } else {
+                                            delete newUserDefined.sampleTypes[
+                                              sampleTypeUuid
+                                            ];
+                                          }
+
+                                          newUserDefined.editCount =
+                                            newUserDefined.editCount + 1;
+                                          return newUserDefined;
                                         },
                                       );
+                                      setSampleTypeSelections([]);
 
                                       // Update the attributes of the graphics on the map on edits
                                       let editsCopy: EditsType = edits;
@@ -2128,8 +2162,8 @@ function LocateSamples() {
                                         layer.sketchLayer.graphics.forEach(
                                           (graphic) => {
                                             if (
-                                              graphic.attributes.TYPE ===
-                                              sampleTypeName
+                                              graphic.attributes.TYPEUUID ===
+                                              sampleTypeUuid
                                             ) {
                                               graphicsToRemove.push(graphic);
                                             }
@@ -2152,9 +2186,6 @@ function LocateSamples() {
                                       });
 
                                       setEdits(editsCopy);
-
-                                      // TODO: Add code for deleteing the user defined type
-                                      //       from ArcGIS Online.
 
                                       setUserDefinedSampleType(null);
                                     },
@@ -2523,30 +2554,36 @@ function LocateSamples() {
                                 );
                               if (editingStatus === 'view') return;
 
+                              const typeUuid =
+                                editingStatus === 'edit' &&
+                                userDefinedSampleType?.value
+                                  ? userDefinedSampleType.value
+                                  : generateUUID();
                               const isValid = validateEdits();
                               const predefinedEdited =
                                 editingStatus === 'edit' &&
                                 userDefinedSampleType?.isPredefined;
                               if (isValid && sampleTypeName && shapeType) {
                                 let newSampleType = {
-                                  value: sampleTypeName,
+                                  value: typeUuid,
                                   label: sampleTypeName,
                                   isPredefined: false,
                                 };
                                 if (predefinedEdited && userDefinedSampleType) {
                                   newSampleType = {
                                     value: userDefinedSampleType.value,
-                                    label: `${userDefinedSampleType?.value} (edited)`,
+                                    label: `${userDefinedSampleType?.label} (edited)`,
                                     isPredefined:
                                       userDefinedSampleType.isPredefined,
                                   };
                                 }
 
                                 // update the sample attributes
-                                const newAttributes = {
+                                const newAttributes: AttributeItems = {
                                   OBJECTID: '-1',
                                   PERMANENT_IDENTIFIER: null,
                                   GLOBALID: null,
+                                  TYPEUUID: typeUuid,
                                   TYPE: sampleTypeName,
                                   ShapeType: shapeType.value,
                                   TTPK: ttpk ? Number(ttpk) : null,
@@ -2575,45 +2612,69 @@ function LocateSamples() {
                                   DECISIONUNIT: null,
                                   DECISIONUNITSORT: null,
                                 };
+                                if (
+                                  userDefinedAttributes.sampleTypes.hasOwnProperty(
+                                    typeUuid,
+                                  )
+                                ) {
+                                  const sampleType =
+                                    userDefinedAttributes.sampleTypes[typeUuid]
+                                      .attributes;
+                                  if (sampleType.OBJECTID)
+                                    newAttributes.OBJECTID =
+                                      sampleType.OBJECTID;
+                                  if (sampleType.GLOBALID)
+                                    newAttributes.GLOBALID =
+                                      sampleType.GLOBALID;
+                                }
 
                                 // add/update the sample's attributes
                                 sampleAttributes[
-                                  sampleTypeName as any
+                                  typeUuid as any
                                 ] = newAttributes;
                                 setUserDefinedAttributes((item) => {
-                                  item.attributes[
-                                    sampleTypeName
-                                  ] = newAttributes;
-
-                                  // if the sampleTypeName changed, remove the attributes tied to the old name
+                                  let status:
+                                    | 'add'
+                                    | 'edit'
+                                    | 'delete'
+                                    | 'published' = 'add';
                                   if (
-                                    didSampleTypeNameChange() &&
-                                    userDefinedSampleType
+                                    item.sampleTypes[typeUuid]?.status ===
+                                    'published'
                                   ) {
-                                    delete item.attributes[
-                                      userDefinedSampleType.value
-                                    ];
+                                    status = 'edit';
                                   }
+                                  if (
+                                    item.sampleTypes[typeUuid]?.status ===
+                                    'delete'
+                                  ) {
+                                    status = 'delete';
+                                  }
+
+                                  item.sampleTypes[typeUuid] = {
+                                    status,
+                                    attributes: newAttributes,
+                                    serviceId: item.sampleTypes.hasOwnProperty(
+                                      typeUuid,
+                                    )
+                                      ? item.sampleTypes[typeUuid].serviceId
+                                      : '',
+                                  };
 
                                   return {
                                     editCount: item.editCount + 1,
-                                    attributes: item.attributes,
+                                    sampleTypes: item.sampleTypes,
                                   };
                                 });
 
                                 // add the new option to the dropdown if it doesn't exist
-                                const hasSample =
-                                  userDefinedOptions.findIndex(
-                                    (option) => option.value === sampleTypeName,
-                                  ) > -1;
                                 if (
-                                  !hasSample &&
                                   (editingStatus !== 'edit' ||
                                     (editingStatus === 'edit' &&
                                       !userDefinedSampleType?.isPredefined))
                                 ) {
                                   setUserDefinedOptions((options) => {
-                                    if (!didSampleTypeNameChange()) {
+                                    if (editingStatus !== 'edit') {
                                       return [...options, newSampleType];
                                     }
 

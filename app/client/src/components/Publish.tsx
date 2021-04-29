@@ -6,14 +6,20 @@ import { css } from '@emotion/react';
 import { EditScenario } from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
+import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
-import { isServiceNameAvailable, publish } from 'utils/arcGisRestUtils';
+import {
+  isServiceNameAvailable,
+  publish,
+  publishTable,
+} from 'utils/arcGisRestUtils';
 import { findLayerInEdits } from 'utils/sketchUtils';
 import { createErrorObject } from 'utils/utils';
 // types
@@ -24,14 +30,22 @@ import {
   ScenarioEditsType,
 } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import {
   noSamplesPublishMessage,
+  featureServiceTakenMessage,
   notLoggedInMessage,
   publishSuccessMessage,
+  pulblishSamplesSuccessMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
 import { LayerType } from 'types/Layer';
+
+type FeatureServices = {
+  status: 'fetching' | 'failure' | 'success';
+  data: SelectedService[];
+};
 
 type PublishResults = {
   [key: string]: {
@@ -42,29 +56,6 @@ type PublishResults = {
   };
 };
 
-// --- styles (Publish) ---
-const panelContainer = css`
-  padding: 20px;
-`;
-
-const publishButtonContainerStyles = css`
-  display: flex;
-  justify-content: flex-end;
-`;
-
-const publishButtonStyles = css`
-  margin-top: 10px;
-`;
-
-const sectionContainer = css`
-  margin-bottom: 10px;
-`;
-
-const layerInfo = css`
-  padding-bottom: 0.5em;
-`;
-
-// --- components (Publish) ---
 type PublishType = {
   status:
     | 'none'
@@ -81,8 +72,65 @@ type PublishType = {
   rawData: any;
 };
 
+type SelectedService = {
+  description: string;
+  label: string;
+  value: string;
+};
+
+// --- styles (Publish) ---
+const panelContainer = css`
+  padding: 20px;
+`;
+
+const publishButtonContainerStyles = css`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const publishButtonStyles = css`
+  margin-top: 10px;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.65;
+  }
+`;
+
+const sectionContainer = css`
+  margin-bottom: 10px;
+`;
+
+const layerInfo = css`
+  padding-bottom: 0.5em;
+`;
+
+const radioLabelStyles = css`
+  padding-left: 0.375rem;
+`;
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
+const multiSelectStyles = css`
+  ${fullWidthSelectStyles}
+  margin-bottom: 10px;
+`;
+
+const inputStyles = css`
+  width: 100%;
+  height: 36px;
+  margin: 0 0 10px 0;
+  padding-left: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+`;
+
+// --- components (Publish) ---
 function Publish() {
-  const { GraphicsLayer, IdentityManager } = useEsriModulesContext();
+  const { GraphicsLayer, IdentityManager, Portal } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
@@ -90,13 +138,33 @@ function Publish() {
   } = React.useContext(AuthenticationContext);
   const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
   const {
+    publishSamplesMode,
+    setPublishSamplesMode,
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
+    sampleTypeSelections,
+    setSampleTypeSelections,
+    selectedService,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+  const {
     edits,
     setEdits,
     layers,
     setLayers,
     sketchLayer,
     selectedScenario,
+    userDefinedAttributes,
+    setUserDefinedAttributes,
   } = React.useContext(SketchContext);
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// START - Publish Layers ///////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
 
   // Checks browser storage to determine if the user clicked publish and logged in.
   const [publishButtonClicked, setPublishButtonClicked] = React.useState(false);
@@ -362,7 +430,8 @@ function Publish() {
       layers: publishLayers,
       edits: [layerEdits],
       serviceMetaData: {
-        name: editsScenario.scenarioName,
+        value: '',
+        label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
       },
     })
@@ -640,6 +709,389 @@ function Publish() {
     selectedScenario,
   ]);
 
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// END - Publish Layers /////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// START - Publish Sample Types /////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  // Checks browser storage to determine if the user clicked publish and logged in.
+  const [
+    publishSamplesButtonClicked,
+    setPublishSamplesButtonClicked,
+  ] = React.useState(false);
+  const [
+    continueSamplesInitialized,
+    setContinueSamplesInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (continueSamplesInitialized) return;
+
+    // continue publish is not true, exit early
+    if (!goToOptions?.continueSamplesPublish) {
+      setContinueSamplesInitialized(true);
+      return;
+    }
+
+    // wait until TOTS is signed in before trying to continue the publish
+    if (!portal || !signedIn) return;
+
+    // continue with publishing
+    setPublishSamplesButtonClicked(true);
+    setGoToOptions({ continueSamplesPublish: false });
+    setContinueSamplesInitialized(true);
+  }, [
+    portal,
+    signedIn,
+    goToOptions,
+    setGoToOptions,
+    continueSamplesInitialized,
+  ]);
+
+  // Sign in if necessary
+  React.useEffect(() => {
+    if (!oAuthInfo || !publishSamplesButtonClicked) return;
+
+    // have the user login if necessary
+    if (!portal || !signedIn) {
+      setGoToOptions({ continueSamplesPublish: true });
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+    }
+  }, [
+    IdentityManager,
+    setGoToOptions,
+    portal,
+    signedIn,
+    oAuthInfo,
+    publishSamplesButtonClicked,
+  ]);
+
+  // Check if the feature service name is available
+  const [
+    hasSamplesNameBeenChecked,
+    setHasSamplesNameBeenChecked,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (
+      !portal ||
+      !publishSamplesButtonClicked ||
+      !publishSampleTableMetaData ||
+      hasSamplesNameBeenChecked
+    ) {
+      return;
+    }
+
+    setPublishSamplesResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
+
+    if (publishSamplesMode === 'existing' && publishSampleTableMetaData.value) {
+      setHasSamplesNameBeenChecked(true);
+      return;
+    }
+
+    // check if the service (scenario) name is availble before continuing
+    isServiceNameAvailable(portal, publishSampleTableMetaData.label)
+      .then((res: any) => {
+        if (!res.available) {
+          setPublishSamplesButtonClicked(false);
+          setPublishSamplesResponse({
+            status: 'name-not-available',
+            summary: { success: '', failed: '' },
+            rawData: null,
+          });
+          return;
+        }
+
+        setHasSamplesNameBeenChecked(true);
+      })
+      .catch((err) => {
+        console.error('isServiceNameAvailable error', err);
+        setPublishSamplesResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: err,
+        });
+      });
+  }, [
+    portal,
+    publishSamplesMode,
+    publishSamplesButtonClicked,
+    hasSamplesNameBeenChecked,
+    layers,
+    publishSampleTableMetaData,
+  ]);
+
+  // Run the publish
+  const [
+    publishSamplesResponse,
+    setPublishSamplesResponse,
+  ] = React.useState<PublishType>({
+    status: 'none',
+    summary: { success: '', failed: '' },
+    rawData: null,
+  });
+  React.useEffect(() => {
+    if (!oAuthInfo || !portal || !signedIn) return;
+    if (
+      Object.keys(sampleTypeSelections).length === 0 ||
+      !publishSampleTableMetaData ||
+      !publishSamplesButtonClicked ||
+      !hasSamplesNameBeenChecked
+    ) {
+      return;
+    }
+
+    setPublishSamplesButtonClicked(false);
+
+    setPublishSamplesResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
+
+    const changes: {
+      id: number;
+      adds: any[];
+      updates: any[];
+      deletes: any[];
+    } = {
+      id: -1,
+      adds: [],
+      updates: [],
+      deletes: [],
+    };
+
+    sampleTypeSelections.forEach((type) => {
+      if (!type.value) return;
+
+      const sampleType = userDefinedAttributes.sampleTypes[type.value];
+      const item = {
+        attributes: sampleType.attributes,
+      };
+      if (publishSamplesMode === 'new') {
+        changes.adds.push(item);
+      } else if (publishSamplesMode === 'existing' && selectedService) {
+        if (selectedService.value === type.serviceId) {
+          if (sampleType.status === 'add') changes.adds.push(item);
+          if (
+            sampleType.status === 'edit' ||
+            sampleType.status === 'published'
+          ) {
+            changes.updates.push(item);
+          }
+          if (sampleType.status === 'delete') changes.deletes.push(item);
+        } else {
+          changes.adds.push(item);
+        }
+      }
+    });
+
+    // exit early if there are no edits
+    if (
+      changes.adds.length === 0 &&
+      changes.updates.length === 0 &&
+      changes.deletes.length === 0
+    ) {
+      setPublishSamplesResponse({
+        status: 'fetch-failure',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+      return;
+    }
+
+    publishTable({
+      portal,
+      changes,
+      serviceMetaData: publishSampleTableMetaData,
+    })
+      .then((res: any) => {
+        // get totals
+        const totals = {
+          added: 0,
+          updated: 0,
+          deleted: 0,
+          failed: 0,
+        };
+
+        const newUserDefinedAttributes = { ...userDefinedAttributes };
+
+        // need to loop through each array and check the success flag
+        if (res.edits.addResults) {
+          res.edits.addResults.forEach((item: any, index: number) => {
+            item.success ? (totals.added += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.adds[index];
+            const origUdt =
+              newUserDefinedAttributes.sampleTypes[
+                origItem.attributes.TYPEUUID
+              ];
+            if (item.success) {
+              origUdt.status = 'published';
+              origUdt.serviceId = res.service.featureService.serviceItemId;
+              origUdt.attributes.GLOBALID = item.globalId;
+              origUdt.attributes.OBJECTID = item.objectId;
+            }
+          });
+        }
+        if (res.edits.updateResults) {
+          res.edits.updateResults.forEach((item: any, index: number) => {
+            item.success ? (totals.updated += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.updates[index];
+            const origUdt =
+              newUserDefinedAttributes.sampleTypes[
+                origItem.attributes.TYPEUUID
+              ];
+            if (item.success) {
+              origUdt.status = 'published';
+              origUdt.serviceId = res.service.featureService.serviceItemId;
+              origUdt.attributes.GLOBALID = item.globalId;
+              origUdt.attributes.OBJECTID = item.objectId;
+            }
+          });
+        }
+        if (res.edits.deleteResults) {
+          res.edits.deleteResults.forEach((item: any, index: number) => {
+            item.success ? (totals.deleted += 1) : (totals.failed += 1);
+
+            // update the edits arrays
+            const origItem = changes.deletes[index];
+            delete newUserDefinedAttributes.sampleTypes[
+              origItem.attributes.TYPEUUID
+            ];
+          });
+        }
+
+        // create the message string for each type of change (add, update and delete)
+        const successParts = [];
+        if (totals.added) {
+          successParts.push(`${totals.added} item(s) added`);
+        }
+        if (totals.updated) {
+          successParts.push(`${totals.updated} item(s) updated`);
+        }
+        if (totals.deleted) {
+          successParts.push(`${totals.deleted} item(s) deleted`);
+        }
+
+        // combine the messages
+        let success = '';
+        if (successParts.length === 1) {
+          success = successParts[0];
+        }
+        if (successParts.length > 1) {
+          success =
+            successParts.slice(0, -1).join(', ') +
+            ' and ' +
+            successParts.slice(-1);
+        }
+
+        // create the failed status message
+        const failed = totals.failed
+          ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
+          : '';
+        if (failed) console.error('Some items failed to publish: ', res.edits);
+
+        newUserDefinedAttributes.editCount =
+          newUserDefinedAttributes.editCount + 1;
+        setPublishSamplesResponse({
+          status: 'success',
+          summary: { success, failed },
+          rawData: res.edits,
+        });
+        setUserDefinedAttributes(newUserDefinedAttributes);
+
+        if (publishSamplesMode === 'new') {
+          setSampleTableDescription('');
+          setSampleTableName('');
+        }
+        if (publishSamplesMode === 'existing') {
+          setSelectedService(null);
+        }
+      })
+      .catch((err) => {
+        console.error('publishTable error', err);
+        setPublishSamplesResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: err,
+        });
+      });
+  }, [
+    GraphicsLayer,
+    IdentityManager,
+    portal,
+    oAuthInfo,
+    setGoToOptions,
+    signedIn,
+    publishSampleTableMetaData,
+    publishSamplesButtonClicked,
+    hasSamplesNameBeenChecked,
+    userDefinedAttributes,
+    setUserDefinedAttributes,
+    publishSamplesMode,
+    sampleTypeSelections,
+    selectedService,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSelectedService,
+  ]);
+
+  const [queryInitialized, setQueryInitialized] = React.useState(false);
+  const [featureServices, setFeatureServices] = React.useState<FeatureServices>(
+    { status: 'fetching', data: [] },
+  );
+  React.useEffect(() => {
+    if (queryInitialized) return;
+
+    setQueryInitialized(true);
+
+    const tmpPortal = portal ? portal : new Portal();
+    tmpPortal
+      .queryItems({
+        categories: ['contains-epa-tots-user-defined-sample-types'],
+        sortField: 'title',
+        sortOrder: 'asc',
+      })
+      .then((res: __esri.PortalQueryResult) => {
+        const data = res.results.map((item) => {
+          return {
+            description: item.description,
+            label: item.title,
+            value: item.id,
+          };
+        });
+        setFeatureServices({ status: 'success', data });
+      })
+      .catch((err) => {
+        console.error(err);
+        setFeatureServices({ status: 'failure', data: [] });
+      });
+  }, [Portal, portal, queryInitialized]);
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////// END - Publish Sample Types ///////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  const sampleTypeOptions: SampleTypeOptions = Object.values(
+    userDefinedAttributes.sampleTypes,
+  ).map((type) => {
+    return {
+      label: type.attributes.TYPE,
+      value: type.attributes.TYPEUUID,
+      serviceId: type.serviceId,
+      status: type.status,
+    };
+  });
+
   // count the number of samples of the selected sampling plan
   let sampleCount = 0;
   if (selectedScenario?.scenarioName) {
@@ -758,6 +1210,144 @@ function Publish() {
             </button>
           </div>
         )}
+
+      <div>
+        <p>
+          Publish user defined sample types to ArcGIS Online. Select the user
+          defined sample types you would like to publish. Then select whether
+          you would like to publish to a new or existing feature service.
+        </p>
+        <div>
+          <label htmlFor="publish-sample-select">Samples to Publish</label>
+          <Select
+            inputId="publish-sample-select"
+            isMulti={true as any}
+            isSearchable={false}
+            options={sampleTypeOptions as any}
+            value={sampleTypeSelections as any}
+            onChange={(ev) => setSampleTypeSelections(ev as any)}
+            css={multiSelectStyles}
+          />
+        </div>
+
+        <div>
+          {publishSamplesResponse.status === 'name-not-available' &&
+            featureServiceTakenMessage(sampleTableName ? sampleTableName : '')}
+          <input
+            id="draw-aoi"
+            type="radio"
+            name="mode"
+            value="Publish to Existing Service"
+            checked={publishSamplesMode === 'new'}
+            onChange={(ev) => {
+              setPublishSamplesMode('new');
+            }}
+          />
+          <label htmlFor="draw-aoi" css={radioLabelStyles}>
+            Publish to new Feature Service
+          </label>
+        </div>
+        <div>
+          <input
+            id="use-aoi-file"
+            type="radio"
+            name="mode"
+            value="Publish to New Service"
+            checked={publishSamplesMode === 'existing'}
+            onChange={(ev) => {
+              setPublishSamplesMode('existing');
+            }}
+          />
+          <label htmlFor="use-aoi-file" css={radioLabelStyles}>
+            Publish to existing Feature Service
+          </label>
+        </div>
+
+        {publishSamplesMode === 'new' && (
+          <React.Fragment>
+            <label htmlFor="sample-table-name-input">Sample Table Name</label>
+            <input
+              id="sample-table-name-input"
+              css={inputStyles}
+              maxLength={250}
+              placeholder="Enter Sample Table Name"
+              value={sampleTableName}
+              onChange={(ev) => setSampleTableName(ev.target.value)}
+            />
+            <label htmlFor="scenario-description-input">Plan Description</label>
+            <input
+              id="scenario-description-input"
+              css={inputStyles}
+              maxLength={2048}
+              placeholder="Enter Plan Description (2048 characters)"
+              value={sampleTableDescription}
+              onChange={(ev) => setSampleTableDescription(ev.target.value)}
+            />
+          </React.Fragment>
+        )}
+        {publishSamplesMode === 'existing' && (
+          <div>
+            {featureServices.status === 'fetching' && <LoadingSpinner />}
+            {featureServices.status === 'failure' && <p>Error!</p>}
+            {featureServices.status === 'success' && (
+              <React.Fragment>
+                <label htmlFor="feature-service-select">
+                  Feature Service Select
+                </label>
+                <Select
+                  inputId="feature-service-select"
+                  css={fullWidthSelectStyles}
+                  value={selectedService}
+                  onChange={(ev) => setSelectedService(ev as SelectedService)}
+                  options={featureServices.data}
+                />
+              </React.Fragment>
+            )}
+          </div>
+        )}
+        {publishSamplesResponse.status === 'fetching' && <LoadingSpinner />}
+        {publishSamplesResponse.status === 'fetch-failure' &&
+          webServiceErrorMessage}
+        {publishSamplesResponse.status === 'success' &&
+          publishSamplesResponse.summary.failed && (
+            <MessageBox
+              severity="error"
+              title="Some item(s) failed to publish"
+              message={publishSamplesResponse.summary.failed}
+            />
+          )}
+        {publishSamplesResponse.summary.success &&
+          pulblishSamplesSuccessMessage}
+        {!signedIn && notLoggedInMessage}
+        {publishSamplesMode && (
+          <div css={publishButtonContainerStyles}>
+            <button
+              css={publishButtonStyles}
+              disabled={
+                !sampleTypeSelections ||
+                sampleTypeSelections.length === 0 ||
+                (publishSamplesMode === 'new' && !sampleTableName) ||
+                (publishSamplesMode === 'existing' && !selectedService)
+              }
+              onClick={() => {
+                if (publishSamplesMode === 'existing' && selectedService) {
+                  setPublishSampleTableMetaData(selectedService);
+                } else if (publishSamplesMode === 'new') {
+                  setPublishSampleTableMetaData({
+                    value: '',
+                    label: sampleTableName,
+                    description: sampleTableDescription,
+                  });
+                }
+
+                setPublishSamplesButtonClicked(true);
+              }}
+            >
+              Publish User Defined Sample Types
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

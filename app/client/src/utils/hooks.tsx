@@ -10,6 +10,7 @@ import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -21,6 +22,7 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
+  ServiceMetaDataType,
 } from 'types/Edits';
 import {
   FieldInfos,
@@ -29,6 +31,7 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
@@ -117,6 +120,14 @@ export function useStartOver() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    setPublishSamplesMode,
+    setPublishSampleTableMetaData,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+  const {
     basemapWidget,
     map,
     mapView,
@@ -147,7 +158,7 @@ export function useStartOver() {
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
-    setUserDefinedAttributes({ editCount: 0, attributes: {} });
+    setUserDefinedAttributes({ editCount: 0, sampleTypes: {} });
     setUserDefinedOptions([]);
 
     // clear navigation
@@ -165,6 +176,14 @@ export function useStartOver() {
 
     // set the calculate settings back to defaults
     resetCalculateContext();
+
+    // clear publish
+    setPublishSamplesMode('');
+    setPublishSampleTableMetaData(null);
+    setSampleTableDescription('');
+    setSampleTableName('');
+    setSampleTypeSelections([]);
+    setSelectedService(null);
 
     // reset the zoom
     if (mapView) {
@@ -403,14 +422,16 @@ export function useGeometryTools() {
         if (
           sampleTypeContext.status === 'success' &&
           sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-            graphic.attributes.TYPE,
+            graphic.attributes.TYPEUUID,
           )
         ) {
           performAreaToleranceCheck();
 
           // check sample attributes against predefined attributes
           const predefinedAttributes: any =
-            sampleTypeContext.data.sampleAttributes[graphic.attributes.TYPE];
+            sampleTypeContext.data.sampleAttributes[
+              graphic.attributes.TYPEUUID
+            ];
           Object.keys(predefinedAttributes).forEach((key) => {
             if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
             if (
@@ -1273,8 +1294,10 @@ function useEditsLayerStorage() {
 
         // set the symbol styles based on sample/layer type
         let symbol = defaultSymbols.symbols[layerType];
-        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
-          symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+        if (
+          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+        ) {
+          symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         }
 
         features.push(
@@ -2171,8 +2194,9 @@ function useUserDefinedSampleAttributesStorage() {
       newSampleAttributes = { ...sampleTypeContext.data.sampleAttributes };
     }
 
-    Object.keys(userDefinedAttributes.attributes).forEach((key) => {
-      newSampleAttributes[key] = userDefinedAttributes.attributes[key];
+    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
+      newSampleAttributes[key] =
+        userDefinedAttributes.sampleTypes[key].attributes;
     });
 
     setSampleAttributes(newSampleAttributes);
@@ -2237,6 +2261,113 @@ function useTablePanelStorage() {
   }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
 }
 
+type SampleMetaDataType = {
+  publishSampleTableMetaData: ServiceMetaDataType | null;
+  sampleTableDescription: string;
+  sampleTableName: string;
+  selectedService: ServiceMetaDataType | null;
+};
+
+// Uses browser storage for holding the currently selected sample layer.
+function usePublishStorage() {
+  const key = 'tots_sample_type_selections';
+  const key2 = 'tots_sample_table_metadata';
+  const key3 = 'tots_publish_samples_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    publishSamplesMode,
+    setPublishSamplesMode,
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
+    sampleTypeSelections,
+    setSampleTypeSelections,
+    selectedService,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+
+  // Retreives the selected sample layer (sketchLayer) from browser storage
+  // when the app loads
+  const [
+    localSampleTypeInitialized,
+    setLocalSampleTypeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localSampleTypeInitialized) return;
+
+    setLocalSampleTypeInitialized(true);
+
+    // set the selected scenario first
+    const sampleSelectionsStr = readFromStorage(key);
+    if (sampleSelectionsStr) {
+      const sampleSelections = JSON.parse(sampleSelectionsStr);
+      setSampleTypeSelections(sampleSelections as SampleTypeOptions);
+    }
+
+    // set the selected scenario first
+    const sampleMetaDataStr = readFromStorage(key2);
+    if (sampleMetaDataStr) {
+      const sampleMetaData: SampleMetaDataType = JSON.parse(sampleMetaDataStr);
+      setPublishSampleTableMetaData(sampleMetaData.publishSampleTableMetaData);
+      setSampleTableDescription(sampleMetaData.sampleTableDescription);
+      setSampleTableName(sampleMetaData.sampleTableName);
+      setSelectedService(sampleMetaData.selectedService);
+    }
+
+    // set the selected scenario first
+    const publishSamplesMode = readFromStorage(key3);
+    if (publishSamplesMode !== null) {
+      setPublishSamplesMode(publishSamplesMode as any);
+    }
+  }, [
+    localSampleTypeInitialized,
+    setPublishSamplesMode,
+    setPublishSampleTableMetaData,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
+  ]);
+
+  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key, sampleTypeSelections, setOptions);
+  }, [sampleTypeSelections, localSampleTypeInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    const data = {
+      publishSampleTableMetaData,
+      sampleTableDescription,
+      sampleTableName,
+      selectedService,
+    };
+    writeToStorage(key2, data, setOptions);
+  }, [
+    localSampleTypeInitialized,
+    publishSampleTableMetaData,
+    sampleTableDescription,
+    sampleTableName,
+    selectedService,
+    setOptions,
+  ]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key3, publishSamplesMode, setOptions);
+  }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -2256,4 +2387,5 @@ export function useSessionStorage() {
   useUserDefinedSampleOptionsStorage();
   useUserDefinedSampleAttributesStorage();
   useTablePanelStorage();
+  usePublishStorage();
 }

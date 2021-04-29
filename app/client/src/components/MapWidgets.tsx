@@ -293,6 +293,7 @@ function MapWidgets({ mapView }: Props) {
               DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
+              OBJECTID: -1,
               TYPE: layerType,
             };
           } else {
@@ -302,6 +303,7 @@ function MapWidgets({ mapView }: Props) {
               DECISIONUNIT: graphic.layer.title,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
+              OBJECTID: -1,
               Notes: '',
               CREATEDDATE: getCurrentDateTime(),
             };

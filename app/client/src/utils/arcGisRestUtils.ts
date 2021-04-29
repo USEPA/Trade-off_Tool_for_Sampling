@@ -1,16 +1,11 @@
 // types
-import { LayerEditsType } from 'types/Edits';
+import { LayerEditsType, ServiceMetaDataType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
-import { defaultLayerProps } from 'config/layerProps';
+import { defaultLayerProps, defaultTableProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
-
-type ServiceMetaDataType = {
-  name: string;
-  description: string;
-};
 
 /**
  * Returns an environment string to be passed as a parameter
@@ -97,11 +92,13 @@ export function isServiceNameAvailable(
  *
  * @param portal The portal object to retreive the hosted feature service from
  * @param serviceMetaData Metadata to be added to the feature service and layers.
+ * @param isTable Determines what category to add.
  * @returns A promise that resolves to the hosted feature service object
  */
 export function getFeatureService(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
+  isTable: boolean = false,
 ) {
   return new Promise((resolve, reject) => {
     // check if the tots feature service already exists
@@ -109,7 +106,7 @@ export function getFeatureService(
       .then((service) => {
         if (service) resolve(service);
         else {
-          createFeatureService(portal, serviceMetaData)
+          createFeatureService(portal, serviceMetaData, isTable)
             .then((service) => resolve(service))
             .catch((err) => {
               window.logErrorToGa(err);
@@ -178,15 +175,17 @@ function getFeatureServiceWrapped(
   serviceMetaData: ServiceMetaDataType,
 ) {
   return new Promise((resolve, reject) => {
+    let query = `orgid:${escapeForLucene(portal.user.orgId)}`;
+    query += serviceMetaData.value
+      ? ` AND id:${serviceMetaData.value}`
+      : ` AND name:${serviceMetaData.label}`;
     portal
       .queryItems({
-        query: `orgid:${escapeForLucene(portal.user.orgId)} AND name:${
-          serviceMetaData.name
-        }`,
+        query,
       })
       .then((res) => {
         const exactMatch = res.results.find(
-          (layer: any) => layer.name === serviceMetaData.name,
+          (layer: any) => layer.name === serviceMetaData.label,
         );
 
         if (exactMatch) {
@@ -226,11 +225,13 @@ function getFeatureServiceWrapped(
  *
  * @param portal The portal object to create the hosted feature service on
  * @param serviceMetaData Metadata to be added to the feature service and layers.
+ * @param isTable Determines what category to add.
  * @returns A promise that resolves to the hosted feature service object
  */
 export function createFeatureService(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
+  isTable: boolean = false,
 ) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -244,7 +245,7 @@ export function createFeatureService(
       description: serviceMetaData.description,
       snippet: serviceMetaData.description,
       createParameters: {
-        name: serviceMetaData.name,
+        name: serviceMetaData.label,
         hasStaticData: false,
         maxRecordCount: 1000,
         supportedQueryFormats: 'JSON',
@@ -278,7 +279,9 @@ export function createFeatureService(
 
           // add metadata for determining whether a feature service has a sample layer vs
           // just being a reference layer.
-          categories: 'contains-epa-tots-sample-layer',
+          categories: isTable
+            ? 'contains-epa-tots-user-defined-sample-types'
+            : 'contains-epa-tots-sample-layer',
         };
         appendEnvironmentObjectParam(indata);
 
@@ -313,7 +316,7 @@ export function createFeatureService(
 export function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
     fetchCheck(
-      `${serviceUrl}?f=json&${getEnvironmentStringParam()}=1&token=${token}`,
+      `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
     )
       .then((res: any) => {
         if (res) resolve(res.layers);
@@ -323,6 +326,27 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
         window.logErrorToGa(err);
         reject(err);
       });
+  });
+}
+
+/**
+ * Gets all of the feature tables associated with the service
+ *
+ * @param service Object representing the hosted feature service
+ * @param token Security token
+ * @returns A promise that resolves to the layers on the hosted
+ *  feature service
+ */
+export function getFeatureTables(serviceUrl: string, token: string) {
+  return new Promise((resolve, reject) => {
+    fetchCheck(
+      `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
+    )
+      .then((res: any) => {
+        if (res) resolve(res.tables);
+        else resolve([]);
+      })
+      .catch((err) => reject(err));
   });
 }
 
@@ -395,7 +419,7 @@ export function createFeatureLayers(
 
       layersParams.push({
         ...defaultLayerProps,
-        name: serviceMetaData.name,
+        name: serviceMetaData.label,
         description: serviceMetaData.description,
         extent: graphicsExtent,
 
@@ -451,6 +475,52 @@ export function createFeatureLayers(
         window.logErrorToGa(err);
         reject(err);
       });
+  });
+}
+
+/**
+ * Used for adding a table to a hosted feature service on
+ * ArcGIS Online
+ *
+ * @param portal The portal object to create feature layers on
+ * @param serviceUrl The hosted feature service to save layers to
+ * @param serviceMetaData Array of service metadata to be added to the layers of a feature service.
+ * @returns A promise that resolves to the layers that were saved
+ */
+export function createFeatureTables(
+  portal: __esri.Portal,
+  serviceUrl: string,
+  serviceMetaData: ServiceMetaDataType,
+) {
+  return new Promise((resolve, reject) => {
+    const tableParams: any[] = [];
+
+    tableParams.push({
+      ...defaultTableProps,
+      type: 'Table',
+      name: serviceMetaData.label,
+      description: serviceMetaData.description,
+    });
+
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+    const data = {
+      f: 'json',
+      token: tempPortal.credential.token,
+      addToDefinition: {
+        tables: tableParams,
+      },
+    };
+    appendEnvironmentObjectParam(data);
+
+    // inject /admin into rest/services to be able to call
+    const adminServiceUrl = serviceUrl.replace(
+      'rest/services',
+      'rest/admin/services',
+    );
+    fetchPost(`${adminServiceUrl}/addToDefinition`, data)
+      .then((res) => resolve(res))
+      .catch((err) => reject(err));
   });
 }
 
@@ -635,11 +705,54 @@ export function applyEdits({
 }
 
 /**
+ * Applys edits to a layer or layers within a hosted feature service
+ * on ArcGIS Online.
+ *
+ * @param portal The portal object to apply edits to
+ * @param serviceUrl The url of the hosted feature service
+ * @param layers The layers that the edits object pertain to
+ * @param edits The edits to be saved to the hosted feature service
+ * @returns A promise that resolves to the successfully saved objects
+ */
+export function applyEditsTable({
+  portal,
+  serviceUrl,
+  changes,
+}: {
+  portal: __esri.Portal;
+  serviceUrl: string;
+  changes: any;
+}) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    // run the webserivce call to update ArcGIS Online
+    const data = {
+      f: 'json',
+      token: tempPortal.credential.token,
+      adds: changes.adds,
+      updates: changes.updates,
+      deletes: changes.deletes.map((item: any) => {
+        return item.attributes.OBJECTID;
+      }),
+      honorSequenceOfEdits: true,
+    };
+    appendEnvironmentObjectParam(data);
+
+    fetchPost(`${serviceUrl}/${changes.id}/applyEdits`, data)
+      .then((res) => resolve(res))
+      .catch((err) => reject(err));
+  });
+}
+
+/**
  * Publishes a layer or layers to ArcGIS online.
  *
  * @param portal The portal object to apply edits to
  * @param layers The layers that the edits object pertain to
  * @param edits The edits to be saved to the hosted feature service
+ * @param serviceMetaData The name and description of the service to be saved
  * @returns A promise that resolves to the successfully published data
  */
 export function publish({
@@ -669,7 +782,7 @@ export function publish({
             res.layers.forEach((layer: any) => {
               const layerEdits = edits.find(
                 (layerEdit) =>
-                  layerEdit.id === -1 && serviceMetaData.name === layer.name,
+                  layerEdit.id === -1 && serviceMetaData.label === layer.name,
               );
 
               const mapLayer = layers.find(
@@ -698,5 +811,75 @@ export function publish({
         window.logErrorToGa(err);
         reject(err);
       });
+  });
+}
+
+/**
+ * Publishes a table to ArcGIS online. Currently this is used for
+ * publishing user defined sample types.
+ *
+ * @param portal The portal object to apply edits to
+ * @param changes The table data to be saved to the hosted feature service
+ * @param serviceMetaData The name and description of the service to be saved
+ * @returns A promise that resolves to the successfully published data
+ */
+export function publishTable({
+  portal,
+  changes,
+  serviceMetaData,
+}: {
+  portal: __esri.Portal;
+  changes: any;
+  serviceMetaData: ServiceMetaDataType;
+}) {
+  return new Promise((resolve, reject) => {
+    if (
+      changes.adds.length === 0 &&
+      changes.updates.length === 0 &&
+      changes.deletes.length === 0
+    ) {
+      reject('No data to publish.');
+      return;
+    }
+
+    getFeatureService(portal, serviceMetaData, true)
+      .then((service: any) => {
+        const serviceUrl: string = service.portalService.url;
+
+        // publish the edits
+        function localApplyEdits() {
+          applyEditsTable({ portal, serviceUrl, changes })
+            .then((res) =>
+              resolve({
+                service,
+                edits: res,
+              }),
+            )
+            .catch((err) => reject(err));
+        }
+
+        for (let table of service.featureService.tables) {
+          if (table.name === serviceMetaData.label) {
+            changes.id = table.id;
+            break;
+          }
+        }
+
+        if (changes.id !== -1) {
+          localApplyEdits();
+          return;
+        }
+
+        // create the layers
+        createFeatureTables(portal, serviceUrl, serviceMetaData)
+          .then((res: any) => {
+            // update the layer ids in edits
+            changes.id = res.layers[0].id;
+
+            localApplyEdits();
+          })
+          .catch((err) => reject(err));
+      })
+      .catch((err) => reject(err));
   });
 }

@@ -338,12 +338,32 @@ export const publishSuccessMessage = (
   />
 );
 
+export const pulblishSamplesSuccessMessage = (
+  <MessageBox
+    severity="info"
+    title="Publish Succeeded"
+    message={
+      'To view or share your sample types with others, go to the ' +
+      'My Content menu in the Content section of your ArcGIS ' +
+      'Online organization.'
+    }
+  />
+);
+
 // scenario name / description component messages
 export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
     title="Plan Name Not Available"
     message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
+  />
+);
+
+export const featureServiceTakenMessage = (serviceName: string) => (
+  <MessageBox
+    severity="warning"
+    title="Feature Service Name Not Available"
+    message={`The "${serviceName}" name is already in use. Please rename the feature service and try again.`}
   />
 );
 

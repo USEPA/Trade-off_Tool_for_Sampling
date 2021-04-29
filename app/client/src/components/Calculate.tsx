@@ -428,6 +428,11 @@ function Calculate() {
                 alias: 'Permanent Identifier',
               },
               {
+                name: 'TYPEUUID',
+                type: 'string',
+                alias: 'Sampling Method Type ID',
+              },
+              {
                 name: 'TYPE',
                 type: 'string',
                 alias: 'Sampling Method Type',
