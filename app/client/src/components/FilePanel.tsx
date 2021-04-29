@@ -1278,13 +1278,15 @@ function FilePanel() {
                   }}
                   options={allSampleOptions}
                 />
-                <p css={sectionParagraph}>
-                  Add an externally-generated Visual Sample Plan (VSP) layer to
-                  analyze and/or use in conjunction with targeted sampling. Once
-                  added, you can select this layer in the next step,{' '}
-                  <strong>Create Plan</strong>, and use it to create the
-                  Sampling Plan.
-                </p>
+                {sampleType && (
+                  <p css={sectionParagraph}>
+                    Add an externally-generated Visual Sample Plan (VSP) layer to
+                    analyze and/or use in conjunction with targeted sampling. Once
+                    added, you can select this layer in the next step,{' '}
+                    <strong>Create Plan</strong>, and use it to create the
+                    Sampling Plan.
+                  </p>
+                )}
               </React.Fragment>
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
@@ -1301,12 +1303,13 @@ function FilePanel() {
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
-            ((layerType.value === 'Samples' || layerType.value === 'VSP') &&
+            (layerType.value === 'Samples' &&
               services.status === 'success' &&
               sampleTypeContext.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
-              services.status === 'success')) && (
+              services.status === 'success' &&
+              sampleTypeContext.status === 'success')) && (
             <React.Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
