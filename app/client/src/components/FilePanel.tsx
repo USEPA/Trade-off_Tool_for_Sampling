@@ -843,6 +843,12 @@ function FilePanel() {
       visible,
       listMode,
     });
+    const pointsLayer = new GraphicsLayer({
+      id: layerUuid + '-points',
+      title: layerName,
+      visible: true,
+      listMode: 'show',
+    });
 
     // create the graphics layer
     const layerToAdd: LayerType = {
@@ -862,10 +868,15 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      pointsLayer:
+        layerType.value === 'Samples' || layerType.value === 'VSP'
+          ? pointsLayer
+          : null,
       parentLayer: null,
     };
 
     const graphics: __esri.Graphic[] = [];
+    const points: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -960,6 +971,18 @@ function FilePanel() {
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
+        points.push(
+          new Graphic({
+            attributes: graphic.attributes,
+            geometry: (graphic.geometry as __esri.Polygon).centroid,
+            popupTemplate: graphic.popupTemplate,
+            symbol: {
+              color: graphic.symbol.color,
+              outline: graphic.symbol.outline,
+              type: 'simple-marker',
+            } as any,
+          }),
+        );
       });
     });
 
@@ -981,6 +1004,7 @@ function FilePanel() {
     }
 
     graphicsLayer.addMany(graphics);
+    pointsLayer.addMany(points);
 
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
@@ -994,6 +1018,9 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
+    if (layerType.value === 'Samples' || layerType.value === 'VSP') {
+      map.add(pointsLayer);
+    }
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
@@ -1280,9 +1307,9 @@ function FilePanel() {
                 />
                 {sampleType && (
                   <p css={sectionParagraph}>
-                    Add an externally-generated Visual Sample Plan (VSP) layer to
-                    analyze and/or use in conjunction with targeted sampling. Once
-                    added, you can select this layer in the next step,{' '}
+                    Add an externally-generated Visual Sample Plan (VSP) layer
+                    to analyze and/or use in conjunction with targeted sampling.
+                    Once added, you can select this layer in the next step,{' '}
                     <strong>Create Plan</strong>, and use it to create the
                     Sampling Plan.
                   </p>

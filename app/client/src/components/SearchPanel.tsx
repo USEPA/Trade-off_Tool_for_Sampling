@@ -1103,7 +1103,14 @@ function ResultCard({ result }: ResultCardProps) {
                     graphics: graphicsList,
                     title: layerName,
                   });
-                  groupLayer.add(graphicsLayer);
+                  const pointsLayer = new GraphicsLayer({
+                    id: firstAttributes.DECISIONUNITUUID + '-points',
+                    graphics: graphicsList,
+                    title: layerName,
+                    visible: false,
+                    listMode: 'hide',
+                  });
+                  groupLayer.addMany([graphicsLayer, pointsLayer]);
 
                   // build the layer
                   const layerToAdd: LayerType = {
@@ -1123,6 +1130,7 @@ function ResultCard({ result }: ResultCardProps) {
                     addedFrom: 'tots',
                     status: 'published',
                     sketchLayer: graphicsLayer,
+                    pointsLayer,
                     parentLayer: groupLayer,
                   };
                   layersToAdd.push(layerToAdd);

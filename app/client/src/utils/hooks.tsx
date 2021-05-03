@@ -1181,6 +1181,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
   } = useEsriModulesContext();
   const {
@@ -1231,12 +1232,19 @@ function useEditsLayerStorage() {
         visible: editsLayer.visible,
         listMode: editsLayer.listMode,
       });
+      const pointsLayer = new GraphicsLayer({
+        title: editsLayer.label,
+        id: editsLayer.uuid + '-points',
+        visible: true,
+        listMode: 'show',
+      });
 
       const popupTemplate = getPopupTemplate(
         editsLayer.layerType,
         editsLayer.hasContaminationRan,
       );
-      const features: __esri.Graphic[] = [];
+      const polyFeatures: __esri.Graphic[] = [];
+      const pointFeatures: __esri.Graphic[] = [];
       const idsUsed: string[] = [];
       const displayedFeatures: FeatureEditsType[] = [];
 
@@ -1272,26 +1280,47 @@ function useEditsLayerStorage() {
         if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
 
         // set the symbol styles based on sample/layer type
-        let symbol = defaultSymbols.symbols[layerType];
+        let symbol = defaultSymbols.symbols[layerType] as any;
         if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
           symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
         }
 
-        features.push(
-          new Graphic({
-            attributes: { ...graphic.attributes },
-            symbol,
-            geometry: new Polygon({
-              spatialReference: {
-                wkid: 3857,
-              },
-              rings: graphic.geometry.rings,
-            }),
-            popupTemplate,
+        const graphicProperties = {
+          attributes: { ...graphic.attributes },
+          popupTemplate,
+        };
+
+        const poly = new Graphic({
+          ...graphicProperties,
+          symbol,
+          geometry: new Polygon({
+            spatialReference: {
+              wkid: 3857,
+            },
+            rings: graphic.geometry.rings,
           }),
-        );
+        });
+
+        const point = new Graphic({
+          ...graphicProperties,
+          symbol: {
+            color: symbol.color,
+            outline: symbol.outline,
+            type: 'simple-marker',
+          } as any,
+          geometry: (poly.geometry as __esri.Polygon).centroid,
+        });
+
+        polyFeatures.push(poly);
+        pointFeatures.push(point);
       });
-      sketchLayer.addMany(features);
+      sketchLayer.addMany(polyFeatures);
+      if (
+        editsLayer.layerType === 'Samples' ||
+        editsLayer.layerType === 'VSP'
+      ) {
+        pointsLayer.addMany(pointFeatures);
+      }
 
       newLayers.push({
         id: editsLayer.id,
@@ -1310,10 +1339,14 @@ function useEditsLayerStorage() {
         sort: editsLayer.sort,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
+        pointsLayer:
+          editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+            ? pointsLayer
+            : null,
         parentLayer,
       });
 
-      return sketchLayer;
+      return [sketchLayer, pointsLayer];
     }
 
     const newLayers: LayerType[] = [];
@@ -1321,7 +1354,7 @@ function useEditsLayerStorage() {
     edits.edits.forEach((editsLayer) => {
       // add layer edits directly
       if (editsLayer.type === 'layer') {
-        graphicsLayers.push(createLayer(editsLayer, newLayers));
+        graphicsLayers.push(...createLayer(editsLayer, newLayers));
       }
       // scenarios need to be added to a group layer first
       if (editsLayer.type === 'scenario') {
@@ -1335,7 +1368,7 @@ function useEditsLayerStorage() {
         // create the layers and add them to the group layer
         const scenarioLayers: __esri.GraphicsLayer[] = [];
         editsLayer.layers.forEach((layer) => {
-          scenarioLayers.push(createLayer(layer, newLayers, groupLayer));
+          scenarioLayers.push(...createLayer(layer, newLayers, groupLayer));
         });
         groupLayer.addMany(scenarioLayers);
 
@@ -1353,6 +1386,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
     defaultSymbols,
     setEdits,

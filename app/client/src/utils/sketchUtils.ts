@@ -400,6 +400,10 @@ export function createSampleLayer(
 ) {
   const layerUuid = generateUUID();
   const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
+  const pointsLayer = new GraphicsLayer({
+    id: layerUuid + '-points',
+    title: name,
+  });
 
   return {
     id: -1,
@@ -418,6 +422,7 @@ export function createSampleLayer(
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    pointsLayer: pointsLayer,
     parentLayer,
   } as LayerType;
 }
@@ -457,6 +462,7 @@ export function getDefaultSamplingMaskLayer(
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    pointsLayer: null,
     parentLayer: null,
   } as LayerType;
 }

@@ -318,6 +318,27 @@ function MapWidgets({ mapView }: Props) {
             createBuffer(graphic);
           }
 
+          if (id !== 'sampling-mask') {
+            // find the points version of the layer
+            const layerId = graphic.layer.id;
+            const pointLayer = (graphic.layer as any).parent.layers.find(
+              (layer: any) => `${layerId}-points` === layer.id,
+            );
+            if (pointLayer) {
+              const symbol = graphic.symbol as __esri.SimpleFillSymbol;
+              pointLayer.add({
+                attributes: graphic.attributes,
+                geometry: (graphic.geometry as __esri.Polygon).centroid,
+                popupTemplate: graphic.popupTemplate,
+                symbol: {
+                  color: symbol.color,
+                  outline: symbol.outline,
+                  type: 'simple-marker',
+                },
+              });
+            }
+          }
+
           // save the graphic
           sketchViewModel.complete();
           sketchEventSetter(event);
@@ -348,6 +369,42 @@ function MapWidgets({ mapView }: Props) {
           isActive = false;
         }
 
+        if (event.state === 'active') {
+          // find the points version of the layer
+          event.graphics.forEach((graphic) => {
+            const layerId = graphic.layer?.id;
+            const pointLayer: __esri.GraphicsLayer = (graphic.layer as any).parent.layers.find(
+              (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
+            );
+            if (!pointLayer) return;
+
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            pointLayer.graphics.forEach((pointVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                pointVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(pointVersion);
+              }
+            });
+            pointLayer.removeMany(graphicsToRemove);
+
+            // Re-add the point version of the graphic
+            const symbol = graphic.symbol as __esri.SimpleFillSymbol;
+            (pointLayer as any).add({
+              attributes: graphic.attributes,
+              geometry: (graphic.geometry as __esri.Polygon).centroid,
+              popupTemplate: graphic.popupTemplate,
+              symbol: {
+                color: symbol.color,
+                outline: symbol.outline,
+                type: 'simple-marker',
+              },
+            });
+          });
+        }
+
         const isShapeChange =
           event.toolEventInfo &&
           (event.toolEventInfo.type.includes('reshape') ||
@@ -376,6 +433,27 @@ function MapWidgets({ mapView }: Props) {
       // is now an option.
       const tempSketchVM = sketchViewModel as any;
       tempSketchVM.on('delete', (event: any) => {
+        // find the points version of the layer
+        event.graphics.forEach((graphic: any) => {
+          const layerId = tempSketchVM.layer?.id;
+          const pointLayer: __esri.GraphicsLayer = (tempSketchVM.layer as any).parent.layers.find(
+            (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
+          );
+          if (!pointLayer) return;
+
+          // Find the original point graphic and remove it
+          const graphicsToRemove: __esri.Graphic[] = [];
+          pointLayer.graphics.forEach((pointVersion) => {
+            if (
+              graphic.attributes.PERMANENT_IDENTIFIER ===
+              pointVersion.attributes.PERMANENT_IDENTIFIER
+            ) {
+              graphicsToRemove.push(pointVersion);
+            }
+          });
+          pointLayer.removeMany(graphicsToRemove);
+        });
+
         sketchEventSetter(event);
       });
     },

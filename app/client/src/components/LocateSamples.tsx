@@ -675,6 +675,7 @@ function LocateSamples() {
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
+            const pointsToAdd: __esri.Graphic[] = [];
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -708,27 +709,40 @@ function LocateSamples() {
 
               // build an array of graphics to draw on the map
               results.features.forEach((feature: any) => {
-                graphicsToAdd.push(
+                const poly = new Graphic({
+                  attributes: {
+                    ...(window as any).totsSampleAttributes[
+                      feature.attributes.TYPE
+                    ],
+                    CREATEDDATE: timestamp,
+                    DECISIONUNITUUID: sketchLayer.uuid,
+                    DECISIONUNIT: sketchLayer.label,
+                    OBJECTID: feature.attributes.OBJECTID,
+                    GLOBALID: feature.attributes.GLOBALID,
+                    PERMANENT_IDENTIFIER:
+                      feature.attributes.PERMANENT_IDENTIFIER,
+                    UPDATEDDATE: timestamp,
+                  },
+                  symbol,
+                  geometry: new Polygon({
+                    rings: feature.geometry.rings,
+                    spatialReference: results.spatialReference,
+                  }),
+                  popupTemplate,
+                });
+
+                graphicsToAdd.push(poly);
+
+                pointsToAdd.push(
                   new Graphic({
-                    attributes: {
-                      ...(window as any).totsSampleAttributes[
-                        feature.attributes.TYPE
-                      ],
-                      CREATEDDATE: timestamp,
-                      DECISIONUNITUUID: sketchLayer.uuid,
-                      DECISIONUNIT: sketchLayer.label,
-                      OBJECTID: feature.attributes.OBJECTID,
-                      GLOBALID: feature.attributes.GLOBALID,
-                      PERMANENT_IDENTIFIER:
-                        feature.attributes.PERMANENT_IDENTIFIER,
-                      UPDATEDDATE: timestamp,
-                    },
-                    symbol,
-                    geometry: new Polygon({
-                      rings: feature.geometry.rings,
-                      spatialReference: results.spatialReference,
-                    }),
+                    attributes: poly.attributes,
+                    geometry: (poly.geometry as any).centroid,
                     popupTemplate,
+                    symbol: {
+                      color: symbol.color,
+                      outline: symbol.outline,
+                      type: 'simple-marker',
+                    } as any,
                   }),
                 );
               });
@@ -740,6 +754,8 @@ function LocateSamples() {
               const collection = new Collection<__esri.Graphic>();
               collection.addMany(graphicsToAdd);
               sketchLayer.sketchLayer.graphics.addMany(collection);
+
+              sketchLayer.pointsLayer?.addMany(pointsToAdd);
 
               let editsCopy = updateLayerEdits({
                 edits,
@@ -1177,6 +1193,11 @@ function LocateSamples() {
                 setEdits(editsCopy);
 
                 sketchVM.layer.removeAll();
+                (sketchVM.layer as any).parent.layers.forEach((layer: any) => {
+                  if (layer.id === sketchVM.layer.id + '-points') {
+                    layer.removeAll();
+                  }
+                });
               }}
             >
               <i className="fas fa-trash-alt" />
@@ -1526,6 +1547,12 @@ function LocateSamples() {
                               sketchLayer.sketchLayer,
                             );
                             map.add(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer) {
+                              sketchLayer.parentLayer?.remove(
+                                sketchLayer.pointsLayer,
+                              );
+                              map.add(sketchLayer.pointsLayer);
+                            }
 
                             // update layers (clear parent layer)
                             setLayers((layers) => {
@@ -1597,6 +1624,9 @@ function LocateSamples() {
 
                             // add the layer to the parent group layer
                             groupLayer.add(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer) {
+                              groupLayer.add(sketchLayer.pointsLayer);
+                            }
 
                             // update layers (set parent layer)
                             setLayers((layers) => {

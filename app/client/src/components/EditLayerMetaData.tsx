@@ -226,6 +226,9 @@ function EditScenario({
 
       if (addDefaultSampleLayer && tempSketchLayer) {
         groupLayer.add(tempSketchLayer.sketchLayer);
+        if (tempSketchLayer.pointsLayer) {
+          groupLayer.add(tempSketchLayer.pointsLayer);
+        }
 
         // update layers (set parent layer)
         setLayers((layers) => {
