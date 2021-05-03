@@ -1,5 +1,5 @@
 {
-  "totsGPServer": "https://ags.erg.com/arcgis/rest/services/TOTS_Dev/GPServer",
+  "totsGPServer": "https://zebra.rtpnc.epa.gov/arcgis/rest/services/ORD/TOTS/GPServer",
   "proxyUrl": "https://app7.erg.com/PHP/proxy.php?",
   "googleAnalyticsMapping": [
     {
