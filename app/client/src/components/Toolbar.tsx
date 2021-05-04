@@ -3,6 +3,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/react';
+import Switch from 'components/Switch';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -69,6 +70,18 @@ const toolBarTitle = css`
   line-height: 1.3;
 `;
 
+const switchLabelContainer = css`
+  display: flex;
+  align-items: center;
+  color: white;
+  margin: 0;
+  font-weight: bold;
+`;
+
+const switchLabel = css`
+  margin: 0 10px;
+`;
+
 const toolBarStyles = css`
   display: flex;
   align-items: center;
@@ -79,7 +92,6 @@ const toolBarStyles = css`
 `;
 
 const toolBarButtonsStyles = css`
-  margin-left: auto;
   display: flex;
   justify-content: flex-end;
 `;
@@ -694,11 +706,40 @@ function Toolbar() {
     setBasemapWidget,
   ]);
 
+  // Switches between point and polygon representations
+  const [checked, setChecked] = React.useState(false);
+  React.useEffect(() => {
+    // Loop through the layers and switch between point/polygon representations
+    layers.forEach((layer) => {
+      if(checked && layer.pointsLayer && layer.sketchLayer.listMode === 'show') {
+        layer.pointsLayer.listMode = layer.sketchLayer.listMode;
+        layer.pointsLayer.visible = layer.sketchLayer.visible;
+        layer.sketchLayer.listMode = 'hide';
+        layer.sketchLayer.visible = false;
+      }
+      else if(!checked && layer.pointsLayer && layer.pointsLayer.listMode === 'show') {
+        layer.sketchLayer.listMode = layer.pointsLayer.listMode;
+        layer.sketchLayer.visible = layer.pointsLayer.visible;
+        layer.pointsLayer.listMode = 'hide';
+        layer.pointsLayer.visible = false;
+      }
+    });
+  }, [checked, layers]);
+
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
       <h2 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
       </h2>
+      <div css={switchLabelContainer}>
+        <span css={switchLabel}>Polygons</span>
+        <Switch
+          checked={checked}
+          onChange={(checked) => setChecked(checked)}
+          ariaLabel="Points or Polygons"
+        />
+        <span css={switchLabel}>Points</span>
+      </div>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
