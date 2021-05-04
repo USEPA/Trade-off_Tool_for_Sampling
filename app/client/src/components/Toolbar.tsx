@@ -199,6 +199,8 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
+    showAsPoints,
+    setShowAsPoints,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -707,24 +709,25 @@ function Toolbar() {
   ]);
 
   // Switches between point and polygon representations
-  const [checked, setChecked] = React.useState(false);
   React.useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
-      if(checked && layer.pointsLayer && layer.sketchLayer.listMode === 'show') {
+      if(showAsPoints && layer.pointsLayer && layer.sketchLayer.listMode === 'show') {
+        // make points layers visible 
         layer.pointsLayer.listMode = layer.sketchLayer.listMode;
         layer.pointsLayer.visible = layer.sketchLayer.visible;
         layer.sketchLayer.listMode = 'hide';
         layer.sketchLayer.visible = false;
       }
-      else if(!checked && layer.pointsLayer && layer.pointsLayer.listMode === 'show') {
+      else if(!showAsPoints && layer.pointsLayer && layer.pointsLayer.listMode === 'show') {
+        // make polygons layer visible
         layer.sketchLayer.listMode = layer.pointsLayer.listMode;
         layer.sketchLayer.visible = layer.pointsLayer.visible;
         layer.pointsLayer.listMode = 'hide';
         layer.pointsLayer.visible = false;
       }
     });
-  }, [checked, layers]);
+  }, [showAsPoints, layers]);
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
@@ -734,8 +737,8 @@ function Toolbar() {
       <div css={switchLabelContainer}>
         <span css={switchLabel}>Polygons</span>
         <Switch
-          checked={checked}
-          onChange={(checked) => setChecked(checked)}
+          checked={showAsPoints}
+          onChange={(checked) => setShowAsPoints(checked)}
           ariaLabel="Points or Polygons"
         />
         <span css={switchLabel}>Points</span>

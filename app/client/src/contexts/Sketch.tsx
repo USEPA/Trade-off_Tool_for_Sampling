@@ -83,6 +83,8 @@ type SketchType = {
   setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: React.Dispatch<React.SetStateAction<SampleSelectType[]>>;
+  showAsPoints: boolean;
+  setShowAsPoints: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -137,6 +139,8 @@ export const SketchContext = React.createContext<SketchType>({
   setSampleAttributes: () => {},
   allSampleOptions: [],
   setAllSampleOptions: () => {},
+  showAsPoints: false,
+  setShowAsPoints: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -210,6 +214,7 @@ export function SketchProvider({ children }: Props) {
   const [allSampleOptions, setAllSampleOptions] = React.useState<
     SampleSelectType[]
   >([]);
+  const [showAsPoints, setShowAsPoints] = React.useState<boolean>(false);
 
   // Update totsSampleAttributes variable on the window object. This is a workaround
   // to an issue where the sampleAttributes state variable is not available within esri
@@ -361,6 +366,8 @@ export function SketchProvider({ children }: Props) {
         setSampleAttributes,
         allSampleOptions,
         setAllSampleOptions,
+        showAsPoints,
+        setShowAsPoints,
       }}
     >
       {children}

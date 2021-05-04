@@ -127,6 +127,7 @@ export function useStartOver() {
     setReferenceLayers,
     setPortalLayers,
     setSelectedScenario,
+    setShowAsPoints,
     setSketchLayer,
     setAoiSketchLayer,
     setUserDefinedAttributes,
@@ -162,6 +163,7 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
+    setShowAsPoints(false);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -2271,6 +2273,37 @@ function useTablePanelStorage() {
   }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
 }
 
+// Uses browser storage for holding the display mode (points or polygons) selection.
+function useDisplayModeStorage() {
+  const key = 'tots_display_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const { showAsPoints, setShowAsPoints } = React.useContext(SketchContext);
+
+  // Retreives display mode data from browser storage when the app loads
+  const [
+    localDisplayModeInitialized,
+    setLocalDisplayModeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localDisplayModeInitialized) return;
+
+    setLocalDisplayModeInitialized(true);
+
+    const displayModeStr = readFromStorage(key);
+    if (!displayModeStr) return;
+
+    const trainingMode = JSON.parse(displayModeStr);
+    setShowAsPoints(trainingMode);
+  }, [localDisplayModeInitialized, setShowAsPoints]);
+
+  React.useEffect(() => {
+    if (!localDisplayModeInitialized) return;
+
+    writeToStorage(key, showAsPoints, setOptions);
+  }, [showAsPoints, localDisplayModeInitialized, setOptions]);
+}
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -2290,4 +2323,5 @@ export function useSessionStorage() {
   useUserDefinedSampleOptionsStorage();
   useUserDefinedSampleAttributesStorage();
   useTablePanelStorage();
+  useDisplayModeStorage();
 }
