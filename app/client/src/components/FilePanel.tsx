@@ -846,8 +846,8 @@ function FilePanel() {
     const pointsLayer = new GraphicsLayer({
       id: layerUuid + '-points',
       title: layerName,
-      visible: true,
-      listMode: 'show',
+      visible: false,
+      listMode: 'hide',
     });
 
     // create the graphics layer

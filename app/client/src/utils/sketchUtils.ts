@@ -403,6 +403,8 @@ export function createSampleLayer(
   const pointsLayer = new GraphicsLayer({
     id: layerUuid + '-points',
     title: name,
+    visible: false,
+    listMode: 'hide',
   });
 
   return {

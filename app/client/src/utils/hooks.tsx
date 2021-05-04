@@ -1235,8 +1235,8 @@ function useEditsLayerStorage() {
       const pointsLayer = new GraphicsLayer({
         title: editsLayer.label,
         id: editsLayer.uuid + '-points',
-        visible: true,
-        listMode: 'show',
+        visible: false,
+        listMode: 'hide',
       });
 
       const popupTemplate = getPopupTemplate(
