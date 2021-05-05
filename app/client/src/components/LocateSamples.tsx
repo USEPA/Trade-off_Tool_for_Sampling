@@ -852,7 +852,7 @@ function LocateSamples() {
   const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
     null,
   );
-  const [pointStyle, setPointStyle] = React.useState<ShapeTypeSelect>();
+  const [pointStyle, setPointStyle] = React.useState<ShapeTypeSelect | null>(null);
   const [ttpk, setTtpk] = React.useState<string | null>('');
   const [ttc, setTtc] = React.useState<string | null>('');
   const [tta, setTta] = React.useState<string | null>('');
@@ -876,6 +876,7 @@ function LocateSamples() {
     if (editType === 'create') {
       setEditingStatus(editType);
       setShapeType(null);
+      setPointStyle(null);
       setTtpk('');
       setTtc('');
       setTta('');
@@ -909,7 +910,7 @@ function LocateSamples() {
         : { value: 'polygon', label: 'Polygon' };
 
     setEditingStatus(editType);
-    setShapeType(shapeType);
+    setShapeType(shapeType);    
     setTtpk(attributes.TTPK ? attributes.TTPK.toString() : null);
     setTtc(attributes.TTC ? attributes.TTC.toString() : null);
     setTta(attributes.TTA ? attributes.TTA.toString() : null);
@@ -924,6 +925,9 @@ function LocateSamples() {
     setAlc(attributes.ALC ? attributes.ALC.toString() : null);
     setAmc(attributes.AMC ? attributes.AMC.toString() : null);
     setSampleTypeName(sampleTypeName);
+
+    const pointStyle = pointStyles.find((s) => s.value === attributes.POINT_STYLE);
+    setPointStyle(pointStyle || null);
   }
 
   // Validates the user input.
