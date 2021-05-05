@@ -750,14 +750,12 @@ export function getSampleTableColumns({
 }
 
 /**
- * Converts a polygon graphic to a point graphic.
+ * Gets a point symbol representation of the provided polygon.
  * 
- * @param Graphic The esri graphic constructor
  * @param polygon The polygon to be converted
- * @returns A point graphic representation of the provided polygon
+ * @returns A point symbol representation of the provided polygon
  */
-export function convertToPoint(
-  Graphic: __esri.GraphicConstructor,
+export function getPointSymbol(
   polygon: __esri.Graphic,
 ) {
   // get the point shape style (i.e. circle, triangle, etc.)
@@ -781,6 +779,22 @@ export function convertToPoint(
     style: style,
   };
   if (path) symbol.path = path;
+
+  return symbol;
+}
+
+/**
+ * Converts a polygon graphic to a point graphic.
+ * 
+ * @param Graphic The esri graphic constructor
+ * @param polygon The polygon to be converted
+ * @returns A point graphic representation of the provided polygon
+ */
+export function convertToPoint(
+  Graphic: __esri.GraphicConstructor,
+  polygon: __esri.Graphic,
+) {
+  const symbol = getPointSymbol(polygon);
 
   // build the graphic
   return new Graphic({

@@ -43,6 +43,7 @@ import {
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
   getNextScenarioLayer,
+  getPointSymbol,
   getScenarios,
   getSketchableLayers,
   updateLayerEdits,
@@ -1054,6 +1055,7 @@ function LocateSamples() {
         graphic.attributes.WWPS = newAttributes.WWPS;
         graphic.attributes.ALC = newAttributes.ALC;
         graphic.attributes.AMC = newAttributes.AMC;
+        graphic.attributes.POINT_STYLE = newAttributes.POINT_STYLE;
 
         // redraw the graphic if the width changed or if the graphic went from a
         // polygon to a point
@@ -1063,6 +1065,11 @@ function LocateSamples() {
         ) {
           // convert the geometry _esriPolygon if it is missing stuff
           createBuffer(graphic as __esri.Graphic);
+        }
+
+        // update the point symbol if necessary
+        if(graphic.geometry.type === 'point') {
+          graphic.symbol = getPointSymbol(graphic);
         }
 
         editedGraphics.push(graphic);
@@ -2712,6 +2719,13 @@ function LocateSamples() {
                                       newAttributes,
                                       oldType,
                                     });
+                                    if(layer.pointsLayer) {
+                                      updateAttributes({
+                                        graphics: layer.pointsLayer.graphics.toArray(),
+                                        newAttributes,
+                                        oldType,
+                                      });
+                                    }
 
                                     if (editedGraphics.length > 0) {
                                       const collection = new Collection<__esri.Graphic>();
