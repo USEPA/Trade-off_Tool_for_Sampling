@@ -10,6 +10,7 @@ import { LayerType, LayerTypeName } from 'types/Layer';
 // utils
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
@@ -111,6 +112,7 @@ function MapWidgets({ mapView }: Props) {
     map,
   } = React.useContext(SketchContext);
   const {
+    Graphic,
     Handles,
     Home,
     Locate,
@@ -325,18 +327,7 @@ function MapWidgets({ mapView }: Props) {
               (layer: any) => `${layerId}-points` === layer.id,
             );
             if (pointLayer) {
-              const symbol = graphic.symbol as __esri.SimpleFillSymbol;
-              pointLayer.add({
-                attributes: graphic.attributes,
-                geometry: (graphic.geometry as __esri.Polygon).centroid,
-                popupTemplate: graphic.popupTemplate,
-                symbol: {
-                  color: symbol.color,
-                  outline: symbol.outline,
-                  style: graphic.attributes.POINT_STYLE,
-                  type: 'simple-marker',
-                },
-              });
+              pointLayer.add(convertToPoint(Graphic, graphic));
             }
           }
 
@@ -458,7 +449,7 @@ function MapWidgets({ mapView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, PopupTemplate],
+    [createBuffer, getPopupTemplate, getTrainingMode, Graphic, PopupTemplate],
   );
 
   // Setup the sketch view model events for the base sketchVM

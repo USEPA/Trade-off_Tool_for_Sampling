@@ -20,6 +20,7 @@ import {
 } from 'utils/arcGisRestUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   deepCopyObject,
   getNextScenarioLayer,
   getSimplePopupTemplate,
@@ -1108,29 +1109,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // convert the polygon graphics into points
                   let pointGraphics: __esri.Graphic[] = [];
                   graphicsList.forEach((graphic) => {
-                    // get the shape style (default is circle)
-                    let style = 'cirlce';
-                    const type = graphic.attributes.TYPE;
-                    if (
-                      sampleAttributes.hasOwnProperty(type) &&
-                      !graphic.attributes.POINT_STYLE &&
-                      sampleAttributes[type].POINT_STYLE
-                    ) {
-                      style = sampleAttributes[type].POINT_STYLE;
-                    }
-
-                    pointGraphics.push(
-                      new Graphic({
-                        attributes: graphic.attributes,
-                        geometry: (graphic.geometry as any).centroid,
-                        symbol: {
-                          color: graphic.symbol.color,
-                          outline: (graphic.symbol as any).outline,
-                          style,
-                          type: 'simple-marker',
-                        } as any,
-                      }),
-                    );
+                    pointGraphics.push(convertToPoint(Graphic, graphic));
                   });
 
                   const pointsLayer = new GraphicsLayer({

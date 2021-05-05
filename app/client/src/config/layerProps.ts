@@ -83,7 +83,7 @@ export const defaultLayerProps = {
       actualType: 'nvarchar',
       alias: 'POINT_STYLE',
       sqlType: 'sqlTypeNVarchar',
-      length: 50,
+      length: 1000,
       nullable: true,
       editable: true,
       domain: null,

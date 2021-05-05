@@ -38,6 +38,7 @@ import {
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
+  convertToPoint,
   findLayerInEdits,
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
@@ -59,6 +60,20 @@ type ShapeTypeSelect = {
 type EditType = 'create' | 'edit' | 'clone' | 'view';
 
 const sketchSelectedClass = 'sketch-button-selected';
+
+const pointStyles: ShapeTypeSelect[] = [
+  { value: 'circle', label: 'Circle' },
+  { value: 'cross', label: 'Cross' },
+  { value: 'diamond', label: 'Diamond' },
+  { value: 'square', label: 'Square' },
+  { value: 'triangle', label: 'Triangle' },
+  { value: 'x', label: 'X' },
+  {
+    value:
+      'path|M17.14 3 8.86 3 3 8.86 3 17.14 8.86 23 17.14 23 23 17.14 23 8.86 17.14 3z',
+    label: 'Octagon',
+  },
+];
 
 /**
  * Determines if the desired name has already been used. If it has
@@ -732,20 +747,7 @@ function LocateSamples() {
                 });
 
                 graphicsToAdd.push(poly);
-
-                pointsToAdd.push(
-                  new Graphic({
-                    attributes: poly.attributes,
-                    geometry: (poly.geometry as any).centroid,
-                    popupTemplate,
-                    symbol: {
-                      color: symbol.color,
-                      outline: symbol.outline,
-                      style: poly.attributes.POINT_STYLE || 'circle',
-                      type: 'simple-marker',
-                    } as any,
-                  }),
-                );
+                pointsToAdd.push(convertToPoint(Graphic, poly));
               });
             }
 
@@ -1148,6 +1150,10 @@ function LocateSamples() {
       setUdtSymbol(defaultSymbols.symbols['Samples']);
     }
   }, [defaultSymbols, userDefinedSampleType]);
+
+  pointStyles.sort((a, b) => 
+    a.value.localeCompare(b.value)
+  );
 
   return (
     <div css={panelContainer}>
@@ -2362,14 +2368,7 @@ function LocateSamples() {
                         value={pointStyle}
                         isDisabled={editingStatus === 'view'}
                         onChange={(ev) => setPointStyle(ev as ShapeTypeSelect)}
-                        options={[
-                          { value: 'circle', label: 'Circle' },
-                          { value: 'cross', label: 'Cross' },
-                          { value: 'diamond', label: 'Diamond' },
-                          { value: 'square', label: 'Square' },
-                          { value: 'triangle', label: 'Triangle' },
-                          { value: 'x', label: 'X' },
-                        ]}
+                        options={pointStyles}
                       />
                       <div>
                         <label htmlFor="sample-type-name-input">

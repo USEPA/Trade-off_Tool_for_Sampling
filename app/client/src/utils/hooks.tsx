@@ -32,7 +32,11 @@ import {
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
-import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  convertToPoint,
+  findLayerInEdits,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
   SampleIssues,
@@ -1287,13 +1291,9 @@ function useEditsLayerStorage() {
           symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
         }
 
-        const graphicProperties = {
+        const poly = new Graphic({
           attributes: { ...graphic.attributes },
           popupTemplate,
-        };
-
-        const poly = new Graphic({
-          ...graphicProperties,
           symbol,
           geometry: new Polygon({
             spatialReference: {
@@ -1303,19 +1303,8 @@ function useEditsLayerStorage() {
           }),
         });
 
-        const point = new Graphic({
-          ...graphicProperties,
-          symbol: {
-            color: symbol.color,
-            outline: symbol.outline,
-            style: poly.attributes.POINT_STYLE || 'circle',
-            type: 'simple-marker',
-          } as any,
-          geometry: (poly.geometry as __esri.Polygon).centroid,
-        });
-
         polyFeatures.push(poly);
-        pointFeatures.push(point);
+        pointFeatures.push(convertToPoint(Graphic, poly));
       });
       sketchLayer.addMany(polyFeatures);
       if (

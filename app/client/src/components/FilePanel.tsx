@@ -23,6 +23,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
@@ -971,19 +972,7 @@ function FilePanel() {
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
-        points.push(
-          new Graphic({
-            attributes: graphic.attributes,
-            geometry: (graphic.geometry as __esri.Polygon).centroid,
-            popupTemplate: graphic.popupTemplate,
-            symbol: {
-              color: graphic.symbol.color,
-              outline: graphic.symbol.outline,
-              style: graphic.attributes.POINT_STYLE || 'circle',
-              type: 'simple-marker',
-            } as any,
-          }),
-        );
+        points.push(convertToPoint(Graphic, graphic));
       });
     });
 

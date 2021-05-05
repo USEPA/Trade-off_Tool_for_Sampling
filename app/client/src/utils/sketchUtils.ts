@@ -748,3 +748,45 @@ export function getSampleTableColumns({
 
   return columns;
 }
+
+/**
+ * Converts a polygon graphic to a point graphic.
+ * 
+ * @param Graphic The esri graphic constructor
+ * @param polygon The polygon to be converted
+ * @returns A point graphic representation of the provided polygon
+ */
+export function convertToPoint(
+  Graphic: __esri.GraphicConstructor,
+  polygon: __esri.Graphic,
+) {
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = polygon.attributes.POINT_STYLE;
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'simple-marker',
+    color: polygon.symbol.color,
+    outline: (polygon.symbol as any).outline,
+    style: style,
+  };
+  if (path) symbol.path = path;
+
+  // build the graphic
+  return new Graphic({
+    attributes: polygon.attributes,
+    geometry: (polygon.geometry as any).centroid,
+    popupTemplate: polygon.popupTemplate,
+    symbol,
+  });
+}
