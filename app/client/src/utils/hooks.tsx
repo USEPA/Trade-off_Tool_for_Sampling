@@ -1308,6 +1308,7 @@ function useEditsLayerStorage() {
           symbol: {
             color: symbol.color,
             outline: symbol.outline,
+            style: poly.attributes.POINT_STYLE || 'circle',
             type: 'simple-marker',
           } as any,
           geometry: (poly.geometry as __esri.Polygon).centroid,

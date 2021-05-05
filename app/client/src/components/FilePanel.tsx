@@ -979,6 +979,7 @@ function FilePanel() {
             symbol: {
               color: graphic.symbol.color,
               outline: graphic.symbol.outline,
+              style: graphic.attributes.POINT_STYLE || 'circle',
               type: 'simple-marker',
             } as any,
           }),

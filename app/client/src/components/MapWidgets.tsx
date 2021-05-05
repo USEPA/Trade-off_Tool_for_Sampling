@@ -333,6 +333,7 @@ function MapWidgets({ mapView }: Props) {
                 symbol: {
                   color: symbol.color,
                   outline: symbol.outline,
+                  style: graphic.attributes.POINT_STYLE,
                   type: 'simple-marker',
                 },
               });

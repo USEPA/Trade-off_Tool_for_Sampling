@@ -22,6 +22,8 @@ function Switch({
       onChange={onChange}
       onColor="#38a6ee"
       onHandleColor="#0071bb"
+      offColor="#90ee90"
+      offHandleColor="#129c12"
       handleDiameter={18}
       uncheckedIcon={false}
       checkedIcon={false}

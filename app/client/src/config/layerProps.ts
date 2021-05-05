@@ -78,6 +78,18 @@ export const defaultLayerProps = {
       defaultValue: null,
     },
     {
+      name: 'POINT_STYLE',
+      type: 'esriFieldTypeString',
+      actualType: 'nvarchar',
+      alias: 'POINT_STYLE',
+      sqlType: 'sqlTypeNVarchar',
+      length: 50,
+      nullable: true,
+      editable: true,
+      domain: null,
+      defaultValue: null,
+    },
+    {
       name: 'Width',
       type: 'esriFieldTypeDouble',
       actualType: 'double',

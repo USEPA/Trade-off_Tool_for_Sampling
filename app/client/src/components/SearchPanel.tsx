@@ -1014,6 +1014,7 @@ function ResultCard({ result }: ResultCardProps) {
                       GLOBALID: null,
                       TYPE: attributes.TYPE,
                       ShapeType: attributes.ShapeType,
+                      POINT_STYLE: attributes.POINT_STYLE || 'circle',
                       TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
                       TTC: attributes.TTC ? Number(attributes.TTC) : null,
                       TTA: attributes.TTA ? Number(attributes.TTA) : null,
@@ -1103,9 +1104,38 @@ function ResultCard({ result }: ResultCardProps) {
                     graphics: graphicsList,
                     title: layerName,
                   });
+
+                  // convert the polygon graphics into points
+                  let pointGraphics: __esri.Graphic[] = [];
+                  graphicsList.forEach((graphic) => {
+                    // get the shape style (default is circle)
+                    let style = 'cirlce';
+                    const type = graphic.attributes.TYPE;
+                    if (
+                      sampleAttributes.hasOwnProperty(type) &&
+                      !graphic.attributes.POINT_STYLE &&
+                      sampleAttributes[type].POINT_STYLE
+                    ) {
+                      style = sampleAttributes[type].POINT_STYLE;
+                    }
+
+                    pointGraphics.push(
+                      new Graphic({
+                        attributes: graphic.attributes,
+                        geometry: (graphic.geometry as any).centroid,
+                        symbol: {
+                          color: graphic.symbol.color,
+                          outline: (graphic.symbol as any).outline,
+                          style,
+                          type: 'simple-marker',
+                        } as any,
+                      }),
+                    );
+                  });
+
                   const pointsLayer = new GraphicsLayer({
                     id: firstAttributes.DECISIONUNITUUID + '-points',
-                    graphics: graphicsList,
+                    graphics: pointGraphics,
                     title: layerName,
                     visible: false,
                     listMode: 'hide',

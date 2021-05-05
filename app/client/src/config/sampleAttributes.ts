@@ -24,6 +24,7 @@ export type AttributeItems = {
   GLOBALID: string | null;
   TYPE: string;
   ShapeType: string;
+  POINT_STYLE: string;
   SA: number | null;
   AA: number | null;
   TTPK: number | null;

@@ -741,6 +741,7 @@ function LocateSamples() {
                     symbol: {
                       color: symbol.color,
                       outline: symbol.outline,
+                      style: poly.attributes.POINT_STYLE || 'circle',
                       type: 'simple-marker',
                     } as any,
                   }),
@@ -848,6 +849,7 @@ function LocateSamples() {
   const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
     null,
   );
+  const [pointStyle, setPointStyle] = React.useState<ShapeTypeSelect>();
   const [ttpk, setTtpk] = React.useState<string | null>('');
   const [ttc, setTtc] = React.useState<string | null>('');
   const [tta, setTta] = React.useState<string | null>('');
@@ -2340,14 +2342,35 @@ function LocateSamples() {
                   />
                   {editingStatus && (
                     <div>
-                      {udtSymbol && (
-                        <ColorPicker
-                          symbol={udtSymbol}
-                          onChange={(symbol: PolygonSymbol) => {
-                            setUdtSymbol(symbol);
-                          }}
-                        />
-                      )}
+                      <ColorPicker
+                        symbol={
+                          editingStatus === 'create' || !udtSymbol
+                            ? defaultSymbols.symbols['Samples']
+                            : udtSymbol
+                        }
+                        onChange={(symbol: PolygonSymbol) => {
+                          setUdtSymbol(symbol);
+                        }}
+                      />
+                      <label htmlFor="point-style-select-input">
+                        Point Style
+                      </label>
+                      <Select
+                        id="point-style-select"
+                        inputId="point-style-select-input"
+                        css={fullWidthSelectStyles}
+                        value={pointStyle}
+                        isDisabled={editingStatus === 'view'}
+                        onChange={(ev) => setPointStyle(ev as ShapeTypeSelect)}
+                        options={[
+                          { value: 'circle', label: 'Circle' },
+                          { value: 'cross', label: 'Cross' },
+                          { value: 'diamond', label: 'Diamond' },
+                          { value: 'square', label: 'Square' },
+                          { value: 'triangle', label: 'Triangle' },
+                          { value: 'x', label: 'X' },
+                        ]}
+                      />
                       <div>
                         <label htmlFor="sample-type-name-input">
                           Sample Type Name
@@ -2579,6 +2602,7 @@ function LocateSamples() {
                                   GLOBALID: null,
                                   TYPE: sampleTypeName,
                                   ShapeType: shapeType.value,
+                                  POINT_STYLE: pointStyle?.value || 'circle',
                                   TTPK: ttpk ? Number(ttpk) : null,
                                   TTC: ttc ? Number(ttc) : null,
                                   TTA: tta ? Number(tta) : null,
