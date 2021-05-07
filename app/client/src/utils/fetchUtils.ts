@@ -203,6 +203,9 @@ export function geoprocessorFetch({
     const geoprocessor = new Geoprocessor({
       url,
       outSpatialReference,
+      requestOptions: {
+        timeout: 120000,
+      },
     });
 
     geoprocessor
