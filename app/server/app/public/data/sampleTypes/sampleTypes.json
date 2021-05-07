@@ -47,7 +47,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Micro Vac": {
       "OBJECTID": "-1",
@@ -80,7 +80,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Wet Vac": {
       "OBJECTID": "-1",
@@ -113,7 +113,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Robot": {
       "OBJECTID": "-1",
@@ -146,7 +146,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Aggressive Air": {
       "OBJECTID": "-1",
@@ -179,7 +179,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Swab": {
       "OBJECTID": "-1",
@@ -212,7 +212,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     }
   }
 }

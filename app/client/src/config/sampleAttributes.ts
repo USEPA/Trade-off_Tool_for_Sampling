@@ -49,7 +49,7 @@ export type AttributeItems = {
   ORGANIZATION: string | null;
   DECISIONUNITUUID: string | null;
   DECISIONUNIT: string | null;
-  DECISIONUNITSORT: number | null;
+  DECISIONUNITSORT: number;
 };
 
 export type Attributes = {

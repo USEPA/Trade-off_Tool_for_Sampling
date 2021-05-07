@@ -377,7 +377,7 @@ export const defaultLayerProps = {
       nullable: false,
       editable: false,
       domain: null,
-      defaultValue: null,
+      defaultValue: 0,
     },
   ],
   supportedQueryFormats: 'JSON',

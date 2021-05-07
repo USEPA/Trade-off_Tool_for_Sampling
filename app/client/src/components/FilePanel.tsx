@@ -918,6 +918,7 @@ function FilePanel() {
             graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
             graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
             graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+            graphic.attributes['DECISIONUNITSORT'] = 0;
             graphic.attributes['GLOBALID'] = uuid;
           }
         }
@@ -928,6 +929,7 @@ function FilePanel() {
           graphic.attributes['AC'] = null;
           graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
           graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+          graphic.attributes['DECISIONUNITSORT'] = 0;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 

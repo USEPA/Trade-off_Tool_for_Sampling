@@ -1,5 +1,5 @@
 // types
-import { LayerEditsType } from 'types/Edits';
+import { FeatureEditsType, LayerEditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps } from 'config/layerProps';
@@ -393,6 +393,7 @@ export function createFeatureLayers(
         graphicsExtent = layer.sketchLayer.fullExtent;
       }
 
+      // add the polygon representation
       layersParams.push({
         ...defaultLayerProps,
         name: serviceMetaData.name,
@@ -415,6 +416,35 @@ export function createFeatureLayers(
                 {
                   id: 'epa-tots-vsp-layer',
                   name: 'epa-tots-vsp-layer',
+                },
+              ]
+            : null,
+      });
+
+      // add the point representation
+      layersParams.push({
+        ...defaultLayerProps,
+        geometryType: 'esriGeometryPoint',
+        name: serviceMetaData.name + '-points',
+        description: serviceMetaData.description,
+        extent: graphicsExtent,
+
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-points-layer',
+                  name: 'epa-tots-sample-points-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-points-layer',
+                  name: 'epa-tots-vsp-points-layer',
                 },
               ]
             : null,
@@ -576,6 +606,37 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 }
 
 /**
+ * Adds point versions of features to the provided array. This is to support publishing a point 
+ * version of the layers being published.
+ * 
+ * @param layer The layer the graphic is on
+ * @param array The array to add the point version of graphic to
+ * @param item The edits item that is being looked for
+ * @param forDeletes True means this is for the deletes change type which is just the global id
+ * @returns 
+ */
+function addPointFeatures(layer: LayerType, array: any[], item: FeatureEditsType, forDeletes: boolean = false) {
+  // find the graphic
+  const graphic = layer.pointsLayer?.graphics.find((graphic) => 
+    graphic.attributes?.PERMANENT_IDENTIFIER === item.attributes.PERMANENT_IDENTIFIER
+  );
+  if(!graphic) return;
+
+  // Add the globalids of graphics to delete
+  if(forDeletes) {
+    array.push(graphic.attributes.GLOBALID);
+    return;
+  }
+
+  // Add full feature for graphics to add or update
+  array.push({
+    attributes: graphic.attributes,
+    geometry: graphic.geometry,
+    symbol: graphic.symbol,
+  });
+}
+
+/**
  * Applys edits to a layer or layers within a hosted feature service
  * on ArcGIS Online.
  *
@@ -588,10 +649,12 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 export function applyEdits({
   portal,
   serviceUrl,
+  layers,
   edits,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
+  layers: LayerType[];
   edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
@@ -609,6 +672,35 @@ export function applyEdits({
         adds: layerEdits.adds,
         updates: layerEdits.updates,
         deletes,
+      });
+
+      // find the points version of the layer
+      const mapLayer = layers.find(
+        (mapLayer) =>
+          mapLayer.layerId === layerEdits?.layerId,
+      );
+      if(!mapLayer?.pointsLayer) return;
+
+      // Loop through the above changes and build a points version
+      const pointsAdds: FeatureEditsType[] = [];
+      const pointsUpdates: FeatureEditsType[] = [];
+      const pointsDeletes: FeatureEditsType[] = [];
+      layerEdits.adds.forEach((item) => {
+        addPointFeatures(mapLayer, pointsAdds, item);
+      });
+      layerEdits.updates.forEach((item) => {
+        addPointFeatures(mapLayer, pointsUpdates, item);
+      });
+      layerEdits.deletes.forEach((item) => {
+        addPointFeatures(mapLayer, pointsDeletes, { attributes: item, geometry: {} });
+      });
+
+      // Push the points version into the changes array
+      changes.push({
+        id: mapLayer.pointsLayer.id,
+        adds: pointsAdds,
+        updates: pointsUpdates,
+        deletes: pointsDeletes,
       });
     });
 
@@ -667,9 +759,12 @@ export function publish({
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
+              const isPoints = layer.name.endsWith('-points');
+              const layerName = isPoints ? layer.name.replace('-points', '') : layer.name;
+
               const layerEdits = edits.find(
                 (layerEdit) =>
-                  layerEdit.id === -1 && serviceMetaData.name === layer.name,
+                  layerEdit.id === -1 && serviceMetaData.name === layerName,
               );
 
               const mapLayer = layers.find(
@@ -677,12 +772,17 @@ export function publish({
                   mapLayer.id === -1 && layerEdits?.layerId === layer.layerId,
               );
 
-              if (layerEdits) layerEdits.id = layer.id;
-              if (mapLayer) mapLayer.id = layer.id;
+              if (layerEdits && !isPoints) layerEdits.id = layer.id;
+              if (mapLayer) {
+                if(!isPoints) mapLayer.id = layer.id;
+
+                // Figure out how to get the points version of the id
+                if(isPoints && mapLayer.pointsLayer) mapLayer.pointsLayer.id = layer.id;
+              }
             });
 
             // publish the edits
-            applyEdits({ portal, serviceUrl, edits })
+            applyEdits({ portal, serviceUrl, layers, edits })
               .then((res) => resolve(res))
               .catch((err) => {
                 window.logErrorToGa(err);

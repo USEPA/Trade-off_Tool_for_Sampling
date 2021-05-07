@@ -956,9 +956,13 @@ function ResultCard({ result }: ResultCardProps) {
 
             let isSampleLayer = false;
             let isVspLayer = false;
+            let isPointsSampleLayer = false;
+            let isVspPointsSampleLayer = false;
             const typesLoop = (type: __esri.FeatureType) => {
               if (type.id === 'epa-tots-vsp-layer') isVspLayer = true;
               if (type.id === 'epa-tots-sample-layer') isSampleLayer = true;
+              if (type.id === 'epa-tots-sample-points-layer') isPointsSampleLayer = true;
+              if (type.id === 'epa-tots-vsp-points-layer') isVspPointsSampleLayer = true;
             };
 
             let fields: __esri.Field[] = [];
@@ -980,7 +984,10 @@ function ResultCard({ result }: ResultCardProps) {
               }
 
               // add sample layers as graphics layers
-              if (isSampleLayer || isVspLayer) {
+              if(isPointsSampleLayer || isVspPointsSampleLayer) {
+                // skip over the points layers
+              }
+              else if (isSampleLayer || isVspLayer) {
                 // get the graphics from the layer
                 const graphics: LayerGraphics = {};
                 layerFeatures.features.forEach((feature: any) => {
@@ -1042,7 +1049,7 @@ function ResultCard({ result }: ResultCardProps) {
                       ORGANIZATION: null,
                       DECISIONUNITUUID: null,
                       DECISIONUNIT: null,
-                      DECISIONUNITSORT: null,
+                      DECISIONUNITSORT: 0,
                     };
                   }
 

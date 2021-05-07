@@ -293,6 +293,7 @@ function MapWidgets({ mapView }: Props) {
             graphic.attributes = {
               DECISIONUNITUUID: graphic.layer.id,
               DECISIONUNIT: graphic.layer.title,
+              DECISIONUNITSORT: 0,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               TYPE: layerType,
@@ -302,6 +303,7 @@ function MapWidgets({ mapView }: Props) {
               ...(window as any).totsSampleAttributes[id],
               DECISIONUNITUUID: graphic.layer.id,
               DECISIONUNIT: graphic.layer.title,
+              DECISIONUNITSORT: 0,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
               Notes: '',

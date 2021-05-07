@@ -733,6 +733,7 @@ function LocateSamples() {
                     CREATEDDATE: timestamp,
                     DECISIONUNITUUID: sketchLayer.uuid,
                     DECISIONUNIT: sketchLayer.label,
+                    DECISIONUNITSORT: 0,
                     OBJECTID: feature.attributes.OBJECTID,
                     GLOBALID: feature.attributes.GLOBALID,
                     PERMANENT_IDENTIFIER:
@@ -2637,7 +2638,7 @@ function LocateSamples() {
                                   ORGANIZATION: null,
                                   DECISIONUNITUUID: null,
                                   DECISIONUNIT: null,
-                                  DECISIONUNITSORT: null,
+                                  DECISIONUNITSORT: 0,
                                 };
 
                                 // add/update the sample's attributes
