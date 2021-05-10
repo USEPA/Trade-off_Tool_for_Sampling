@@ -960,8 +960,9 @@ function FilePanel() {
 
         // set the symbol styles based on the sample/layer type
         if (graphic?.geometry?.type === 'polygon') {
-          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPE)) {
-            graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+            graphic.symbol =
+              defaultSymbols.symbols[graphic.attributes.TYPEUUID];
           } else {
             graphic.symbol =
               defaultSymbols.symbols[

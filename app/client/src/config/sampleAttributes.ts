@@ -22,6 +22,7 @@ export type AttributeItems = {
   OBJECTID: string | null;
   PERMANENT_IDENTIFIER: string | null;
   GLOBALID: string | null;
+  TYPEUUID: string | null;
   TYPE: string;
   ShapeType: string;
   POINT_STYLE: string;
@@ -53,7 +54,11 @@ export type AttributeItems = {
 };
 
 export type Attributes = {
-  [key: string]: AttributeItems;
+  [key: string]: {
+    status: 'add' | 'edit' | 'delete' | 'published';
+    serviceId: string;
+    attributes: AttributeItems;
+  };
 };
 
 export type UserDefinedConfig = {
@@ -65,7 +70,7 @@ export type UserDefinedConfig = {
 
 export type UserDefinedAttributes = {
   editCount: number;
-  attributes: Attributes;
+  sampleTypes: Attributes;
 };
 
 export type SampleIssues = {

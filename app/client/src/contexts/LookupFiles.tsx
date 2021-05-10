@@ -142,8 +142,9 @@ function useSampleTypesContext() {
       const sampleSelectOptions: SampleSelectType[] = [];
       const sampleAttributes = newValue.data.sampleAttributes;
       Object.keys(sampleAttributes).forEach((key: any) => {
-        const value = sampleAttributes[key].TYPE;
-        sampleSelectOptions.push({ value, label: value, isPredefined: true });
+        const value = sampleAttributes[key].TYPEUUID;
+        const label = sampleAttributes[key].TYPE;
+        sampleSelectOptions.push({ value, label, isPredefined: true });
       });
       newValue.data['sampleSelectOptions'] = sampleSelectOptions;
       setSampleTypes(newValue);
