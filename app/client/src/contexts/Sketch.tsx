@@ -8,6 +8,7 @@ import {
   useServicesContext,
 } from 'contexts/LookupFiles';
 // utils
+import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
 import { updatePolygonSymbol } from 'utils/sketchUtils';
 // types
@@ -277,7 +278,7 @@ export function SketchProvider({ children }: Props) {
       }
 
       // get the max record count from the gp server
-      fetchCheck(`${services.data.totsGPServer}?f=json`)
+      fetchCheck(`${services.data.totsGPServer}?f=json${getEnvironmentStringParam()}`)
         .then((res: any) => {
           const maxRecordCount = res.maximumRecords;
           setGpMaxRecordCount(maxRecordCount);
