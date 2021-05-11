@@ -166,6 +166,7 @@ export function geoprocessorFetch({
       outSpatialReference,
       requestOptions: {
         timeout: 120000,
+        cacheBust: true,
       },
     });
 
