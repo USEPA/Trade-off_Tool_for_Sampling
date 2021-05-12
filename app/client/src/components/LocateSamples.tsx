@@ -2615,17 +2615,16 @@ function LocateSamples() {
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
-                              if (editingStatus === 'view') return;
-
-                              const typeUuid =
-                                editingStatus === 'edit' &&
-                                userDefinedSampleType?.value
-                                  ? userDefinedSampleType.value
-                                  : generateUUID();
+                              const typeUuid = (editingStatus === 'edit' || editingStatus === 'view') &&
+                                      userDefinedSampleType?.value
+                                        ? userDefinedSampleType.value
+                                        : generateUUID();
 
                               if (udtSymbol) {
                                 setDefaultSymbolSingle(typeUuid, udtSymbol);
                               }
+
+                              if (editingStatus === 'view') return;
 
                               const isValid = validateEdits();
                               const predefinedEdited =
