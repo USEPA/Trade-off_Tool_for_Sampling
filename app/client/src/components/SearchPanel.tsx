@@ -992,6 +992,35 @@ function ResultCard({ result }: ResultCardProps) {
               setStatus('');
             }
 
+            // Updates the pointIds on the layers and edits objects
+            function updatePointIds(layerFeatures: any, layerDetails: any) {
+              // get the layer uuid from the first feature
+              layerFeatures.features.forEach((feature: any) => {
+                const uuid = feature.attributes?.DECISIONUNITUUID;
+                if (!uuid) return;
+
+                // find the layer in layersToAdd and update the id
+                const layer = layersToAdd.find((l) => l.layerId === uuid);
+                if (layer) layer.pointsId = layerDetails.id;
+
+                // find the layer in editsCopy and update the id
+                const editsLayer = editsCopy.edits.find(
+                  (l) => l.portalId === layerDetails.serviceItemId,
+                );
+                if (editsLayer) {
+                  editsLayer.pointsId = layerDetails.id;
+
+                  const editsLayerTemp = editsLayer as ScenarioEditsType;
+                  if (editsLayerTemp?.layers) {
+                    const sublayer = editsLayerTemp.layers.find(
+                      (s) => s.uuid === uuid,
+                    );
+                    if (sublayer) sublayer.pointsId = layerDetails.id;
+                  }
+                }
+              });
+            }
+
             let isSampleLayer = false;
             let isVspLayer = false;
             let isPointsSampleLayer = false;
@@ -1026,31 +1055,7 @@ function ResultCard({ result }: ResultCardProps) {
               // add sample layers as graphics layers
               if (isPointsSampleLayer || isVspPointsSampleLayer) {
                 if (layerFeatures.features?.length > 0) {
-                  // get the layer uuid from the first feature
-                  layerFeatures.features.forEach((feature: any) => {
-                    const uuid = feature.attributes?.DECISIONUNITUUID;
-                    if (!uuid) return;
-
-                    // find the layer in layersToAdd and update the id
-                    const layer = layersToAdd.find((l) => l.layerId === uuid);
-                    if (layer) layer.pointsId = layerDetails.id;
-
-                    // find the layer in editsCopy and update the id
-                    const editsLayer = editsCopy.edits.find(
-                      (l) => l.portalId === layerDetails.serviceItemId,
-                    );
-                    if (editsLayer) {
-                      editsLayer.pointsId = layerDetails.id;
-
-                      const editsLayerTemp = editsLayer as ScenarioEditsType;
-                      if (editsLayerTemp?.layers) {
-                        const sublayer = editsLayerTemp.layers.find(
-                          (s) => s.uuid === uuid,
-                        );
-                        if (sublayer) sublayer.pointsId = layerDetails.id;
-                      }
-                    }
-                  });
+                  updatePointIds(layerFeatures, layerDetails);
                 }
               } else if (isSampleLayer || isVspLayer) {
                 let newSymbolsAdded = false;

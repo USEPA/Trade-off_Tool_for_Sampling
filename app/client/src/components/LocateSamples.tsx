@@ -859,7 +859,6 @@ function LocateSamples() {
     null,
   );
   const [sampleTypeName, setSampleTypeName] = React.useState<string>('');
-  const [sampleTypeUuid, setSampleTypeUuid] = React.useState<string>('');
   const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
     null,
   );
@@ -904,7 +903,6 @@ function LocateSamples() {
       setAlc('');
       setAmc('');
       setSampleTypeName('');
-      setSampleTypeUuid('');
       return;
     }
 
@@ -940,7 +938,6 @@ function LocateSamples() {
     setAlc(attributes.ALC ? attributes.ALC.toString() : null);
     setAmc(attributes.AMC ? attributes.AMC.toString() : null);
     setSampleTypeName(sampleTypeName);
-    setSampleTypeUuid(sampleTypeUuid);
 
     const pointStyle = pointStyles.find(
       (s) => s.value === attributes.POINT_STYLE,
@@ -2627,10 +2624,7 @@ function LocateSamples() {
                                   : generateUUID();
 
                               if (udtSymbol) {
-                                setDefaultSymbolSingle(
-                                  typeUuid,
-                                  udtSymbol,
-                                );
+                                setDefaultSymbolSingle(typeUuid, udtSymbol);
                               }
 
                               const isValid = validateEdits();
