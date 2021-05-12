@@ -409,12 +409,56 @@ export function createFeatureLayers(
       // get the current extent, so we can go back
       let graphicsExtent: __esri.Extent | null = null;
 
+      const uniqueValueInfosPolygons: any[] = [];
+      const typesAdded: string[] = [];
+      const uniqueValueInfosPoints: any[] = [];
+
       // get the extent from the array of graphics
       if (layer.sketchLayer.type === 'graphics') {
         layer.sketchLayer.graphics.forEach((graphic) => {
           graphicsExtent === null
             ? (graphicsExtent = graphic.geometry.extent)
             : graphicsExtent.union(graphic.geometry.extent);
+
+          // build the renderer to publish
+          const attributes = graphic.attributes;
+          if (!typesAdded.includes(attributes.TYPEUUID)) {
+            typesAdded.push(attributes.TYPEUUID);
+
+            // build the polygon renderer
+            uniqueValueInfosPolygons.push({
+              value: attributes.TYPEUUID,
+              label: attributes.TYPE,
+              symbol: {
+                type: 'esriSFS',
+                style: 'esriSFSSolid',
+                color: graphic.symbol.color,
+                outline: (graphic.symbol as any).outline,
+              },
+            });
+
+            // build the points renderer
+            const pointStyle = attributes.POINT_STYLE || 'circle';
+            const isPath = pointStyle.includes('path|');
+            const style: string =
+              'esriSMS' +
+              (isPath
+                ? 'Path'
+                : pointStyle.charAt(0).toUpperCase() + pointStyle.slice(1));
+            const symbol: any = {
+              type: 'esriSMS',
+              style,
+              color: graphic.symbol.color,
+              outline: (graphic.symbol as any).outline,
+            };
+            if (isPath)
+              symbol.path = attributes.POINT_STYLE.replace('path|', '');
+            uniqueValueInfosPoints.push({
+              value: attributes.TYPEUUID,
+              label: attributes.TYPE,
+              symbol,
+            });
+          }
         });
       }
       if (layer.sketchLayer.type === 'feature') {
@@ -427,6 +471,13 @@ export function createFeatureLayers(
         name: serviceMetaData.label,
         description: serviceMetaData.description,
         extent: graphicsExtent,
+        drawingInfo: {
+          renderer: {
+            type: 'uniqueValue',
+            field1: 'TYPEUUID',
+            uniqueValueInfos: uniqueValueInfosPolygons,
+          },
+        },
 
         // add a custom type for determining which layers in a feature service
         // are the sample layers. All feature services made through TOTS should only
@@ -456,6 +507,13 @@ export function createFeatureLayers(
         name: serviceMetaData.label + '-points',
         description: serviceMetaData.description,
         extent: graphicsExtent,
+        drawingInfo: {
+          renderer: {
+            type: 'uniqueValue',
+            field1: 'TYPEUUID',
+            uniqueValueInfos: uniqueValueInfosPoints,
+          },
+        },
 
         // add a custom type for determining which layers in a feature service
         // are the sample layers. All feature services made through TOTS should only
@@ -780,7 +838,7 @@ export function applyEdits({
 
       // Push the points version into the changes array
       changes.push({
-        id: mapLayer.pointsLayer.id,
+        id: mapLayer.pointsId,
         adds: pointsAdds,
         updates: pointsUpdates,
         deletes: pointsDeletes,

@@ -371,6 +371,7 @@ function Publish() {
     let layerEdits: LayerEditsType = {
       type: 'layer',
       id: editsScenario.id,
+      pointsId: -1,
       uuid: '', // no need for a uuid since this is combining layers into one
       layerId: editsScenario.layerId,
       portalId: editsScenario.portalId,

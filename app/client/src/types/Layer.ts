@@ -19,6 +19,7 @@ export type PublishStatus = 'added' | 'edited' | 'published';
 
 export type LayerType = {
   id: number;
+  pointsId: number;
   uuid: string;
   layerId: string;
   portalId: string;

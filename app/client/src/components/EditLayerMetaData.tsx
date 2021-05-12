@@ -196,6 +196,7 @@ function EditScenario({
       const newScenario: ScenarioEditsType = {
         type: 'scenario',
         id: -1,
+        pointsId: -1,
         layerId: groupLayer.id,
         portalId: '',
         name: scenarioName,

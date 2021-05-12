@@ -30,6 +30,7 @@ type SketchType = {
   defaultSymbols: DefaultSymbolsType;
   setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
   setDefaultSymbolSingle: Function;
+  resetDefaultSymbols: Function;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
@@ -98,6 +99,7 @@ export const SketchContext = React.createContext<SketchType>({
   },
   setDefaultSymbols: () => {},
   setDefaultSymbolSingle: () => {},
+  resetDefaultSymbols: () =>  {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
@@ -158,6 +160,15 @@ export function SketchProvider({ children }: Props) {
     },
   };
 
+  const initialDefaultSymbols = {
+    symbols: {
+      'Area of Interest': defaultSymbol,
+      'Contamination Map': defaultSymbol,
+      Samples: defaultSymbol,
+    },
+    editCount: 0,
+  };
+
   const [autoZoom, setAutoZoom] = React.useState(false);
   const [
     basemapWidget,
@@ -166,14 +177,7 @@ export function SketchProvider({ children }: Props) {
   const [
     defaultSymbols,
     setDefaultSymbols,
-  ] = React.useState<DefaultSymbolsType>({
-    symbols: {
-      'Area of Interest': defaultSymbol,
-      'Contamination Map': defaultSymbol,
-      Samples: defaultSymbol,
-    },
-    editCount: 0,
-  });
+  ] = React.useState<DefaultSymbolsType>(initialDefaultSymbols);
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
@@ -315,6 +319,11 @@ export function SketchProvider({ children }: Props) {
     updatePolygonSymbol(layers, newDefaultSymbols);
   }
 
+  // Reset default symbols back to the default values
+  function resetDefaultSymbols() {
+    setDefaultSymbols(initialDefaultSymbols);
+  }
+
   return (
     <SketchContext.Provider
       value={{
@@ -325,6 +334,7 @@ export function SketchProvider({ children }: Props) {
         defaultSymbols,
         setDefaultSymbols,
         setDefaultSymbolSingle,
+        resetDefaultSymbols,
         edits,
         setEdits,
         homeWidget,

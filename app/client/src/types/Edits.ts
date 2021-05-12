@@ -16,6 +16,7 @@ export type EditType =
 export type ScenarioEditsType = {
   type: 'scenario';
   id: number; // scenario layer id
+  pointsId: number;
   layerId: string; // id from esri group layer
   portalId: string; // id from portal layer
   name: string; // layer/scenario name
@@ -36,6 +37,7 @@ export type ScenarioEditsType = {
 export type LayerEditsType = {
   type: 'layer';
   id: number; // layer id
+  pointsId: number;
   uuid: string; // unique id for the layer
   layerId: string; // id from esri layer
   portalId: string; // id from portal layer

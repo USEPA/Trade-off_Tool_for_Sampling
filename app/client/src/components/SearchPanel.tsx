@@ -34,7 +34,11 @@ import { createErrorObject, escapeForLucene } from 'utils/utils';
 import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
-import { Attributes, SampleSelectType } from 'config/sampleAttributes';
+import {
+  Attributes,
+  DefaultSymbolsType,
+  SampleSelectType,
+} from 'config/sampleAttributes';
 // config
 import {
   notLoggedInMessage,
@@ -788,6 +792,7 @@ function ResultCard({ result }: ResultCardProps) {
   } = useEsriModulesContext();
   const {
     defaultSymbols,
+    setDefaultSymbols,
     edits,
     setEdits,
     layers,
@@ -854,7 +859,21 @@ function ResultCard({ result }: ResultCardProps) {
       .then((res: any) => {
         // fire off requests to get the details and features for each layer
         const layerPromises: Promise<any>[] = [];
+
+        // ensure -points layer calls are done last
+        const resPolys: any[] = [];
+        const resPoints: any[] = [];
         res.forEach((layer: any) => {
+          if (layer.geometryType === 'esriGeometryPoint') {
+            resPoints.push(layer);
+          } else {
+            resPolys.push(layer);
+          }
+        });
+
+        // fire off the calls with the points layers last
+        const resCombined = [...resPolys, ...resPoints];
+        resCombined.forEach((layer: any) => {
           const id = layer.id;
 
           // get the layer details promise
@@ -1006,8 +1025,64 @@ function ResultCard({ result }: ResultCardProps) {
 
               // add sample layers as graphics layers
               if (isPointsSampleLayer || isVspPointsSampleLayer) {
-                // skip over the points layers
+                if (layerFeatures.features?.length > 0) {
+                  // get the layer uuid from the first feature
+                  layerFeatures.features.forEach((feature: any) => {
+                    const uuid = feature.attributes?.DECISIONUNITUUID;
+                    if (!uuid) return;
+
+                    // find the layer in layersToAdd and update the id
+                    const layer = layersToAdd.find((l) => l.layerId === uuid);
+                    if (layer) layer.pointsId = layerDetails.id;
+
+                    // find the layer in editsCopy and update the id
+                    const editsLayer = editsCopy.edits.find(
+                      (l) => l.portalId === layerDetails.serviceItemId,
+                    );
+                    if (editsLayer) {
+                      editsLayer.pointsId = layerDetails.id;
+
+                      const editsLayerTemp = editsLayer as ScenarioEditsType;
+                      if (editsLayerTemp?.layers) {
+                        const sublayer = editsLayerTemp.layers.find(
+                          (s) => s.uuid === uuid,
+                        );
+                        if (sublayer) sublayer.pointsId = layerDetails.id;
+                      }
+                    }
+                  });
+                }
               } else if (isSampleLayer || isVspLayer) {
+                let newSymbolsAdded = false;
+                let newDefaultSymbols: DefaultSymbolsType = {
+                  editCount: defaultSymbols.editCount + 1,
+                  symbols: { ...defaultSymbols.symbols },
+                };
+
+                // add symbol styles if necessary
+                const uniqueValueInfos =
+                  layerDetails?.drawingInfo?.renderer?.uniqueValueInfos;
+                if (uniqueValueInfos) {
+                  uniqueValueInfos.forEach((value: any) => {
+                    // exit if value exists already
+                    if (defaultSymbols.symbols.hasOwnProperty(value.value))
+                      return;
+
+                    newSymbolsAdded = true;
+
+                    newDefaultSymbols.symbols[value.value] = {
+                      type: 'simple-fill',
+                      color: value.symbol.color,
+                      outline: {
+                        color: value.symbol.outline.color,
+                        width: value.symbol.outline.width,
+                      },
+                    };
+                  });
+
+                  if (newSymbolsAdded) setDefaultSymbols(newDefaultSymbols);
+                }
+
                 // get the graphics from the layer
                 const graphics: LayerGraphics = {};
                 layerFeatures.features.forEach((feature: any) => {
@@ -1075,7 +1150,8 @@ function ResultCard({ result }: ResultCardProps) {
                   if (
                     !sampleAttributes.hasOwnProperty(
                       graphic.attributes.TYPEUUID,
-                    )
+                    ) &&
+                    !newAttributes.hasOwnProperty(graphic.attributes.TYPEUUID)
                   ) {
                     newUserSampleTypes.push({
                       value: typeUuid,
@@ -1128,14 +1204,14 @@ function ResultCard({ result }: ResultCardProps) {
                     };
                   }
 
-                  graphic.symbol = defaultSymbols.symbols['Samples'];
+                  graphic.symbol = newDefaultSymbols.symbols['Samples'];
                   if (
-                    defaultSymbols.symbols.hasOwnProperty(
+                    newDefaultSymbols.symbols.hasOwnProperty(
                       feature.attributes.TYPEUUID,
                     )
                   ) {
                     graphic.symbol =
-                      defaultSymbols.symbols[feature.attributes.TYPEUUID];
+                      newDefaultSymbols.symbols[feature.attributes.TYPEUUID];
                   }
 
                   zoomToGraphics.push(graphic);
@@ -1157,6 +1233,7 @@ function ResultCard({ result }: ResultCardProps) {
                 const newScenario: ScenarioEditsType = {
                   type: 'scenario',
                   id: layerDetails.id,
+                  pointsId: -1,
                   layerId: groupLayer.id,
                   portalId: result.id,
                   name: scenarioName,
@@ -1216,6 +1293,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // build the layer
                   const layerToAdd: LayerType = {
                     id: layerDetails.id,
+                    pointsId: -1,
                     uuid: firstAttributes.DECISIONUNITUUID,
                     layerId: graphicsLayer.id,
                     portalId: result.id,

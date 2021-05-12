@@ -137,6 +137,7 @@ export function useStartOver() {
     mapView,
     homeWidget,
     setLayers,
+    resetDefaultSymbols,
     setEdits,
     setUrlLayers,
     setReferenceLayers,
@@ -159,6 +160,7 @@ export function useStartOver() {
 
     // set the layers to just the defaults
     setLayers([]);
+    resetDefaultSymbols();
     setEdits({ count: 0, edits: [] });
     setUrlLayers([]);
     setReferenceLayers([]);
@@ -1339,6 +1341,7 @@ function useEditsLayerStorage() {
 
       newLayers.push({
         id: editsLayer.id,
+        pointsId: editsLayer.pointsId,
         uuid: editsLayer.uuid,
         layerId: editsLayer.layerId,
         portalId: editsLayer.portalId,

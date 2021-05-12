@@ -10,6 +10,8 @@ import {
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 import { DefaultSymbolsType } from 'config/sampleAttributes';
+// config
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -91,6 +93,7 @@ export function createLayerEditTemplate(
   return {
     type: 'layer',
     id: layerToEdit.id,
+    pointsId: layerToEdit.pointsId,
     uuid: layerToEdit.uuid,
     layerId: layerToEdit.sketchLayer.id,
     portalId: layerToEdit.portalId,
@@ -409,6 +412,7 @@ export function createSampleLayer(
 
   return {
     id: -1,
+    pointsId: -1,
     uuid: layerUuid,
     layerId: graphicsLayer.id,
     portalId: '',
@@ -447,6 +451,7 @@ export function getDefaultSamplingMaskLayer(
 
   return {
     id: -1,
+    pointsId: -1,
     uuid: layerUuid,
     layerId: layerUuid,
     portalId: '',
@@ -753,12 +758,13 @@ export function getSampleTableColumns({
 
 /**
  * Gets a point symbol representation of the provided polygon.
- * 
+ *
  * @param polygon The polygon to be converted
  * @returns A point symbol representation of the provided polygon
  */
 export function getPointSymbol(
   polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
 ) {
   // get the point shape style (i.e. circle, triangle, etc.)
   let style = 'circle';
@@ -776,8 +782,10 @@ export function getPointSymbol(
   // build the symbol
   const symbol: any = {
     type: 'simple-marker',
-    color: polygon.symbol.color,
-    outline: (polygon.symbol as any).outline,
+    color: symbolColor ? symbolColor.color : polygon.symbol.color,
+    outline: symbolColor
+      ? symbolColor.outline
+      : (polygon.symbol as any).outline,
     style: style,
   };
   if (path) symbol.path = path;
@@ -787,7 +795,7 @@ export function getPointSymbol(
 
 /**
  * Converts a polygon graphic to a point graphic.
- * 
+ *
  * @param Graphic The esri graphic constructor
  * @param polygon The polygon to be converted
  * @returns A point graphic representation of the provided polygon

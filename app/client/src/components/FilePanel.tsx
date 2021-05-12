@@ -854,6 +854,7 @@ function FilePanel() {
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      pointsId: -1,
       uuid: layerUuid,
       layerId: graphicsLayer.id,
       portalId: '',
