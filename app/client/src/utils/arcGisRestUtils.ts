@@ -963,8 +963,10 @@ export function publish({
                 if (!isPoints) mapLayer.id = layer.id;
 
                 // Figure out how to get the points version of the id
-                if (isPoints && mapLayer.pointsLayer)
+                if (isPoints && mapLayer.pointsLayer) {
                   mapLayer.pointsLayer.id = layer.id;
+                  mapLayer.pointsId = layer.id;
+                }
               }
             });
 
