@@ -15,6 +15,7 @@ import {
   getCurrentDateTime,
   updateLayerEdits,
 } from 'utils/sketchUtils';
+import { ScenarioEditsType } from 'types/Edits';
 
 // Makes all sketch buttons no longer active by removing
 // the sketch-button-selected class.
@@ -107,6 +108,7 @@ function MapWidgets({ mapView }: Props) {
     aoiSketchLayer,
     setAoiSketchLayer,
     selectedScenario,
+    setSelectedScenario,
     layers,
     setLayers,
     map,
@@ -593,6 +595,11 @@ function MapWidgets({ mapView }: Props) {
     // update the edits state
     setEdits(editsCopy);
 
+    const newScenario = editsCopy.edits.find((e) => 
+      e.type === 'scenario' && e.layerId === selectedScenario?.layerId
+    ) as ScenarioEditsType;
+    if(newScenario) setSelectedScenario(newScenario);
+
     // updated the edited layer
     setLayers([
       ...layers.slice(0, updateLayer.layerIndex),
@@ -606,7 +613,7 @@ function MapWidgets({ mapView }: Props) {
         return layer ? { ...layer, editType: updateLayer.eventType } : null;
       });
     }
-  }, [edits, setEdits, updateLayer, layers, setLayers]);
+  }, [edits, setEdits, updateLayer, layers, setLayers, selectedScenario, setSelectedScenario]);
 
   // Reactivate aoiSketchVM after the updateSketchEvent is null
   React.useEffect(() => {
