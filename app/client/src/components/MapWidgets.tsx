@@ -109,6 +109,7 @@ function MapWidgets({ mapView }: Props) {
     setAoiSketchLayer,
     selectedScenario,
     setSelectedScenario,
+    showAsPoints,
     layers,
     setLayers,
     map,
@@ -716,6 +717,31 @@ function MapWidgets({ mapView }: Props) {
       handles.remove(group);
     } catch (e) {}
 
+    // Highlights graphics on the provided layer that matches the provided 
+    // list of uuids.
+    function highlightGraphics(
+      layer: __esri.GraphicsLayer | __esri.FeatureLayer | null, 
+      uuids: any,
+    ) {
+      if(!layer) return;
+
+      const itemsToHighlight: __esri.Graphic[] = [];
+      const tempLayer = layer as __esri.GraphicsLayer;
+      tempLayer.graphics.forEach((graphic) => {
+        if (uuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
+          itemsToHighlight.push(graphic);
+        }
+      });
+      
+      // Highlight the graphics with a contam value
+      if (itemsToHighlight.length === 0) return;
+
+      mapView.whenLayerView(tempLayer).then((layerView) => {
+        const handle = layerView.highlight(itemsToHighlight);
+        handles.add(handle, group);
+      });
+    }
+
     const samples: any = {};
     selectedSampleIds.forEach((sample) => {
       if (!samples.hasOwnProperty(sample.DECISIONUNITUUID)) {
@@ -732,23 +758,10 @@ function MapWidgets({ mapView }: Props) {
 
       if (!layer) return;
 
-      const highlightGraphics: __esri.Graphic[] = [];
-      const tempLayer = layer.sketchLayer as __esri.GraphicsLayer;
-      tempLayer.graphics.forEach((graphic) => {
-        if (sampleUuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
-          highlightGraphics.push(graphic);
-        }
-      });
-
-      // Highlight the graphics with a contam value
-      if (highlightGraphics.length === 0) return;
-
-      mapView.whenLayerView(tempLayer).then((layerView) => {
-        const handle = layerView.highlight(highlightGraphics);
-        handles.add(handle, group);
-      });
+      highlightGraphics(layer.sketchLayer, sampleUuids);
+      highlightGraphics(layer.pointsLayer, sampleUuids);
     });
-  }, [map, handles, layers, mapView, selectedSampleIds]);
+  }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
 
   return null;
 }
