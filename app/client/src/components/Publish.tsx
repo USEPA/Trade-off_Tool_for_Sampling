@@ -339,6 +339,11 @@ function Publish() {
       visible: false,
       listMode: 'hide',
     });
+    const pointsLayer = new GraphicsLayer({
+      title: selectedScenario.scenarioName + '-points',
+      visible: false,
+      listMode: 'hide',
+    });
 
     let publishLayer: LayerType | null = null;
     originalLayers.forEach((layer, index) => {
@@ -350,6 +355,7 @@ function Publish() {
           layerType: 'Samples',
           name: selectedScenario.scenarioName,
           sketchLayer: graphicsLayer,
+          pointsLayer,
           value: selectedScenario.scenarioName,
         };
       }
@@ -364,6 +370,11 @@ function Publish() {
 
       const clonedGraphics = layer.sketchLayer.graphics.clone();
       publishLayer.sketchLayer.addMany(clonedGraphics.toArray());
+
+      if (layer.pointsLayer && publishLayer.pointsLayer) {
+        const clonedPoints = layer.pointsLayer.graphics.clone();
+        publishLayer.pointsLayer.addMany(clonedPoints.toArray());
+      }
     });
     const publishLayers: LayerType[] = publishLayer ? [publishLayer] : [];
 
@@ -669,20 +680,20 @@ function Publish() {
             }
 
             const oldPublished = editedLayer.published.filter((x) => {
-              const idx = editedLayer.deletes.findIndex((y) => 
-                y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER
+              const idx = editedLayer.deletes.findIndex(
+                (y) =>
+                  y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
               );
               return idx === -1;
             });
 
             const edits = changes[editedLayer.uuid];
-            editedLayer.adds = edits.adds;
-            editedLayer.updates = edits.updates;
-            editedLayer.published = [
-              ...oldPublished,
-              ...edits.published,
-            ];
-            editedLayer.deletes = edits.deletes;
+            if (edits) {
+              editedLayer.adds = edits.adds;
+              editedLayer.updates = edits.updates;
+              editedLayer.published = [...oldPublished, ...edits.published];
+              editedLayer.deletes = edits.deletes;
+            }
           });
 
           return {

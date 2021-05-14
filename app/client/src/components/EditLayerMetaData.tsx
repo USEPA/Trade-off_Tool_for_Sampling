@@ -446,6 +446,7 @@ function EditLayer({
       // update the title of the layer on the map
       const mapLayer = layers.find((layer) => layer.layerId === layerId);
       if (mapLayer) mapLayer.sketchLayer.title = layerName;
+      if (mapLayer?.pointsLayer) mapLayer.pointsLayer.title = layerName;
 
       // update the active sketchLayer
       setSketchLayer((sketchLayer) => {
@@ -514,6 +515,9 @@ function EditLayer({
       if (groupLayer && groupLayer.type === 'group') {
         const tempGroupLayer = groupLayer as __esri.GroupLayer;
         tempGroupLayer.add(tempLayer.sketchLayer);
+        if (tempLayer.pointsLayer) {
+          tempGroupLayer.add(tempLayer.pointsLayer);
+        }
       }
 
       // make the new layer the active sketch layer
