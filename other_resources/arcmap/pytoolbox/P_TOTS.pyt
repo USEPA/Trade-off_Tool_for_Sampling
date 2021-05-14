@@ -66,7 +66,7 @@ class GenerateRandom(object):
           displayName   = "Sample Type Parameters"
          ,name          = "Sample_Type_Parameters"
          ,datatype      = "DETable"
-         ,parameterType = "Optional"
+         ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
       );
@@ -221,13 +221,111 @@ class GenerateRandom(object):
       
       #########################################################################
       # Step 50
+      # Grab the sample type parameters
+      #########################################################################
+      str_chk              = None;
+      num_ttpk             = None;
+      num_ttc              = None;
+      num_tta              = None;
+      num_ttps             = None;
+      num_lod_p            = None;
+      num_lod_non          = None;
+      num_mcps             = None;
+      num_tcps             = None;
+      num_wvps             = None;
+      num_wwps             = None;
+      num_sa               = None;
+      num_aa               = None;
+      num_alc              = None;
+      num_amc              = None;
+      str_notes            = None;
+      str_contamtype       = None;
+      num_contamval        = None;
+      str_contamunit       = None;
+      dat_createddate      = None;
+      dat_updateddate      = None;
+      str_username         = None;
+      str_organization     = None;
+      gui_decisionunituuid = None;
+      str_decisionunit     = None;
+      int_decisionunitsort = None;
+      
+      flds = [
+          "TYPE"
+         ,"TTPK"
+         ,"TTC"
+         ,"TTA"
+         ,"TTPS"
+         ,"LOD_P"
+         ,"LOD_NON"
+         ,"MCPS"
+         ,"TCPS"
+         ,"WVPS"
+         ,"WWPS"
+         ,"SA"
+         ,"AA"
+         ,"ALC"
+         ,"AMC"
+         ,"Notes"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
+         ,"CREATEDDATE"
+         ,"UPDATEDDATE"
+         ,"USERNAME"
+         ,"ORGANIZATION"
+         ,"DECISIONUNITUUID"
+         ,"DECISIONUNIT"
+         ,"DECISIONUNITSORT"
+      ];
+      
+      with arcpy.da.SearchCursor(
+          in_table    = sample_type_parms
+         ,field_names = flds
+      ) as cursor:
+      
+         for row in cursor:
+            if row[0] is not None and row[0] == str_sample_type:
+               str_chk              = row[0];
+               num_ttpk             = row[1];
+               num_ttc              = row[2];
+               num_tta              = row[3];
+               num_ttps             = row[4];
+               num_lod_p            = row[5];
+               num_lod_non          = row[6];
+               num_mcps             = row[7];
+               num_tcps             = row[8];
+               num_wvps             = row[9];
+               num_wwps             = row[10];    
+               num_sa               = row[11];
+               num_aa               = row[12];
+               num_alc              = row[13];
+               num_amc              = row[14];
+               str_notes            = row[15];
+               str_contamtype       = row[16];
+               num_contamval        = row[17];
+               str_contamunit       = row[18];
+               dat_createddate      = row[19];
+               dat_updateddate      = row[20];
+               str_username         = row[21];
+               str_organization     = row[22];
+               gui_decisionunituuid = row[23];
+               str_decisionunit     = row[24];
+               int_decisionunitsort = row[25];
+               break;
+      
+      if str_chk is None:
+         raise arcpy.ExecuteError("Sample Type " + str_sample_type + " not found in parameter table.");
+         
+      #########################################################################
+      # Step 60
       # Generate set of random points across the AOI
       #    Licensing information
       #    Basic: Requires 3D Analyst or Spatial Analyst
       #    Standard: Requires 3D Analyst or Spatial Analyst
       #    Advanced: Yes
       #########################################################################
-      arcpy.AddMessage("Generating Points...");
+      arcpy.AddMessage("Generating " + str(int_number_samples) + " sample points...");
       arcpy.CreateRandomPoints_management(
           out_path                   = scratch_path_p
          ,out_name                   = scratch_name_p
@@ -237,32 +335,16 @@ class GenerateRandom(object):
          ,create_multipoint_output   = "POINT"
          ,multipoint_size            = "0"
       );
-
+      
       #########################################################################
-      if str_sample_type == "Micro Vac":
-         str_buffer_distance = "6 Inches";
+      num_buffer_radius = round(math.sqrt(num_sa) / 2,4);
+      str_buffer_radius = str(num_buffer_radius) + " Inches";
+      arcpy.AddMessage("Using buffer radius of " + str_buffer_radius + " to generate features");
 
-      elif str_sample_type == "Wet Vac":
-         str_buffer_distance = "84.85 Inches";
-
-      elif str_sample_type == "Sponge":
-         str_buffer_distance = "5 Inches";
-
-      elif str_sample_type == "Robot":
-         str_buffer_distance = "189.73 Inches";
-
-      elif str_sample_type == "Aggressive Air":
-         str_buffer_distance = "54.77 Inches";
-
-      elif str_sample_type == "Swab":
-         str_buffer_distance = "1 Inches";
-
-      #########################################################################
-      arcpy.AddMessage("Creating Features...");
       arcpy.Buffer_analysis(
           in_features              = scratch_full_p
          ,out_feature_class        = scratch_full_b
-         ,buffer_distance_or_field = str_buffer_distance
+         ,buffer_distance_or_field = str_buffer_radius
          ,line_side                = "FULL"
          ,line_end_type            = "ROUND"
          ,dissolve_option          = "NONE"
@@ -295,7 +377,7 @@ class GenerateRandom(object):
 
       #########################################################################
       arcpy.AddMessage("Populating Sampling Metrics...");
-      fields = [
+      flds = [
           "GLOBALID"
          ,"PERMANENT_IDENTIFIER"
          ,"TYPE"
@@ -303,132 +385,64 @@ class GenerateRandom(object):
          ,"TTC"
          ,"TTA"
          ,"TTPS"
+         ,"LOD_P"
+         ,"LOD_NON"
          ,"MCPS"
          ,"TCPS"
          ,"WVPS"
          ,"WWPS"
          ,"SA"
+         ,"AA"
          ,"ALC"
          ,"AMC"
-         ,"LOD_P"
-         ,"LOD_NON"
+         ,"Notes"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
+         ,"CREATEDDATE"
+         ,"UPDATEDDATE"
+         ,"USERNAME"
+         ,"ORGANIZATION"
+         ,"DECISIONUNITUUID"
+         ,"DECISIONUNIT"
+         ,"DECISIONUNITSORT"
       ];
 
       with arcpy.da.UpdateCursor(
           in_table    = scratch_full_o
-         ,field_names = fields
+         ,field_names = flds
       ) as cursor:
 
          for row in cursor:
-
-            if str_sample_type == 'Micro Vac':
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Micro Vac";
-               row[3]  = 0.18;
-               row[4]  = 0.15;
-               row[5]  = 0.8;
-               row[6]  = 1.21;
-               row[7]  = 34.28;
-               row[8]  = 395.84;
-               row[9]  = 0.02;
-               row[10] = 4.3;
-               row[11] = 144;
-               row[12] = 151;
-               row[13] = 288;
-               row[14] = 105;
-               row[15] = 0;
-               
-            elif str_sample_type == "Wet Vac":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Wet Vac";
-               row[3]  = 0.33;
-               row[4]  = 0.13;
-               row[5]  = 0.8;
-               row[6]  = 1.07;
-               row[7]  = 167;
-               row[8]  = 220;
-               row[9]  = 5;
-               row[10] = 28.5;
-               row[11] = 28800;
-               row[12] = 151;
-               row[13] = 200;
-               row[14] = 105;
-               row[15] = 40;
-               
-            elif str_sample_type == "Sponge":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Sponge";
-               row[3]  = 0.12;
-               row[4]  = 0.09;
-               row[5]  = 0.7;
-               row[6]  = 0.99;
-               row[7]  = 46.87;
-               row[8]  = 343.03;
-               row[9]  = 0.1;
-               row[10] = 4.3;
-               row[11] = 100;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 14;
-               row[15] = 0;
-               
-            elif str_sample_type == "Robot":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Robot";
-               row[3]  = 0.33;
-               row[4]  = 0.3;
-               row[5]  = 0.7;
-               row[6]  = 1.12;
-               row[7]  = 400;
-               row[8]  = 267;
-               row[9]  = 0.5;
-               row[10] = 10.5;
-               row[11] = 144000;
-               row[12] = 200;
-               row[13] = 288;
-               row[14] = 105;
-               row[15] = 140;
-               
-            elif str_sample_type == "Aggressive Air":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Aggressive Air";
-               row[3]  = 0.33;
-               row[4]  = 0.6;
-               row[5]  = 0.5;
-               row[6]  = 1.12;
-               row[7]  = 207;
-               row[8]  = 267;
-               row[9]  = 0.1;
-               row[10] = 5;
-               row[11] = 12000;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 105;
-               row[15] = 140;
-               
-            elif str_sample_type == "Swab":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Swab";
-               row[3]  = 0.12;
-               row[4]  = 0.07;
-               row[5]  = 0.7;
-               row[6]  = 0.89;
-               row[7]  = 21;
-               row[8]  = 219;
-               row[9]  = 0.01;
-               row[10]  = 2;
-               row[11] = 4;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 25;
-               row[15] = 0;
-            
+         
+            row[0]  = '{' + str(uuid.uuid4()) + '}';
+            row[1]  = '{' + str(uuid.uuid4()) + '}';
+            row[2]  = str_sample_type;
+            row[3]  = num_ttpk;
+            row[4]  = num_ttc;
+            row[5]  = num_tta;
+            row[6]  = num_ttps;
+            row[7]  = num_lod_p;
+            row[8]  = num_lod_non;
+            row[9]  = num_mcps;
+            row[10] = num_tcps;
+            row[11] = num_wvps;
+            row[12] = num_wwps             
+            row[13] = num_sa               
+            row[14] = num_aa               
+            row[15] = num_alc              
+            row[16] = num_amc              
+            row[17] = str_notes            
+            row[18] = str_contamtype       
+            row[19] = num_contamval        
+            row[20] = str_contamunit       
+            row[21] = dat_createddate      
+            row[22] = dat_updateddate      
+            row[23] = str_username         
+            row[24] = str_organization     
+            row[25] = gui_decisionunituuid 
+            row[26] = str_decisionunit     
+            row[27] = int_decisionunitsort 
             cursor.updateRow(row);
             
       arcpy.Project_management(
@@ -481,7 +495,7 @@ class VSPImport(object):
           displayName   = "Sample Type Parameters"
          ,name          = "Sample_Type_Parameters"
          ,datatype      = "DETable"
-         ,parameterType = "Optional"
+         ,parameterType = "Required"
          ,direction     = "Input"
          ,enabled       = True
       );
@@ -624,8 +638,107 @@ class VSPImport(object):
          );
             
          fc_vsp = scratch_full_in;
+         
+      #########################################################################
+      # Step 50
+      # Grab the sample type parameters
+      #########################################################################
+      str_chk              = None;
+      num_ttpk             = None;
+      num_ttc              = None;
+      num_tta              = None;
+      num_ttps             = None;
+      num_lod_p            = None;
+      num_lod_non          = None;
+      num_mcps             = None;
+      num_tcps             = None;
+      num_wvps             = None;
+      num_wwps             = None;
+      num_sa               = None;
+      num_aa               = None;
+      num_alc              = None;
+      num_amc              = None;
+      str_notes            = None;
+      str_contamtype       = None;
+      num_contamval        = None;
+      str_contamunit       = None;
+      dat_createddate      = None;
+      dat_updateddate      = None;
+      str_username         = None;
+      str_organization     = None;
+      gui_decisionunituuid = None;
+      str_decisionunit     = None;
+      int_decisionunitsort = None;
+      
+      flds = [
+          "TYPE"
+         ,"TTPK"
+         ,"TTC"
+         ,"TTA"
+         ,"TTPS"
+         ,"LOD_P"
+         ,"LOD_NON"
+         ,"MCPS"
+         ,"TCPS"
+         ,"WVPS"
+         ,"WWPS"
+         ,"SA"
+         ,"AA"
+         ,"ALC"
+         ,"AMC"
+         ,"Notes"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
+         ,"CREATEDDATE"
+         ,"UPDATEDDATE"
+         ,"USERNAME"
+         ,"ORGANIZATION"
+         ,"DECISIONUNITUUID"
+         ,"DECISIONUNIT"
+         ,"DECISIONUNITSORT"
+      ];
+      
+      with arcpy.da.SearchCursor(
+          in_table    = sample_type_parms
+         ,field_names = flds
+      ) as cursor:
+      
+         for row in cursor:
+            if row[0] is not None and row[0] == str_sample_type:
+               str_chk              = row[0];
+               num_ttpk             = row[1];
+               num_ttc              = row[2];
+               num_tta              = row[3];
+               num_ttps             = row[4];
+               num_lod_p            = row[5];
+               num_lod_non          = row[6];
+               num_mcps             = row[7];
+               num_tcps             = row[8];
+               num_wvps             = row[9];
+               num_wwps             = row[10];    
+               num_sa               = row[11];
+               num_aa               = row[12];
+               num_alc              = row[13];
+               num_amc              = row[14];
+               str_notes            = row[15];
+               str_contamtype       = row[16];
+               num_contamval        = row[17];
+               str_contamunit       = row[18];
+               dat_createddate      = row[19];
+               dat_updateddate      = row[20];
+               str_username         = row[21];
+               str_organization     = row[22];
+               gui_decisionunituuid = row[23];
+               str_decisionunit     = row[24];
+               int_decisionunitsort = row[25];
+               break;
+      
+      if str_chk is None:
+         raise arcpy.ExecuteError("Sample Type " + str_sample_type + " not found in parameter table.");
       
       #########################################################################
+      # Step 60
       # Use the FeatureToPolygon function to form new areas
       arcpy.FeatureToPolygon_management(
           in_features       = fc_vsp
@@ -637,6 +750,7 @@ class VSPImport(object):
       arcpy.AddMessage("Built " + str(cnt) + " polygons from VSP input");
       
       #########################################################################
+      # Step 70
       (a,b,scratch_full_o) = sampling_scratch_fc(
           p_preset   = None
          ,p_srid     = int_srid
@@ -650,6 +764,7 @@ class VSPImport(object):
       );
 
       #########################################################################
+      # Step 80
       fields = [
           "GLOBALID"
          ,"PERMANENT_IDENTIFIER"
@@ -658,129 +773,60 @@ class VSPImport(object):
          ,"TTC"
          ,"TTA"
          ,"TTPS"
+         ,"LOD_P"
+         ,"LOD_NON"
          ,"MCPS"
          ,"TCPS"
          ,"WVPS"
          ,"WWPS"
          ,"SA"
+         ,"AA"
          ,"ALC"
          ,"AMC"
-         ,"LOD_P"
-         ,"LOD_NON"
+         ,"Notes"
+         ,"CONTAMTYPE"
+         ,"CONTAMVAL"
+         ,"CONTAMUNIT"
+         ,"CREATEDDATE"
+         ,"UPDATEDDATE"
+         ,"USERNAME"
+         ,"ORGANIZATION"
+         ,"DECISIONUNITUUID"
+         ,"DECISIONUNIT"
+         ,"DECISIONUNITSORT"
       ];
 
       with arcpy.da.UpdateCursor(scratch_full_o,fields) as cursor:
 
          for row in cursor:
-
-            if str_sample_type == 'Micro Vac':
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Micro Vac";
-               row[3]  = 0.18;
-               row[4]  = 0.15;
-               row[5]  = 0.8;
-               row[6]  = 1.21;
-               row[7]  = 34.28;
-               row[8]  = 395.84;
-               row[9]  = 0.02;
-               row[10] = 4.3;
-               row[11] = 144;
-               row[12] = 151;
-               row[13] = 288;
-               row[14] = 105;
-               row[15] = 0;
-
-            elif str_sample_type == "Wet Vac":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Wet Vac";
-               row[3]  = 0.33;
-               row[4]  = 0.13;
-               row[5]  = 0.8;
-               row[6]  = 1.07;
-               row[7]  = 167;
-               row[8]  = 220;
-               row[9]  = 5;
-               row[10] = 28.5;
-               row[11] = 28800;
-               row[12] = 151;
-               row[13] = 200;
-               row[14] = 105;
-               row[15] = 40;
-               
-            elif str_sample_type == "Sponge":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Sponge";
-               row[3]  = 0.12;
-               row[4]  = 0.09;
-               row[5]  = 0.7;
-               row[6]  = 0.99;
-               row[7]  = 46.87;
-               row[8]  = 343.03;
-               row[9]  = 0.1;
-               row[10] = 4.3;
-               row[11] = 100;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 14;
-               row[15] = 0;
-               
-            elif str_sample_type == "Robot":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Robot";
-               row[3]  = 0.33;
-               row[4]  = 0.3;
-               row[5]  = 0.7;
-               row[6]  = 1.12;
-               row[7]  = 400;
-               row[8]  = 267;
-               row[9]  = 0.5;
-               row[10] = 10.5;
-               row[11] = 144000;
-               row[12] = 200;
-               row[13] = 288;
-               row[14] = 105;
-               row[15] = 140;
-               
-            elif str_sample_type == "Aggressive Air":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Aggressive Air";
-               row[3]  = 0.33;
-               row[4]  = 0.6;
-               row[5]  = 0.5;
-               row[6]  = 1.12;
-               row[7]  = 207;
-               row[8]  = 267;
-               row[9]  = 0.1;
-               row[10]  = 5;
-               row[11] = 12000;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 105;
-               row[15] = 140;
-               
-            elif str_sample_type == "Swab":
-               row[0]  = '{' + str(uuid.uuid4()) + '}';
-               row[1]  = '{' + str(uuid.uuid4()) + '}';
-               row[2]  = "Swab";
-               row[3]  = 0.12;
-               row[4]  = 0.07;
-               row[5]  = 0.7;
-               row[6]  = 0.89;
-               row[7]  = 21;
-               row[8]  = 219;
-               row[9]  = 0.01;
-               row[10] = 2;
-               row[11] = 4;
-               row[12] = 118;
-               row[13] = 239;
-               row[14] = 25;
-               row[15] = 0;
-            
+            row[0]  = '{' + str(uuid.uuid4()) + '}';
+            row[1]  = '{' + str(uuid.uuid4()) + '}';
+            row[2]  = str_sample_type;
+            row[3]  = num_ttpk;
+            row[4]  = num_ttc;
+            row[5]  = num_tta;
+            row[6]  = num_ttps;
+            row[7]  = num_lod_p;
+            row[8]  = num_lod_non;
+            row[9]  = num_mcps;
+            row[10] = num_tcps;
+            row[11] = num_wvps;
+            row[12] = num_wwps             
+            row[13] = num_sa               
+            row[14] = num_aa               
+            row[15] = num_alc              
+            row[16] = num_amc              
+            row[17] = str_notes            
+            row[18] = str_contamtype       
+            row[19] = num_contamval        
+            row[20] = str_contamunit       
+            row[21] = dat_createddate      
+            row[22] = dat_updateddate      
+            row[23] = str_username         
+            row[24] = str_organization     
+            row[25] = gui_decisionunituuid 
+            row[26] = str_decisionunit     
+            row[27] = int_decisionunitsort 
             cursor.updateRow(row);
             
       arcpy.Project_management(
@@ -830,16 +876,6 @@ class ContaminationResults(object):
       
       #########################################################################
       param2 = arcpy.Parameter(
-          displayName   = "Sample Type Parameters"
-         ,name          = "Sample_Type_Parameters"
-         ,datatype      = "DETable"
-         ,parameterType = "Optional"
-         ,direction     = "Input"
-         ,enabled       = True
-      );
-      
-      #########################################################################
-      param3 = arcpy.Parameter(
           displayName   = "CS SRID Override"
          ,name          = "CSSRIDOverride"
          ,datatype      = "GPLong"
@@ -849,7 +885,7 @@ class ContaminationResults(object):
       );
 
       #########################################################################
-      param4 = arcpy.Parameter(
+      param3 = arcpy.Parameter(
           displayName   = "Output TOTS Results"
          ,name          = "Output_TOTS_Results"
          ,datatype      = "GPTableView"
@@ -858,7 +894,7 @@ class ContaminationResults(object):
       );
       
       #########################################################################
-      param5 = arcpy.Parameter(
+      param4 = arcpy.Parameter(
           displayName   = "CS SRID"
          ,name          = "CSSRID"
          ,datatype      = "GPLong"
@@ -872,7 +908,6 @@ class ContaminationResults(object):
          ,param2
          ,param3
          ,param4
-         ,param5
       ];
 
       return params;
@@ -901,8 +936,7 @@ class ContaminationResults(object):
       #########################################################################
       fc_samples_in        = parameters[0].value;
       fc_contamination_map = parameters[1].value;
-      sample_type_parms    = parameters[2].value;
-      int_srid_override    = parameters[3].value; 
+      int_srid_override    = parameters[2].value; 
       
       #########################################################################
       # Step 20
@@ -940,10 +974,11 @@ class ContaminationResults(object):
          arcpy.Project_management(
              in_dataset      = fc_samples_in
             ,out_dataset     = scratch_full_samp
-            ,out_coor_system = arcpy.SpatialReference(3857)
-         )
+            ,out_coor_system = arcpy.SpatialReference(int_srid)
+         );
             
          fc_samples_in = scratch_full_samp;
+         arcpy.AddMessage("  determining UTM local srid to be " + str(int_srid));
          
       #########################################################################
       sr = arcpy.Describe(fc_contamination_map).spatialReference.factoryCode;
@@ -1086,8 +1121,8 @@ class ContaminationResults(object):
             ));
                   
       #########################################################################
-      arcpy.SetParameterAsText(4,scratch_full_o);
-      arcpy.SetParameter(5,int_srid);
+      arcpy.SetParameterAsText(3,scratch_full_o);
+      arcpy.SetParameter(4,int_srid);
       
 ###############################################################################
 class SampleData(object):
@@ -1404,6 +1439,7 @@ def sampling_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
          ,['WVPS'                ,'DOUBLE','Waste Volume per Sample'       ,None,None,'']
          ,['WWPS'                ,'DOUBLE','Waste Weight per Sample'       ,None,None,'']
          ,['SA'                  ,'DOUBLE','Sampling Surface Area'         ,None,None,'']
+         ,['AA'                  ,'DOUBLE','Actual Surface Area'           ,None,None,'']
          ,['Notes'               ,'TEXT'  ,'Notes'                         ,2000,None,'']
          ,['ALC'                 ,'DOUBLE','Analysis Labor Cost'           ,None,None,'']
          ,['AMC'                 ,'DOUBLE','Analysis Material Cost'        ,None,None,'']
@@ -1414,7 +1450,10 @@ def sampling_scratch_fc(p_preset,p_srid=None,p_fcprefix=None):
          ,['UPDATEDDATE'         ,'DATE'  ,'Updated Date'                  ,None,None,'']
          ,['USERNAME'            ,'TEXT'  ,'Username'                      ,255 ,None,'']
          ,['ORGANIZATION'        ,'TEXT'  ,'Organization'                  ,255 ,None,'']
-         ,['ELEVATIONSERIES'     ,'TEXT'  ,'Elevation Series'              ,255 ,None,'']
+         ,['SURFACEAREAUNIT'     ,'TEXT'  ,'Surface Area Unit'             ,16  ,None,'']
+         ,['DECISIONUNITUUID'    ,'GUID'  ,'Decision Unit UUID'            ,None,None,'']
+         ,['DECISIONUNIT'        ,'TEXT'  ,'Decision Unit'                 ,255 ,None,'']
+         ,['DECISIONUNITSORT'    ,'LONG'  ,'Decision Unit Sort'            ,None,None,'']
        ]
    );
    
