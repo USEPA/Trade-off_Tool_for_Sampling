@@ -23,6 +23,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
@@ -843,10 +844,17 @@ function FilePanel() {
       visible,
       listMode,
     });
+    const pointsLayer = new GraphicsLayer({
+      id: layerUuid + '-points',
+      title: layerName,
+      visible: false,
+      listMode: 'hide',
+    });
 
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      pointsId: -1,
       uuid: layerUuid,
       layerId: graphicsLayer.id,
       portalId: '',
@@ -862,10 +870,15 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      pointsLayer:
+        layerType.value === 'Samples' || layerType.value === 'VSP'
+          ? pointsLayer
+          : null,
       parentLayer: null,
     };
 
     const graphics: __esri.Graphic[] = [];
+    const points: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -906,6 +919,7 @@ function FilePanel() {
             graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
             graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
             graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+            graphic.attributes['DECISIONUNITSORT'] = 0;
             graphic.attributes['GLOBALID'] = uuid;
           }
         }
@@ -916,6 +930,7 @@ function FilePanel() {
           graphic.attributes['AC'] = null;
           graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
           graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+          graphic.attributes['DECISIONUNITSORT'] = 0;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
@@ -961,6 +976,7 @@ function FilePanel() {
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
+        points.push(convertToPoint(Graphic, graphic));
       });
     });
 
@@ -982,6 +998,7 @@ function FilePanel() {
     }
 
     graphicsLayer.addMany(graphics);
+    pointsLayer.addMany(points);
 
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
@@ -995,6 +1012,9 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
     map.add(graphicsLayer);
+    if (layerType.value === 'Samples' || layerType.value === 'VSP') {
+      map.add(pointsLayer);
+    }
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
@@ -1281,9 +1301,9 @@ function FilePanel() {
                 />
                 {sampleType && (
                   <p css={sectionParagraph}>
-                    Add an externally-generated Visual Sample Plan (VSP) layer to
-                    analyze and/or use in conjunction with targeted sampling. Once
-                    added, you can select this layer in the next step,{' '}
+                    Add an externally-generated Visual Sample Plan (VSP) layer
+                    to analyze and/or use in conjunction with targeted sampling.
+                    Once added, you can select this layer in the next step,{' '}
                     <strong>Create Plan</strong>, and use it to create the
                     Sampling Plan.
                   </p>

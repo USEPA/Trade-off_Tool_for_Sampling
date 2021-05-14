@@ -25,6 +25,7 @@ export type AttributeItems = {
   TYPEUUID: string | null;
   TYPE: string;
   ShapeType: string;
+  POINT_STYLE: string;
   SA: number | null;
   AA: number | null;
   TTPK: number | null;
@@ -49,7 +50,7 @@ export type AttributeItems = {
   ORGANIZATION: string | null;
   DECISIONUNITUUID: string | null;
   DECISIONUNIT: string | null;
-  DECISIONUNITSORT: number | null;
+  DECISIONUNITSORT: number;
 };
 
 export type Attributes = {

@@ -10,6 +10,8 @@ import {
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 import { DefaultSymbolsType } from 'config/sampleAttributes';
+// config
+import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
  * This function performs a deep copy, exluding functions,
@@ -91,6 +93,7 @@ export function createLayerEditTemplate(
   return {
     type: 'layer',
     id: layerToEdit.id,
+    pointsId: layerToEdit.pointsId,
     uuid: layerToEdit.uuid,
     layerId: layerToEdit.sketchLayer.id,
     portalId: layerToEdit.portalId,
@@ -400,9 +403,16 @@ export function createSampleLayer(
 ) {
   const layerUuid = generateUUID();
   const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
+  const pointsLayer = new GraphicsLayer({
+    id: layerUuid + '-points',
+    title: name,
+    visible: false,
+    listMode: 'hide',
+  });
 
   return {
     id: -1,
+    pointsId: -1,
     uuid: layerUuid,
     layerId: graphicsLayer.id,
     portalId: '',
@@ -418,6 +428,7 @@ export function createSampleLayer(
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    pointsLayer: pointsLayer,
     parentLayer,
   } as LayerType;
 }
@@ -440,6 +451,7 @@ export function getDefaultSamplingMaskLayer(
 
   return {
     id: -1,
+    pointsId: -1,
     uuid: layerUuid,
     layerId: layerUuid,
     portalId: '',
@@ -457,6 +469,7 @@ export function getDefaultSamplingMaskLayer(
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
+    pointsLayer: null,
     parentLayer: null,
   } as LayerType;
 }
@@ -489,6 +502,41 @@ export function updatePolygonSymbol(
           graphic.attributes.TYPEUUID
         ] as any;
       }
+    });
+  });
+}
+
+/**
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided defaultSymbols.
+ *
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param defaultSymbols - The new default symbols.
+ */
+export function updatePointSymbol(
+  layers: LayerType[],
+  defaultSymbols: DefaultSymbolsType,
+) {
+  layers.forEach((layer) => {
+    if (layer.pointsLayer?.type !== 'graphics') return;
+
+    layer.pointsLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'point') return;
+
+      let layerType = layer.layerType;
+      if (layerType === 'VSP') layerType = 'Samples';
+      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+      // set the symbol based on sample/layer type
+      let udtSymbol: PolygonSymbol | null = null;
+      udtSymbol = defaultSymbols.symbols[layerType] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+        udtSymbol = defaultSymbols.symbols[
+          graphic.attributes.TYPEUUID
+        ] as any;
+      }
+
+      graphic.symbol = getPointSymbol(graphic, udtSymbol);
     });
   });
 }
@@ -741,4 +789,63 @@ export function getSampleTableColumns({
   }
 
   return columns;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+export function getPointSymbol(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = polygon.attributes.POINT_STYLE;
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'simple-marker',
+    color: symbolColor ? symbolColor.color : polygon.symbol.color,
+    outline: symbolColor
+      ? symbolColor.outline
+      : (polygon.symbol as any).outline,
+    style: style,
+  };
+  if (path) symbol.path = path;
+
+  return symbol;
+}
+
+/**
+ * Converts a polygon graphic to a point graphic.
+ *
+ * @param Graphic The esri graphic constructor
+ * @param polygon The polygon to be converted
+ * @returns A point graphic representation of the provided polygon
+ */
+export function convertToPoint(
+  Graphic: __esri.GraphicConstructor,
+  polygon: __esri.Graphic,
+) {
+  const symbol = getPointSymbol(polygon);
+
+  // build the graphic
+  return new Graphic({
+    attributes: polygon.attributes,
+    geometry: (polygon.geometry as any).centroid,
+    popupTemplate: polygon.popupTemplate,
+    symbol,
+  });
 }

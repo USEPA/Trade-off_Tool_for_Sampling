@@ -164,6 +164,20 @@ function MapMouseEvents({ mapView }: Props) {
 
     layer.sketchLayer.remove(sampleToDelete);
 
+    if (!layer.pointsLayer) return;
+
+    // Find the original point graphic and remove it
+    const graphicsToRemove: __esri.Graphic[] = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (
+        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        pointVersion.attributes.PERMANENT_IDENTIFIER
+      ) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
+
     // close the popup
     mapView?.popup.close();
 

@@ -35,7 +35,11 @@ import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
-import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  convertToPoint,
+  findLayerInEdits,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
   SampleIssues,
@@ -133,11 +137,13 @@ export function useStartOver() {
     mapView,
     homeWidget,
     setLayers,
+    resetDefaultSymbols,
     setEdits,
     setUrlLayers,
     setReferenceLayers,
     setPortalLayers,
     setSelectedScenario,
+    setShowAsPoints,
     setSketchLayer,
     setAoiSketchLayer,
     setUserDefinedAttributes,
@@ -154,6 +160,7 @@ export function useStartOver() {
 
     // set the layers to just the defaults
     setLayers([]);
+    resetDefaultSymbols();
     setEdits({ count: 0, edits: [] });
     setUrlLayers([]);
     setReferenceLayers([]);
@@ -173,6 +180,7 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
+    setShowAsPoints(false);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -1202,6 +1210,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
   } = useEsriModulesContext();
   const {
@@ -1252,12 +1261,19 @@ function useEditsLayerStorage() {
         visible: editsLayer.visible,
         listMode: editsLayer.listMode,
       });
+      const pointsLayer = new GraphicsLayer({
+        title: editsLayer.label,
+        id: editsLayer.uuid + '-points',
+        visible: false,
+        listMode: 'hide',
+      });
 
       const popupTemplate = getPopupTemplate(
         editsLayer.layerType,
         editsLayer.hasContaminationRan,
       );
-      const features: __esri.Graphic[] = [];
+      const polyFeatures: __esri.Graphic[] = [];
+      const pointFeatures: __esri.Graphic[] = [];
       const idsUsed: string[] = [];
       const displayedFeatures: FeatureEditsType[] = [];
 
@@ -1293,31 +1309,39 @@ function useEditsLayerStorage() {
         if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
 
         // set the symbol styles based on sample/layer type
-        let symbol = defaultSymbols.symbols[layerType];
+        let symbol = defaultSymbols.symbols[layerType] as any;
         if (
           defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
         ) {
           symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         }
 
-        features.push(
-          new Graphic({
-            attributes: { ...graphic.attributes },
-            symbol,
-            geometry: new Polygon({
-              spatialReference: {
-                wkid: 3857,
-              },
-              rings: graphic.geometry.rings,
-            }),
-            popupTemplate,
+        const poly = new Graphic({
+          attributes: { ...graphic.attributes },
+          popupTemplate,
+          symbol,
+          geometry: new Polygon({
+            spatialReference: {
+              wkid: 3857,
+            },
+            rings: graphic.geometry.rings,
           }),
-        );
+        });
+
+        polyFeatures.push(poly);
+        pointFeatures.push(convertToPoint(Graphic, poly));
       });
-      sketchLayer.addMany(features);
+      sketchLayer.addMany(polyFeatures);
+      if (
+        editsLayer.layerType === 'Samples' ||
+        editsLayer.layerType === 'VSP'
+      ) {
+        pointsLayer.addMany(pointFeatures);
+      }
 
       newLayers.push({
         id: editsLayer.id,
+        pointsId: editsLayer.pointsId,
         uuid: editsLayer.uuid,
         layerId: editsLayer.layerId,
         portalId: editsLayer.portalId,
@@ -1333,10 +1357,14 @@ function useEditsLayerStorage() {
         sort: editsLayer.sort,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
+        pointsLayer:
+          editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+            ? pointsLayer
+            : null,
         parentLayer,
       });
 
-      return sketchLayer;
+      return [sketchLayer, pointsLayer];
     }
 
     const newLayers: LayerType[] = [];
@@ -1344,7 +1372,7 @@ function useEditsLayerStorage() {
     edits.edits.forEach((editsLayer) => {
       // add layer edits directly
       if (editsLayer.type === 'layer') {
-        graphicsLayers.push(createLayer(editsLayer, newLayers));
+        graphicsLayers.push(...createLayer(editsLayer, newLayers));
       }
       // scenarios need to be added to a group layer first
       if (editsLayer.type === 'scenario') {
@@ -1358,7 +1386,7 @@ function useEditsLayerStorage() {
         // create the layers and add them to the group layer
         const scenarioLayers: __esri.GraphicsLayer[] = [];
         editsLayer.layers.forEach((layer) => {
-          scenarioLayers.push(createLayer(layer, newLayers, groupLayer));
+          scenarioLayers.push(...createLayer(layer, newLayers, groupLayer));
         });
         groupLayer.addMany(scenarioLayers);
 
@@ -1376,6 +1404,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
     defaultSymbols,
     setEdits,
@@ -2368,6 +2397,36 @@ function usePublishStorage() {
   }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
 }
 
+// Uses browser storage for holding the display mode (points or polygons) selection.
+function useDisplayModeStorage() {
+  const key = 'tots_display_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const { showAsPoints, setShowAsPoints } = React.useContext(SketchContext);
+
+  // Retreives display mode data from browser storage when the app loads
+  const [
+    localDisplayModeInitialized,
+    setLocalDisplayModeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localDisplayModeInitialized) return;
+
+    setLocalDisplayModeInitialized(true);
+
+    const displayModeStr = readFromStorage(key);
+    if (!displayModeStr) return;
+
+    const trainingMode = JSON.parse(displayModeStr);
+    setShowAsPoints(trainingMode);
+  }, [localDisplayModeInitialized, setShowAsPoints]);
+
+  React.useEffect(() => {
+    if (!localDisplayModeInitialized) return;
+
+    writeToStorage(key, showAsPoints, setOptions);
+  }, [showAsPoints, localDisplayModeInitialized, setOptions]);
+}
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -2388,4 +2447,5 @@ export function useSessionStorage() {
   useUserDefinedSampleAttributesStorage();
   useTablePanelStorage();
   usePublishStorage();
+  useDisplayModeStorage();
 }

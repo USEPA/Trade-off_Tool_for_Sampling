@@ -196,6 +196,7 @@ function EditScenario({
       const newScenario: ScenarioEditsType = {
         type: 'scenario',
         id: -1,
+        pointsId: -1,
         layerId: groupLayer.id,
         portalId: '',
         name: scenarioName,
@@ -226,6 +227,9 @@ function EditScenario({
 
       if (addDefaultSampleLayer && tempSketchLayer) {
         groupLayer.add(tempSketchLayer.sketchLayer);
+        if (tempSketchLayer.pointsLayer) {
+          groupLayer.add(tempSketchLayer.pointsLayer);
+        }
 
         // update layers (set parent layer)
         setLayers((layers) => {
@@ -442,6 +446,7 @@ function EditLayer({
       // update the title of the layer on the map
       const mapLayer = layers.find((layer) => layer.layerId === layerId);
       if (mapLayer) mapLayer.sketchLayer.title = layerName;
+      if (mapLayer?.pointsLayer) mapLayer.pointsLayer.title = layerName;
 
       // update the active sketchLayer
       setSketchLayer((sketchLayer) => {
@@ -510,6 +515,9 @@ function EditLayer({
       if (groupLayer && groupLayer.type === 'group') {
         const tempGroupLayer = groupLayer as __esri.GroupLayer;
         tempGroupLayer.add(tempLayer.sketchLayer);
+        if (tempLayer.pointsLayer) {
+          tempGroupLayer.add(tempLayer.pointsLayer);
+        }
       }
 
       // make the new layer the active sketch layer

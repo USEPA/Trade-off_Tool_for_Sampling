@@ -43,11 +43,13 @@ import {
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
+  convertToPoint,
   findLayerInEdits,
   generateUUID,
   getCurrentDateTime,
   getDefaultSamplingMaskLayer,
   getNextScenarioLayer,
+  getPointSymbol,
   getScenarios,
   getSketchableLayers,
   updateLayerEdits,
@@ -65,6 +67,20 @@ type ShapeTypeSelect = {
 type EditType = 'create' | 'edit' | 'clone' | 'view';
 
 const sketchSelectedClass = 'sketch-button-selected';
+
+const pointStyles: ShapeTypeSelect[] = [
+  { value: 'circle', label: 'Circle' },
+  { value: 'cross', label: 'Cross' },
+  { value: 'diamond', label: 'Diamond' },
+  { value: 'square', label: 'Square' },
+  { value: 'triangle', label: 'Triangle' },
+  { value: 'x', label: 'X' },
+  {
+    value:
+      'path|M17.14 3 8.86 3 3 8.86 3 17.14 8.86 23 17.14 23 23 17.14 23 8.86 17.14 3z',
+    label: 'Octagon',
+  },
+];
 
 /**
  * Determines if the desired name has already been used. If it has
@@ -684,6 +700,7 @@ function LocateSamples() {
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
+            const pointsToAdd: __esri.Graphic[] = [];
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -717,29 +734,31 @@ function LocateSamples() {
 
               // build an array of graphics to draw on the map
               results.features.forEach((feature: any) => {
-                graphicsToAdd.push(
-                  new Graphic({
-                    attributes: {
-                      ...(window as any).totsSampleAttributes[
-                        feature.attributes.TYPE
-                      ],
-                      CREATEDDATE: timestamp,
-                      DECISIONUNITUUID: sketchLayer.uuid,
-                      DECISIONUNIT: sketchLayer.label,
-                      OBJECTID: feature.attributes.OBJECTID,
-                      GLOBALID: feature.attributes.GLOBALID,
-                      PERMANENT_IDENTIFIER:
-                        feature.attributes.PERMANENT_IDENTIFIER,
-                      UPDATEDDATE: timestamp,
-                    },
-                    symbol,
-                    geometry: new Polygon({
-                      rings: feature.geometry.rings,
-                      spatialReference: results.spatialReference,
-                    }),
-                    popupTemplate,
+                const poly = new Graphic({
+                  attributes: {
+                    ...(window as any).totsSampleAttributes[
+                      feature.attributes.TYPE
+                    ],
+                    CREATEDDATE: timestamp,
+                    DECISIONUNITUUID: sketchLayer.uuid,
+                    DECISIONUNIT: sketchLayer.label,
+                    DECISIONUNITSORT: 0,
+                    OBJECTID: feature.attributes.OBJECTID,
+                    GLOBALID: feature.attributes.GLOBALID,
+                    PERMANENT_IDENTIFIER:
+                      feature.attributes.PERMANENT_IDENTIFIER,
+                    UPDATEDDATE: timestamp,
+                  },
+                  symbol,
+                  geometry: new Polygon({
+                    rings: feature.geometry.rings,
+                    spatialReference: results.spatialReference,
                   }),
-                );
+                  popupTemplate,
+                });
+
+                graphicsToAdd.push(poly);
+                pointsToAdd.push(convertToPoint(Graphic, poly));
               });
             }
 
@@ -749,6 +768,8 @@ function LocateSamples() {
               const collection = new Collection<__esri.Graphic>();
               collection.addMany(graphicsToAdd);
               sketchLayer.sketchLayer.graphics.addMany(collection);
+
+              sketchLayer.pointsLayer?.addMany(pointsToAdd);
 
               let editsCopy = updateLayerEdits({
                 edits,
@@ -841,6 +862,9 @@ function LocateSamples() {
   const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
     null,
   );
+  const [pointStyle, setPointStyle] = React.useState<ShapeTypeSelect | null>(
+    null,
+  );
   const [ttpk, setTtpk] = React.useState<string | null>('');
   const [ttc, setTtc] = React.useState<string | null>('');
   const [tta, setTta] = React.useState<string | null>('');
@@ -864,6 +888,7 @@ function LocateSamples() {
     if (editType === 'create') {
       setEditingStatus(editType);
       setShapeType(null);
+      setPointStyle(null);
       setTtpk('');
       setTtc('');
       setTta('');
@@ -913,6 +938,11 @@ function LocateSamples() {
     setAlc(attributes.ALC ? attributes.ALC.toString() : null);
     setAmc(attributes.AMC ? attributes.AMC.toString() : null);
     setSampleTypeName(sampleTypeName);
+
+    const pointStyle = pointStyles.find(
+      (s) => s.value === attributes.POINT_STYLE,
+    );
+    setPointStyle(pointStyle || null);
   }
 
   // Validates the user input.
@@ -1015,10 +1045,12 @@ function LocateSamples() {
     graphics,
     newAttributes,
     oldType,
+    symbol = null,
   }: {
     graphics: __esri.Graphic[];
     newAttributes: any;
     oldType: string;
+    symbol?: PolygonSymbol | null;
   }) {
     const editedGraphics: __esri.Graphic[] = [];
     graphics.forEach((graphic: __esri.Graphic) => {
@@ -1044,6 +1076,7 @@ function LocateSamples() {
         graphic.attributes.WWPS = newAttributes.WWPS;
         graphic.attributes.ALC = newAttributes.ALC;
         graphic.attributes.AMC = newAttributes.AMC;
+        graphic.attributes.POINT_STYLE = newAttributes.POINT_STYLE;
 
         // redraw the graphic if the width changed or if the graphic went from a
         // polygon to a point
@@ -1053,6 +1086,11 @@ function LocateSamples() {
         ) {
           // convert the geometry _esriPolygon if it is missing stuff
           createBuffer(graphic as __esri.Graphic);
+        }
+
+        // update the point symbol if necessary
+        if (graphic.geometry.type === 'point') {
+          graphic.symbol = getPointSymbol(graphic, symbol);
         }
 
         editedGraphics.push(graphic);
@@ -1141,6 +1179,8 @@ function LocateSamples() {
     }
   }, [defaultSymbols, userDefinedSampleType]);
 
+  pointStyles.sort((a, b) => a.value.localeCompare(b.value));
+
   return (
     <div css={panelContainer}>
       <div>
@@ -1187,6 +1227,11 @@ function LocateSamples() {
                 setEdits(editsCopy);
 
                 sketchVM.layer.removeAll();
+                (sketchVM.layer as any).parent.layers.forEach((layer: any) => {
+                  if (layer.id === sketchVM.layer.id + '-points') {
+                    layer.removeAll();
+                  }
+                });
               }}
             >
               <i className="fas fa-trash-alt" />
@@ -1536,6 +1581,12 @@ function LocateSamples() {
                               sketchLayer.sketchLayer,
                             );
                             map.add(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer) {
+                              sketchLayer.parentLayer?.remove(
+                                sketchLayer.pointsLayer,
+                              );
+                              map.add(sketchLayer.pointsLayer);
+                            }
 
                             // update layers (clear parent layer)
                             setLayers((layers) => {
@@ -1607,6 +1658,9 @@ function LocateSamples() {
 
                             // add the layer to the parent group layer
                             groupLayer.add(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer) {
+                              groupLayer.add(sketchLayer.pointsLayer);
+                            }
 
                             // update layers (set parent layer)
                             setLayers((layers) => {
@@ -2341,14 +2395,28 @@ function LocateSamples() {
                   />
                   {editingStatus && (
                     <div>
-                      {udtSymbol && (
-                        <ColorPicker
-                          symbol={udtSymbol}
-                          onChange={(symbol: PolygonSymbol) => {
-                            setUdtSymbol(symbol);
-                          }}
-                        />
-                      )}
+                      <ColorPicker
+                        symbol={
+                          editingStatus === 'create' || !udtSymbol
+                            ? defaultSymbols.symbols['Samples']
+                            : udtSymbol
+                        }
+                        onChange={(symbol: PolygonSymbol) => {
+                          setUdtSymbol(symbol);
+                        }}
+                      />
+                      <label htmlFor="point-style-select-input">
+                        Point Style
+                      </label>
+                      <Select
+                        id="point-style-select"
+                        inputId="point-style-select-input"
+                        css={fullWidthSelectStyles}
+                        value={pointStyle}
+                        isDisabled={editingStatus === 'view'}
+                        onChange={(ev) => setPointStyle(ev as ShapeTypeSelect)}
+                        options={pointStyles}
+                      />
                       <div>
                         <label htmlFor="sample-type-name-input">
                           Sample Type Name
@@ -2547,18 +2615,19 @@ function LocateSamples() {
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
-                              if (udtSymbol)
-                                setDefaultSymbolSingle(
-                                  sampleTypeName,
-                                  udtSymbol,
-                                );
-                              if (editingStatus === 'view') return;
-
                               const typeUuid =
-                                editingStatus === 'edit' &&
+                                (editingStatus === 'edit' ||
+                                  editingStatus === 'view') &&
                                 userDefinedSampleType?.value
                                   ? userDefinedSampleType.value
                                   : generateUUID();
+
+                              if (udtSymbol) {
+                                setDefaultSymbolSingle(typeUuid, udtSymbol);
+                              }
+
+                              if (editingStatus === 'view') return;
+
                               const isValid = validateEdits();
                               const predefinedEdited =
                                 editingStatus === 'edit' &&
@@ -2586,6 +2655,7 @@ function LocateSamples() {
                                   TYPEUUID: typeUuid,
                                   TYPE: sampleTypeName,
                                   ShapeType: shapeType.value,
+                                  POINT_STYLE: pointStyle?.value || 'circle',
                                   TTPK: ttpk ? Number(ttpk) : null,
                                   TTC: ttc ? Number(ttc) : null,
                                   TTA: tta ? Number(tta) : null,
@@ -2610,7 +2680,7 @@ function LocateSamples() {
                                   ORGANIZATION: null,
                                   DECISIONUNITUUID: null,
                                   DECISIONUNIT: null,
-                                  DECISIONUNITSORT: null,
+                                  DECISIONUNITSORT: 0,
                                 };
                                 if (
                                   userDefinedAttributes.sampleTypes.hasOwnProperty(
@@ -2620,12 +2690,14 @@ function LocateSamples() {
                                   const sampleType =
                                     userDefinedAttributes.sampleTypes[typeUuid]
                                       .attributes;
-                                  if (sampleType.OBJECTID)
+                                  if (sampleType.OBJECTID) {
                                     newAttributes.OBJECTID =
                                       sampleType.OBJECTID;
-                                  if (sampleType.GLOBALID)
+                                  }
+                                  if (sampleType.GLOBALID) {
                                     newAttributes.GLOBALID =
                                       sampleType.GLOBALID;
+                                  }
                                 }
 
                                 // add/update the sample's attributes
@@ -2669,9 +2741,9 @@ function LocateSamples() {
 
                                 // add the new option to the dropdown if it doesn't exist
                                 if (
-                                  (editingStatus !== 'edit' ||
-                                    (editingStatus === 'edit' &&
-                                      !userDefinedSampleType?.isPredefined))
+                                  editingStatus !== 'edit' ||
+                                  (editingStatus === 'edit' &&
+                                    !userDefinedSampleType?.isPredefined)
                                 ) {
                                   setUserDefinedOptions((options) => {
                                     if (editingStatus !== 'edit') {
@@ -2720,6 +2792,14 @@ function LocateSamples() {
                                       newAttributes,
                                       oldType,
                                     });
+                                    if (layer.pointsLayer) {
+                                      updateAttributes({
+                                        graphics: layer.pointsLayer.graphics.toArray(),
+                                        newAttributes,
+                                        oldType,
+                                        symbol: udtSymbol,
+                                      });
+                                    }
 
                                     if (editedGraphics.length > 0) {
                                       const collection = new Collection<__esri.Graphic>();

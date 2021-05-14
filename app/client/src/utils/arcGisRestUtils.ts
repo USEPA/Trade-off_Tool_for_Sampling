@@ -1,5 +1,9 @@
 // types
-import { LayerEditsType, ServiceMetaDataType } from 'types/Edits';
+import {
+  FeatureEditsType,
+  LayerEditsType,
+  ServiceMetaDataType,
+} from 'types/Edits';
 import { LayerType } from 'types/Layer';
 // config
 import { defaultLayerProps, defaultTableProps } from 'config/layerProps';
@@ -374,6 +378,85 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
 }
 
 /**
+ * Builds the renderer parameter for publishing and gets the extent
+ * of all of the graphics in the layer.
+ *
+ * @param layer The layer to build the renderer for
+ * @returns The extent of graphics, the renderers for points and polygons
+ */
+function buildRendererParams(layer: LayerType) {
+  // get the current extent, so we can go back
+  let graphicsExtent: __esri.Extent | null = null;
+
+  const uniqueValueInfosPolygons: any[] = [];
+  const typesAdded: string[] = [];
+  const uniqueValueInfosPoints: any[] = [];
+
+  // get the extent from the array of graphics
+  if (layer.sketchLayer.type === 'graphics') {
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      graphicsExtent === null
+        ? (graphicsExtent = graphic.geometry.extent)
+        : graphicsExtent.union(graphic.geometry.extent);
+
+      // build the renderer to publish
+      const attributes = graphic.attributes;
+      if (!typesAdded.includes(attributes.TYPEUUID)) {
+        typesAdded.push(attributes.TYPEUUID);
+
+        const tempSymbol = {
+          color: graphic.symbol.color,
+          outline: (graphic.symbol as any).outline,
+        };
+
+        // build the polygon renderer
+        uniqueValueInfosPolygons.push({
+          value: attributes.TYPEUUID,
+          label: attributes.TYPE,
+          symbol: {
+            type: 'esriSFS',
+            style: 'esriSFSSolid',
+            ...tempSymbol,
+          },
+        });
+
+        // build the points renderer
+        const pointStyle = attributes.POINT_STYLE || 'circle';
+        const isPath = pointStyle.includes('path|');
+        const style: string =
+          'esriSMS' +
+          (isPath
+            ? 'Path'
+            : pointStyle.charAt(0).toUpperCase() + pointStyle.slice(1));
+        const symbol: any = {
+          type: 'esriSMS',
+          style,
+          ...tempSymbol,
+        };
+        if (isPath) {
+          symbol.path = attributes.POINT_STYLE.replace('path|', '');
+        }
+
+        uniqueValueInfosPoints.push({
+          value: attributes.TYPEUUID,
+          label: attributes.TYPE,
+          symbol,
+        });
+      }
+    });
+  }
+  if (layer.sketchLayer.type === 'feature') {
+    graphicsExtent = layer.sketchLayer.fullExtent;
+  }
+
+  return {
+    graphicsExtent,
+    uniqueValueInfosPolygons,
+    uniqueValueInfosPoints,
+  };
+}
+
+/**
  * Used for adding a feature layer to a hosted feature service on
  * ArcGIS Online
  *
@@ -402,26 +485,25 @@ export function createFeatureLayers(
       // don't duplicate existing layers
       if (layer.id > -1) return;
 
-      // get the current extent, so we can go back
-      let graphicsExtent: __esri.Extent | null = null;
+      const {
+        graphicsExtent,
+        uniqueValueInfosPolygons,
+        uniqueValueInfosPoints,
+      } = buildRendererParams(layer);
 
-      // get the extent from the array of graphics
-      if (layer.sketchLayer.type === 'graphics') {
-        layer.sketchLayer.graphics.forEach((graphic) => {
-          graphicsExtent === null
-            ? (graphicsExtent = graphic.geometry.extent)
-            : graphicsExtent.union(graphic.geometry.extent);
-        });
-      }
-      if (layer.sketchLayer.type === 'feature') {
-        graphicsExtent = layer.sketchLayer.fullExtent;
-      }
-
+      // add the polygon representation
       layersParams.push({
         ...defaultLayerProps,
         name: serviceMetaData.label,
         description: serviceMetaData.description,
         extent: graphicsExtent,
+        drawingInfo: {
+          renderer: {
+            type: 'uniqueValue',
+            field1: 'TYPEUUID',
+            uniqueValueInfos: uniqueValueInfosPolygons,
+          },
+        },
 
         // add a custom type for determining which layers in a feature service
         // are the sample layers. All feature services made through TOTS should only
@@ -439,6 +521,42 @@ export function createFeatureLayers(
                 {
                   id: 'epa-tots-vsp-layer',
                   name: 'epa-tots-vsp-layer',
+                },
+              ]
+            : null,
+      });
+
+      // add the point representation
+      layersParams.push({
+        ...defaultLayerProps,
+        geometryType: 'esriGeometryPoint',
+        name: serviceMetaData.label + '-points',
+        description: serviceMetaData.description,
+        extent: graphicsExtent,
+        drawingInfo: {
+          renderer: {
+            type: 'uniqueValue',
+            field1: 'TYPEUUID',
+            uniqueValueInfos: uniqueValueInfosPoints,
+          },
+        },
+
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-points-layer',
+                  name: 'epa-tots-sample-points-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-points-layer',
+                  name: 'epa-tots-vsp-points-layer',
                 },
               ]
             : null,
@@ -521,6 +639,95 @@ export function createFeatureTables(
     fetchPost(`${adminServiceUrl}/addToDefinition`, data)
       .then((res) => resolve(res))
       .catch((err) => reject(err));
+  });
+}
+
+/**
+ * Updates the renderers of the feature layers.
+ *
+ * @param portal The portal object to create feature layers on
+ * @param serviceUrl The hosted feature service to save layers to
+ * @param layers The layers to be updated
+ * @param createResponse The response from creating layers
+ * @returns A promise that resolves to the layers that were updated
+ */
+export function updateFeatureLayers(
+  portal: __esri.Portal,
+  serviceUrl: string,
+  layers: LayerType[],
+  createResponse: any,
+) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    const requests: any[] = [];
+    if (layers.length === 0 || createResponse.layers.length > 0) {
+      resolve({
+        success: true,
+        layers: [],
+      });
+      return;
+    }
+
+    // inject /admin into rest/services to be able to call
+    const adminServiceUrl = serviceUrl.replace(
+      'rest/services',
+      'rest/admin/services',
+    );
+
+    layers.forEach((layer) => {
+      const {
+        uniqueValueInfosPolygons,
+        uniqueValueInfosPoints,
+      } = buildRendererParams(layer);
+
+      // update the polygon representation
+      requests.push(
+        fetchPost(`${adminServiceUrl}/${layer.id}/updateDefinition`, {
+          f: 'json',
+          token: tempPortal.credential.token,
+          updateDefinition: {
+            drawingInfo: {
+              renderer: {
+                type: 'uniqueValue',
+                field1: 'TYPEUUID',
+                uniqueValueInfos: uniqueValueInfosPolygons,
+              },
+            },
+          },
+        }),
+      );
+
+      // update the point representation
+      requests.push(
+        fetchPost(`${adminServiceUrl}/${layer.pointsId}/updateDefinition`, {
+          f: 'json',
+          token: tempPortal.credential.token,
+          updateDefinition: {
+            drawingInfo: {
+              renderer: {
+                type: 'uniqueValue',
+                field1: 'TYPEUUID',
+                uniqueValueInfos: uniqueValueInfosPoints,
+              },
+            },
+          },
+        }),
+      );
+    });
+
+    Promise.all(requests)
+      .then((res) =>
+        resolve({
+          success: true,
+          res: res,
+        }),
+      )
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -646,6 +853,44 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 }
 
 /**
+ * Adds point versions of features to the provided array. This is to support publishing a point
+ * version of the layers being published.
+ *
+ * @param layer The layer the graphic is on
+ * @param array The array to add the point version of graphic to
+ * @param item The edits item that is being looked for
+ * @param forDeletes True means this is for the deletes change type which is just the global id
+ * @returns
+ */
+function addPointFeatures(
+  layer: LayerType,
+  array: any[],
+  item: FeatureEditsType,
+  forDeletes: boolean = false,
+) {
+  // find the graphic
+  const graphic = layer.pointsLayer?.graphics.find(
+    (graphic) =>
+      graphic.attributes?.PERMANENT_IDENTIFIER ===
+      item.attributes.PERMANENT_IDENTIFIER,
+  );
+  if (!graphic) return;
+
+  // Add the globalids of graphics to delete
+  if (forDeletes) {
+    array.push(graphic.attributes.GLOBALID);
+    return;
+  }
+
+  // Add full feature for graphics to add or update
+  array.push({
+    attributes: graphic.attributes,
+    geometry: graphic.geometry,
+    symbol: graphic.symbol,
+  });
+}
+
+/**
  * Applys edits to a layer or layers within a hosted feature service
  * on ArcGIS Online.
  *
@@ -658,10 +903,12 @@ export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
 export function applyEdits({
   portal,
   serviceUrl,
+  layers,
   edits,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
+  layers: LayerType[];
   edits: LayerEditsType[];
 }) {
   return new Promise((resolve, reject) => {
@@ -679,6 +926,37 @@ export function applyEdits({
         adds: layerEdits.adds,
         updates: layerEdits.updates,
         deletes,
+      });
+
+      // find the points version of the layer
+      const mapLayer = layers.find(
+        (mapLayer) => mapLayer.layerId === layerEdits?.layerId,
+      );
+      if (!mapLayer?.pointsLayer) return;
+
+      // Loop through the above changes and build a points version
+      const pointsAdds: FeatureEditsType[] = [];
+      const pointsUpdates: FeatureEditsType[] = [];
+      const pointsDeletes: FeatureEditsType[] = [];
+      layerEdits.adds.forEach((item) => {
+        addPointFeatures(mapLayer, pointsAdds, item);
+      });
+      layerEdits.updates.forEach((item) => {
+        addPointFeatures(mapLayer, pointsUpdates, item);
+      });
+      layerEdits.deletes.forEach((item) => {
+        addPointFeatures(mapLayer, pointsDeletes, {
+          attributes: item,
+          geometry: {},
+        });
+      });
+
+      // Push the points version into the changes array
+      changes.push({
+        id: mapLayer.pointsId,
+        adds: pointsAdds,
+        updates: pointsUpdates,
+        deletes: pointsDeletes,
       });
     });
 
@@ -775,28 +1053,75 @@ export function publish({
     getFeatureService(portal, serviceMetaData)
       .then((service: any) => {
         const serviceUrl: string = service.portalService.url;
+        const portalId: string = service.portalService.id;
+        const idMapping: any = {};
         // create the layers
         createFeatureLayers(portal, serviceUrl, layers, serviceMetaData)
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
-              const layerEdits = edits.find(
-                (layerEdit) =>
-                  layerEdit.id === -1 && serviceMetaData.label === layer.name,
-              );
+              const isPoints = layer.name.endsWith('-points');
+
+              const layerEdits = edits.find((layerEdit) => {
+                return (
+                  ((!isPoints && layerEdit.id === -1) || isPoints) &&
+                  (serviceMetaData.label === layer.name ||
+                    `${serviceMetaData.label}-points` === layer.name)
+                );
+              });
 
               const mapLayer = layers.find(
-                (mapLayer) =>
-                  mapLayer.id === -1 && layerEdits?.layerId === layer.layerId,
+                (mapLayer) => mapLayer.layerId === layerEdits?.layerId,
               );
 
-              if (layerEdits) layerEdits.id = layer.id;
-              if (mapLayer) mapLayer.id = layer.id;
+              // update the various ids (id, pointsId, portalId)
+              if (layerEdits) {
+                if (!isPoints) {
+                  layerEdits.id = layer.id;
+                  layerEdits.portalId = portalId;
+                }
+
+                // Figure out how to get the points version of the id
+                if (isPoints && layerEdits) {
+                  layerEdits.pointsId = layer.id;
+                }
+              }
+              if (mapLayer) {
+                if (!isPoints) {
+                  mapLayer.id = layer.id;
+                  mapLayer.portalId = portalId;
+                }
+
+                // Figure out how to get the points version of the id
+                if (isPoints && mapLayer.pointsLayer) {
+                  mapLayer.pointsId = layer.id;
+                }
+
+                if (!idMapping.hasOwnProperty(mapLayer.uuid)) {
+                  idMapping[mapLayer.uuid] = { portalId };
+                }
+                if (isPoints) idMapping[mapLayer.uuid].pointsId = layer.id;
+                else idMapping[mapLayer.uuid].id = layer.id;
+              }
             });
 
-            // publish the edits
-            applyEdits({ portal, serviceUrl, edits })
-              .then((res) => resolve(res))
+            // update the renderers
+            updateFeatureLayers(portal, serviceUrl, layers, res)
+              .then((updateRes) => {
+                // publish the edits
+                applyEdits({ portal, serviceUrl, layers, edits })
+                  .then((res) =>
+                    resolve({
+                      portalId,
+                      idMapping,
+                      edits: res,
+                    }),
+                  )
+                  .catch((err) => {
+                    window.logErrorToGa(err);
+                    reject(err);
+                  });
+              })
               .catch((err) => {
                 window.logErrorToGa(err);
                 reject(err);
