@@ -507,6 +507,41 @@ export function updatePolygonSymbol(
 }
 
 /**
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided defaultSymbols.
+ *
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param defaultSymbols - The new default symbols.
+ */
+export function updatePointSymbol(
+  layers: LayerType[],
+  defaultSymbols: DefaultSymbolsType,
+) {
+  layers.forEach((layer) => {
+    if (layer.pointsLayer?.type !== 'graphics') return;
+
+    layer.pointsLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'point') return;
+
+      let layerType = layer.layerType;
+      if (layerType === 'VSP') layerType = 'Samples';
+      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+      // set the symbol based on sample/layer type
+      let udtSymbol: PolygonSymbol | null = null;
+      udtSymbol = defaultSymbols.symbols[layerType] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+        udtSymbol = defaultSymbols.symbols[
+          graphic.attributes.TYPEUUID
+        ] as any;
+      }
+
+      graphic.symbol = getPointSymbol(graphic, udtSymbol);
+    });
+  });
+}
+
+/**
  * Gets an array of layers, included in the provided edits parameter,
  * that can be used with the sketch widget. The search will look in
  * child layers of scenarios as well.

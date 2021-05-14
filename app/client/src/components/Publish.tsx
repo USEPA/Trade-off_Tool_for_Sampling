@@ -437,6 +437,8 @@ function Publish() {
       },
     })
       .then((res: any) => {
+        const portalId = res.portalId;
+
         // get totals
         const totals = {
           added: 0,
@@ -446,167 +448,172 @@ function Publish() {
         };
         const changes: PublishResults = {};
 
-        const layerRes: any = res[0];
-        // need to loop through each array and check the success flag
-        if (layerRes.addResults) {
-          layerRes.addResults.forEach((item: any, index: number) => {
-            item.success ? (totals.added += 1) : (totals.failed += 1);
+        res.edits.forEach((layerRes: any, index: number) => {
+          // odd layers are points layers so ignore those
+          const isOdd = index % 2 === 1;
+          if (isOdd) return;
 
-            // update the edits arrays
-            const origItem = layerEdits.adds[index];
-            const decisionUUID = origItem.attributes.DECISIONUNITUUID;
-            if (item.success) {
-              origItem.attributes.OBJECTID = item.objectId;
-              origItem.attributes.GLOBALID = item.globalId;
+          // need to loop through each array and check the success flag
+          if (layerRes.addResults) {
+            layerRes.addResults.forEach((item: any, index: number) => {
+              item.success ? (totals.added += 1) : (totals.failed += 1);
 
-              // update the published for this layer
-              if (changes.hasOwnProperty(decisionUUID)) {
-                changes[decisionUUID].published.push(origItem);
+              // update the edits arrays
+              const origItem = layerEdits.adds[index];
+              const decisionUUID = origItem.attributes.DECISIONUNITUUID;
+              if (item.success) {
+                origItem.attributes.OBJECTID = item.objectId;
+                origItem.attributes.GLOBALID = item.globalId;
+
+                // update the published for this layer
+                if (changes.hasOwnProperty(decisionUUID)) {
+                  changes[decisionUUID].published.push(origItem);
+                } else {
+                  changes[decisionUUID] = {
+                    adds: [],
+                    updates: [],
+                    deletes: [],
+                    published: [origItem],
+                  };
+                }
+
+                // find the tots layer
+                const mapLayer = layers.find(
+                  (layer) => layer.uuid === decisionUUID,
+                );
+
+                // update the graphic on the map
+                if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
+                  const graphic = mapLayer.sketchLayer.graphics.find(
+                    (graphic) =>
+                      graphic.attributes.PERMANENT_IDENTIFIER ===
+                      origItem.attributes.PERMANENT_IDENTIFIER,
+                  );
+
+                  if (graphic) {
+                    graphic.attributes.OBJECTID = item.objectId;
+                    graphic.attributes.GLOBALID = item.globalId;
+                  }
+                }
               } else {
-                changes[decisionUUID] = {
-                  adds: [],
-                  updates: [],
-                  deletes: [],
-                  published: [origItem],
-                };
+                // update the adds for this layer
+                if (changes.hasOwnProperty(decisionUUID)) {
+                  changes[decisionUUID].adds.push(origItem);
+                } else {
+                  changes[decisionUUID] = {
+                    adds: [origItem],
+                    updates: [],
+                    deletes: [],
+                    published: [],
+                  };
+                }
               }
+            });
+          }
+          if (layerRes.updateResults) {
+            layerRes.updateResults.forEach((item: any, index: number) => {
+              item.success ? (totals.updated += 1) : (totals.failed += 1);
 
-              // find the tots layer
-              const mapLayer = layers.find(
-                (layer) => layer.uuid === decisionUUID,
-              );
+              // update the edits arrays
+              const origItem = layerEdits.updates[index];
+              const decisionUUID = origItem.attributes.DECISIONUNITUUID;
+              if (item.success) {
+                origItem.attributes.OBJECTID = item.objectId;
+                origItem.attributes.GLOBALID = item.globalId;
 
-              // update the graphic on the map
-              if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
-                const graphic = mapLayer.sketchLayer.graphics.find(
-                  (graphic) =>
-                    graphic.attributes.PERMANENT_IDENTIFIER ===
+                // get the publish items for this layer
+                let layerNewPublished = changes[decisionUUID].published;
+
+                // find the item in published
+                const index = layerNewPublished.findIndex(
+                  (pubItem) =>
+                    pubItem.attributes.PERMANENT_IDENTIFIER ===
                     origItem.attributes.PERMANENT_IDENTIFIER,
                 );
 
-                if (graphic) {
-                  graphic.attributes.OBJECTID = item.objectId;
-                  graphic.attributes.GLOBALID = item.globalId;
+                // update the item in newPublished
+                if (index > -1) {
+                  changes[decisionUUID].published = [
+                    ...layerNewPublished.slice(0, index),
+                    origItem,
+                    ...layerNewPublished.slice(index + 1),
+                  ];
                 }
-              }
-            } else {
-              // update the adds for this layer
-              if (changes.hasOwnProperty(decisionUUID)) {
-                changes[decisionUUID].adds.push(origItem);
-              } else {
-                changes[decisionUUID] = {
-                  adds: [origItem],
-                  updates: [],
-                  deletes: [],
-                  published: [],
-                };
-              }
-            }
-          });
-        }
-        if (layerRes.updateResults) {
-          layerRes.updateResults.forEach((item: any, index: number) => {
-            item.success ? (totals.updated += 1) : (totals.failed += 1);
 
-            // update the edits arrays
-            const origItem = layerEdits.updates[index];
-            const decisionUUID = origItem.attributes.DECISIONUNITUUID;
-            if (item.success) {
-              origItem.attributes.OBJECTID = item.objectId;
-              origItem.attributes.GLOBALID = item.globalId;
-
-              // get the publish items for this layer
-              let layerNewPublished = changes[decisionUUID].published;
-
-              // find the item in published
-              const index = layerNewPublished.findIndex(
-                (pubItem) =>
-                  pubItem.attributes.PERMANENT_IDENTIFIER ===
-                  origItem.attributes.PERMANENT_IDENTIFIER,
-              );
-
-              // update the item in newPublished
-              if (index > -1) {
-                changes[decisionUUID].published = [
-                  ...layerNewPublished.slice(0, index),
-                  origItem,
-                  ...layerNewPublished.slice(index + 1),
-                ];
-              }
-
-              // find the tots layer
-              const mapLayer = layers.find(
-                (layer) => layer.uuid === decisionUUID,
-              );
-
-              // update the graphic on the map
-              if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
-                const graphic = mapLayer.sketchLayer.graphics.find(
-                  (graphic) =>
-                    graphic.attributes.PERMANENT_IDENTIFIER ===
-                    origItem.attributes.PERMANENT_IDENTIFIER,
+                // find the tots layer
+                const mapLayer = layers.find(
+                  (layer) => layer.uuid === decisionUUID,
                 );
 
-                if (graphic) {
-                  graphic.attributes.OBJECTID = item.objectId;
-                  graphic.attributes.GLOBALID = item.globalId;
+                // update the graphic on the map
+                if (mapLayer && mapLayer.sketchLayer.type === 'graphics') {
+                  const graphic = mapLayer.sketchLayer.graphics.find(
+                    (graphic) =>
+                      graphic.attributes.PERMANENT_IDENTIFIER ===
+                      origItem.attributes.PERMANENT_IDENTIFIER,
+                  );
+
+                  if (graphic) {
+                    graphic.attributes.OBJECTID = item.objectId;
+                    graphic.attributes.GLOBALID = item.globalId;
+                  }
+                }
+              } else {
+                // update the updates for this layer
+                if (changes.hasOwnProperty(decisionUUID)) {
+                  changes[decisionUUID].updates.push(origItem);
+                } else {
+                  changes[decisionUUID] = {
+                    adds: [],
+                    updates: [origItem],
+                    deletes: [],
+                    published: [],
+                  };
                 }
               }
-            } else {
-              // update the updates for this layer
-              if (changes.hasOwnProperty(decisionUUID)) {
-                changes[decisionUUID].updates.push(origItem);
+            });
+          }
+          if (layerRes.deleteResults) {
+            layerRes.deleteResults.forEach((item: any, index: number) => {
+              item.success ? (totals.deleted += 1) : (totals.failed += 1);
+
+              // update the edits delete array
+              const origItem = layerEdits.deletes[index];
+              const decisionUUID = origItem.DECISIONUNITUUID;
+              if (item.success) {
+                // get the publish items for this layer
+                let layerNewPublished = changes[decisionUUID].published;
+
+                // find the item in published
+                const pubIndex = layerNewPublished.findIndex(
+                  (pubItem) =>
+                    pubItem.attributes.PERMANENT_IDENTIFIER ===
+                    origItem.PERMANENT_IDENTIFIER,
+                );
+
+                // update the item in newPublished
+                if (pubIndex > -1) {
+                  changes[decisionUUID].published = [
+                    ...layerNewPublished.slice(0, pubIndex),
+                    ...layerNewPublished.slice(pubIndex + 1),
+                  ];
+                }
               } else {
-                changes[decisionUUID] = {
-                  adds: [],
-                  updates: [origItem],
-                  deletes: [],
-                  published: [],
-                };
+                // update the updates for this layer
+                if (changes.hasOwnProperty(decisionUUID)) {
+                  changes[decisionUUID].deletes.push(origItem);
+                } else {
+                  changes[decisionUUID] = {
+                    adds: [],
+                    updates: [],
+                    deletes: [origItem],
+                    published: [],
+                  };
+                }
               }
-            }
-          });
-        }
-        if (layerRes.deleteResults) {
-          layerRes.deleteResults.forEach((item: any, index: number) => {
-            item.success ? (totals.deleted += 1) : (totals.failed += 1);
-
-            // update the edits delete array
-            const origItem = layerEdits.deletes[index];
-            const decisionUUID = origItem.DECISIONUNITUUID;
-            if (item.success) {
-              // get the publish items for this layer
-              let layerNewPublished = changes[decisionUUID].published;
-
-              // find the item in published
-              const pubIndex = layerNewPublished.findIndex(
-                (pubItem) =>
-                  pubItem.attributes.PERMANENT_IDENTIFIER ===
-                  origItem.PERMANENT_IDENTIFIER,
-              );
-
-              // update the item in newPublished
-              if (pubIndex > -1) {
-                changes[decisionUUID].published = [
-                  ...layerNewPublished.slice(0, pubIndex),
-                  ...layerNewPublished.slice(pubIndex + 1),
-                ];
-              }
-            } else {
-              // update the updates for this layer
-              if (changes.hasOwnProperty(decisionUUID)) {
-                changes[decisionUUID].deletes.push(origItem);
-              } else {
-                changes[decisionUUID] = {
-                  adds: [],
-                  updates: [],
-                  deletes: [origItem],
-                  published: [],
-                };
-              }
-            }
-          });
-        }
+            });
+          }
+        });
 
         // create the message string for each type of change (add, update and delete)
         const successParts = [];
@@ -649,13 +656,33 @@ function Publish() {
         setEdits((edits) => {
           const editsScenario = edits.edits[scenarioIndex] as ScenarioEditsType;
           editsScenario.status = 'published';
+          editsScenario.portalId = portalId;
 
           editsScenario.layers.forEach((editedLayer) => {
+            // update the ids
+            if (res.idMapping.hasOwnProperty(editedLayer.uuid)) {
+              editedLayer.portalId = portalId;
+              editedLayer.id = res.idMapping[editedLayer.uuid].id;
+              editedLayer.pointsId = res.idMapping[editedLayer.uuid].pointsId;
+              editsScenario.id = editedLayer.id;
+              editsScenario.pointsId = editedLayer.pointsId;
+            }
+
+            const oldPublished = editedLayer.published.filter((x) => {
+              const idx = editedLayer.deletes.findIndex((y) => 
+                y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER
+              );
+              return idx === -1;
+            });
+
             const edits = changes[editedLayer.uuid];
             editedLayer.adds = edits.adds;
             editedLayer.updates = edits.updates;
+            editedLayer.published = [
+              ...oldPublished,
+              ...edits.published,
+            ];
             editedLayer.deletes = edits.deletes;
-            editedLayer.published = edits.published;
           });
 
           return {
@@ -673,10 +700,19 @@ function Publish() {
           layers.map((layer) => {
             if (!changes.hasOwnProperty(layer.uuid)) return layer;
 
-            return {
+            const updatedLayer: LayerType = {
               ...layer,
               status: 'published',
+              portalId,
             };
+
+            // update the ids
+            if (res.idMapping.hasOwnProperty(layer.uuid)) {
+              updatedLayer.id = res.idMapping[layer.uuid].id;
+              updatedLayer.pointsId = res.idMapping[layer.uuid].pointsId;
+            }
+
+            return updatedLayer;
           }),
         );
       })

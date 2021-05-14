@@ -378,6 +378,85 @@ export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
 }
 
 /**
+ * Builds the renderer parameter for publishing and gets the extent
+ * of all of the graphics in the layer.
+ *
+ * @param layer The layer to build the renderer for
+ * @returns The extent of graphics, the renderers for points and polygons
+ */
+function buildRendererParams(layer: LayerType) {
+  // get the current extent, so we can go back
+  let graphicsExtent: __esri.Extent | null = null;
+
+  const uniqueValueInfosPolygons: any[] = [];
+  const typesAdded: string[] = [];
+  const uniqueValueInfosPoints: any[] = [];
+
+  // get the extent from the array of graphics
+  if (layer.sketchLayer.type === 'graphics') {
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      graphicsExtent === null
+        ? (graphicsExtent = graphic.geometry.extent)
+        : graphicsExtent.union(graphic.geometry.extent);
+
+      // build the renderer to publish
+      const attributes = graphic.attributes;
+      if (!typesAdded.includes(attributes.TYPEUUID)) {
+        typesAdded.push(attributes.TYPEUUID);
+
+        const tempSymbol = {
+          color: graphic.symbol.color,
+          outline: (graphic.symbol as any).outline,
+        };
+
+        // build the polygon renderer
+        uniqueValueInfosPolygons.push({
+          value: attributes.TYPEUUID,
+          label: attributes.TYPE,
+          symbol: {
+            type: 'esriSFS',
+            style: 'esriSFSSolid',
+            ...tempSymbol,
+          },
+        });
+
+        // build the points renderer
+        const pointStyle = attributes.POINT_STYLE || 'circle';
+        const isPath = pointStyle.includes('path|');
+        const style: string =
+          'esriSMS' +
+          (isPath
+            ? 'Path'
+            : pointStyle.charAt(0).toUpperCase() + pointStyle.slice(1));
+        const symbol: any = {
+          type: 'esriSMS',
+          style,
+          ...tempSymbol,
+        };
+        if (isPath) {
+          symbol.path = attributes.POINT_STYLE.replace('path|', '');
+        }
+
+        uniqueValueInfosPoints.push({
+          value: attributes.TYPEUUID,
+          label: attributes.TYPE,
+          symbol,
+        });
+      }
+    });
+  }
+  if (layer.sketchLayer.type === 'feature') {
+    graphicsExtent = layer.sketchLayer.fullExtent;
+  }
+
+  return {
+    graphicsExtent,
+    uniqueValueInfosPolygons,
+    uniqueValueInfosPoints,
+  };
+}
+
+/**
  * Used for adding a feature layer to a hosted feature service on
  * ArcGIS Online
  *
@@ -406,64 +485,11 @@ export function createFeatureLayers(
       // don't duplicate existing layers
       if (layer.id > -1) return;
 
-      // get the current extent, so we can go back
-      let graphicsExtent: __esri.Extent | null = null;
-
-      const uniqueValueInfosPolygons: any[] = [];
-      const typesAdded: string[] = [];
-      const uniqueValueInfosPoints: any[] = [];
-
-      // get the extent from the array of graphics
-      if (layer.sketchLayer.type === 'graphics') {
-        layer.sketchLayer.graphics.forEach((graphic) => {
-          graphicsExtent === null
-            ? (graphicsExtent = graphic.geometry.extent)
-            : graphicsExtent.union(graphic.geometry.extent);
-
-          // build the renderer to publish
-          const attributes = graphic.attributes;
-          if (!typesAdded.includes(attributes.TYPEUUID)) {
-            typesAdded.push(attributes.TYPEUUID);
-
-            // build the polygon renderer
-            uniqueValueInfosPolygons.push({
-              value: attributes.TYPEUUID,
-              label: attributes.TYPE,
-              symbol: {
-                type: 'esriSFS',
-                style: 'esriSFSSolid',
-                color: graphic.symbol.color,
-                outline: (graphic.symbol as any).outline,
-              },
-            });
-
-            // build the points renderer
-            const pointStyle = attributes.POINT_STYLE || 'circle';
-            const isPath = pointStyle.includes('path|');
-            const style: string =
-              'esriSMS' +
-              (isPath
-                ? 'Path'
-                : pointStyle.charAt(0).toUpperCase() + pointStyle.slice(1));
-            const symbol: any = {
-              type: 'esriSMS',
-              style,
-              color: graphic.symbol.color,
-              outline: (graphic.symbol as any).outline,
-            };
-            if (isPath)
-              symbol.path = attributes.POINT_STYLE.replace('path|', '');
-            uniqueValueInfosPoints.push({
-              value: attributes.TYPEUUID,
-              label: attributes.TYPE,
-              symbol,
-            });
-          }
-        });
-      }
-      if (layer.sketchLayer.type === 'feature') {
-        graphicsExtent = layer.sketchLayer.fullExtent;
-      }
+      const {
+        graphicsExtent,
+        uniqueValueInfosPolygons,
+        uniqueValueInfosPoints,
+      } = buildRendererParams(layer);
 
       // add the polygon representation
       layersParams.push({
@@ -613,6 +639,95 @@ export function createFeatureTables(
     fetchPost(`${adminServiceUrl}/addToDefinition`, data)
       .then((res) => resolve(res))
       .catch((err) => reject(err));
+  });
+}
+
+/**
+ * Updates the renderers of the feature layers.
+ *
+ * @param portal The portal object to create feature layers on
+ * @param serviceUrl The hosted feature service to save layers to
+ * @param layers The layers to be updated
+ * @param createResponse The response from creating layers
+ * @returns A promise that resolves to the layers that were updated
+ */
+export function updateFeatureLayers(
+  portal: __esri.Portal,
+  serviceUrl: string,
+  layers: LayerType[],
+  createResponse: any,
+) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    const requests: any[] = [];
+    if (layers.length === 0 || createResponse.layers.length > 0) {
+      resolve({
+        success: true,
+        layers: [],
+      });
+      return;
+    }
+
+    // inject /admin into rest/services to be able to call
+    const adminServiceUrl = serviceUrl.replace(
+      'rest/services',
+      'rest/admin/services',
+    );
+
+    layers.forEach((layer) => {
+      const {
+        uniqueValueInfosPolygons,
+        uniqueValueInfosPoints,
+      } = buildRendererParams(layer);
+
+      // update the polygon representation
+      requests.push(
+        fetchPost(`${adminServiceUrl}/${layer.id}/updateDefinition`, {
+          f: 'json',
+          token: tempPortal.credential.token,
+          updateDefinition: {
+            drawingInfo: {
+              renderer: {
+                type: 'uniqueValue',
+                field1: 'TYPEUUID',
+                uniqueValueInfos: uniqueValueInfosPolygons,
+              },
+            },
+          },
+        }),
+      );
+
+      // update the point representation
+      requests.push(
+        fetchPost(`${adminServiceUrl}/${layer.pointsId}/updateDefinition`, {
+          f: 'json',
+          token: tempPortal.credential.token,
+          updateDefinition: {
+            drawingInfo: {
+              renderer: {
+                type: 'uniqueValue',
+                field1: 'TYPEUUID',
+                uniqueValueInfos: uniqueValueInfosPoints,
+              },
+            },
+          },
+        }),
+      );
+    });
+
+    Promise.all(requests)
+      .then((res) =>
+        resolve({
+          success: true,
+          res: res,
+        }),
+      )
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
   });
 }
 
@@ -938,41 +1053,75 @@ export function publish({
     getFeatureService(portal, serviceMetaData)
       .then((service: any) => {
         const serviceUrl: string = service.portalService.url;
+        const portalId: string = service.portalService.id;
+        const idMapping: any = {};
         // create the layers
         createFeatureLayers(portal, serviceUrl, layers, serviceMetaData)
           .then((res: any) => {
             // update the layer ids in edits
             res.layers.forEach((layer: any) => {
               const isPoints = layer.name.endsWith('-points');
-              const layerName = isPoints
-                ? layer.name.replace('-points', '')
-                : layer.name;
 
-              const layerEdits = edits.find(
-                (layerEdit) =>
-                  layerEdit.id === -1 && serviceMetaData.label === layerName,
-              );
+              const layerEdits = edits.find((layerEdit) => {
+                return (
+                  ((!isPoints && layerEdit.id === -1) || isPoints) &&
+                  (serviceMetaData.label === layer.name ||
+                    `${serviceMetaData.label}-points` === layer.name)
+                );
+              });
 
               const mapLayer = layers.find(
-                (mapLayer) =>
-                  mapLayer.id === -1 && layerEdits?.layerId === layer.layerId,
+                (mapLayer) => mapLayer.layerId === layerEdits?.layerId,
               );
 
-              if (layerEdits && !isPoints) layerEdits.id = layer.id;
+              // update the various ids (id, pointsId, portalId)
+              if (layerEdits) {
+                if (!isPoints) {
+                  layerEdits.id = layer.id;
+                  layerEdits.portalId = portalId;
+                }
+
+                // Figure out how to get the points version of the id
+                if (isPoints && layerEdits) {
+                  layerEdits.pointsId = layer.id;
+                }
+              }
               if (mapLayer) {
-                if (!isPoints) mapLayer.id = layer.id;
+                if (!isPoints) {
+                  mapLayer.id = layer.id;
+                  mapLayer.portalId = portalId;
+                }
 
                 // Figure out how to get the points version of the id
                 if (isPoints && mapLayer.pointsLayer) {
-                  mapLayer.pointsLayer.id = layer.id;
                   mapLayer.pointsId = layer.id;
                 }
+
+                if (!idMapping.hasOwnProperty(mapLayer.uuid)) {
+                  idMapping[mapLayer.uuid] = { portalId };
+                }
+                if (isPoints) idMapping[mapLayer.uuid].pointsId = layer.id;
+                else idMapping[mapLayer.uuid].id = layer.id;
               }
             });
 
-            // publish the edits
-            applyEdits({ portal, serviceUrl, layers, edits })
-              .then((res) => resolve(res))
+            // update the renderers
+            updateFeatureLayers(portal, serviceUrl, layers, res)
+              .then((updateRes) => {
+                // publish the edits
+                applyEdits({ portal, serviceUrl, layers, edits })
+                  .then((res) =>
+                    resolve({
+                      portalId,
+                      idMapping,
+                      edits: res,
+                    }),
+                  )
+                  .catch((err) => {
+                    window.logErrorToGa(err);
+                    reject(err);
+                  });
+              })
               .catch((err) => {
                 window.logErrorToGa(err);
                 reject(err);

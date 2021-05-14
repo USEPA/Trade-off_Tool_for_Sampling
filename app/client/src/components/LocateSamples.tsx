@@ -2615,10 +2615,12 @@ function LocateSamples() {
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
-                              const typeUuid = (editingStatus === 'edit' || editingStatus === 'view') &&
-                                      userDefinedSampleType?.value
-                                        ? userDefinedSampleType.value
-                                        : generateUUID();
+                              const typeUuid =
+                                (editingStatus === 'edit' ||
+                                  editingStatus === 'view') &&
+                                userDefinedSampleType?.value
+                                  ? userDefinedSampleType.value
+                                  : generateUUID();
 
                               if (udtSymbol) {
                                 setDefaultSymbolSingle(typeUuid, udtSymbol);
@@ -2688,12 +2690,14 @@ function LocateSamples() {
                                   const sampleType =
                                     userDefinedAttributes.sampleTypes[typeUuid]
                                       .attributes;
-                                  if (sampleType.OBJECTID)
+                                  if (sampleType.OBJECTID) {
                                     newAttributes.OBJECTID =
                                       sampleType.OBJECTID;
-                                  if (sampleType.GLOBALID)
+                                  }
+                                  if (sampleType.GLOBALID) {
                                     newAttributes.GLOBALID =
                                       sampleType.GLOBALID;
+                                  }
                                 }
 
                                 // add/update the sample's attributes

@@ -8,7 +8,7 @@ import {
 } from 'contexts/LookupFiles';
 // utils
 import { fetchCheck } from 'utils/fetchUtils';
-import { updatePolygonSymbol } from 'utils/sketchUtils';
+import { updatePointSymbol, updatePolygonSymbol } from 'utils/sketchUtils';
 // types
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
@@ -317,6 +317,7 @@ export function SketchProvider({ children }: Props) {
 
     // update all of the symbols
     updatePolygonSymbol(layers, newDefaultSymbols);
+    updatePointSymbol(layers, newDefaultSymbols);
   }
 
   // Reset default symbols back to the default values

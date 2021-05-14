@@ -1070,16 +1070,27 @@ function ResultCard({ result }: ResultCardProps) {
                 if (uniqueValueInfos) {
                   uniqueValueInfos.forEach((value: any) => {
                     // exit if value exists already
-                    if (defaultSymbols.symbols.hasOwnProperty(value.value))
+                    if (defaultSymbols.symbols.hasOwnProperty(value.value)) {
                       return;
+                    }
 
                     newSymbolsAdded = true;
 
                     newDefaultSymbols.symbols[value.value] = {
                       type: 'simple-fill',
-                      color: value.symbol.color,
+                      color: [
+                        value.symbol.color[0],
+                        value.symbol.color[1],
+                        value.symbol.color[2],
+                        (value.symbol.color[3] / 255),
+                      ],
                       outline: {
-                        color: value.symbol.outline.color,
+                        color: [
+                          value.symbol.outline.color[0],
+                          value.symbol.outline.color[1],
+                          value.symbol.outline.color[2],
+                          (value.symbol.outline.color[3] / 255),
+                        ],
                         width: value.symbol.outline.width,
                       },
                     };
