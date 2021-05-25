@@ -1569,7 +1569,10 @@ function LocateSamples() {
                                     ...edits.edits.slice(0, scenarioIndex),
                                     editsScenario,
                                     ...edits.edits.slice(scenarioIndex + 1),
-                                    editsLayer,
+                                    {
+                                      ...editsLayer,
+                                      visible: false,
+                                    }
                                   ],
                                 };
                               }
@@ -1765,40 +1768,7 @@ function LocateSamples() {
                 css={layerSelectStyles}
                 isDisabled={addLayerVisible || editLayerVisible}
                 value={sketchLayer}
-                onChange={(ev) => {
-                  const newLayer = ev as LayerType;
-
-                  // set visibility
-                  let visibilityChange = false;
-                  if (sketchLayer && !sketchLayer.parentLayer) {
-                    sketchLayer.sketchLayer.visible = false;
-                    visibilityChange = true;
-                  }
-                  if (!newLayer.parentLayer) {
-                    newLayer.sketchLayer.visible = true;
-                    visibilityChange = true;
-                  }
-                  if (visibilityChange) {
-                    setEdits((edits) => ({
-                      count: edits.count + 1,
-                      edits: edits.edits.map((edit) => {
-                        if (edit.type === 'scenario') return edit;
-
-                        let visible = edit.visible;
-                        if (edit.layerId === sketchLayer?.layerId)
-                          visible = false;
-                        if (edit.layerId === newLayer.layerId) visible = true;
-
-                        return {
-                          ...edit,
-                          visible,
-                        };
-                      }),
-                    }));
-                  }
-
-                  setSketchLayer(newLayer);
-                }}
+                onChange={(ev) => setSketchLayer(ev as LayerType)}
                 options={sampleLayers}
               />
               {addLayerVisible && (
