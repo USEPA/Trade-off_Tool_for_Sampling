@@ -187,6 +187,7 @@ export function updateLayerEdits({
       editsCopy.edits.push(editsLayer);
     }
   } else if (scenario && editsScenario && type === 'move') {
+    editsLayer.visible = true;
     editsScenario.layers.push(editsLayer);
     editsCopy.edits = editsCopy.edits.filter(
       (edit) => edit.layerId !== editsLayer.layerId,
