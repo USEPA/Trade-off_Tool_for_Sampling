@@ -279,6 +279,7 @@ type SketchButtonProps = {
   label: string;
   iconClass: string;
   layers: LayerType[];
+  selectedScenario: ScenarioEditsType | null;
   onClick: () => void;
 };
 
@@ -287,6 +288,7 @@ function SketchButton({
   label,
   iconClass,
   layers,
+  selectedScenario,
   onClick,
 }: SketchButtonProps) {
   // put an ellipses on the end if the text is to long
@@ -296,6 +298,7 @@ function SketchButton({
   layers.forEach((layer) => {
     if (layer.layerType !== 'Samples' && layer.layerType !== 'VSP') return;
     if (layer.sketchLayer.type === 'feature') return;
+    if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
 
     layer.sketchLayer.graphics.forEach((graphic) => {
       if (graphic.attributes.TYPEUUID === value) count += 1;
@@ -1861,6 +1864,7 @@ function LocateSamples() {
                                   key={index}
                                   layers={layers}
                                   value={sampleTypeUuid}
+                                  selectedScenario={selectedScenario}
                                   label={
                                     edited
                                       ? `${sampleType} (edited)`
@@ -1899,6 +1903,7 @@ function LocateSamples() {
                               value={sampleTypeUuid}
                               label={option.label}
                               layers={layers}
+                              selectedScenario={selectedScenario}
                               iconClass={
                                 shapeType === 'point'
                                   ? 'fas fa-pen-fancy'
