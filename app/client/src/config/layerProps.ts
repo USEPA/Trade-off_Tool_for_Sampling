@@ -1,3 +1,5 @@
+export const notesCharacterLimit = 2000;
+
 export const defaultLayerProps = {
   type: 'Feature Layer',
   editFieldsInfo: {
@@ -271,7 +273,7 @@ export const defaultLayerProps = {
       actualType: 'nvarchar',
       alias: 'Notes',
       sqlType: 'sqlTypeNVarchar',
-      length: 2000,
+      length: notesCharacterLimit,
       nullable: true,
       editable: true,
       domain: null,
@@ -662,7 +664,7 @@ export const defaultTableProps = {
       actualType: 'nvarchar',
       alias: 'Notes',
       sqlType: 'sqlTypeNVarchar',
-      length: 2000,
+      length: notesCharacterLimit,
       nullable: true,
       editable: true,
       domain: null,

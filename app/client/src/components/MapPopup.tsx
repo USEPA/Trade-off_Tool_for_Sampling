@@ -8,6 +8,8 @@ import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
 // utils
 import { getSketchableLayers } from 'utils/sketchUtils';
+// config
+import { notesCharacterLimit } from 'config/layerProps';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -235,11 +237,14 @@ function MapPopup({
                   id="graphic-note"
                   css={noteStyles}
                   value={note}
+                  maxLength={notesCharacterLimit}
                   onChange={(ev) => {
                     setSaveStatus('none');
                     setNote(ev.target.value);
                   }}
                 />
+                <br />
+                <span>{note.length} / 2000 characters</span>
               </div>
               <div css={saveButtonContainerStyles}>
                 <button
