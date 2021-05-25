@@ -197,6 +197,7 @@ export function useStartOver() {
     if (mapView) {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
+      mapView.popup?.close();
 
       if (homeWidget) {
         homeWidget.viewpoint = mapView.viewpoint;
