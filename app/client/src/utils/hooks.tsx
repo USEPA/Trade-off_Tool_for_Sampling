@@ -908,9 +908,6 @@ export function useDynamicPopup() {
     // set the clicked button as active until the drawing is complete
     deactivateButtons();
 
-    const target = ev.target as HTMLElement;
-    target.classList.add('sketch-button-selected');
-
     const changes = new Collection<__esri.Graphic>();
 
     // find the layer
@@ -971,6 +968,8 @@ export function useDynamicPopup() {
       const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
       tempNewLayer.addMany(changes.toArray());
       tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = newLayer.sketchLayer;
     }
   };
 

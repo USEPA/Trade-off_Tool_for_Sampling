@@ -267,7 +267,7 @@ function MapPopup({
                     }
                   }}
                 >
-                  {saveStatus === 'none' && 'Save'}
+                  {(saveStatus === 'none' || saveStatus === 'success') && 'Save'}
                   {saveStatus === 'failure' && (
                     <React.Fragment>
                       <i className="fas fa-exclamation-triangle" /> Error
