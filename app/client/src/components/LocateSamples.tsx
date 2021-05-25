@@ -438,6 +438,7 @@ function LocateSamples() {
     userDefinedAttributes,
     setUserDefinedAttributes,
     allSampleOptions,
+    showAsPoints,
   } = React.useContext(SketchContext);
   const {
     Collection,
@@ -1580,11 +1581,13 @@ function LocateSamples() {
                             });
 
                             // remove the layer from the parent group layer and add to map
+                            sketchLayer.sketchLayer.visible = false;
                             sketchLayer.parentLayer?.remove(
                               sketchLayer.sketchLayer,
                             );
                             map.add(sketchLayer.sketchLayer);
                             if (sketchLayer.pointsLayer) {
+                              sketchLayer.pointsLayer.visible = false;
                               sketchLayer.parentLayer?.remove(
                                 sketchLayer.pointsLayer,
                               );
@@ -1664,6 +1667,13 @@ function LocateSamples() {
                             if (sketchLayer.pointsLayer) {
                               groupLayer.add(sketchLayer.pointsLayer);
                             }
+
+                            // show the newly added layer
+                            if(showAsPoints && sketchLayer.pointsLayer) {
+                              sketchLayer.pointsLayer.visible = true;
+                            } else {
+                              sketchLayer.sketchLayer.visible = true;
+                            }     
 
                             // update layers (set parent layer)
                             setLayers((layers) => {
