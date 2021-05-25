@@ -2163,7 +2163,9 @@ function LocateSamples() {
                                     title: 'Would you like to continue?',
                                     ariaLabel: 'Would you like to continue?',
                                     description:
-                                      'This operation will delete the sample type and any associated samples.',
+                                      'Sample plans are referencing samples based on one or more of the custom sample types. ' + 
+                                      'This operation will delete any samples from the sampling plan that are associated ' + 
+                                      'with these custom sample types that you are attempting to remove.',
                                     onContinue: () => {
                                       setUserDefinedOptions(
                                         userDefinedOptions.filter(
