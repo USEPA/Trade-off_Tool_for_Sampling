@@ -219,13 +219,7 @@ function Toolbar() {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
-      // Swap this ID out with registered application ID
-      // TODO: We need to get the app id that will be using for development and or production
       appId: process.env.REACT_APP_ARCGIS_APP_ID,
-      // Uncomment the next line and update if using your own portal
-      // portalUrl: "https://<host>:<port>/arcgis"
-      // Uncomment the next line to prevent the user's signed in state from being shared with other apps on the same domain with the same authNamespace value.
-      // authNamespace: "portal_oauth_inline",
       popup: false,
     });
     IdentityManager.registerOAuthInfos([info]);
