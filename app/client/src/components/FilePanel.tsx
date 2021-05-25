@@ -480,6 +480,8 @@ function FilePanel() {
     if (file.file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
     if (layerType.value === 'VSP' && !sampleType) return; // VSP layers need a sample type
 
+    const localSampleType = sampleType;
+
     setFile((file: any) => {
       return {
         ...file,
@@ -560,7 +562,7 @@ function FilePanel() {
 
         // this should never happen, but if sample type wasn't selected
         // exit early
-        if (!sampleType) return;
+        if (!localSampleType) return;
 
         const features: __esri.Graphic[] = [];
         let layerDefinition: any;
@@ -593,7 +595,7 @@ function FilePanel() {
           fields: defaultLayerProps.fields,
           features: [
             {
-              attributes: sampleAttributes[sampleType.value as any],
+              attributes: sampleAttributes[localSampleType.value as any],
             },
           ],
         };
@@ -625,7 +627,7 @@ function FilePanel() {
               const params = {
                 f: 'json',
                 Input_VSP: inputVspSet,
-                Sample_Type: sampleType.value,
+                Sample_Type: localSampleType.label,
                 Sample_Type_Parameters: sampleTypeFeatureSet,
               };
               appendEnvironmentObjectParam(params);
@@ -653,7 +655,7 @@ function FilePanel() {
                       geometry: feature.geometry,
                       attributes: {
                         ...(window as any).totsSampleAttributes[
-                          feature.attributes.TYPE
+                          localSampleType.value
                         ],
                         CREATEDDATE: timestamp,
                         OBJECTID: feature.attributes.OBJECTID,
@@ -961,7 +963,7 @@ function FilePanel() {
 
         // set the symbol styles based on the sample/layer type
         if (graphic?.geometry?.type === 'polygon') {
-          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+          if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
             graphic.symbol =
               defaultSymbols.symbols[graphic.attributes.TYPEUUID];
           } else {
