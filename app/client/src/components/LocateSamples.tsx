@@ -678,7 +678,7 @@ function LocateSamples() {
           const props = {
             f: 'json',
             Number_of_Samples: numSamples,
-            Sample_Type: sampleType.value,
+            Sample_Type: sampleType.label,
             Area_of_Interest_Mask: featureSet.toJSON(),
             Sample_Type_Parameters: sampleTypeFeatureSet,
           };
