@@ -268,6 +268,7 @@ function App() {
     layers,
     selectedSampleIds,
     setSelectedSampleIds,
+    selectedScenario,
   } = React.useContext(SketchContext);
 
   useSessionStorage();
@@ -341,6 +342,7 @@ function App() {
   const sampleData: any[] = [];
   layers.forEach((layer) => {
     if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
+    if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
     if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
       layer.sketchLayer.graphics.forEach((sample) => {
         sampleData.push({

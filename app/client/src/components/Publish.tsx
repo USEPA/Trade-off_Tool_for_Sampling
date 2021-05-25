@@ -1266,7 +1266,7 @@ function Publish() {
           you would like to publish to a new or existing feature service.
         </p>
         <div>
-          <label htmlFor="publish-sample-select">Samples to Publish</label>
+          <label htmlFor="publish-sample-select">Sample Types to Publish</label>
           <Select
             inputId="publish-sample-select"
             isMulti={true as any}
@@ -1313,21 +1313,21 @@ function Publish() {
 
         {publishSamplesMode === 'new' && (
           <React.Fragment>
-            <label htmlFor="sample-table-name-input">Sample Table Name</label>
+            <label htmlFor="sample-table-name-input">Custom Sample Type Table Name</label>
             <input
               id="sample-table-name-input"
               css={inputStyles}
               maxLength={250}
-              placeholder="Enter Sample Table Name"
+              placeholder="Enter Custom Sample Type Table Name"
               value={sampleTableName}
               onChange={(ev) => setSampleTableName(ev.target.value)}
             />
-            <label htmlFor="scenario-description-input">Plan Description</label>
+            <label htmlFor="scenario-description-input">Custom Sample Type Table Description</label>
             <input
               id="scenario-description-input"
               css={inputStyles}
               maxLength={2048}
-              placeholder="Enter Plan Description (2048 characters)"
+              placeholder="Enter Custom Sample Type Table Description (2048 characters)"
               value={sampleTableDescription}
               onChange={(ev) => setSampleTableDescription(ev.target.value)}
             />
@@ -1391,7 +1391,7 @@ function Publish() {
                 setPublishSamplesButtonClicked(true);
               }}
             >
-              Publish User Defined Sample Types
+              Publish Custom Sample Types
             </button>
           </div>
         )}
