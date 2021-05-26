@@ -179,6 +179,11 @@ type LocationType =
   | { value: 'My Organization'; label: 'My Organization' }
   | { value: 'My Groups'; label: 'My Groups' };
 
+type LayerTypeFilter =
+  | { value: 'All', label: 'All' }
+  | { value: 'Sampling Plans', label: 'TOTS Sampling Plans' }
+  | { value: 'Custom Sample Types', label: 'TOTS Custom Sample Types' };
+
 type GroupType = {
   value: string;
   label: string;
@@ -208,6 +213,13 @@ function SearchPanel() {
   ] = React.useState<LocationType>({
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
+  });
+  const [
+    layerTypeFilter,
+    setLayerTypeFilter, //
+  ] = React.useState<LayerTypeFilter>({
+    value: 'All',
+    label: 'All',
   });
   const [group, setGroup] = React.useState<GroupType | null>(null);
   const [search, setSearch] = React.useState('');
@@ -333,10 +345,19 @@ function SearchPanel() {
     if (typePart.length > 0) query = appendToQuery(query, typePart);
     else query = appendToQuery(query, defaultTypePart);
 
+    const categories: string[] = [];
+    if(layerTypeFilter.value === 'Custom Sample Types'){
+      categories.push('contains-epa-tots-user-defined-sample-types');
+    }
+    if(layerTypeFilter.value === 'Sampling Plans') {
+      categories.push('contains-epa-tots-sample-layer')
+    }
+
     // build the query parameters
     let queryParams = {
       query,
       sortOrder,
+      categories,
     } as __esri.PortalQueryParams;
 
     if (withinMap && currentExtent) queryParams.extent = currentExtent;
@@ -380,6 +401,7 @@ function SearchPanel() {
     group,
     Portal,
     portal,
+    layerTypeFilter,
     location,
     search,
     setSearchResults,
@@ -495,6 +517,17 @@ function SearchPanel() {
           />
         </React.Fragment>
       )}
+      <label htmlFor="layer-type-select">Type</label>
+      <Select
+        inputId="layer-type-select"
+        value={layerTypeFilter}
+        onChange={(ev) => setLayerTypeFilter(ev as LayerTypeFilter)}
+        options={[
+          { value: 'All', label: 'All' },
+          { value: 'Sampling Plans', label: 'TOTS Sampling Plans' },
+          { value: 'Custom Sample Types', label: 'TOTS Custom Sample Types' },
+        ]}
+      />
       <label htmlFor="search-input">Search</label>
       <form
         css={searchContainerStyles}
@@ -1931,8 +1964,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // and add the layer accordingly
                   const categories = result?.categories;
                   if (
-                    categories?.includes('contains-epa-tots-sample-layer') ||
-                    categories?.includes('contains-epa-tots-vsp-layer')
+                    categories?.includes('contains-epa-tots-sample-layer')
                   ) {
                     addTotsLayer();
                   } else if (
@@ -1957,8 +1989,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // and add the layer accordingly
                   const categories = result?.categories;
                   if (
-                    categories?.includes('contains-epa-tots-sample-layer') ||
-                    categories?.includes('contains-epa-tots-vsp-layer')
+                    categories?.includes('contains-epa-tots-sample-layer')
                   ) {
                     removeTotsLayer();
                   } else if (
