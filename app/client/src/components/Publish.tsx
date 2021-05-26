@@ -11,11 +11,14 @@ import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
+import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
+  getAllFeatures,
+  getFeatureTables,
   isServiceNameAvailable,
   publish,
   publishTable,
@@ -73,6 +76,7 @@ type PublishType = {
 };
 
 type SelectedService = {
+  url: string;
   description: string;
   label: string;
   value: string;
@@ -130,7 +134,7 @@ const inputStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const { GraphicsLayer, IdentityManager, Portal } = useEsriModulesContext();
+  const { Graphic, GraphicsLayer, IdentityManager, Portal } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
@@ -156,11 +160,15 @@ function Publish() {
     setEdits,
     layers,
     setLayers,
-    sketchLayer,
+    sampleAttributes,
     selectedScenario,
+    sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
+    setUserDefinedOptions
   } = React.useContext(SketchContext);
+  
+  const sampleTypeContext = useSampleTypesContext();
 
   ///////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// START - Publish Layers ///////////////////////////////////
@@ -445,6 +453,7 @@ function Publish() {
         value: '',
         label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
+        url: '',
       },
     })
       .then((res: any) => {
@@ -889,7 +898,8 @@ function Publish() {
       Object.keys(sampleTypeSelections).length === 0 ||
       !publishSampleTableMetaData ||
       !publishSamplesButtonClicked ||
-      !hasSamplesNameBeenChecked
+      !hasSamplesNameBeenChecked ||
+      (publishSamplesMode === 'existing' && !selectedService)
     ) {
       return;
     }
@@ -901,6 +911,9 @@ function Publish() {
       summary: { success: '', failed: '' },
       rawData: null,
     });
+
+    const tempPortal = portal as any;
+    const token = tempPortal.credential.token;
 
     const changes: {
       id: number;
@@ -914,156 +927,222 @@ function Publish() {
       deletes: [],
     };
 
-    sampleTypeSelections.forEach((type) => {
-      if (!type.value) return;
+    function publishSampleTypes() {
+      if(!portal || !publishSampleTableMetaData) return;
 
-      const sampleType = userDefinedAttributes.sampleTypes[type.value];
-      const item = {
-        attributes: sampleType.attributes,
-      };
-      if (publishSamplesMode === 'new') {
-        changes.adds.push(item);
-      } else if (publishSamplesMode === 'existing' && selectedService) {
-        if (selectedService.value === type.serviceId) {
-          if (sampleType.status === 'add') changes.adds.push(item);
-          if (
-            sampleType.status === 'edit' ||
-            sampleType.status === 'published'
-          ) {
-            changes.updates.push(item);
+      // exit early if there are no edits
+      if (
+        changes.adds.length === 0 &&
+        changes.updates.length === 0 &&
+        changes.deletes.length === 0
+      ) {
+        setPublishSamplesResponse({
+          status: 'fetch-failure',
+          summary: { success: '', failed: '' },
+          rawData: null,
+        });
+        return;
+      }
+
+      publishTable({
+        portal,
+        changes,
+        serviceMetaData: publishSampleTableMetaData,
+      })
+        .then((res: any) => {
+          // get totals
+          const totals = {
+            added: 0,
+            updated: 0,
+            deleted: 0,
+            failed: 0,
+          };
+
+          const newUserDefinedAttributes = { ...userDefinedAttributes };
+
+          // need to loop through each array and check the success flag
+          if (res.edits.addResults) {
+            res.edits.addResults.forEach((item: any, index: number) => {
+              item.success ? (totals.added += 1) : (totals.failed += 1);
+
+              // update the edits arrays
+              const origItem = changes.adds[index];
+              const origUdt =
+                newUserDefinedAttributes.sampleTypes[
+                  origItem.attributes.TYPEUUID
+                ];
+              if (item.success) {
+                origUdt.status = 'published';
+                origUdt.serviceId = res.service.featureService.serviceItemId;
+                origUdt.attributes.GLOBALID = item.globalId;
+                origUdt.attributes.OBJECTID = item.objectId;
+              }
+            });
           }
-          if (sampleType.status === 'delete') changes.deletes.push(item);
-        } else {
+          if (res.edits.updateResults) {
+            res.edits.updateResults.forEach((item: any, index: number) => {
+              item.success ? (totals.updated += 1) : (totals.failed += 1);
+
+              // update the edits arrays
+              const origItem = changes.updates[index];
+              const origUdt =
+                newUserDefinedAttributes.sampleTypes[
+                  origItem.attributes.TYPEUUID
+                ];
+              if (item.success) {
+                origUdt.status = 'published';
+                origUdt.serviceId = res.service.featureService.serviceItemId;
+                origUdt.attributes.GLOBALID = item.globalId;
+                origUdt.attributes.OBJECTID = item.objectId;
+              }
+            });
+          }
+          if (res.edits.deleteResults) {
+            res.edits.deleteResults.forEach((item: any, index: number) => {
+              item.success ? (totals.deleted += 1) : (totals.failed += 1);
+
+              // update the edits arrays
+              const origItem = changes.deletes[index];
+              delete newUserDefinedAttributes.sampleTypes[
+                origItem.attributes.TYPEUUID
+              ];
+            });
+          }
+
+          // create the message string for each type of change (add, update and delete)
+          const successParts = [];
+          if (totals.added) {
+            successParts.push(`${totals.added} item(s) added`);
+          }
+          if (totals.updated) {
+            successParts.push(`${totals.updated} item(s) updated`);
+          }
+          if (totals.deleted) {
+            successParts.push(`${totals.deleted} item(s) deleted`);
+          }
+
+          // combine the messages
+          let success = '';
+          if (successParts.length === 1) {
+            success = successParts[0];
+          }
+          if (successParts.length > 1) {
+            success =
+              successParts.slice(0, -1).join(', ') +
+              ' and ' +
+              successParts.slice(-1);
+          }
+
+          // create the failed status message
+          const failed = totals.failed
+            ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
+            : '';
+          if (failed) console.error('Some items failed to publish: ', res.edits);
+
+          newUserDefinedAttributes.editCount =
+            newUserDefinedAttributes.editCount + 1;
+          setPublishSamplesResponse({
+            status: 'success',
+            summary: { success, failed },
+            rawData: res.edits,
+          });
+          setUserDefinedAttributes(newUserDefinedAttributes);
+
+          if (publishSamplesMode === 'new') {
+            setSampleTableDescription('');
+            setSampleTableName('');
+          }
+          if (publishSamplesMode === 'existing') {
+            setSelectedService(null);
+          }
+        })
+        .catch((err) => {
+          console.error('publishTable error', err);
+          setPublishSamplesResponse({
+            status: 'fetch-failure',
+            summary: { success: '', failed: '' },
+            rawData: err,
+          });
+        });
+    }
+
+    if(publishSamplesMode === 'new') {
+      sampleTypeSelections.forEach((type) => {
+        if (!type.value) return;
+
+        const sampleType = userDefinedAttributes.sampleTypes[type.value];
+        const item = {
+          attributes: sampleType.attributes,
+        };
+        if (publishSamplesMode === 'new') {
           changes.adds.push(item);
         }
-      }
-    });
-
-    // exit early if there are no edits
-    if (
-      changes.adds.length === 0 &&
-      changes.updates.length === 0 &&
-      changes.deletes.length === 0
-    ) {
-      setPublishSamplesResponse({
-        status: 'fetch-failure',
-        summary: { success: '', failed: '' },
-        rawData: null,
       });
+
+      publishSampleTypes();
       return;
     }
 
-    publishTable({
-      portal,
-      changes,
-      serviceMetaData: publishSampleTableMetaData,
-    })
+    if(!selectedService) return;
+
+    // get the list of feature layers in this feature server
+    getFeatureTables(selectedService.url, token)
       .then((res: any) => {
-        // get totals
-        const totals = {
-          added: 0,
-          updated: 0,
-          deleted: 0,
-          failed: 0,
-        };
-
-        const newUserDefinedAttributes = { ...userDefinedAttributes };
-
-        // need to loop through each array and check the success flag
-        if (res.edits.addResults) {
-          res.edits.addResults.forEach((item: any, index: number) => {
-            item.success ? (totals.added += 1) : (totals.failed += 1);
-
-            // update the edits arrays
-            const origItem = changes.adds[index];
-            const origUdt =
-              newUserDefinedAttributes.sampleTypes[
-                origItem.attributes.TYPEUUID
-              ];
-            if (item.success) {
-              origUdt.status = 'published';
-              origUdt.serviceId = res.service.featureService.serviceItemId;
-              origUdt.attributes.GLOBALID = item.globalId;
-              origUdt.attributes.OBJECTID = item.objectId;
-            }
-          });
-        }
-        if (res.edits.updateResults) {
-          res.edits.updateResults.forEach((item: any, index: number) => {
-            item.success ? (totals.updated += 1) : (totals.failed += 1);
-
-            // update the edits arrays
-            const origItem = changes.updates[index];
-            const origUdt =
-              newUserDefinedAttributes.sampleTypes[
-                origItem.attributes.TYPEUUID
-              ];
-            if (item.success) {
-              origUdt.status = 'published';
-              origUdt.serviceId = res.service.featureService.serviceItemId;
-              origUdt.attributes.GLOBALID = item.globalId;
-              origUdt.attributes.OBJECTID = item.objectId;
-            }
-          });
-        }
-        if (res.edits.deleteResults) {
-          res.edits.deleteResults.forEach((item: any, index: number) => {
-            item.success ? (totals.deleted += 1) : (totals.failed += 1);
-
-            // update the edits arrays
-            const origItem = changes.deletes[index];
-            delete newUserDefinedAttributes.sampleTypes[
-              origItem.attributes.TYPEUUID
-            ];
-          });
-        }
-
-        // create the message string for each type of change (add, update and delete)
-        const successParts = [];
-        if (totals.added) {
-          successParts.push(`${totals.added} item(s) added`);
-        }
-        if (totals.updated) {
-          successParts.push(`${totals.updated} item(s) updated`);
-        }
-        if (totals.deleted) {
-          successParts.push(`${totals.deleted} item(s) deleted`);
-        }
-
-        // combine the messages
-        let success = '';
-        if (successParts.length === 1) {
-          success = successParts[0];
-        }
-        if (successParts.length > 1) {
-          success =
-            successParts.slice(0, -1).join(', ') +
-            ' and ' +
-            successParts.slice(-1);
-        }
-
-        // create the failed status message
-        const failed = totals.failed
-          ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
-          : '';
-        if (failed) console.error('Some items failed to publish: ', res.edits);
-
-        newUserDefinedAttributes.editCount =
-          newUserDefinedAttributes.editCount + 1;
-        setPublishSamplesResponse({
-          status: 'success',
-          summary: { success, failed },
-          rawData: res.edits,
+        // fire off requests to get the details and features for each layer
+        const layerPromises: Promise<any>[] = [];
+        res.forEach((layer: any) => {
+          // get the layer features promise
+          const featuresCall = getAllFeatures(
+            portal,
+            selectedService.url + '/' + layer.id,
+          );
+          layerPromises.push(featuresCall);
         });
-        setUserDefinedAttributes(newUserDefinedAttributes);
 
-        if (publishSamplesMode === 'new') {
-          setSampleTableDescription('');
-          setSampleTableName('');
-        }
-        if (publishSamplesMode === 'existing') {
-          setSelectedService(null);
-        }
+        // wait for all of the promises to resolve
+        Promise.all(layerPromises)
+          .then((responses) => {
+            // define items used for updating states
+            const existingTypeUuids: string[] = [];
+
+            // create the user defined sample types to be added to TOTS
+            responses.forEach((layerFeatures) => {
+              // get the graphics from the layer
+              layerFeatures.features.forEach((feature: any) => {
+                const uuid = feature.attributes.TYPEUUID;
+                if(!existingTypeUuids.includes(uuid)) {
+                  existingTypeUuids.push(uuid);
+                }
+              });
+            });
+
+            sampleTypeSelections.forEach((type) => {
+              if (!type.value) return;
+        
+              const sampleType = userDefinedAttributes.sampleTypes[type.value];
+              const item = {
+                attributes: sampleType.attributes,
+              };
+              const typeUuid = item.attributes.TYPEUUID || '';
+
+              if(existingTypeUuids.includes(typeUuid)) {
+                if(sampleType.status === 'delete') changes.deletes.push(item);
+                else changes.updates.push(item);
+              } else {
+                if(sampleType.status !== 'delete') changes.adds.push(item);
+              }
+            });
+
+            publishSampleTypes();
+          })
+          .catch((err) => {
+            console.error('publishTable error', err);
+            setPublishSamplesResponse({
+              status: 'fetch-failure',
+              summary: { success: '', failed: '' },
+              rawData: err,
+            });
+          });
       })
       .catch((err) => {
         console.error('publishTable error', err);
@@ -1074,6 +1153,7 @@ function Publish() {
         });
       });
   }, [
+    Graphic,
     GraphicsLayer,
     IdentityManager,
     portal,
@@ -1086,11 +1166,14 @@ function Publish() {
     userDefinedAttributes,
     setUserDefinedAttributes,
     publishSamplesMode,
+    sampleAttributes,
+    sampleTypeContext,
     sampleTypeSelections,
     selectedService,
     setSampleTableDescription,
     setSampleTableName,
     setSelectedService,
+    setUserDefinedOptions,
   ]);
 
   const [queryInitialized, setQueryInitialized] = React.useState(false);
@@ -1112,6 +1195,7 @@ function Publish() {
       .then((res: __esri.PortalQueryResult) => {
         const data = res.results.map((item) => {
           return {
+            url: item.url,
             description: item.description,
             label: item.title,
             value: item.id,
@@ -1133,7 +1217,7 @@ function Publish() {
     userDefinedAttributes.sampleTypes,
   ).map((type) => {
     return {
-      label: type.attributes.TYPE,
+      label: `${type.attributes.TYPE}${type.status === 'delete' ? ' (deleted)' : ''}`,
       value: type.attributes.TYPEUUID,
       serviceId: type.serviceId,
       status: type.status,
@@ -1385,6 +1469,7 @@ function Publish() {
                     value: '',
                     label: sampleTableName,
                     description: sampleTableDescription,
+                    url: '',
                   });
                 }
 
