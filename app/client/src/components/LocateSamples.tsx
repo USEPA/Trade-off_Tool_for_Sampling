@@ -652,6 +652,7 @@ function LocateSamples() {
         });
 
         // get the sample type definition (can be established or custom)
+        const typeuuid = sampleType.value;
         const sampleTypeFeatureSet = {
           displayFieldName: '',
           geometryType: 'esriGeometryPolygon',
@@ -661,7 +662,7 @@ function LocateSamples() {
           fields: defaultLayerProps.fields,
           features: [
             {
-              attributes: sampleAttributes[sampleType.value as any],
+              attributes: sampleAttributes[typeuuid as any],
             },
           ],
         };
@@ -741,7 +742,7 @@ function LocateSamples() {
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[
-                      feature.attributes.TYPE
+                      typeuuid
                     ],
                     CREATEDDATE: timestamp,
                     DECISIONUNITUUID: sketchLayer.uuid,
