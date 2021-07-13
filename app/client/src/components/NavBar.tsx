@@ -6,6 +6,7 @@ import { css } from '@emotion/react';
 import AddData from 'components/AddData';
 import Calculate from 'components/Calculate';
 import CalculateResults from 'components/CalculateResults';
+import ConfigureOutput from 'components/ConfigureOutput';
 import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
@@ -108,7 +109,11 @@ function NavButton({
       <div
         css={verticalButtonBar(panelIndex < 1 ? 'transparent' : color)}
       ></div>
-      <button data-testid={value} onClick={onClick} css={navButtonStyles(selected)}>
+      <button
+        data-testid={value}
+        onClick={onClick}
+        css={navButtonStyles(selected)}
+      >
         <i className={iconClass} css={navIconStyles(color)} />
         <span css={navTextStyles}>{label}</span>
       </button>
@@ -504,6 +509,7 @@ function NavBar({ height }: Props) {
               {currentPanel.value === 'addData' && <AddData />}
               {currentPanel.value === 'locateSamples' && <LocateSamples />}
               {currentPanel.value === 'calculate' && <Calculate />}
+              {currentPanel.value === 'configureOutput' && <ConfigureOutput />}
               {currentPanel.value === 'publish' && <Publish />}
             </div>
           </div>
