@@ -59,15 +59,25 @@ const arrow = css`
 type AccordionItemProps = {
   title: ReactNode;
   initiallyExpanded?: boolean;
+  isOpenParam?: boolean;
+  onChange?: (isOpen: boolean) => void;
   children: ReactNode;
 };
 
 function AccordionItem({
   title,
   initiallyExpanded = false,
+  isOpenParam,
+  onChange = () => {},
   children,
 }: AccordionItemProps) {
   const [isOpen, setIsOpen] = React.useState(initiallyExpanded);
+
+  React.useEffect(() => {
+    if (isOpenParam === undefined || isOpen === isOpenParam) return;
+
+    setIsOpen(isOpenParam);
+  }, [isOpen, isOpenParam]);
 
   return (
     <div css={accordionItemContainer}>
@@ -75,11 +85,15 @@ function AccordionItem({
         tabIndex={0}
         css={headerStyles}
         onClick={(ev) => {
-          setIsOpen(!isOpen);
+          const newIsOpen = !isOpen;
+          setIsOpen(newIsOpen);
+          onChange(newIsOpen);
         }}
         onKeyUp={(ev) => {
           if (ev.key === 'Enter') {
-            setIsOpen(!isOpen);
+            const newIsOpen = !isOpen;
+            setIsOpen(newIsOpen);
+            onChange(newIsOpen);
           }
         }}
       >

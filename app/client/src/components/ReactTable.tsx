@@ -50,8 +50,17 @@ function generateFilterInput({
 }
 
 // --- styles ---
-const tableStyles = (tableWidth: number, height: number) => css`
-  height: ${height}px;
+const tableStyles = ({
+  tableWidth,
+  height,
+  hideHeader,
+}: {
+  tableWidth: number;
+  height?: number;
+  hideHeader: boolean;
+}) => css`
+  ${height ? `height: ${height}px;` : 'max-height: 400px;'}
+  border: 1px solid rgba(0, 0, 0, 0.1);
 
   /* These styles are suggested for the table fill all available space in its containing element */
   display: block;
@@ -144,6 +153,8 @@ const tableStyles = (tableWidth: number, height: number) => css`
     .rt-filter {
       padding-top: 10px;
     }
+
+    ${hideHeader ? '.rt-th { display: none !important; }' : ''}
   }
 `;
 
@@ -154,13 +165,14 @@ type Props = {
   getColumns: Function;
   idColumn: string;
   striped?: boolean;
-  height: number;
-  initialSelectedRowIds: any;
-  onSelectionChange: Function;
-  sortBy: any;
+  height?: number;
+  initialSelectedRowIds?: any;
+  onSelectionChange?: Function;
+  allowHighlight?: boolean;
+  sortBy?: any;
 };
 
-function ReactTable({
+export function ReactTable({
   id,
   data,
   getColumns,
@@ -169,6 +181,7 @@ function ReactTable({
   height,
   initialSelectedRowIds,
   onSelectionChange,
+  allowHighlight = true,
   sortBy,
 }: Props) {
   // Initializes the column widths based on the table width
@@ -213,8 +226,8 @@ function ReactTable({
       data,
       defaultColumn,
       initialState: {
-        selectedRowIds: initialSelectedRowIds.ids,
-        sortBy,
+        selectedRowIds: initialSelectedRowIds?.ids || {},
+        sortBy: sortBy || [],
       } as any,
     } as any,
     useResizeColumns,
@@ -233,7 +246,7 @@ function ReactTable({
 
   React.useEffect(() => {
     // don't scroll for row clicks
-    const ids = Object.keys(initialSelectedRowIds.ids);
+    const ids = Object.keys(initialSelectedRowIds?.ids || {});
     if (
       ids.length === 0 ||
       initialSelectedRowIds.selectionMethod === 'row-click'
@@ -258,7 +271,11 @@ function ReactTable({
       id={id}
       ref={measuredTableRef}
       className="ReactTable"
-      css={tableStyles(totalColumnsWidth, height)}
+      css={tableStyles({
+        tableWidth: totalColumnsWidth,
+        height,
+        hideHeader: false,
+      })}
     >
       <div className="rt-table" role="grid" {...getTableProps()}>
         <div className="rt-thead">
@@ -318,7 +335,8 @@ function ReactTable({
             // cast as any to workaround toggleRowSelected not being on the type
             const tempRow = row as any;
 
-            const selected = Object.keys(selectedRowIds).includes(row.id);
+            const selected =
+              allowHighlight && Object.keys(selectedRowIds).includes(row.id);
             const isEven = i % 2 === 0;
             prepareRow(row);
             return (
@@ -361,4 +379,225 @@ function ReactTable({
   );
 }
 
-export default ReactTable;
+type EditableProps = {
+  id: string;
+  data: Array<any>;
+  getColumns: Function;
+  idColumn: string;
+  hideHeader?: boolean;
+  striped?: boolean;
+  height?: number;
+  onDataChange?: Function;
+};
+
+export function ReactTableEditable({
+  id,
+  data,
+  getColumns,
+  idColumn,
+  striped = false,
+  hideHeader = false,
+  height,
+  onDataChange,
+}: EditableProps) {
+  // Initializes the column widths based on the table width
+  const [tableWidth, setTableWidth] = React.useState(0);
+  const columns = React.useMemo(() => {
+    return getColumns(tableWidth);
+  }, [tableWidth, getColumns]);
+
+  // default column settings
+  const defaultColumn = React.useMemo(
+    () => ({
+      // When using the useFlexLayout:
+      minWidth: 50, // minWidth is only used as a limit for resizing
+      width: 150, // width is used for both the flex-basis and flex-grow
+      maxWidth: 1000, // maxWidth is only used as a limit for resizing
+      Filter: generateFilterInput,
+      Cell: ReactTableEditableCell,
+    }),
+    [],
+  );
+
+  const {
+    getTableProps,
+    getTableBodyProps,
+    headerGroups,
+    rows,
+    prepareRow,
+    totalColumnsWidth,
+  }: {
+    getTableProps: any;
+    getTableBodyProps: any;
+    headerGroups: HeaderGroup<Object>[];
+    rows: Row<Object>[];
+    prepareRow: (row: Row<Object>) => void;
+    selectedFlatRows: any;
+    state: any;
+    totalColumnsWidth: number;
+  } = useTable(
+    {
+      autoResetSortBy: false,
+      columns,
+      data,
+      defaultColumn,
+      updateMyData: onDataChange,
+    } as any,
+    useResizeColumns,
+    useBlockLayout,
+    useFlexLayout,
+    useFilters,
+  ) as any;
+
+  // measures the table width
+  const measuredTableRef = React.useCallback((node) => {
+    if (!node) return;
+    setTableWidth(node.getBoundingClientRect().width);
+  }, []);
+
+  return (
+    <div
+      id={id}
+      ref={measuredTableRef}
+      className="ReactTable"
+      css={tableStyles({ tableWidth: totalColumnsWidth, height, hideHeader })}
+    >
+      <div className="rt-table" role="grid" {...getTableProps()}>
+        <div className="rt-thead">
+          {headerGroups.map((headerGroup) => (
+            <div
+              className="rt-tr"
+              role="row"
+              {...headerGroup.getHeaderGroupProps()}
+            >
+              {headerGroup.headers.map((column: any) => {
+                if (typeof column.show === 'boolean' && !column.show) {
+                  return null;
+                }
+                return (
+                  <div
+                    className="rt-th"
+                    role="columnheader"
+                    {...column.getHeaderProps()}
+                  >
+                    <div>
+                      <div className="rt-col-title">
+                        {column.render('Header')}
+                        <span>
+                          {column.isSorted ? (
+                            column.isSortedDesc ? (
+                              <i className="fas fa-arrow-down" />
+                            ) : (
+                              <i className="fas fa-arrow-up" />
+                            )
+                          ) : (
+                            ''
+                          )}
+                        </span>
+                      </div>
+                      {column.filterable && (
+                        <div className="rt-filter">
+                          {column.render('Filter')}
+                        </div>
+                      )}
+                    </div>
+                    {column.canResize && (
+                      <div
+                        {...column.getResizerProps()}
+                        className={`rt-resizer ${
+                          column.isResizing ? 'isResizing' : ''
+                        }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="rt-tbody" {...getTableBodyProps()}>
+          {rows.map((row, i) => {
+            // cast as any to workaround toggleRowSelected not being on the type
+            const tempRow = row as any;
+
+            const isEven = i % 2 === 0;
+            prepareRow(row);
+            return (
+              <div
+                id={tempRow.original[idColumn]}
+                className={`rt-tr ${striped ? 'rt-striped' : ''} ${
+                  isEven ? '-odd' : '-even'
+                }`}
+                role="row"
+                {...row.getRowProps()}
+              >
+                {row.cells.map((cell) => {
+                  const column: any = cell.column;
+                  if (typeof column.show === 'boolean' && !column.show) {
+                    return null;
+                  }
+                  return (
+                    <div
+                      className="rt-td"
+                      role="gridcell"
+                      {...cell.getCellProps()}
+                    >
+                      {cell.render('Cell')}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type EditableCellProps = {
+  value: any;
+  row: any;
+  column: any;
+  updateMyData: any;
+};
+
+export function ReactTableEditableCell({
+  value: initialValue,
+  row: { index },
+  column: { id },
+  updateMyData, // This is a custom function that we supplied to our table instance
+}: EditableCellProps) {
+  // We need to keep and update the state of the cell normally
+  const [value, setValue] = React.useState(initialValue);
+
+  const onChange = (e: any) => {
+    setValue(e.target.value);
+  };
+
+  // We'll only update the external data when the input is blurred
+  const onBlur = () => {
+    updateMyData(index, id, value);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      updateMyData(index, id, value);
+    }
+  };
+
+  // If the initialValue is changed external, sync it up with our state
+  React.useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  return (
+    <input
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      onKeyDown={onKeyDown}
+      css={inputStyles}
+    />
+  );
+}

@@ -10,7 +10,7 @@ import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -31,7 +31,7 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
-import { SampleTypeOptions } from 'types/Publish';
+import { AttributesType, SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
@@ -124,6 +124,12 @@ export function useStartOver() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    setIncludeFullPlan,
+    setIncludeFullPlanWebMap,
+    setIncludePartialPlan,
+    setIncludePartialPlanWebMap,
+    setIncludeCustomSampleTypes,
+    setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
@@ -192,6 +198,12 @@ export function useStartOver() {
     setSampleTableName('');
     setSampleTypeSelections([]);
     setSelectedService(null);
+    setIncludeFullPlan(true);
+    setIncludeFullPlanWebMap(true);
+    setIncludePartialPlan(false);
+    setIncludePartialPlanWebMap(true);
+    setIncludeCustomSampleTypes(false);
+    setPartialPlanAttributes(defaultPlanAttributes);
 
     // reset the zoom
     if (mapView) {
@@ -2302,6 +2314,8 @@ function usePublishStorage() {
   const key = 'tots_sample_type_selections';
   const key2 = 'tots_sample_table_metadata';
   const key3 = 'tots_publish_samples_mode';
+  const key4 = 'tots_output_settings';
+  const key5 = 'tots_partial_plan_attributes';
 
   const { setOptions } = React.useContext(DialogContext);
   const {
@@ -2317,7 +2331,27 @@ function usePublishStorage() {
     setSampleTypeSelections,
     selectedService,
     setSelectedService,
+    includeFullPlan,
+    setIncludeFullPlan,
+    includeFullPlanWebMap,
+    setIncludeFullPlanWebMap,
+    includePartialPlan,
+    setIncludePartialPlan,
+    includePartialPlanWebMap,
+    setIncludePartialPlanWebMap,
+    includeCustomSampleTypes,
+    setIncludeCustomSampleTypes,
+    partialPlanAttributes,
+    setPartialPlanAttributes,
   } = React.useContext(PublishContext);
+
+  type OutputSettingsType = {
+    includeFullPlan: boolean;
+    includeFullPlanWebMap: boolean;
+    includePartialPlan: boolean;
+    includePartialPlanWebMap: boolean;
+    includeCustomSampleTypes: boolean;
+  };
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
@@ -2352,8 +2386,32 @@ function usePublishStorage() {
     if (publishSamplesMode !== null) {
       setPublishSamplesMode(publishSamplesMode as any);
     }
+
+    // set the publish output settings
+    const outputSettingsStr = readFromStorage(key4);
+    if (outputSettingsStr !== null) {
+      const outputSettings: OutputSettingsType = JSON.parse(outputSettingsStr);
+      setIncludeFullPlan(outputSettings.includeFullPlan);
+      setIncludeFullPlanWebMap(outputSettings.includeFullPlanWebMap);
+      setIncludePartialPlan(outputSettings.includePartialPlan);
+      setIncludePartialPlanWebMap(outputSettings.includePartialPlanWebMap);
+      setIncludeCustomSampleTypes(outputSettings.includeCustomSampleTypes);
+    }
+
+    // set the partial plan attributes list
+    const partialAttributesStr = readFromStorage(key5);
+    if (partialAttributesStr) {
+      const partialAttributes = JSON.parse(partialAttributesStr);
+      setPartialPlanAttributes(partialAttributes as AttributesType[]);
+    }
   }, [
     localSampleTypeInitialized,
+    setIncludeCustomSampleTypes,
+    setIncludeFullPlan,
+    setIncludeFullPlanWebMap,
+    setIncludePartialPlan,
+    setIncludePartialPlanWebMap,
+    setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
@@ -2395,6 +2453,36 @@ function usePublishStorage() {
 
     writeToStorage(key3, publishSamplesMode, setOptions);
   }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
+
+  // Saves the publish output settings to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    const settings: OutputSettingsType = {
+      includeFullPlan,
+      includeFullPlanWebMap,
+      includePartialPlan,
+      includePartialPlanWebMap,
+      includeCustomSampleTypes,
+    };
+
+    writeToStorage(key4, settings, setOptions);
+  }, [
+    includeFullPlan,
+    includeFullPlanWebMap,
+    includePartialPlan,
+    includePartialPlanWebMap,
+    includeCustomSampleTypes,
+    localSampleTypeInitialized,
+    setOptions,
+  ]);
+
+  // Saves the partial plan attributes list to browser storage whenever it changers
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key5, partialPlanAttributes, setOptions);
+  }, [partialPlanAttributes, localSampleTypeInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the display mode (points or polygons) selection.
@@ -2427,6 +2515,7 @@ function useDisplayModeStorage() {
     writeToStorage(key, showAsPoints, setOptions);
   }, [showAsPoints, localDisplayModeInitialized, setOptions]);
 }
+
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
