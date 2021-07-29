@@ -1,5 +1,5 @@
 {
-  "totsGPServer": "https://ags.erg.com/arcgis/rest/services/ORD/TOTS/GPServer",
+  "totsGPServer": "https://geopub.epa.gov/arcgis/rest/services/ORD/TOTS/GPServer",
   "proxyUrl": "https://app7.erg.com/PHP/proxy.php?",
-  "useProxyForGPServer": true
+  "useProxyForGPServer": false
 }
