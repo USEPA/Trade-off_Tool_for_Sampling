@@ -144,9 +144,6 @@ jobs:
           name: Re-route green to blue and then remove blue
           command: |
             cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
-            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
-            cf stop $APP_NAME
-            cf delete $APP_NAME -f
             cf rename $APP_NAME-green $APP_NAME
 
   deploy-staging:
