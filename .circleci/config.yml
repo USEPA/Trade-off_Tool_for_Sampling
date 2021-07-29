@@ -147,7 +147,6 @@ jobs:
           aws-region: CF_STAGE_S3_REGION
           aws-secret-access-key: CF_STAGE_S3_SECRET_KEY
           from: server/app/public/data
-          overwrite: true
           to: "s3://$CF_STAGE_S3_BUCKET_ID/data"
       - run:
           name: Re-route green to blue and then remove blue
