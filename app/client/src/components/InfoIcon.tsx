@@ -1,13 +1,12 @@
+/** @jsxImportSource @emotion/react */
 
-// Uses react-tooltip component. The below import is not needed, but
-// it could be necessary in the future. Uncomment the below line
-// if more features are needed.
 import React from 'react';
 import ReactTooltip from 'react-tooltip';
 
 type Props = {
   id: string;
   tooltip: string;
+  cssStyles?: any;
   type?: 'dark' | 'success' | 'warning' | 'error' | 'info' | 'light';
   place?: 'top' | 'right' | 'bottom' | 'left';
   effect?: 'float' | 'solid';
@@ -16,6 +15,7 @@ type Props = {
 function InfoIcon({
   id,
   tooltip,
+  cssStyles,
   type = 'dark',
   place = 'top',
   effect = 'float',
@@ -31,6 +31,7 @@ function InfoIcon({
       />
       <i 
         className="fas fa-info-circle"
+        css={cssStyles}
         data-for={id}
         data-tip={tooltip}
       ></i>
