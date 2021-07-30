@@ -3,6 +3,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/react';
+// components
+import InfoIcon from 'components/InfoIcon';
 import Switch from 'components/Switch';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -741,6 +743,12 @@ function Toolbar() {
           ariaLabel="Points or Polygons"
         />
         <span css={switchLabel}>Points</span>
+        <InfoIcon 
+          id="poly-points-switch"
+          tooltip={'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'}
+          place="bottom"
+          type="info"
+        />
       </div>
       <div css={toolBarButtonsStyles}>
         <div>
