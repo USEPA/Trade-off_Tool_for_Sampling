@@ -161,9 +161,9 @@ function ConfigureOutput() {
 
   const [editAttributesOpen, setEditAttributesOpen] = React.useState(false);
   const [attributesIndex, setAttributesIndex] = React.useState(-1);
-  const [isFullOpen, setIsFullOpen] = React.useState(false);
-  const [isPartialOpen, setIsPartialOpen] = React.useState(false);
-  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(false);
+  const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
+  const [isPartialOpen, setIsPartialOpen] = React.useState(includePartialPlan);
+  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(includeCustomSampleTypes);
 
   return (
     <div css={panelContainer}>
