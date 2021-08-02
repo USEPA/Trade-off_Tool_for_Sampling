@@ -6,6 +6,7 @@ import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import { EditCustomSampleTypesTable } from 'components/EditLayerMetaData';
+import InfoIcon from 'components/InfoIcon';
 import NavigationButton from 'components/NavigationButton';
 import { ReactTable, ReactTableEditable } from 'components/ReactTable';
 import Select from 'components/Select';
@@ -122,6 +123,15 @@ const checkboxStyles = css`
   margin-right: 5px;
 `;
 
+const nextInstructionStyles = css`
+  margin-top: 20px;
+`;
+
+const infoIconStyels = css`
+  margin-left: 10px;
+  color: #19a3dd;
+`;
+
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
   const {
@@ -163,7 +173,19 @@ function ConfigureOutput() {
   const [attributesIndex, setAttributesIndex] = React.useState(-1);
   const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
   const [isPartialOpen, setIsPartialOpen] = React.useState(includePartialPlan);
-  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(includeCustomSampleTypes);
+  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(
+    includeCustomSampleTypes,
+  );
+
+  const webMapIcon = (id: string) => (
+    <InfoIcon
+      id={id}
+      cssStyles={infoIconStyels}
+      tooltip="A web map is used with Field Maps and supports field data collection activities."
+      place="right"
+      type="info"
+    />
+  );
 
   return (
     <div css={panelContainer}>
@@ -180,7 +202,7 @@ function ConfigureOutput() {
         <div>
           <p>
             Use this tab to configure what TOTS output is published to your
-            ArcGIS Online account. Three options are available:
+            ArcGIS Online account. Select one or more of the options below.
           </p>
           <ol>
             <li>
@@ -197,9 +219,6 @@ function ConfigureOutput() {
               sample types for future use in TOTS.
             </li>
           </ol>
-          <p>
-            Click <strong>Next</strong> to publish the selected TOTS output.
-          </p>
         </div>
 
         <p css={layerInfo}>
@@ -254,6 +273,7 @@ function ConfigureOutput() {
               <label htmlFor="include-web-map-toggle">
                 Include web map in output
               </label>
+              {webMapIcon('full-web-map-icon')}
             </div>
           </div>
         </AccordionItem>
@@ -267,7 +287,9 @@ function ConfigureOutput() {
           }}
           title={
             <label css={labelStyles}>
-              <strong>Include TOTS Partial Reference File</strong>
+              <strong>
+                Include Tailored TOTS Output for Field Data Collection
+              </strong>
               <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
                 <Switch
                   checked={includePartialPlan}
@@ -283,13 +305,13 @@ function ConfigureOutput() {
         >
           <div css={sectionContainer}>
             <p>
-              Define user-defined attributes to use with field data collection
-              apps. A subset of TOTS output will be published by default as
-              shown below. Click the <strong>Add New Attribute</strong> button
-              to add an additional attribute. A new window will open to assist
-              you with defining the attribute. Click the <strong>Edit</strong>{' '}
-              or <strong>Delete</strong> icons to modify attributes previously
-              added.
+              A subset of TOTS output will be published by default (see
+              attributes below). Specify additional user-defined attributes to
+              use with field data collection apps by clicking the
+              <strong> Add New Attribute</strong> button. A new window will open
+              to assist you with defining the attribute. Click the{' '}
+              <strong>Edit</strong> or <strong>Delete</strong> icons to modify
+              attributes previously added.
             </p>
           </div>
           <div css={sectionContainer}>
@@ -305,6 +327,7 @@ function ConfigureOutput() {
             <label htmlFor="include-partial-web-map-toggle">
               Include web map in output
             </label>
+            {webMapIcon('partial-web-map-icon')}
           </div>
           <div css={tableContainer}>
             <button
@@ -414,10 +437,11 @@ function ConfigureOutput() {
         >
           <div css={sectionContainer}>
             <p>
-              Publish user defined sample types to ArcGIS Online. Select the
-              user defined sample types you would like to publish. Then select
-              whether you would like to publish to a new or existing feature
-              service.
+              Publish custom sample types to ArcGIS Online. Select one or more
+              custom sample types from the drop-down list and specify whether to
+              publish output to a new or existing feature service. If appending
+              output to an existing feature service, select the feature service
+              from the drop-down list.
             </p>
             <div>
               <label htmlFor="publish-sample-select">
@@ -474,6 +498,10 @@ function ConfigureOutput() {
       </AccordionList>
 
       <div css={sectionContainer}>
+        <p css={nextInstructionStyles}>
+          Click <strong>Next</strong> to output.
+        </p>
+
         <NavigationButton goToPanel="publish" />
       </div>
     </div>
