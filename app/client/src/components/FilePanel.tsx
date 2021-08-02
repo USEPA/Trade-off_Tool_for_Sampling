@@ -33,7 +33,7 @@ import { chunkArray, createErrorObject } from 'utils/utils';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultFields } from 'config/layerProps';
+import { defaultLayerProps } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
@@ -592,7 +592,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultFields,
+          fields: defaultLayerProps.fields,
           features: [
             {
               attributes: sampleAttributes[localSampleType.value as any],
@@ -963,9 +963,7 @@ function FilePanel() {
 
         // set the symbol styles based on the sample/layer type
         if (graphic?.geometry?.type === 'polygon') {
-          if (
-            defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
-          ) {
+          if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
             graphic.symbol =
               defaultSymbols.symbols[graphic.attributes.TYPEUUID];
           } else {

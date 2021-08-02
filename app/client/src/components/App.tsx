@@ -11,7 +11,7 @@ import Toolbar from 'components/Toolbar';
 import SplashScreen from 'components/SplashScreen';
 import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
-import { ReactTable } from 'components/ReactTable';
+import ReactTable from 'components/ReactTable';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
