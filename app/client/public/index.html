@@ -207,8 +207,8 @@
 
             //Log to Google Analytics
             const action = title
-              ? 'ow-tots1-' + text + ' - ' + title
-              : 'ow-tots1-' + text;
+              ? 'ord-tots1-' + text + ' - ' + title
+              : 'ord-tots1-' + text;
             logToGa(
               'send',
               'event',
@@ -234,7 +234,7 @@
                 action = item.name;
               }
             });
-            action = 'ow-tots1-' + (action ? action : event.target.text.trim());
+            action = 'ord-tots1-' + (action ? action : event.target.text.trim());
 
             if (document.location.hostname === event.target.hostname) {
               //Part of the TOTS application

@@ -251,7 +251,7 @@ export function logCallToGoogleAnalytics(
       eventAction = item.name;
     }
   });
-  eventAction = `ow-tots1-${eventAction}`;
+  eventAction = `ord-tots1-${eventAction}`;
 
   const eventLabel = `${url} | status:${status} | time:${duration}`;
 
