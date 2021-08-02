@@ -329,8 +329,8 @@ export const noSamplesPublishMessage = (
 export const noSampleTypesPublishMessage = (
   <MessageBox
     severity="warning"
-    title="No Sample Types to Publish"
-    message="There are no custom sample types to publish. Please add some custom sample types to the plan and try again."
+    title="No Custom Sample Types Exist"
+    message="There are no custom sample types created and/or loaded. Please add custom sample types to the plan and try again."
   />
 );
 
@@ -355,7 +355,7 @@ export const publishSuccessMessage = (
     severity="info"
     title="Publish Succeeded"
     message={
-      'To view or share your content with others, go to the ' +
+      'To view or share your TOTS content with others, go to the ' +
       'My Content menu in the Content section of your ArcGIS ' +
       'Online organization.'
     }
@@ -367,7 +367,7 @@ export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
     title="Plan Name Not Available"
-    message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
+    message={`The "${scenarioName}" name is already in use within your organization. Please rename the plan and try again.`}
   />
 );
 

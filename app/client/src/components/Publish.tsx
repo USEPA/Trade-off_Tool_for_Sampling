@@ -10,7 +10,6 @@ import {
 } from 'components/EditLayerMetaData';
 import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
-import { ReactTable } from 'components/ReactTable';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
@@ -112,10 +111,6 @@ const unCheckedStyles = css`
 
 const webMapContainerCheckboxStyles = css`
   margin-left: 20px;
-`;
-
-const tableContainerCheckboxStyles = css`
-  margin-bottom: 20px;
 `;
 
 // --- components (Publish) ---
@@ -1666,17 +1661,16 @@ function Publish() {
       <h2>Publish Output</h2>
       <div css={sectionContainer}>
         <p>
-          Publish the output (full plan, partial plan, and or custom sample
-          types) to ArcGIS Online. A hosted feature layer is created in your
-          ArcGIS Online organization account. By default, only you and the
-          administrator can access the feature layer created. To allow others
-          access to the plan, via Collector or Survey123 for example,{' '}
+          Publish the configured TOTS output to your ArcGIS Online account. 
+          A summary of the selections made on the Configure Output step is below. 
+          By default, only you and the ArcGIS Online adminstrator can access content created. 
+          Provide other collaborators access to TOTS content by{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"
             target="_blank"
             rel="noopener noreferrer"
           >
-            share
+            sharing
           </a>{' '}
           <a
             className="exit-disclaimer"
@@ -1686,7 +1680,7 @@ function Publish() {
           >
             EXIT
           </a>{' '}
-          the layer and file with everyone (the public), your organization, or
+          the content to everyone (the public), your organization, or
           members of specific groups. You can edit{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/manage-data/item-details.htm"
@@ -1750,7 +1744,7 @@ function Publish() {
             ) : (
               <i className="fas fa-times" css={unCheckedStyles}></i>
             )}
-            Include TOTS Full Reference File:
+            Include TOTS Full Reference Files:
           </strong>
           {includeFullPlan && (
             <React.Fragment>
@@ -1773,7 +1767,7 @@ function Publish() {
             ) : (
               <i className="fas fa-times" css={unCheckedStyles}></i>
             )}
-            Include TOTS Partial Reference File:
+            Include Tailored TOTS Output Files:
           </strong>
           {includePartialPlan && (
             <React.Fragment>
@@ -1789,47 +1783,17 @@ function Publish() {
             </React.Fragment>
           )}
         </p>
-        {includePartialPlan && (
-          <div css={tableContainerCheckboxStyles}>
-            <ReactTable
-              id="tots-survey123-attributes-table"
-              data={partialPlanAttributes}
-              idColumn={'ID'}
-              striped={true}
-              getColumns={(tableWidth: any) => {
-                return [
-                  {
-                    Header: 'ID',
-                    accessor: 'ID',
-                    width: 0,
-                    show: false,
-                  },
-                  {
-                    Header: 'Field',
-                    accessor: 'label',
-                    width: 148,
-                  },
-                  {
-                    Header: 'Type',
-                    accessor: 'dataType',
-                    width: 50,
-                  },
-                ];
-              }}
-            />
-          </div>
-        )}
 
         {includeCustomSampleTypes && (
           <div>
-            <strong>Custom Sample Types</strong>
+            <strong>Include Custom Sample Types:</strong>
             <ul>
               {sampleTypeSelections.map((item, index) => {
                 return <li key={index}>{item.label}</li>;
               })}
             </ul>
             <p>
-              <strong>Publish Custom Sample Types to</strong>
+              <strong>Publish Custom Sample Types to:</strong>
               <br />
               {selectedService ? (
                 <React.Fragment>
