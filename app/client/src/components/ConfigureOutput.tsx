@@ -13,6 +13,7 @@ import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 import Switch from 'components/Switch';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -23,6 +24,8 @@ import {
   Domain,
   SampleTypeOptions,
 } from 'types/Publish';
+// config
+import { notLoggedInMessage } from 'config/errorMessages';
 // styles
 import { colors } from 'styles';
 
@@ -134,6 +137,7 @@ const infoIconStyels = css`
 
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
+  const { signedIn } = React.useContext(AuthenticationContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
@@ -199,6 +203,7 @@ function ConfigureOutput() {
       />
       <div css={sectionContainer}>
         <h2>Configure Output</h2>
+        {!signedIn && notLoggedInMessage}
         <div>
           <p>
             Use this tab to configure what TOTS output is published to your
@@ -259,7 +264,11 @@ function ConfigureOutput() {
           }
         >
           <div css={sectionContainer}>
-            <p>This allows pulling back into TOTS for later modification.</p>
+            <p>
+              Choose this option to publish a complete set of output, including
+              all TOTS attribute values, that can be imported back into TOTS in
+              the future.
+            </p>
             <div>
               <input
                 id="include-web-map-toggle"
