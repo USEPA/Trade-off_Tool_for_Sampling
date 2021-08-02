@@ -68,7 +68,7 @@ export const CalculateContext = React.createContext<CalculateType>({
   setNumSamplingTeams: () => {},
   samplingLaborCost: 420,
   setSamplingLaborCost: () => {},
-  surfaceArea: 7400,
+  surfaceArea: 0,
   setSurfaceArea: () => {},
   inputNumLabs: 1,
   setInputNumLabs: () => {},
@@ -84,7 +84,7 @@ export const CalculateContext = React.createContext<CalculateType>({
   setInputNumSamplingTeams: () => {},
   inputSamplingLaborCost: 420,
   setInputSamplingLaborCost: () => {},
-  inputSurfaceArea: 7400,
+  inputSurfaceArea: 0,
   setInputSurfaceArea: () => {},
   updateContextValues: false,
   setUpdateContextValues: () => {},
@@ -113,7 +113,7 @@ export function CalculateProvider({ children }: Props) {
   const [numSamplingShifts, setNumSamplingShifts] = React.useState(1);
   const [numSamplingTeams, setNumSamplingTeams] = React.useState(1);
   const [samplingLaborCost, setSamplingLaborCost] = React.useState(420);
-  const [surfaceArea, setSurfaceArea] = React.useState(7400);
+  const [surfaceArea, setSurfaceArea] = React.useState(0);
 
   // input states
   const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
@@ -226,7 +226,16 @@ export function CalculateProvider({ children }: Props) {
           setNumSamplingShifts(1);
           setNumSamplingTeams(1);
           setSamplingLaborCost(420);
-          setSurfaceArea(7400);
+          setSurfaceArea(0);
+
+          setInputNumLabs(1);
+          setInputNumLabHours(24);
+          setInputNumSamplingHours(5);
+          setInputNumSamplingPersonnel(3);
+          setInputNumSamplingShifts(1);
+          setInputNumSamplingTeams(1);
+          setInputSamplingLaborCost(420);
+          setInputSurfaceArea(0);
         },
       }}
     >

@@ -6,12 +6,14 @@ import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import { EditCustomSampleTypesTable } from 'components/EditLayerMetaData';
+import InfoIcon from 'components/InfoIcon';
 import NavigationButton from 'components/NavigationButton';
 import { ReactTable, ReactTableEditable } from 'components/ReactTable';
 import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 import Switch from 'components/Switch';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -22,6 +24,8 @@ import {
   Domain,
   SampleTypeOptions,
 } from 'types/Publish';
+// config
+import { notLoggedInMessage } from 'config/errorMessages';
 // styles
 import { colors } from 'styles';
 
@@ -122,8 +126,18 @@ const checkboxStyles = css`
   margin-right: 5px;
 `;
 
+const nextInstructionStyles = css`
+  margin-top: 20px;
+`;
+
+const infoIconStyels = css`
+  margin-left: 10px;
+  color: #19a3dd;
+`;
+
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
+  const { signedIn } = React.useContext(AuthenticationContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
@@ -161,9 +175,21 @@ function ConfigureOutput() {
 
   const [editAttributesOpen, setEditAttributesOpen] = React.useState(false);
   const [attributesIndex, setAttributesIndex] = React.useState(-1);
-  const [isFullOpen, setIsFullOpen] = React.useState(false);
-  const [isPartialOpen, setIsPartialOpen] = React.useState(false);
-  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(false);
+  const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
+  const [isPartialOpen, setIsPartialOpen] = React.useState(includePartialPlan);
+  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(
+    includeCustomSampleTypes,
+  );
+
+  const webMapIcon = (id: string) => (
+    <InfoIcon
+      id={id}
+      cssStyles={infoIconStyels}
+      tooltip="A web map is used with Field Maps and supports field data collection activities."
+      place="right"
+      type="info"
+    />
+  );
 
   return (
     <div css={panelContainer}>
@@ -177,10 +203,11 @@ function ConfigureOutput() {
       />
       <div css={sectionContainer}>
         <h2>Configure Output</h2>
+        {!signedIn && notLoggedInMessage}
         <div>
           <p>
             Use this tab to configure what TOTS output is published to your
-            ArcGIS Online account. Three options are available:
+            ArcGIS Online account. Select one or more of the options below.
           </p>
           <ol>
             <li>
@@ -197,9 +224,6 @@ function ConfigureOutput() {
               sample types for future use in TOTS.
             </li>
           </ol>
-          <p>
-            Click <strong>Next</strong> to publish the selected TOTS output.
-          </p>
         </div>
 
         <p css={layerInfo}>
@@ -240,7 +264,11 @@ function ConfigureOutput() {
           }
         >
           <div css={sectionContainer}>
-            <p>This allows pulling back into TOTS for later modification.</p>
+            <p>
+              Choose this option to publish a complete set of output, including
+              all TOTS attribute values, that can be imported back into TOTS in
+              the future.
+            </p>
             <div>
               <input
                 id="include-web-map-toggle"
@@ -254,6 +282,7 @@ function ConfigureOutput() {
               <label htmlFor="include-web-map-toggle">
                 Include web map in output
               </label>
+              {webMapIcon('full-web-map-icon')}
             </div>
           </div>
         </AccordionItem>
@@ -267,7 +296,9 @@ function ConfigureOutput() {
           }}
           title={
             <label css={labelStyles}>
-              <strong>Include TOTS Partial Reference File</strong>
+              <strong>
+                Include Tailored TOTS Output for Field Data Collection
+              </strong>
               <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
                 <Switch
                   checked={includePartialPlan}
@@ -283,13 +314,13 @@ function ConfigureOutput() {
         >
           <div css={sectionContainer}>
             <p>
-              Define user-defined attributes to use with field data collection
-              apps. A subset of TOTS output will be published by default as
-              shown below. Click the <strong>Add New Attribute</strong> button
-              to add an additional attribute. A new window will open to assist
-              you with defining the attribute. Click the <strong>Edit</strong>{' '}
-              or <strong>Delete</strong> icons to modify attributes previously
-              added.
+              A subset of TOTS output will be published by default (see
+              attributes below). Specify additional user-defined attributes to
+              use with field data collection apps by clicking the
+              <strong> Add New Attribute</strong> button. A new window will open
+              to assist you with defining the attribute. Click the{' '}
+              <strong>Edit</strong> or <strong>Delete</strong> icons to modify
+              attributes previously added.
             </p>
           </div>
           <div css={sectionContainer}>
@@ -305,6 +336,7 @@ function ConfigureOutput() {
             <label htmlFor="include-partial-web-map-toggle">
               Include web map in output
             </label>
+            {webMapIcon('partial-web-map-icon')}
           </div>
           <div css={tableContainer}>
             <button
@@ -414,10 +446,11 @@ function ConfigureOutput() {
         >
           <div css={sectionContainer}>
             <p>
-              Publish user defined sample types to ArcGIS Online. Select the
-              user defined sample types you would like to publish. Then select
-              whether you would like to publish to a new or existing feature
-              service.
+              Publish custom sample types to ArcGIS Online. Select one or more
+              custom sample types from the drop-down list and specify whether to
+              publish output to a new or existing feature service. If appending
+              output to an existing feature service, select the feature service
+              from the drop-down list.
             </p>
             <div>
               <label htmlFor="publish-sample-select">
@@ -474,6 +507,10 @@ function ConfigureOutput() {
       </AccordionList>
 
       <div css={sectionContainer}>
+        <p css={nextInstructionStyles}>
+          Click <strong>Next</strong> to output.
+        </p>
+
         <NavigationButton goToPanel="publish" />
       </div>
     </div>
@@ -538,6 +575,16 @@ const rangeContainerStyles = css`
 
 const codedContainerStyles = css`
   margin-bottom: 10px;
+`;
+
+// This is a workaround for an issue where react-select does not
+// allow the required attribute to be passed in.
+const hiddenInput = css`
+  opacity: 0;
+  width: 100%;
+  height: 0;
+  position: absolute;
+  margin-top: -15px;
 `;
 
 // --- components (GettingStarted) ---
@@ -690,143 +737,8 @@ function EditAttributePopup({
       data-testid="tots-getting-started"
     >
       <DialogContent css={dialogStyles} aria-label="Edit Attribute">
-        <h1 css={headingStyles}>Edit Attribute</h1>
-
-        <div>
-          <label htmlFor="attribute-name-input">Name:</label>
-          <input
-            id="attribute-name-input"
-            type="text"
-            css={inputStyles}
-            value={name}
-            onChange={(ev) => setName(ev.target.value)}
-          />
-
-          <label htmlFor="attribute-label-input">Label:</label>
-          <input
-            id="attribute-label-input"
-            type="text"
-            css={inputStyles}
-            value={label}
-            onChange={(ev) => setLabel(ev.target.value)}
-          />
-        </div>
-
-        <label htmlFor="data-type-select-input">Data Type:</label>
-        <Select
-          id="data-type-select"
-          inputId="data-type-select-input"
-          css={layerSelectStyles}
-          value={dataType}
-          onChange={(ev) => setDataType(ev as DataType)}
-          options={[
-            { label: 'Date', value: 'date' },
-            { label: 'Double', value: 'double' },
-            { label: 'Integer', value: 'integer' },
-            { label: 'String', value: 'string' },
-          ]}
-          styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-          menuPortalTarget={document.body}
-          menuPosition={'fixed'}
-          menuPlacement={'bottom'}
-        />
-
-        {dataType && dataType.value === 'string' && (
-          <div>
-            <label htmlFor="length-input">Length:</label>
-            <input
-              id="length-input"
-              type="text"
-              pattern="[0-9]*"
-              css={inputStyles}
-              value={length}
-              onChange={(ev) => setLength(Number(ev.target.value))}
-            />
-          </div>
-        )}
-
-        {dataType && dataType.value !== 'date' && (
-          <div>
-            <label htmlFor="domain-type-select-input">Domain Type:</label>
-            <Select
-              id="domain-type-select"
-              inputId="domain-type-select-input"
-              css={layerSelectStyles}
-              value={domainType}
-              onChange={(ev) => setDomainType(ev as DataType)}
-              options={domainTypeOptions}
-              styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
-              menuPortalTarget={document.body}
-              menuPosition={'fixed'}
-              menuPlacement={'bottom'}
-            />
-
-            {domainType?.value === 'range' && (
-              <div css={rangeContainerStyles}>
-                <div>
-                  <label htmlFor="min-input">Min:</label>
-                  <input
-                    id="min-input"
-                    type="text"
-                    pattern="[0-9]*"
-                    css={inputStyles}
-                    value={min}
-                    onChange={(ev) => setMin(Number(ev.target.value))}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="max-input">Max:</label>
-                  <input
-                    id="max-input"
-                    type="text"
-                    pattern="[0-9]*"
-                    css={inputStyles}
-                    value={max}
-                    onChange={(ev) => setMax(Number(ev.target.value))}
-                  />
-                </div>
-              </div>
-            )}
-
-            {domainType?.value === 'coded' && (
-              <div css={codedContainerStyles}>
-                <label>Domain Values:</label>
-                <ReactTableEditable
-                  id="tots-survey123-attributes-table"
-                  data={codes}
-                  idColumn={'ID'}
-                  striped={true}
-                  hideHeader={false}
-                  onDataChange={onDataChange}
-                  getColumns={(tableWidth: any) => {
-                    return [
-                      {
-                        Header: 'ID',
-                        accessor: 'ID',
-                        width: 0,
-                        show: false,
-                      },
-                      {
-                        Header: 'Label',
-                        accessor: 'label',
-                        width: 181,
-                      },
-                      {
-                        Header: 'Value',
-                        accessor: 'value',
-                        width: 181,
-                      },
-                    ];
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        <button
-          css={saveAttributesButtonStyles}
-          onClick={() => {
+        <form
+          onSubmit={() => {
             if (!dataType) return;
 
             let domain: null | Domain = null;
@@ -891,16 +803,212 @@ function EditAttributePopup({
             onSave();
           }}
         >
-          Save
-        </button>
-        <button
-          css={saveAttributesButtonStyles}
-          onClick={() => {
-            onClose();
-          }}
-        >
-          Close
-        </button>
+          <h1 css={headingStyles}>Edit Attribute</h1>
+          <p>
+            Create or Edit an attribute that will make up the structure for
+            storing data in ArcGIS Online. The settings below will also drive
+            what UI options are available when creating surveys in Esri Field
+            Maps, such as text input, numeric input, drop down, etc.
+          </p>
+
+          <div>
+            <label htmlFor="attribute-name-input">Enter Field Name:</label>
+            <InfoIcon
+              id="field-name-input-icon"
+              cssStyles={infoIconStyels}
+              tooltip="Field names should not contain special characters, such as spaces, hyphens, parentheses, brackets, or characters such as $, %, and #."
+              place="right"
+              type="info"
+            />
+            <input
+              id="attribute-name-input"
+              type="text"
+              pattern="[a-zA-Z0-9_]+"
+              css={inputStyles}
+              value={name}
+              onChange={(ev) => setName(ev.target.value)}
+              required
+            />
+
+            <label htmlFor="attribute-label-input">Enter Display Name:</label>
+            <InfoIcon
+              id="display-name-input-icon"
+              cssStyles={infoIconStyels}
+              tooltip="An alternative name or alias for a field that is more descriptive and user-friendly than the name."
+              place="right"
+              type="info"
+            />
+            <input
+              id="attribute-label-input"
+              type="text"
+              css={inputStyles}
+              value={label}
+              onChange={(ev) => setLabel(ev.target.value)}
+              required
+            />
+          </div>
+
+          <label htmlFor="data-type-select-input">Choose Data Type:</label>
+          <Select
+            id="data-type-select"
+            inputId="data-type-select-input"
+            css={layerSelectStyles}
+            value={dataType}
+            onChange={(ev) => setDataType(ev as DataType)}
+            options={[
+              { label: 'Date', value: 'date' },
+              { label: 'Double', value: 'double' },
+              { label: 'Integer', value: 'integer' },
+              { label: 'String', value: 'string' },
+            ]}
+            styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+            menuPortalTarget={document.body}
+            menuPosition={'fixed'}
+            menuPlacement={'bottom'}
+          />
+          {/* This is a workaround for an issue where react-select does not
+            allow the required attribute to be passed in. */}
+          <input
+            css={hiddenInput}
+            aria-hidden="true"
+            value={dataType?.label}
+            required
+          />
+
+          {dataType && dataType.value === 'string' && (
+            <div>
+              <label htmlFor="length-input">Length:</label>
+              <input
+                id="length-input"
+                type="number"
+                min="1"
+                css={inputStyles}
+                value={length}
+                onChange={(ev) => setLength(Number(ev.target.value))}
+              />
+            </div>
+          )}
+
+          {dataType && dataType.value !== 'date' && (
+            <div>
+              <label htmlFor="domain-type-select-input">
+                Field Input Limitations:
+              </label>
+              <InfoIcon
+                id="domain-type-input-icon"
+                cssStyles={infoIconStyels}
+                tooltip="Used for limiting the values users can input into this field. This can either be a predefined list of values (Coded Values) or a numerical range (Range). The Coded Values option allows for drop-down, radio button, and switch options when creating surveys in Esri Field Maps."
+                place="right"
+                type="info"
+              />
+              <Select
+                id="domain-type-select"
+                inputId="domain-type-select-input"
+                css={layerSelectStyles}
+                value={domainType}
+                onChange={(ev) => setDomainType(ev as DataType)}
+                options={domainTypeOptions}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                menuPortalTarget={document.body}
+                menuPosition={'fixed'}
+                menuPlacement={'bottom'}
+              />
+
+              {domainType?.value === 'range' && (
+                <div css={rangeContainerStyles}>
+                  <div>
+                    <label htmlFor="min-input">Min:</label>
+                    <input
+                      id="min-input"
+                      type="text"
+                      pattern="[0-9]*"
+                      css={inputStyles}
+                      value={min}
+                      onChange={(ev) => setMin(Number(ev.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="max-input">Max:</label>
+                    <input
+                      id="max-input"
+                      type="text"
+                      pattern="[0-9]*"
+                      css={inputStyles}
+                      value={max}
+                      onChange={(ev) => setMax(Number(ev.target.value))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {domainType?.value === 'coded' && (
+                <div css={codedContainerStyles}>
+                  <label>Coded Values:</label>
+                  <ReactTableEditable
+                    id="tots-survey123-attributes-table"
+                    data={codes}
+                    idColumn={'ID'}
+                    striped={true}
+                    hideHeader={false}
+                    onDataChange={onDataChange}
+                    getColumns={(tableWidth: any) => {
+                      return [
+                        {
+                          Header: 'ID',
+                          accessor: 'ID',
+                          width: 0,
+                          show: false,
+                        },
+                        {
+                          Header: 'Label',
+                          accessor: 'label',
+                          width: 181,
+                        },
+                        {
+                          Header: 'Value',
+                          accessor: 'value',
+                          width: 181,
+                        },
+                      ];
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <button css={saveAttributesButtonStyles} type="submit">
+            Save
+          </button>
+          <button
+            css={saveAttributesButtonStyles}
+            onClick={() => {
+              onClose();
+            }}
+          >
+            Close
+          </button>
+
+          <p>
+            View documentation on{' '}
+            <a
+              href="https://doc.arcgis.com/en/field-maps/android/help/configure-the-form.htm"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              working with fields
+            </a>
+            .{' '}
+            <a
+              className="exit-disclaimer"
+              href="https://www.epa.gov/home/exit-epa"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              EXIT
+            </a>
+          </p>
+        </form>
       </DialogContent>
     </DialogOverlay>
   );

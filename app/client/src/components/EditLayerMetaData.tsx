@@ -77,7 +77,7 @@ const saveButtonStyles = (status: string) => {
   if (status === 'success') {
     backgroundColor = `background-color: ${colors.green()};`;
   }
-  if (status === 'failure') {
+  if (status === 'failure' || status === 'name-not-available') {
     backgroundColor = `background-color: ${colors.red()};`;
   }
 
