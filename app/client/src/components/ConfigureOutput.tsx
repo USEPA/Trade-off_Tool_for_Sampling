@@ -929,6 +929,26 @@ function EditAttributePopup({
         >
           Close
         </button>
+
+        <p>
+          View documentation on{' '}
+          <a
+            href="https://doc.arcgis.com/en/field-maps/android/help/configure-the-form.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            working with fields
+          </a>
+          .{' '}
+          <a
+            className="exit-disclaimer"
+            href="https://www.epa.gov/home/exit-epa"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            EXIT
+          </a>
+        </p>
       </DialogContent>
     </DialogOverlay>
   );

@@ -1661,10 +1661,10 @@ function Publish() {
       <h2>Publish Output</h2>
       <div css={sectionContainer}>
         <p>
-          Publish the configured TOTS output to your ArcGIS Online account. 
-          A summary of the selections made on the Configure Output step is below. 
-          By default, only you and the ArcGIS Online adminstrator can access content created. 
-          Provide other collaborators access to TOTS content by{' '}
+          Publish the configured TOTS output to your ArcGIS Online account. A
+          summary of the selections made on the Configure Output step is below.
+          By default, only you and the ArcGIS Online adminstrator can access
+          content created. Provide other collaborators access to TOTS content by{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"
             target="_blank"
@@ -1680,8 +1680,8 @@ function Publish() {
           >
             EXIT
           </a>{' '}
-          the content to everyone (the public), your organization, or
-          members of specific groups. You can edit{' '}
+          the content to everyone (the public), your organization, or members of
+          specific groups. You can edit{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/manage-data/item-details.htm"
             target="_blank"
