@@ -209,21 +209,6 @@ function ConfigureOutput() {
             Use this tab to configure what TOTS output is published to your
             ArcGIS Online account. Select one or more of the options below.
           </p>
-          <ol>
-            <li>
-              Choose Include Full Plan to publish a complete set of output that
-              can be imported back into TOTS in the future.
-            </li>
-            <li>
-              Choose Include Partial Plan to publish user-defined attributes
-              along with a subset of TOTS attributes to use with field data
-              collection apps.
-            </li>
-            <li>
-              Choose Include Custom Sample Types to publish and share custom
-              sample types for future use in TOTS.
-            </li>
-          </ol>
         </div>
 
         <p css={layerInfo}>
@@ -508,7 +493,7 @@ function ConfigureOutput() {
 
       <div css={sectionContainer}>
         <p css={nextInstructionStyles}>
-          Click <strong>Next</strong> to output.
+          Click <strong>Next</strong> to continue.
         </p>
 
         <NavigationButton goToPanel="publish" />
