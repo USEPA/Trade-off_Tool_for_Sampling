@@ -114,7 +114,11 @@ function MapMouseEvents({ mapView }: Props) {
             });
           }
         })
-        .catch((err: any) => console.error(err));
+        .catch((err: any) => {
+          console.error(err);
+
+          window.logErrorToGa(err);
+        });
     },
     [setSelectedSampleIds],
   );
@@ -159,6 +163,20 @@ function MapMouseEvents({ mapView }: Props) {
     setEdits(editsCopy);
 
     layer.sketchLayer.remove(sampleToDelete);
+
+    if (!layer.pointsLayer) return;
+
+    // Find the original point graphic and remove it
+    const graphicsToRemove: __esri.Graphic[] = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (
+        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        pointVersion.attributes.PERMANENT_IDENTIFIER
+      ) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
 
     // close the popup
     mapView?.popup.close();

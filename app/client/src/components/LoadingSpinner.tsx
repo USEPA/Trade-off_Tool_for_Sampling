@@ -1,7 +1,6 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
-import { jsx, css, keyframes } from '@emotion/core';
+import { css, keyframes } from '@emotion/react';
 // styles
 import { colors } from 'styles';
 

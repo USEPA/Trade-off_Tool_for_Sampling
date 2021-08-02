@@ -1,7 +1,6 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React, { ReactNode } from 'react';
-import { jsx } from '@emotion/core';
 // contexts
 import {
   useSampleTypesContext,
@@ -10,7 +9,7 @@ import {
 // utils
 import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
-import { updatePolygonSymbol } from 'utils/sketchUtils';
+import { updatePointSymbol, updatePolygonSymbol } from 'utils/sketchUtils';
 // types
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
@@ -32,6 +31,7 @@ type SketchType = {
   defaultSymbols: DefaultSymbolsType;
   setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
   setDefaultSymbolSingle: Function;
+  resetDefaultSymbols: Function;
   edits: EditsType;
   setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
@@ -85,6 +85,8 @@ type SketchType = {
   setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: React.Dispatch<React.SetStateAction<SampleSelectType[]>>;
+  showAsPoints: boolean;
+  setShowAsPoints: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const SketchContext = React.createContext<SketchType>({
@@ -98,6 +100,7 @@ export const SketchContext = React.createContext<SketchType>({
   },
   setDefaultSymbols: () => {},
   setDefaultSymbolSingle: () => {},
+  resetDefaultSymbols: () =>  {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
@@ -133,12 +136,14 @@ export const SketchContext = React.createContext<SketchType>({
   getGpMaxRecordCount: null,
   userDefinedOptions: [],
   setUserDefinedOptions: () => {},
-  userDefinedAttributes: { editCount: 0, attributes: {} },
+  userDefinedAttributes: { editCount: 0, sampleTypes: {} },
   setUserDefinedAttributes: () => {},
   sampleAttributes: [],
   setSampleAttributes: () => {},
   allSampleOptions: [],
   setAllSampleOptions: () => {},
+  showAsPoints: false,
+  setShowAsPoints: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -156,21 +161,24 @@ export function SketchProvider({ children }: Props) {
     },
   };
 
-  const [autoZoom, setAutoZoom] = React.useState(false);
-  const [
-    basemapWidget,
-    setBasemapWidget, //
-  ] = React.useState<__esri.BasemapGallery | null>(null);
-  const [defaultSymbols, setDefaultSymbols] = React.useState<
-    DefaultSymbolsType
-  >({
+  const initialDefaultSymbols = {
     symbols: {
       'Area of Interest': defaultSymbol,
       'Contamination Map': defaultSymbol,
       Samples: defaultSymbol,
     },
     editCount: 0,
-  });
+  };
+
+  const [autoZoom, setAutoZoom] = React.useState(false);
+  const [
+    basemapWidget,
+    setBasemapWidget, //
+  ] = React.useState<__esri.BasemapGallery | null>(null);
+  const [
+    defaultSymbols,
+    setDefaultSymbols,
+  ] = React.useState<DefaultSymbolsType>(initialDefaultSymbols);
   const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
   const [layersInitialized, setLayersInitialized] = React.useState(false);
   const [layers, setLayers] = React.useState<LayerType[]>([]);
@@ -203,13 +211,15 @@ export function SketchProvider({ children }: Props) {
   const [userDefinedOptions, setUserDefinedOptions] = React.useState<
     SampleSelectType[]
   >([]);
-  const [userDefinedAttributes, setUserDefinedAttributes] = React.useState<
-    UserDefinedAttributes
-  >({ editCount: 0, attributes: {} });
+  const [
+    userDefinedAttributes,
+    setUserDefinedAttributes,
+  ] = React.useState<UserDefinedAttributes>({ editCount: 0, sampleTypes: {} });
   const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
   const [allSampleOptions, setAllSampleOptions] = React.useState<
     SampleSelectType[]
   >([]);
+  const [showAsPoints, setShowAsPoints] = React.useState<boolean>(false);
 
   // Update totsSampleAttributes variable on the window object. This is a workaround
   // to an issue where the sampleAttributes state variable is not available within esri
@@ -243,7 +253,7 @@ export function SketchProvider({ children }: Props) {
     sampleTypeContext.data.sampleSelectOptions.forEach((option: any) => {
       allSampleOptions.push({
         value: option.value,
-        label: userDefinedAttributes.attributes.hasOwnProperty(option.value)
+        label: userDefinedAttributes.sampleTypes.hasOwnProperty(option.value)
           ? `${option.value} (edited)`
           : option.label,
         isPredefined: option.isPredefined,
@@ -278,10 +288,8 @@ export function SketchProvider({ children }: Props) {
       }
 
       let url = '';
-      if (services.data.useProxyForGPServer) url = services.data.proxyUrl;
-      url += `${
-        services.data.totsGPServer
-      }?f=json${getEnvironmentStringParam()}`;
+      if(services.data.useProxyForGPServer) url = services.data.proxyUrl;
+      url += `${services.data.totsGPServer}?f=json${getEnvironmentStringParam()}`;
 
       // get the max record count from the gp server
       fetchCheck(url)
@@ -290,7 +298,10 @@ export function SketchProvider({ children }: Props) {
           setGpMaxRecordCount(maxRecordCount);
           resolve(maxRecordCount);
         })
-        .catch((err) => reject(err));
+        .catch((err) => {
+          window.logErrorToGa(err);
+          reject(err);
+        });
     });
   }
 
@@ -309,6 +320,12 @@ export function SketchProvider({ children }: Props) {
 
     // update all of the symbols
     updatePolygonSymbol(layers, newDefaultSymbols);
+    updatePointSymbol(layers, newDefaultSymbols);
+  }
+
+  // Reset default symbols back to the default values
+  function resetDefaultSymbols() {
+    setDefaultSymbols(initialDefaultSymbols);
   }
 
   return (
@@ -321,6 +338,7 @@ export function SketchProvider({ children }: Props) {
         defaultSymbols,
         setDefaultSymbols,
         setDefaultSymbolSingle,
+        resetDefaultSymbols,
         edits,
         setEdits,
         homeWidget,
@@ -362,6 +380,8 @@ export function SketchProvider({ children }: Props) {
         setSampleAttributes,
         allSampleOptions,
         setAllSampleOptions,
+        showAsPoints,
+        setShowAsPoints,
       }}
     >
       {children}

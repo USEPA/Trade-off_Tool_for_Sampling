@@ -1,5 +1,107 @@
 {
   "totsGPServer": "https://geopub.epa.gov/arcgis/rest/services/ORD/TOTS/GPServer",
   "proxyUrl": "https://app7.erg.com/PHP/proxy.php?",
-  "useProxyForGPServer": false
+  "useProxyForGPServer": false,
+  "googleAnalyticsMapping": [
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{urlLookup}/Contamination Results*",
+      "name": "GP Server - Contamination Results"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{urlLookup}/Generate%20Random*",
+      "name": "GP Server - Generate Random"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{urlLookup}/VSP%20Import*",
+      "name": "GP Server - VSP Import"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{proxyUrl}{urlLookup}*",
+      "name": "GP Server"
+    },
+    {
+      "urlLookup": "origin",
+      "wildcardUrl": "{urlLookup}/proxy?url={urlLookup}/data/sampleTypes/sampleTypes.json",
+      "name": "s3 lookup - sample types"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/community/users/*",
+      "name": "ArcGIS - User logged in check"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/features/generate",
+      "name": "ArcGIS - Convert ShapeFile to Feature Layer"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/features/analyze",
+      "name": "ArcGIS - Validate CSV file"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://utility.arcgis.com/sharing/kml",
+      "name": "ArcGIS - KML file upload"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/portals/*/isServiceNameAvailable",
+      "name": "ArcGIS - is service name available"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/applyEdits",
+      "name": "ArcGIS - Apply Edits to Feature Server"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer/addToDefinition",
+      "name": "ArcGIS - Add Layer to Feature Server"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://services5.arcgis.com/*/arcgis/rest/services/*/FeatureServer",
+      "name": "ArcGIS - Feature Server"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://services5.arcgis.com/*",
+      "name": "ArcGIS"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/community/groups*",
+      "name": "ArcGIS - Community Groups"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/groups*",
+      "name": "ArcGIS - Content Groups"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/items*",
+      "name": "ArcGIS - Content Items"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/portals*",
+      "name": "ArcGIS - Portals"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/search*",
+      "name": "ArcGIS - Search"
+    },
+    {
+      "urlLookup": "ArcGIS",
+      "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/users/*",
+      "name": "ArcGIS - User logged in check"
+    }
+  ]
 }

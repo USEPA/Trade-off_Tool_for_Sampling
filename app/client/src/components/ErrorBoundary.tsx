@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // config
 import { errorBoundaryMessage } from 'config/errorMessages';
 
@@ -31,6 +30,14 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error) {
     console.warn(error);
+
+    try {
+      throw error;
+    } catch (err) {
+      if (!window.gaTarget) return;
+
+      window.logErrorToGa(err, true);
+    }
   }
 
   render() {

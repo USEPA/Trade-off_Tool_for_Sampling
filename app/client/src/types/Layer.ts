@@ -19,6 +19,7 @@ export type PublishStatus = 'added' | 'edited' | 'published';
 
 export type LayerType = {
   id: number;
+  pointsId: number;
   uuid: string;
   layerId: string;
   portalId: string;
@@ -34,6 +35,7 @@ export type LayerType = {
   addedFrom: AddedFrom;
   status: PublishStatus;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+  pointsLayer: __esri.GraphicsLayer | null;
   parentLayer: __esri.GroupLayer | null;
 };
 

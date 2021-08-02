@@ -20,8 +20,10 @@
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Sponge",
       "TYPE": "Sponge",
       "ShapeType": "point",
+      "POINT_STYLE": "circle",
       "SA": 100,
       "AA": null,
       "TTPK": 0.12,
@@ -46,14 +48,16 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Micro Vac": {
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Micro Vac",
       "TYPE": "Micro Vac",
       "ShapeType": "point",
+      "POINT_STYLE": "cross",
       "SA": 144,
       "AA": null,
       "TTPK": 0.18,
@@ -78,14 +82,16 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Wet Vac": {
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Wet Vac",
       "TYPE": "Wet Vac",
       "ShapeType": "polygon",
+      "POINT_STYLE": "diamond",
       "SA": 28800,
       "AA": null,
       "TTPK": 0.33,
@@ -110,14 +116,16 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Robot": {
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Robot",
       "TYPE": "Robot",
       "ShapeType": "polygon",
+      "POINT_STYLE": "square",
       "SA": 144000,
       "AA": null,
       "TTPK": 0.33,
@@ -142,14 +150,16 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Aggressive Air": {
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Aggressive Air",
       "TYPE": "Aggressive Air",
       "ShapeType": "polygon",
+      "POINT_STYLE": "triangle",
       "SA": 144000,
       "AA": null,
       "TTPK": 0.33,
@@ -174,14 +184,16 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     },
     "Swab": {
       "OBJECTID": "-1",
       "PERMANENT_IDENTIFIER": null,
       "GLOBALID": null,
+      "TYPEUUID": "Swab",
       "TYPE": "Swab",
       "ShapeType": "point",
+      "POINT_STYLE": "x",
       "SA": 4,
       "AA": null,
       "TTPK": 0.12,
@@ -206,7 +218,7 @@
       "ORGANIZATION": null,
       "DECISIONUNITUUID": null,
       "DECISIONUNIT": null,
-      "DECISIONUNITSORT": null
+      "DECISIONUNITSORT": 0
     }
   }
 }

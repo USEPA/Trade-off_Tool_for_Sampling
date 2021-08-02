@@ -1,8 +1,7 @@
-// emotion @jsx pragma docs: https://emotion.sh/docs/css-prop#jsx-pragma
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { Global, jsx, css } from '@emotion/core';
+import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
 // components
 import AlertDialog from 'components/AlertDialog';
@@ -19,6 +18,7 @@ import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
 import { LookupFilesProvider } from 'contexts/LookupFiles';
 import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
+import { PublishProvider } from 'contexts/Publish';
 import { SketchProvider, SketchContext } from 'contexts/Sketch';
 import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
@@ -36,6 +36,16 @@ const esrifooterheight = 16;
 const expandButtonHeight = 32;
 const minMapHeight = 180;
 var startY = 0;
+
+declare global {
+  interface Window {
+    ga: Function;
+    gaTarget: string;
+    googleAnalyticsMapping: any[];
+    logErrorToGa: Function;
+    logToGa: Function;
+  }
+}
 
 const gloablStyles = css`
   html {
@@ -78,7 +88,7 @@ const gloablStyles = css`
   }
 
   .esri-popup__main-container {
-    min-height: 450px !important;
+    max-height: 465px !important;
     min-width: 460px !important;
   }
 
@@ -258,6 +268,7 @@ function App() {
     layers,
     selectedSampleIds,
     setSelectedSampleIds,
+    selectedScenario,
   } = React.useContext(SketchContext);
 
   useSessionStorage();
@@ -331,6 +342,7 @@ function App() {
   const sampleData: any[] = [];
   layers.forEach((layer) => {
     if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
+    if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
     if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
       layer.sketchLayer.graphics.forEach((sample) => {
         sampleData.push({
@@ -664,9 +676,11 @@ export default function AppContainer() {
           <AuthenticationProvider>
             <CalculateProvider>
               <NavigationProvider>
-                <SketchProvider>
-                  <App />
-                </SketchProvider>
+                <PublishProvider>
+                  <SketchProvider>
+                    <App />
+                  </SketchProvider>
+                </PublishProvider>
               </NavigationProvider>
             </CalculateProvider>
           </AuthenticationProvider>

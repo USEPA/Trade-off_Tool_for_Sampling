@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -139,6 +139,8 @@ function URLPanel() {
         .catch((err) => {
           console.error(err);
           setStatus('failure');
+
+          window.logErrorToGa(err);
         });
       return;
     }
