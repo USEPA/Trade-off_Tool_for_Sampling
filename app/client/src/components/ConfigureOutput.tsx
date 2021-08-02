@@ -718,29 +718,112 @@ function EditAttributePopup({
       data-testid="tots-getting-started"
     >
       <DialogContent css={dialogStyles} aria-label="Edit Attribute">
+        <form 
+          onSubmit={() => {
+            if (!dataType) return;
+
+            let domain: null | Domain = null;
+            if (
+              domainType &&
+              (dataType.value === 'double' ||
+                dataType.value === 'integer' ||
+                dataType.value === 'string')
+            ) {
+              if (domainType.value === 'range') {
+                domain = {
+                  type: 'range',
+                  range: {
+                    min,
+                    max,
+                  },
+                  codedValues: null,
+                };
+              } else if (domainType.value === 'coded') {
+                domain = {
+                  type: 'coded',
+                  range: null,
+                  codedValues: codes,
+                };
+              } else {
+                domain = {
+                  type: 'none',
+                  range: null,
+                  codedValues: null,
+                };
+              }
+            }
+
+            const id =
+              selectedIndex === -1 ? currentAttributeId : selectedIndex;
+            if (selectedIndex === -1) currentAttributeId += 1;
+
+            const newAttribute: AttributesType = {
+              id,
+              name,
+              label,
+              dataType: dataType.value as any,
+              length: dataType.value === 'string' ? length : null,
+              domain,
+            };
+
+            setAttributes((attributes) => {
+              let newAttributes = attributes.map((attribute, index) => {
+                if (index === selectedIndex) {
+                  return newAttribute;
+                }
+                return attribute;
+              });
+
+              if (selectedIndex === -1) {
+                newAttributes.push(newAttribute);
+              }
+
+              return newAttributes;
+            });
+
+            onSave();
+          }}
+        >
         <h1 css={headingStyles}>Edit Attribute</h1>
 
         <div>
-          <label htmlFor="attribute-name-input">Name:</label>
+          <label htmlFor="attribute-name-input">Enter Field Name:</label>
+          <InfoIcon
+            id="field-name-input-icon"
+            cssStyles={infoIconStyels}
+            tooltip="Field names should not contain special characters, such as spaces, hyphens, parentheses, brackets, or characters such as $, %, and #."
+            place="right"
+            type="info"
+          />
           <input
             id="attribute-name-input"
             type="text"
+            pattern="[a-zA-Z0-9_]+"
             css={inputStyles}
             value={name}
             onChange={(ev) => setName(ev.target.value)}
+            required
           />
 
-          <label htmlFor="attribute-label-input">Label:</label>
+          <label htmlFor="attribute-label-input">Enter Display Name:</label>
+          <InfoIcon
+            id="display-name-input-icon"
+            cssStyles={infoIconStyels}
+            tooltip="An alternative name or alias for a field that is more descriptive and user-friendly than the name."
+            place="right"
+            type="info"
+          />
           <input
             id="attribute-label-input"
             type="text"
             css={inputStyles}
             value={label}
             onChange={(ev) => setLabel(ev.target.value)}
+            required
           />
         </div>
 
-        <label htmlFor="data-type-select-input">Data Type:</label>
+        <label htmlFor="data-type-select-input">Choose Data Type:</label>
         <Select
           id="data-type-select"
           inputId="data-type-select-input"
@@ -758,14 +841,26 @@ function EditAttributePopup({
           menuPosition={'fixed'}
           menuPlacement={'bottom'}
         />
+        <input 
+          css={css`
+              opacity: 0;
+              width: 100%;
+              height: 0;
+              position: absolute;
+              margin-top: -15px;
+          `} 
+          aria-hidden="true"
+          value={dataType?.label}
+          required 
+        />
 
         {dataType && dataType.value === 'string' && (
           <div>
             <label htmlFor="length-input">Length:</label>
             <input
               id="length-input"
-              type="text"
-              pattern="[0-9]*"
+              type="number"
+              min="1"
               css={inputStyles}
               value={length}
               onChange={(ev) => setLength(Number(ev.target.value))}
@@ -854,70 +949,7 @@ function EditAttributePopup({
 
         <button
           css={saveAttributesButtonStyles}
-          onClick={() => {
-            if (!dataType) return;
-
-            let domain: null | Domain = null;
-            if (
-              domainType &&
-              (dataType.value === 'double' ||
-                dataType.value === 'integer' ||
-                dataType.value === 'string')
-            ) {
-              if (domainType.value === 'range') {
-                domain = {
-                  type: 'range',
-                  range: {
-                    min,
-                    max,
-                  },
-                  codedValues: null,
-                };
-              } else if (domainType.value === 'coded') {
-                domain = {
-                  type: 'coded',
-                  range: null,
-                  codedValues: codes,
-                };
-              } else {
-                domain = {
-                  type: 'none',
-                  range: null,
-                  codedValues: null,
-                };
-              }
-            }
-
-            const id =
-              selectedIndex === -1 ? currentAttributeId : selectedIndex;
-            if (selectedIndex === -1) currentAttributeId += 1;
-
-            const newAttribute: AttributesType = {
-              id,
-              name,
-              label,
-              dataType: dataType.value as any,
-              length: dataType.value === 'string' ? length : null,
-              domain,
-            };
-
-            setAttributes((attributes) => {
-              let newAttributes = attributes.map((attribute, index) => {
-                if (index === selectedIndex) {
-                  return newAttribute;
-                }
-                return attribute;
-              });
-
-              if (selectedIndex === -1) {
-                newAttributes.push(newAttribute);
-              }
-
-              return newAttributes;
-            });
-
-            onSave();
-          }}
+          type="submit"
         >
           Save
         </button>
@@ -949,6 +981,7 @@ function EditAttributePopup({
             EXIT
           </a>
         </p>
+        </form>
       </DialogContent>
     </DialogOverlay>
   );
