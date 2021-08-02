@@ -193,52 +193,38 @@ function ConfigureOutput() {
 
   return (
     <div css={panelContainer}>
-      <EditAttributePopup
-        isOpen={editAttributesOpen}
-        attributes={partialPlanAttributes}
-        setAttributes={setPartialPlanAttributes}
-        selectedIndex={attributesIndex}
-        onSave={() => setEditAttributesOpen(false)}
-        onClose={() => setEditAttributesOpen(false)}
-      />
-      <div css={sectionContainer}>
-        <h2>Configure Output</h2>
-        {!signedIn && notLoggedInMessage}
-        <div>
-          <p>
-            Use this tab to configure what TOTS output is published to your
-            ArcGIS Online account. Select one or more of the options below.
-          </p>
-          <ol>
-            <li>
-              Choose Include Full Plan to publish a complete set of output that
-              can be imported back into TOTS in the future.
-            </li>
-            <li>
-              Choose Include Partial Plan to publish user-defined attributes
-              along with a subset of TOTS attributes to use with field data
-              collection apps.
-            </li>
-            <li>
-              Choose Include Custom Sample Types to publish and share custom
-              sample types for future use in TOTS.
-            </li>
-          </ol>
-        </div>
+      <div>
+        <EditAttributePopup
+          isOpen={editAttributesOpen}
+          attributes={partialPlanAttributes}
+          setAttributes={setPartialPlanAttributes}
+          selectedIndex={attributesIndex}
+          onSave={() => setEditAttributesOpen(false)}
+          onClose={() => setEditAttributesOpen(false)}
+        />
+        <div css={sectionContainer}>
+          <h2>Configure Output</h2>
+          {!signedIn && notLoggedInMessage}
+          <div>
+            <p>
+              Use this tab to configure what TOTS output is published to your
+              ArcGIS Online account. Select one or more of the options below.
+            </p>
+          </div>
 
-        <p css={layerInfo}>
-          <strong>Plan Name: </strong>
-          {selectedScenario?.scenarioName}
-        </p>
-        <p css={layerInfo}>
-          <strong>Plan Description: </strong>
-          <ShowLessMore
-            text={selectedScenario?.scenarioDescription}
-            charLimit={20}
-          />
-        </p>
-      </div>
-      <AccordionList>
+          <p css={layerInfo}>
+            <strong>Plan Name: </strong>
+            {selectedScenario?.scenarioName}
+          </p>
+          <p css={layerInfo}>
+            <strong>Plan Description: </strong>
+            <ShowLessMore
+              text={selectedScenario?.scenarioDescription}
+              charLimit={20}
+            />
+          </p>
+        </div>
+        <AccordionList>
         <AccordionItem
           isOpenParam={isFullOpen}
           onChange={(isOpen) => {
@@ -505,10 +491,11 @@ function ConfigureOutput() {
           </div>
         </AccordionItem>
       </AccordionList>
+      </div>
 
       <div css={sectionContainer}>
         <p css={nextInstructionStyles}>
-          Click <strong>Next</strong> to output.
+          Click <strong>Next</strong> to continue.
         </p>
 
         <NavigationButton goToPanel="publish" />
