@@ -3,17 +3,10 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ServiceMetaDataType,
-  TableType,
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
-import { AttributesType } from 'types/Publish';
 // config
-import {
-  defaultFields,
-  defaultLayerProps,
-  defaultTableProps,
-  webMapFieldProps,
-} from 'config/layerProps';
+import { defaultLayerProps, defaultTableProps } from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
@@ -330,7 +323,7 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
       `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
     )
       .then((res: any) => {
-        if (res) resolve(res);
+        if (res) resolve(res.layers);
         else resolve([]);
       })
       .catch((err) => {
@@ -398,9 +391,6 @@ function buildRendererParams(layer: LayerType) {
   const uniqueValueInfosPolygons: any[] = [];
   const typesAdded: string[] = [];
   const uniqueValueInfosPoints: any[] = [];
-  const templatesPolygons: any[] = [];
-  const templatesPoints: any[] = [];
-  const sampleTypes: any = {};
 
   // get the extent from the array of graphics
   if (layer.sketchLayer.type === 'graphics') {
@@ -413,25 +403,6 @@ function buildRendererParams(layer: LayerType) {
       const attributes = graphic.attributes;
       if (!typesAdded.includes(attributes.TYPEUUID)) {
         typesAdded.push(attributes.TYPEUUID);
-
-        sampleTypes[attributes.TYPEUUID] = {
-          attributes: {
-            ...attributes,
-            PERMANENT_IDENTIFIER: null,
-            AA: null,
-            Notes: '',
-            CONTAMTYPE: null,
-            CONTAMVAL: null,
-            CONTAMUNIT: null,
-            CREATEDDATE: null,
-            UPDATEDDATE: null,
-            USERNAME: null,
-            ORGANIZATION: null,
-            DECISIONUNITUUID: null,
-            DECISIONUNIT: null,
-            DECISIONUNITSORT: 0,
-          },
-        };
 
         const tempSymbol = {
           color: graphic.symbol.color,
@@ -480,9 +451,6 @@ function buildRendererParams(layer: LayerType) {
 
   return {
     graphicsExtent,
-    sampleTypes,
-    templatesPoints,
-    templatesPolygons,
     uniqueValueInfosPolygons,
     uniqueValueInfosPoints,
   };
@@ -502,7 +470,6 @@ export function createFeatureLayers(
   serviceUrl: string,
   layers: LayerType[],
   serviceMetaData: ServiceMetaDataType,
-  attributesToInclude: AttributesType[] | null,
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -510,7 +477,6 @@ export function createFeatureLayers(
       resolve({
         success: true,
         layers: [],
-        tables: [],
       });
       return;
     }
@@ -521,111 +487,13 @@ export function createFeatureLayers(
 
       const {
         graphicsExtent,
-        templatesPoints,
-        templatesPolygons,
         uniqueValueInfosPolygons,
         uniqueValueInfosPoints,
       } = buildRendererParams(layer);
 
-      // add a custom type for determining which layers in a feature service
-      // are the sample layers. All feature services made through TOTS should only
-      // have one layer, but it is possible for user
-      if (layer.layerType === 'Samples') {
-        templatesPolygons.push({
-          id: 'epa-tots-sample-layer',
-          name: 'epa-tots-sample-layer',
-        });
-      }
-      if (layer.layerType === 'VSP') {
-        templatesPolygons.push({
-          id: 'epa-tots-vsp-layer',
-          name: 'epa-tots-vsp-layer',
-        });
-      }
-
-      let fields = defaultFields;
-      if (attributesToInclude) {
-        fields = defaultFields.filter(
-          (x) =>
-            attributesToInclude.findIndex((y) => y.name === x.name) > -1 ||
-            x.name === 'GLOBALID' ||
-            x.name === 'OBJECTID',
-        );
-      }
-
-      attributesToInclude?.forEach((attribute) => {
-        const fieldIndex = fields.findIndex((x) => x.name === attribute.name);
-
-        if (fieldIndex > -1) return;
-
-        let esriType = '';
-        let actualType: string | undefined = undefined;
-        let sqlType = '';
-        let length: number | undefined = undefined;
-        if (attribute.dataType === 'date') {
-          esriType = 'esriFieldTypeDate';
-          sqlType = 'sqlTypeOther';
-        }
-        if (attribute.dataType === 'double') {
-          esriType = 'esriFieldTypeDouble';
-          actualType = 'double';
-          sqlType = 'sqlTypeDouble';
-        }
-        if (attribute.dataType === 'integer') {
-          esriType = 'esriFieldTypeInteger';
-          actualType = 'int';
-          sqlType = 'sqlTypeInteger';
-        }
-        if (attribute.dataType === 'string') {
-          esriType = 'esriFieldTypeString';
-          actualType = 'nvarchar';
-          sqlType = 'sqlTypeNVarchar';
-          length = attribute.length ?? undefined;
-        }
-
-        let domain = null;
-        if (attribute.domain?.type === 'range' && attribute.domain.range) {
-          const range = attribute.domain.range;
-          domain = {
-            type: 'range',
-            name: `${attribute.name}DOMAIN`,
-            range: [range.min, range.max],
-          };
-        }
-        if (
-          attribute.domain?.type === 'coded' &&
-          attribute.domain.codedValues
-        ) {
-          domain = {
-            type: 'codedValue',
-            name: `${attribute.name}DOMAIN`,
-            codedValues: attribute.domain.codedValues.map((item) => {
-              return {
-                name: item.label,
-                code: item.value,
-              };
-            }),
-          };
-        }
-
-        fields.push({
-          name: attribute.name,
-          alias: attribute.label,
-          type: esriType,
-          actualType,
-          sqlType,
-          nullable: true,
-          editable: true,
-          defaultValue: null,
-          length,
-          domain,
-        } as any);
-      });
-
       // add the polygon representation
       layersParams.push({
         ...defaultLayerProps,
-        fields,
         name: serviceMetaData.label,
         description: serviceMetaData.description,
         extent: graphicsExtent,
@@ -636,29 +504,31 @@ export function createFeatureLayers(
             uniqueValueInfos: uniqueValueInfosPolygons,
           },
         },
-        types: templatesPolygons,
-      });
 
-      // add a custom type for determining which layers in a feature service
-      // are the sample layers. All feature services made through TOTS should only
-      // have one layer, but it is possible for user
-      if (layer.layerType === 'Samples') {
-        templatesPoints.push({
-          id: 'epa-tots-sample-points-layer',
-          name: 'epa-tots-sample-points-layer',
-        });
-      }
-      if (layer.layerType === 'VSP') {
-        templatesPoints.push({
-          id: 'epa-tots-vsp-points-layer',
-          name: 'epa-tots-vsp-points-layer',
-        });
-      }
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-layer',
+                  name: 'epa-tots-sample-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-layer',
+                  name: 'epa-tots-vsp-layer',
+                },
+              ]
+            : null,
+      });
 
       // add the point representation
       layersParams.push({
         ...defaultLayerProps,
-        fields,
         geometryType: 'esriGeometryPoint',
         name: serviceMetaData.label + '-points',
         description: serviceMetaData.description,
@@ -670,7 +540,26 @@ export function createFeatureLayers(
             uniqueValueInfos: uniqueValueInfosPoints,
           },
         },
-        types: templatesPoints,
+
+        // add a custom type for determining which layers in a feature service
+        // are the sample layers. All feature services made through TOTS should only
+        // have one layer, but it is possible for user
+        types:
+          layer.layerType === 'Samples'
+            ? [
+                {
+                  id: 'epa-tots-sample-points-layer',
+                  name: 'epa-tots-sample-points-layer',
+                },
+              ]
+            : layer.layerType === 'VSP'
+            ? [
+                {
+                  id: 'epa-tots-vsp-points-layer',
+                  name: 'epa-tots-vsp-points-layer',
+                },
+              ]
+            : null,
       });
     });
 
@@ -681,15 +570,6 @@ export function createFeatureLayers(
       token: tempPortal.credential.token,
       addToDefinition: {
         layers: layersParams,
-        tables: [
-          {
-            ...defaultTableProps,
-            fields: defaultFields,
-            type: 'Table',
-            name: `${serviceMetaData.label}-sample-types`,
-            description: '',
-          },
-        ],
       },
     };
     appendEnvironmentObjectParam(data);
@@ -698,7 +578,6 @@ export function createFeatureLayers(
       resolve({
         success: true,
         layers: [],
-        tables: [],
       });
       return;
     }
@@ -736,7 +615,6 @@ export function createFeatureTables(
 
     tableParams.push({
       ...defaultTableProps,
-      fields: defaultFields,
       type: 'Table',
       name: serviceMetaData.label,
       description: serviceMetaData.description,
@@ -988,7 +866,6 @@ function addPointFeatures(
   layer: LayerType,
   array: any[],
   item: FeatureEditsType,
-  attributesToInclude: AttributesType[] | null,
   forDeletes: boolean = false,
 ) {
   // find the graphic
@@ -1005,28 +882,9 @@ function addPointFeatures(
     return;
   }
 
-  let attributes: any = {};
-  if (layer?.sketchLayer.type === 'graphics') {
-    const graphic = layer.sketchLayer.graphics.find(
-      (graphic) =>
-        graphic.attributes.PERMANENT_IDENTIFIER ===
-        item.attributes.PERMANENT_IDENTIFIER,
-    );
-
-    attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
-    attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-    if (attributesToInclude) {
-      attributesToInclude.forEach((attribute) => {
-        attributes[attribute.name] = graphic.attributes[attribute.name] || null;
-      });
-    } else {
-      attributes = { ...graphic.attributes };
-    }
-  }
-
   // Add full feature for graphics to add or update
   array.push({
-    attributes,
+    attributes: graphic.attributes,
     geometry: graphic.geometry,
     symbol: graphic.symbol,
   });
@@ -1047,15 +905,11 @@ export function applyEdits({
   serviceUrl,
   layers,
   edits,
-  table,
-  attributesToInclude,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
   layers: LayerType[];
   edits: LayerEditsType[];
-  table: TableType | null;
-  attributesToInclude: AttributesType[] | null;
 }) {
   return new Promise((resolve, reject) => {
     const changes: any[] = [];
@@ -1085,21 +939,16 @@ export function applyEdits({
       const pointsUpdates: FeatureEditsType[] = [];
       const pointsDeletes: FeatureEditsType[] = [];
       layerEdits.adds.forEach((item) => {
-        addPointFeatures(mapLayer, pointsAdds, item, attributesToInclude);
+        addPointFeatures(mapLayer, pointsAdds, item);
       });
       layerEdits.updates.forEach((item) => {
-        addPointFeatures(mapLayer, pointsUpdates, item, attributesToInclude);
+        addPointFeatures(mapLayer, pointsUpdates, item);
       });
       layerEdits.deletes.forEach((item) => {
-        addPointFeatures(
-          mapLayer,
-          pointsDeletes,
-          {
-            attributes: item,
-            geometry: {},
-          },
-          attributesToInclude,
-        );
+        addPointFeatures(mapLayer, pointsDeletes, {
+          attributes: item,
+          geometry: {},
+        });
       });
 
       // Push the points version into the changes array
@@ -1110,13 +959,6 @@ export function applyEdits({
         deletes: pointsDeletes,
       });
     });
-
-    let tableOut: TableType | null = null;
-    if (table) {
-      const output = buildTableEdits({ layers, table });
-      changes.push(output.edits);
-      tableOut = output.table;
-    }
 
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
@@ -1132,208 +974,6 @@ export function applyEdits({
     appendEnvironmentObjectParam(data);
 
     fetchPost(`${serviceUrl}/applyEdits`, data)
-      .then((res) =>
-        resolve({
-          response: res,
-          table: tableOut,
-        }),
-      )
-      .catch((err) => {
-        window.logErrorToGa(err);
-        reject(err);
-      });
-  });
-}
-
-/**
- * Builds the edits arrays for publishing the sample types layer of 
- * the sampling plan feature service.
- * 
- * @param layers LayerType[] - The layers to search for sample types in
- * @param table any - The table object
- * @returns An object containing the edits arrays
- */
-export function buildTableEdits({
-  layers,
-  table,
-}: {
-  layers: LayerType[];
-  table: TableType;
-}) {
-  const adds: any[] = [];
-  const updates: any[] = [];
-  const deletes: any[] = [];
-  let sampleTypesOut: any = {};
-
-  layers.forEach((layer) => {
-    const { sampleTypes } = buildRendererParams(layer);
-
-    // build the deletes array
-    Object.keys(table.sampleTypes).forEach((key) => {
-      if (!sampleTypes.hasOwnProperty(key)) {
-        deletes.push(table.sampleTypes[key].OBJECTID);
-      }
-    });
-
-    // build the adds and updates arrays
-    Object.keys(sampleTypes).forEach((key) => {
-      if (table.sampleTypes.hasOwnProperty(key)) {
-        updates.push(sampleTypes[key]);
-        sampleTypesOut[key] = sampleTypes[key];
-      } else {
-        adds.push(sampleTypes[key]);
-        sampleTypesOut[key] = sampleTypes[key];
-      }
-    });
-  });
-
-  return {
-    table: {
-      id: table.id,
-      sampleTypes: sampleTypesOut,
-    },
-    edits: {
-      id: table.id,
-      adds,
-      updates,
-      deletes,
-    },
-  };
-}
-
-/**
- * Publishes a web map version of the feature service.
- * 
- * @param portal The portal object to apply edits to
- * @param service The feature service object
- * @param layers The layers that the edits object pertain to
- * @param layersResponse The response from creating layers
- * @param attributesToInclude The attributes to include with each graphic
- * @returns A promise that resolves to the successfully saved web map
- */
-export function addWebMap({
-  portal,
-  service,
-  layers,
-  layersResponse,
-  attributesToInclude,
-}: {
-  portal: __esri.Portal;
-  service: any;
-  layers: LayerType[];
-  layersResponse: any;
-  attributesToInclude: AttributesType[] | null;
-}) {
-  return new Promise((resolve, reject) => {
-    // Workaround for esri.Portal not having credential
-    const tempPortal: any = portal;
-
-    const itemId = service.portalService.id;
-    const baseUrl = service.portalService.url;
-    const title = service.portalService.title;
-
-    const fieldInfos: any[] = [];
-    attributesToInclude?.forEach((attribute) => {
-      if (webMapFieldProps.hasOwnProperty(attribute.name)) {
-        fieldInfos.push((webMapFieldProps as any)[attribute.name]);
-      } else {
-        let format: any = undefined;
-        if (
-          attribute.dataType === 'double' ||
-          attribute.dataType === 'integer'
-        ) {
-          format = {
-            digitSeparator: true,
-            places: 0,
-          };
-        }
-
-        fieldInfos.push({
-          fieldName: attribute.name,
-          label: attribute.label,
-          isEditable: true,
-          visible: true,
-          format,
-        });
-      }
-    });
-
-    const operationalLayers: any[] = [];
-    const mainLayer = layers[0];
-    let extent: __esri.Extent = mainLayer.sketchLayer.fullExtent;
-    const { graphicsExtent } = buildRendererParams(mainLayer);
-    if (graphicsExtent) {
-      extent = graphicsExtent;
-    }
-
-    layersResponse.layers.forEach((layer: any) => {
-      operationalLayers.push({
-        title: layer.name,
-        url: `${baseUrl}/${layer.id}`,
-        itemId,
-        layerType: 'ArcGISFeatureLayer',
-        popupInfo: {
-          popupElements: [{ type: 'fields' }, { type: 'attachments' }],
-          showAttachments: true,
-          fieldInfos: fieldInfos,
-          title: `${layer.name}: {USERNAME}`,
-        },
-      });
-    });
-
-    // run the webserivce call to update ArcGIS Online
-    const data = {
-      f: 'json',
-      token: tempPortal.credential.token,
-      title: title,
-      type: 'Web Map',
-      text: {
-        operationalLayers,
-        baseMap: {
-          baseMapLayers: [
-            {
-              id: 'World_Hillshade_2559',
-              title: 'World Hillshade',
-              url:
-                'https://ibasemaps-api.arcgis.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer',
-              layerType: 'ArcGISTiledMapServiceLayer',
-            },
-            {
-              id: 'VectorTile_9568',
-              title: 'World Topographic Map',
-              layerType: 'VectorTileLayer',
-              styleUrl:
-                'https://cdn.arcgis.com/sharing/rest/content/items/42df0d22517e49ad84edcee4c093857d/resources/styles/root.json',
-            },
-          ],
-          title: 'Topographic',
-        },
-        authoringApp: 'ArcGISMapViewer',
-        authoringAppVersion: '9.1',
-        initialState: {
-          viewpoint: {
-            targetGeometry: {
-              spatialReference: {
-                latestWkid: 3857,
-                wkid: 102100,
-              },
-              xmin: extent.xmin,
-              ymin: extent.ymin,
-              xmax: extent.xmax,
-              ymax: extent.ymax,
-            },
-          },
-        },
-        spatialReference: {
-          latestWkid: 3857,
-          wkid: 102100,
-        },
-        version: '2.20',
-      },
-    };
-    appendEnvironmentObjectParam(data);
-
-    fetchPost(`${portal.user.userContentUrl}/addItem`, data)
       .then((res) => resolve(res))
       .catch((err) => {
         window.logErrorToGa(err);
@@ -1398,17 +1038,11 @@ export function publish({
   layers,
   edits,
   serviceMetaData,
-  createWebMap = false,
-  attributesToInclude = null,
-  table = null,
 }: {
   portal: __esri.Portal;
   layers: LayerType[];
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
-  createWebMap?: boolean;
-  attributesToInclude?: AttributesType[] | null;
-  table?: any;
 }) {
   return new Promise((resolve, reject) => {
     if (layers.length === 0) {
@@ -1422,17 +1056,10 @@ export function publish({
         const portalId: string = service.portalService.id;
         const idMapping: any = {};
         // create the layers
-        createFeatureLayers(
-          portal,
-          serviceUrl,
-          layers,
-          serviceMetaData,
-          attributesToInclude,
-        )
-          .then((layersRes: any) => {
-            let tableParam = table;
+        createFeatureLayers(portal, serviceUrl, layers, serviceMetaData)
+          .then((res: any) => {
             // update the layer ids in edits
-            layersRes.layers.forEach((layer: any) => {
+            res.layers.forEach((layer: any) => {
               const isPoints = layer.name.endsWith('-points');
 
               const layerEdits = edits.find((layerEdit) => {
@@ -1478,58 +1105,18 @@ export function publish({
               }
             });
 
-            layersRes.tables.forEach((table: any) => {
-              const isSampleTypes = table.name.endsWith('-sample-types');
-              if (isSampleTypes) {
-                tableParam = {
-                  id: table.id,
-                  sampleTypes: {},
-                };
-              }
-            });
-
             // update the renderers
-            updateFeatureLayers(portal, serviceUrl, layers, layersRes)
+            updateFeatureLayers(portal, serviceUrl, layers, res)
               .then((updateRes) => {
                 // publish the edits
-                applyEdits({
-                  portal,
-                  serviceUrl,
-                  layers,
-                  edits,
-                  table: tableParam,
-                  attributesToInclude,
-                })
-                  .then((editsRes: any) => {
-                    if (!createWebMap) {
-                      resolve({
-                        portalId,
-                        idMapping,
-                        edits: editsRes.response,
-                        table: editsRes.table,
-                      });
-                    } else {
-                      addWebMap({
-                        portal,
-                        service,
-                        layers,
-                        layersResponse: layersRes,
-                        attributesToInclude,
-                      })
-                        .then(() => {
-                          resolve({
-                            portalId,
-                            idMapping,
-                            edits: editsRes.response,
-                            table: editsRes.table,
-                          });
-                        })
-                        .catch((err) => {
-                          window.logErrorToGa(err);
-                          reject(err);
-                        });
-                    }
-                  })
+                applyEdits({ portal, serviceUrl, layers, edits })
+                  .then((res) =>
+                    resolve({
+                      portalId,
+                      idMapping,
+                      edits: res,
+                    }),
+                  )
                   .catch((err) => {
                     window.logErrorToGa(err);
                     reject(err);

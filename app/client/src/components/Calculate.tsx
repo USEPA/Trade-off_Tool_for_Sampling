@@ -733,7 +733,7 @@ function Calculate() {
                 samples would have resulted in contamination hits.{' '}
               </React.Fragment>
             )}
-            Click <strong>Next</strong> to configure your output.
+            Click <strong>Next</strong> to publish your plan.
           </p>
           <p css={layerInfo}>
             <strong>Plan Name: </strong>
@@ -965,7 +965,7 @@ function Calculate() {
         )}
       </div>
       <div css={sectionContainer}>
-        <NavigationButton goToPanel="configureOutput" />
+        <NavigationButton goToPanel="publish" />
       </div>
     </div>
   );

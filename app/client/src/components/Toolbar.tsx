@@ -327,7 +327,7 @@ function Toolbar() {
             layer.pointsLayer?.id === item?.layer?.id,
         );
 
-        const isPoints = item.layer.id?.includes('-points');
+        const isPoints = item.layer.id.includes('-points');
 
         const defaultSymbols: DefaultSymbolsType = (window as any)
           .totsDefaultSymbols;
@@ -741,8 +741,6 @@ function Toolbar() {
           checked={showAsPoints}
           onChange={(checked) => setShowAsPoints(checked)}
           ariaLabel="Points or Polygons"
-          offColor="#90ee90"
-          offHandleColor="#129c12"
         />
         <span css={switchLabel}>Points</span>
         <InfoIcon 

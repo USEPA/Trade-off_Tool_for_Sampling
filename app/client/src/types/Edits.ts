@@ -13,11 +13,6 @@ export type EditType =
   | 'properties'
   | 'move';
 
-export type TableType = {
-  id: number; // esri layer id
-  sampleTypes: any; // <sample type name>: { attributes: any };
-};
-
 export type ScenarioEditsType = {
   type: 'scenario';
   id: number; // scenario layer id
@@ -37,7 +32,6 @@ export type ScenarioEditsType = {
   scenarioName: string; // user defined scenario name
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
   layers: LayerEditsType[];
-  table: TableType | null;
 };
 
 export type LayerEditsType = {

@@ -3,7 +3,6 @@ export type PanelValueType =
   | 'addData'
   | 'locateSamples'
   | 'calculate'
-  | 'configureOutput'
   | 'publish';
 
 export type PanelType = {
@@ -34,13 +33,8 @@ export const panels: PanelType[] = [
     iconClass: 'fas fa-calculator',
   },
   {
-    value: 'configureOutput',
-    label: 'Configure Output',
-    iconClass: 'fas fa-cog',
-  },
-  {
     value: 'publish',
-    label: 'Publish Output',
+    label: 'Publish Plan',
     iconClass: 'fas fa-upload',
   },
 ];
