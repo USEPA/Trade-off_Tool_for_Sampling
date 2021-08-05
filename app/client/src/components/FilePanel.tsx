@@ -970,16 +970,14 @@ function FilePanel() {
         }
 
         // set the symbol styles based on the sample/layer type
-        if (graphic?.geometry?.type === 'polygon') {
-          if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-            graphic.symbol =
-              defaultSymbols.symbols[graphic.attributes.TYPEUUID];
-          } else {
-            graphic.symbol =
-              defaultSymbols.symbols[
-                layerType.value === 'VSP' ? 'Samples' : layerType.value
-              ];
-          }
+        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+          graphic.symbol =
+            defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+        } else {
+          graphic.symbol =
+            defaultSymbols.symbols[
+              layerType.value === 'VSP' ? 'Samples' : layerType.value
+            ];
         }
 
         // add the popup template
