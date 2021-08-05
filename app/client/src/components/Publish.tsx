@@ -317,12 +317,6 @@ function Publish() {
   const publishFullPlan = React.useCallback(() => {
     if (!portal || !selectedScenario) return;
 
-    setPublishResponse({
-      status: 'fetching',
-      summary: { success: '', failed: '' },
-      rawData: null,
-    });
-
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
       selectedScenario.layerId,
@@ -458,6 +452,21 @@ function Publish() {
       });
     });
 
+    if(layerEdits.adds.length === 0 && layerEdits.updates.length === 0 && layerEdits.deletes.length === 0) {
+      setPublishResponse({
+        status: 'success',
+        summary: { success: '', failed: '' },
+        rawData: {},
+      });
+      return;
+    } else {
+      setPublishResponse({
+        status: 'fetching',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+    }
+
     publish({
       portal,
       layers: publishLayers,
@@ -503,7 +512,11 @@ function Publish() {
 
                 // update the published for this layer
                 if (changes.hasOwnProperty(decisionUUID)) {
-                  changes[decisionUUID].published.push(origItem);
+                  const exist = changes[decisionUUID].published.findIndex((x) => 
+                    x.attributes.PERMANENT_IDENTIFIER === 
+                    origItem.attributes.PERMANENT_IDENTIFIER
+                  ) > -1;
+                  if(!exist) changes[decisionUUID].published.push(origItem);
                 } else {
                   changes[decisionUUID] = {
                     adds: [],
@@ -616,7 +629,7 @@ function Publish() {
               // update the edits delete array
               const origItem = layerEdits.deletes[index];
               const decisionUUID = origItem.DECISIONUNITUUID;
-              if (item.success) {
+              if (item.success && changes.hasOwnProperty(decisionUUID)) {
                 // get the publish items for this layer
                 let layerNewPublished = changes[decisionUUID].published;
 
@@ -704,16 +717,20 @@ function Publish() {
               editsScenario.pointsId = editedLayer.pointsId;
             }
 
-            const oldPublished = editedLayer.published.filter((x) => {
-              const idx = editedLayer.deletes.findIndex(
-                (y) =>
-                  y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
-              );
-              return idx === -1;
-            });
-
             const edits = changes[editedLayer.uuid];
-            if (edits) {
+
+            if(edits) {
+              const oldPublished = editedLayer.published.filter((x) => {
+                const idx = editedLayer.deletes.findIndex(
+                  (y) =>
+                    y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                );
+                const idx2 = edits.published.findIndex((y) => 
+                    y.attributes.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                );
+                return idx === -1 && idx2 === -1;
+              });
+
               editedLayer.adds = edits.adds;
               editedLayer.updates = edits.updates;
               editedLayer.published = [...oldPublished, ...edits.published];
@@ -791,12 +808,6 @@ function Publish() {
   // publishes a plan with all of the attributes
   const publishPartialPlan = React.useCallback(() => {
     if (!portal || !selectedScenario) return;
-
-    setPublishPartialResponse({
-      status: 'fetching',
-      summary: { success: '', failed: '' },
-      rawData: null,
-    });
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -959,6 +970,21 @@ function Publish() {
       });
     });
 
+    if(layerEdits.adds.length === 0 && layerEdits.updates.length === 0 && layerEdits.deletes.length === 0) {
+      setPublishPartialResponse({
+        status: 'success',
+        summary: { success: '', failed: '' },
+        rawData: {},
+      });
+      return;
+    } else {
+      setPublishPartialResponse({
+        status: 'fetching',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+    }
+
     publish({
       portal,
       layers: publishLayers,
@@ -989,6 +1015,7 @@ function Publish() {
           // odd layers are points layers so ignore those
           const isOdd = index % 2 === 1;
           if (isOdd) return;
+          if (layerRes.id === res.table.id) return;
 
           // need to loop through each array and check the success flag
           if (layerRes.addResults) {
@@ -1004,7 +1031,11 @@ function Publish() {
 
                 // update the published for this layer
                 if (changes.hasOwnProperty(decisionUUID)) {
-                  changes[decisionUUID].published.push(origItem);
+                  const exist = changes[decisionUUID].published.findIndex((x) => 
+                    x.attributes.PERMANENT_IDENTIFIER === 
+                    origItem.attributes.PERMANENT_IDENTIFIER
+                  ) > -1;
+                  if(!exist) changes[decisionUUID].published.push(origItem);
                 } else {
                   changes[decisionUUID] = {
                     adds: [],
@@ -1117,7 +1148,7 @@ function Publish() {
               // update the edits delete array
               const origItem = layerEdits.deletes[index];
               const decisionUUID = origItem.DECISIONUNITUUID;
-              if (item.success) {
+              if (item.success && changes.hasOwnProperty(decisionUUID)) {
                 // get the publish items for this layer
                 let layerNewPublished = changes[decisionUUID].published;
 
@@ -1205,16 +1236,19 @@ function Publish() {
               editsScenario.pointsId = editedLayer.pointsId;
             }
 
-            const oldPublished = editedLayer.published.filter((x) => {
-              const idx = editedLayer.deletes.findIndex(
-                (y) =>
-                  y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
-              );
-              return idx === -1;
-            });
-
             const edits = changes[editedLayer.uuid];
-            if (edits) {
+            if(edits) {
+              const oldPublished = editedLayer.published.filter((x) => {
+                const idx = editedLayer.deletes.findIndex(
+                  (y) =>
+                    y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                );
+                const idx2 = edits.published.findIndex((y) => 
+                    y.attributes.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                );
+                return idx === -1 && idx2 === -1;
+              });
+
               editedLayer.adds = edits.adds;
               editedLayer.updates = edits.updates;
               editedLayer.published = [...oldPublished, ...edits.published];
@@ -1850,9 +1884,9 @@ function Publish() {
             message={publishSamplesResponse.summary.failed}
           />
         )}
-      {publishResponse.summary.success &&
-        publishPartialResponse.summary.success &&
-        publishSamplesResponse.summary.success &&
+      {publishResponse.status === 'success' &&
+        publishPartialResponse.status === 'success' &&
+        publishSamplesResponse.status === 'success' &&
         publishSuccessMessage}
 
       {!signedIn && notLoggedInMessage}
@@ -1866,6 +1900,7 @@ function Publish() {
             !sampleTableName &&
             noServiceNameMessage}
           {publishSamplesMode === 'existing' &&
+            publishSamplesResponse.status === 'none' &&
             !selectedService &&
             noServiceSelectedMessage}
         </React.Fragment>

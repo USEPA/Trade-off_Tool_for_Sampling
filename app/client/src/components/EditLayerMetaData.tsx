@@ -84,6 +84,11 @@ const saveButtonStyles = (status: string) => {
   return css`
     margin: 5px 0;
     ${backgroundColor}
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.65;
+    }
   `;
 };
 
