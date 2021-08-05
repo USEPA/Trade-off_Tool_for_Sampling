@@ -655,13 +655,17 @@ function MapWidgets({ mapView }: Props) {
 
     // update the popupTemplate for all Sample/VSP layers
     layers.forEach((layer) => {
-      if (
-        layer.sketchLayer.type === 'graphics' &&
-        (layer.layerType === 'Samples' || layer.layerType === 'VSP')
-      ) {
-        layer.sketchLayer.graphics.forEach((graphic) => {
-          graphic.popupTemplate = popupTemplate;
-        });
+      if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
+        if (layer.sketchLayer.type === 'graphics') {
+          layer.sketchLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
+        if (layer.pointsLayer?.type === 'graphics') {
+          layer.pointsLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
       }
     });
   }, [PopupTemplate, getPopupTemplate, trainingMode, layers]);
