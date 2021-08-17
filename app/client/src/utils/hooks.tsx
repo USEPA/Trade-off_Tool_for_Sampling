@@ -927,7 +927,7 @@ export function useDynamicPopup() {
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
-      (layer) => layer.layerId === tempLayer.id,
+      (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
     );
     if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
       return;
@@ -940,6 +940,13 @@ export function useDynamicPopup() {
         tempGraphic.attributes.PERMANENT_IDENTIFIER,
     );
     graphic.attributes = tempGraphic.attributes;
+
+    const pointGraphic: __esri.Graphic | undefined = tempSketchLayer.pointsLayer?.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        graphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    if(pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
 
     if (type === 'Save') {
       changes.add(graphic);
@@ -983,6 +990,15 @@ export function useDynamicPopup() {
       tempSketchLayer.sketchLayer.remove(graphic);
 
       feature.graphic.layer = newLayer.sketchLayer;
+
+      if(pointGraphic && tempSketchLayer.pointsLayer) {
+        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
+        tempNewPointsLayer.add(pointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
     }
   };
 
