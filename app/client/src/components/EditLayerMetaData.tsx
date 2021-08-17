@@ -202,13 +202,24 @@ function EditScenario({
       const layers: LayerEditsType[] = [];
       let tempSketchLayer: LayerType | null = null;
       if (addDefaultSampleLayer) {
-        // no sketchable layers were available, create one
-        tempSketchLayer = createSampleLayer(
-          GraphicsLayer,
-          undefined,
-          groupLayer,
-        );
-        layers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        edits.edits.forEach((edit) => {
+          if(
+            edit.type === 'layer' && 
+              (edit.layerType === 'Samples' || edit.layerType === 'VSP')
+          ) {
+            layers.push(edit);
+          }
+        });
+
+        if(layers.length === 0) {
+          // no sketchable layers were available, create one
+          tempSketchLayer = createSampleLayer(
+            GraphicsLayer,
+            undefined,
+            groupLayer,
+          );
+          layers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        }
       }
 
       // create the scenario to be added to edits
@@ -236,9 +247,17 @@ function EditScenario({
 
       // make a copy of the edits context variable
       setEdits((edits) => {
+        const newEdits = edits.edits.filter((edit) => {
+          const idx = layers.findIndex((l) => 
+            l.layerId === edit.layerId
+          );
+
+          return idx === -1;
+        });
+
         return {
           count: edits.count + 1,
-          edits: [...edits.edits, newScenario],
+          edits: [...newEdits, newScenario],
         };
       });
 

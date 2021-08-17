@@ -30,6 +30,7 @@ import {
 } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject } from 'utils/utils';
 // types
+import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
@@ -247,6 +248,9 @@ function FilePanel() {
     getGpMaxRecordCount,
     sampleAttributes,
     allSampleOptions,
+    selectedScenario,
+    setSelectedScenario,
+    setSketchLayer,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -853,6 +857,10 @@ function FilePanel() {
       listMode: 'hide',
     });
 
+    const groupLayer = selectedScenario ? map.layers.find(
+      (layer) => layer.id === selectedScenario?.layerId,
+    ) as __esri.GroupLayer : null;
+
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
@@ -876,7 +884,7 @@ function FilePanel() {
         layerType.value === 'Samples' || layerType.value === 'VSP'
           ? pointsLayer
           : null,
-      parentLayer: null,
+      parentLayer: groupLayer ? groupLayer : null,
     };
 
     const graphics: __esri.Graphic[] = [];
@@ -962,18 +970,14 @@ function FilePanel() {
         }
 
         // set the symbol styles based on the sample/layer type
-        if (graphic?.geometry?.type === 'polygon') {
-          if (
-            defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
-          ) {
-            graphic.symbol =
-              defaultSymbols.symbols[graphic.attributes.TYPEUUID];
-          } else {
-            graphic.symbol =
-              defaultSymbols.symbols[
-                layerType.value === 'VSP' ? 'Samples' : layerType.value
-              ];
-          }
+        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+          graphic.symbol =
+            defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+        } else {
+          graphic.symbol =
+            defaultSymbols.symbols[
+              layerType.value === 'VSP' ? 'Samples' : layerType.value
+            ];
         }
 
         // add the popup template
@@ -1007,6 +1011,7 @@ function FilePanel() {
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
       edits,
+      scenario: selectedScenario,
       layer: layerToAdd,
       type: 'add',
       changes: graphicsLayer.graphics,
@@ -1015,6 +1020,29 @@ function FilePanel() {
     setEdits(editsCopy);
 
     setLayers([...layers, layerToAdd]);
+
+    setSelectedScenario((selectedScenario) => {
+      if (!selectedScenario) return selectedScenario;
+
+      const scenario = editsCopy.edits.find(
+        (edit) =>
+          edit.type === 'scenario' &&
+          edit.layerId === selectedScenario.layerId,
+      ) as ScenarioEditsType;
+      const newLayer = scenario.layers.find(
+        (layer) => layer.layerId === layerToAdd.layerId,
+      );
+
+      if (!newLayer) return selectedScenario;
+
+      return {
+        ...selectedScenario,
+        layers: [...selectedScenario.layers, newLayer],
+      };
+    });
+
+    setSketchLayer(layerToAdd);
+
     map.add(graphicsLayer);
     if (layerType.value === 'Samples' || layerType.value === 'VSP') {
       map.add(pointsLayer);
@@ -1022,7 +1050,14 @@ function FilePanel() {
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
-      mapView.goTo(graphics);
+      if (selectedScenario && groupLayer) {
+        groupLayer.add(layerToAdd.sketchLayer);
+        if(layerToAdd.pointsLayer) {
+          groupLayer.add(layerToAdd.pointsLayer);
+        }
+      } else {
+        mapView.goTo(graphics);
+      }
     }
 
     setUploadStatus('success');
@@ -1047,6 +1082,9 @@ function FilePanel() {
     map,
     mapView,
     sampleAttributes,
+    selectedScenario,
+    setSelectedScenario,
+    setSketchLayer,
     trainingMode,
   ]);
 
