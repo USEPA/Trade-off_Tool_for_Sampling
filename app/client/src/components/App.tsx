@@ -344,7 +344,13 @@ function App() {
     if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
     if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
     if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
-      layer.sketchLayer.graphics.forEach((sample) => {
+      const graphics = layer.sketchLayer.graphics.toArray();
+      graphics.sort((a, b) =>
+        a.attributes.PERMANENT_IDENTIFIER.localeCompare(
+          b.attributes.PERMANENT_IDENTIFIER,
+        ),
+      );
+      graphics.forEach((sample) => {
         sampleData.push({
           graphic: sample,
           ...sample.attributes,
@@ -365,14 +371,17 @@ function App() {
   }
 
   // determine which rows of the table should be selected
-  const ids: { [key: number]: boolean } = {};
+  const ids: { [key: string]: boolean } = {};
   let selectionMethod: 'row-click' | 'sample-click' = 'sample-click';
   sampleData.forEach((sample, index) => {
     const selectedIndex = selectedSampleIds.findIndex(
       (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
     );
-    if (selectedIndex !== -1) {
-      ids[index] = true;
+    const selectedItem = selectedSampleIds.find(
+      (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
+    );
+    if (selectedItem && selectedIndex !== -1) {
+      ids[selectedItem.PERMANENT_IDENTIFIER] = true;
       selectionMethod = selectedSampleIds[selectedIndex].selection_method;
     }
   });
