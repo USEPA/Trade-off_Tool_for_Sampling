@@ -129,7 +129,7 @@ function MapPopup({
     if (layerInitialized) return;
 
     if (feature?.graphic?.layer) {
-      const activeLayerId = feature.graphic.layer.id;
+      const activeLayerId = feature.graphic.layer.id.replace('-points', '');
       // find the layer
       const sketchLayer = layers.find(
         (layer) => layer.layerId === activeLayerId,
@@ -260,7 +260,7 @@ function MapPopup({
                       setGraphicNote(note);
 
                       // move the graphic if it is on a different layer
-                      if (activeLayerId !== selectedLayer?.layerId) {
+                      if (activeLayerId.replace('-points', '') !== selectedLayer?.layerId.replace('-points', '')) {
                         onClick(ev, feature, 'Move', selectedLayer);
                       } else {
                         onClick(ev, feature, 'Save');
