@@ -31,6 +31,7 @@
     "@types/react-color": "3.0.4",
     "@types/react-select": "4.0.15",
     "@types/react-table": "7.0.29",
+    "@types/react-virtualized": "9.21.13",
     "@types/uuid": "8.3.0",
     "esri-loader": "3.0.0",
     "excel4node": "1.7.2",
@@ -45,6 +46,7 @@
     "react-switch": "6.0.0",
     "react-table": "7.6.3",
     "react-tooltip": "4.2.21",
+    "react-virtualized": "9.22.3",
     "typescript": "4.2.4",
     "universal-cookie": "4.0.4",
     "uuid": "8.3.2"
