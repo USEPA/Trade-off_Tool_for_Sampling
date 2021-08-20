@@ -11,6 +11,7 @@ import MessageBox from 'components/MessageBox';
 import NavigationButton from 'components/NavigationButton';
 import Select from 'components/Select';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import {
@@ -404,6 +405,9 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
+const {
+  userInfo,
+} = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const {
     setGoTo,
@@ -753,6 +757,8 @@ function LocateSamples() {
                     PERMANENT_IDENTIFIER:
                       feature.attributes.PERMANENT_IDENTIFIER,
                     UPDATEDDATE: timestamp,
+                    USERNAME: userInfo?.username || '',
+                    ORGANIZATION: userInfo?.orgId || '',
                   },
                   symbol,
                   geometry: new Polygon({
