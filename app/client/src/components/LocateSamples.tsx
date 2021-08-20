@@ -2484,7 +2484,7 @@ function LocateSamples() {
                           onChange={(ev) => setTtps(ev.target.value)}
                         /> */}
                         <label htmlFor="lod_p-input">
-                          Limit of Detection (CFU) Porous{' '}
+                          Limit of Detection for Porous Surfaces per Sample (CFU){' '}
                           <em>(only used for reference)</em>
                         </label>
                         <input
@@ -2495,7 +2495,7 @@ function LocateSamples() {
                           onChange={(ev) => setLodp(ev.target.value)}
                         />
                         <label htmlFor="lod_non-input">
-                          Limit of Detection (CFU) Nonporous{' '}
+                          Limit of Detection for Nonporous Surfaces per Sample (CFU){' '}
                           <em>(only used for reference)</em>
                         </label>
                         <input
