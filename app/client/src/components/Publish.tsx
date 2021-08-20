@@ -1902,9 +1902,9 @@ function Publish() {
             message={publishSamplesResponse.summary.failed}
           />
         )}
-      {publishResponse.status === 'success' &&
-        publishPartialResponse.status === 'success' &&
-        publishSamplesResponse.status === 'success' &&
+      {(!includeFullPlan || (includeFullPlan && publishResponse.status === 'success')) &&
+        (!includePartialPlan || (includePartialPlan && publishPartialResponse.status === 'success')) &&
+        (!includeCustomSampleTypes || (includeCustomSampleTypes && publishSamplesResponse.status === 'success')) &&
         publishSuccessMessage}
 
       {!signedIn && notLoggedInMessage}
@@ -1915,6 +1915,7 @@ function Publish() {
         <React.Fragment>
           {sampleTypeSelections.length === 0 && noSampleTypesPublishMessage}
           {publishSamplesMode === 'new' &&
+            publishSamplesResponse.status === 'none' &&
             !sampleTableName &&
             noServiceNameMessage}
           {publishSamplesMode === 'existing' &&
