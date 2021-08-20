@@ -1482,6 +1482,9 @@ const {
                                 ],
                               };
                             });
+
+                            if(sketchLayer.sketchLayer) parentLayer.remove(sketchLayer.sketchLayer);
+                            if(sketchLayer.pointsLayer) parentLayer.remove(sketchLayer.pointsLayer);
                           } else {
                             // remove the scenario from edits
                             setEdits((edits) => {
