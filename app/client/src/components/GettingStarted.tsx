@@ -48,6 +48,9 @@ type Props = {
 };
 
 function GettingStarted({ isOpen, children }: Props) {
+  const { REACT_APP_SERVER_URL } = process.env;
+  const baseUrl = REACT_APP_SERVER_URL || window.location.origin;
+
   return (
     <DialogOverlay
       css={overlayStyles}
@@ -118,7 +121,17 @@ function GettingStarted({ isOpen, children }: Props) {
           </li>
         </ul>
 
-        <p>View the TOTS User’s Guide (PDF) for more detailed instructions</p>
+        <p>
+          View the{' '}
+          <a 
+            href={`${baseUrl}/data/documents/TOTS-Users-Guide.pdf`} 
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            TOTS User’s Guide (PDF)
+          </a>{' '}
+          for more detailed instructions
+        </p>
 
         {children && <React.Fragment>{children}</React.Fragment>}
       </DialogContent>
