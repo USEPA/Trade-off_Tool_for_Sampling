@@ -32,6 +32,10 @@
     <meta name="DC.language" content="en" />
     <meta name="DC.Subject.epachannel" content="Learn the Issues" />
     <meta name="DC.type" content="Data and Tools" />
+    <meta name="DC.Subject.epaopt" content="" />
+    <meta name="DC.date.created" content="" />
+    <meta name="DC.date.modified" content="" />
+    <meta name="DC.date.reviewed" content="" />
     <meta name="DC.creator" content="US EPA" />
     <meta name="theme-color" content="#0071bc" />
     <title>Trade-off Tool for Sampling (TOTS) | US EPA</title>
@@ -44,6 +48,7 @@
     <link
       rel="stylesheet"
       href="https://www.epa.gov/sites/all/libraries/standalone/css/core/style.css"
+      media="all"
     />
     <link
       rel="stylesheet"
@@ -234,7 +239,8 @@
                 action = item.name;
               }
             });
-            action = 'ord-tots1-' + (action ? action : event.target.text.trim());
+            action =
+              'ord-tots1-' + (action ? action : event.target.text.trim());
 
             if (document.location.hostname === event.target.hostname) {
               //Part of the TOTS application
@@ -287,11 +293,6 @@
       </a>
     </div>
     <header class="masthead clearfix" role="banner">
-      <img
-        class="site-logo"
-        src="https://www.epa.gov/sites/all/themes/epa/logo.png"
-        alt=""
-      />
       <div class="site-name-and-slogan">
         <h1 class="site-name">
           <a href="https://www.epa.gov/" rel="home" title="Go to the home page">
@@ -454,40 +455,42 @@
           >
             <div class="row cols-3">
               <div class="col size-1of3">
-                <div class="col__title">Discover.</div>
+                <h3 class="col__title">Discover.</h3>
                 <ul class="menu">
-                  <li>
-                    <a href="https://www.epa.gov/accessibility">
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/accessibility" class="menu__link">
                       Accessibility
                     </a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/planandbudget">
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/planandbudget" class="menu__link">
                       Budget &amp; Performance
                     </a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/contracts">Contracting</a>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/contracts" class="menu__link">Contracting</a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/grants"> Grants </a>
-                  </li>
-                  <li>
-                    <a href="https://www.epa.gov/home/wwwepagov-snapshots">
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/home/wwwepagov-snapshots" class="menu__link">
                       EPA www Web Snapshots
                     </a>
                   </li>
-                  <li>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/grants" class="menu__link"> Grants </a>
+                  </li>
+                  <li class="menu__item">
                     <a
                       href="https://www.epa.gov/ocr/whistleblower-protections-epa-and-how-they-relate-non-disclosure-agreements-signed-epa-employees"
+                      class="menu__link"
                     >
                       No FEAR Act Data
                     </a>
-                  </li>
-                  <li><a href="https://www.epa.gov/privacy">Privacy</a></li>
-                  <li>
+                  </li class="menu__item">
+                  <li class="menu__item"><a href="https://www.epa.gov/privacy" class="menu__link">Privacy</a></li>
+                  <li class="menu__item">
                     <a
                       href="https://www.epa.gov/privacy/privacy-and-security-notice"
+                      class="menu__link"
                       >Privacy and Security Notice</a
                     >
                   </li>
@@ -496,55 +499,68 @@
               <div class="col size-1of3">
                 <div class="col__title">Connect.</div>
                 <ul class="menu">
-                  <li>
-                    <a href="https://www.data.gov/">Data.gov</a>
+                  <li class="menu__item">
+                    <a href="https://www.data.gov/" class="menu__link">Data.gov</a>
                   </li>
-                  <li>
+                  <li class="menu__item">
                     <a
                       href="https://www.epa.gov/office-inspector-general/about-epas-office-inspector-general"
+                      class="menu__link"
                     >
                       Inspector General
                     </a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/careers">Jobs</a>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/careers" class="menu__link">Jobs</a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/newsroom">Newsroom</a>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/newsroom" class="menu__link">Newsroom</a>
                   </li>
-                  <li>
-                    <a href="https://www.regulations.gov/">Regulations.gov</a>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/data" class="menu__link">Open Government</a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/newsroom/email-subscriptions">
+                  <li class="menu__item">
+                    <a href="https://www.regulations.gov/" class="menu__link">Regulations.gov</a>
+                  </li>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/newsroom/email-subscriptions-epa-news-releases" class="menu__link">
                       Subscribe
                     </a>
                   </li>
-                  <li>
-                    <a href="https://www.usa.gov/">USA.gov</a>
+                  <li class="menu__item">
+                    <a href="https://www.usa.gov/" class="menu__link">USA.gov</a>
                   </li>
-                  <li>
-                    <a href="https://www.whitehouse.gov/">White House</a>
+                  <li class="menu__item">
+                    <a href="https://www.whitehouse.gov/" class="menu__link">White House</a>
                   </li>
                 </ul>
               </div>
               <div class="col size-1of3">
                 <div class="col__title">Ask.</div>
                 <ul class="menu">
-                  <li>
-                    <a href="https://www.epa.gov/home/forms/contact-us">
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/home/forms/contact-epa" class="menu__link">
                       Contact EPA
                     </a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/home/epa-hotlines">Hotlines</a>
+                  <li class="menu__item">
+                    <a
+                      href="https://www.epa.gov/web-policies-and-procedures/epa-disclaimers"
+                      class="menu__link"
+                    >
+                      EPA Disclaimers
+                    </a>
                   </li>
-                  <li>
-                    <a href="https://www.epa.gov/foia">FOIA Requests</a>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/home/epa-hotlines" class="menu__link">Hotlines</a>
                   </li>
-                  <li>
+                  <li class="menu__item">
+                    <a href="https://www.epa.gov/foia" class="menu__link">FOIA Requests</a>
+                  </li>
+                  <li class="menu__item">
                     <a
                       href="https://www.epa.gov/home/frequent-questions-specific-epa-programstopics"
+                      class="menu__link"
                     >
                       Frequent Questions
                     </a>
@@ -593,7 +609,7 @@
                     </a>
                   </li>
                 </ul>
-                <p class="last-updated">Last updated on {Month day, YYYY}</p>
+                <p class="last-updated">Last updated on August 20, 2021</p>
               </div>
             </div>
           </div>
