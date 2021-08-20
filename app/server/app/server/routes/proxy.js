@@ -4,7 +4,6 @@ const axios = require('axios');
 const querystring = require('querystring');
 const config = require('../config/proxyConfig.json');
 const logger = require('../utilities/logger');
-const { parse } = require('path');
 const log = logger.logger;
 
 module.exports = function (app) {
@@ -70,11 +69,6 @@ module.exports = function (app) {
       delete response.headers['x-aspnet-version'];
       // end of EPA TS work around.
     }
-
-    console.log('parsedUrl');
-    console.log(parsedUrl);
-    console.log('request_headers');
-    console.log(request_headers);
 
     axios({
       method: req.query.method,
