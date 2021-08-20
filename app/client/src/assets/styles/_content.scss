@@ -1,0 +1,60 @@
+// EPA Standalone template overrides
+footer .region-footer .row {
+  margin: 0 -1em; // required so smaller screens don't have a blank area to the right
+}
+
+html {
+  font-size: 106.25%;
+  line-height: 1.5;
+}
+
+section p,
+nav p {
+  padding: 0;
+}
+
+section button {
+  margin-bottom: 0;
+}
+
+// Content
+.content {
+  p,
+  ul {
+    margin-bottom: 1rem;
+  }
+}
+
+.more-info-card {
+  height: auto !important;
+
+  @media screen and (min-width: 1064px) {
+    max-width: 375px;
+  }
+}
+
+.modal-container > .modal {
+  max-width: 900px;
+}
+
+.pagetop {
+  text-align: right;
+}
+.pagetop > a {
+  font-size: size('ui', 3);
+  margin-right: 0.5em;
+  padding: 0 0.25em;
+  text-decoration: none;
+}
+.pagetop > a:before {
+  background: no-repeat center/100% url(../img/pagetop.svg);
+  content: '';
+  display: inline-block;
+  height: 1em;
+  margin: -0.2667em 0.25em 0 0;
+  vertical-align: middle;
+  width: 1em;
+}
+.pagetop > a:hover {
+  text-decoration: underline;
+}
