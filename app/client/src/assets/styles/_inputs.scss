@@ -1,0 +1,39 @@
+iframe:focus,
+[href]:focus,
+[tabindex]:not(#main-content):focus,
+[contentEditable=true]:focus,
+input:not([disabled]):focus,
+select:not([disabled]):focus,
+textarea:not([disabled]):focus,
+button:focus,
+input:not([disabled]):focus + label {
+  outline: 2px dotted #aeb0b5 !important;
+}
+
+input[type="checkbox"]:focus + label::before, input[type="radio"]:focus + label::before {
+  outline: none !important;
+}
+
+.iw-button-link {
+  background: transparent;
+  margin: 0 0.25rem;
+  padding: 0.25rem;
+  color: initial;
+}
+
+.usa-label, .usa-legend {
+  margin-top: 0.75rem !important;
+  font-size: 1rem;
+}
+
+.usa-radio__label, .usa-checkbox__label {
+  font-size: 1rem;
+}
+
+.action-buttons {
+  margin: auto 0;
+
+  .usa-button {
+    margin-left: 0.5rem;
+  }
+}
