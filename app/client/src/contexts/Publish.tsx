@@ -68,7 +68,7 @@ export const defaultPlanAttributes: AttributesType[] = [
   {
     id: 3,
     name: 'DECISIONUNITUUID',
-    label: 'Layer ID',
+    label: 'Layer UUID (DECISIONUNITUUID)',
     dataType: 'string',
     length: null,
     domain: null,
@@ -76,7 +76,7 @@ export const defaultPlanAttributes: AttributesType[] = [
   {
     id: 4,
     name: 'DECISIONUNIT',
-    label: 'Layer',
+    label: 'Layer (DECISIONUNIT)',
     dataType: 'string',
     length: null,
     domain: null,

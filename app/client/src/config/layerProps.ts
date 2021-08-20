@@ -372,60 +372,6 @@ export const defaultFields = [
     domain: null,
     defaultValue: 0,
   },
-  {
-    name: 'TESTCOMBO',
-    type: 'esriFieldTypeString',
-    actualType: 'nvarchar',
-    alias: 'Test Combo',
-    sqlType: 'sqlTypeNVarchar',
-    length: 255,
-    nullable: true,
-    editable: true,
-    domain: {
-      type: 'codedValue',
-      name: 'TESTCOMBODOMAIN',
-      codedValues: [
-        { name: 'Yes', code: 'yes' },
-        { name: 'No', code: 'no' },
-      ],
-    },
-    defaultValue: null,
-  },
-  {
-    name: 'TESTCOMBOINT',
-    type: 'esriFieldTypeInteger',
-    actualType: 'int',
-    alias: 'Test Combo Integer',
-    sqlType: 'sqlTypeInteger',
-    length: 4,
-    nullable: true,
-    editable: true,
-    domain: {
-      type: 'codedValue',
-      name: 'TESTCOMBODOMAININT',
-      codedValues: [
-        { name: 'Yes', code: 1 },
-        { name: 'No', code: 0 },
-      ],
-    },
-    defaultValue: null,
-  },
-  {
-    name: 'TESTRANGE',
-    type: 'esriFieldTypeInteger',
-    actualType: 'int',
-    alias: 'Test Combo Integer',
-    sqlType: 'sqlTypeInteger',
-    length: 4,
-    nullable: true,
-    editable: true,
-    domain: {
-      type: 'range',
-      name: 'TESTCOMBODOMAINRANGE',
-      range: [1, 6],
-    },
-    defaultValue: null,
-  },
 ];
 
 export const defaultLayerProps = {

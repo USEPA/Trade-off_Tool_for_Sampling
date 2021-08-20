@@ -229,7 +229,7 @@ type UploadStatusType =
   | 'file-read-error';
 
 function FilePanel() {
-  const { portal } = React.useContext(AuthenticationContext);
+  const { portal, userInfo } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
     NavigationContext,
@@ -667,6 +667,8 @@ function FilePanel() {
                         PERMANENT_IDENTIFIER:
                           feature.attributes.PERMANENT_IDENTIFIER,
                         UPDATEDDATE: timestamp,
+                        USERNAME: userInfo?.username || '',
+                        ORGANIZATION: userInfo?.orgId || '',
                       },
                     });
                   });
@@ -744,6 +746,7 @@ function FilePanel() {
     getGpMaxRecordCount,
     services,
     sampleAttributes,
+    userInfo,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
