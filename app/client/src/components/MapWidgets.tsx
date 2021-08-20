@@ -2,6 +2,7 @@
 
 import React from 'react';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
@@ -89,6 +90,7 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
+const { userInfo } = React.useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } = React.useContext(
     NavigationContext,
   );
@@ -313,6 +315,9 @@ function MapWidgets({ mapView }: Props) {
               OBJECTID: -1,
               Notes: '',
               CREATEDDATE: getCurrentDateTime(),
+              UPDATEDDATE: getCurrentDateTime(),
+              USERNAME: userInfo?.username || '',
+              ORGANIZATION: userInfo?.orgId || '',
             };
           }
 
@@ -361,6 +366,8 @@ function MapWidgets({ mapView }: Props) {
           if (event.state === 'complete') {
             event.graphics.forEach((graphic) => {
               graphic.attributes.UPDATEDDATE = getCurrentDateTime();
+              graphic.attributes.USERNAME = userInfo?.username || '';
+              graphic.attributes.ORGANIZATION = userInfo?.orgId || '';
             });
             sketchEventSetter(event);
           }
@@ -456,7 +463,7 @@ function MapWidgets({ mapView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, Graphic, PopupTemplate],
+    [createBuffer, getPopupTemplate, getTrainingMode, Graphic, PopupTemplate, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
