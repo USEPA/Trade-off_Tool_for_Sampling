@@ -452,7 +452,11 @@ function Publish() {
       });
     });
 
-    if(layerEdits.adds.length === 0 && layerEdits.updates.length === 0 && layerEdits.deletes.length === 0) {
+    if (
+      layerEdits.adds.length === 0 &&
+      layerEdits.updates.length === 0 &&
+      layerEdits.deletes.length === 0
+    ) {
       setPublishResponse({
         status: 'success',
         summary: { success: '', failed: '' },
@@ -512,11 +516,13 @@ function Publish() {
 
                 // update the published for this layer
                 if (changes.hasOwnProperty(decisionUUID)) {
-                  const exist = changes[decisionUUID].published.findIndex((x) => 
-                    x.attributes.PERMANENT_IDENTIFIER === 
-                    origItem.attributes.PERMANENT_IDENTIFIER
-                  ) > -1;
-                  if(!exist) changes[decisionUUID].published.push(origItem);
+                  const exist =
+                    changes[decisionUUID].published.findIndex(
+                      (x) =>
+                        x.attributes.PERMANENT_IDENTIFIER ===
+                        origItem.attributes.PERMANENT_IDENTIFIER,
+                    ) > -1;
+                  if (!exist) changes[decisionUUID].published.push(origItem);
                 } else {
                   changes[decisionUUID] = {
                     adds: [],
@@ -719,14 +725,17 @@ function Publish() {
 
             const edits = changes[editedLayer.uuid];
 
-            if(edits) {
+            if (edits) {
               const oldPublished = editedLayer.published.filter((x) => {
                 const idx = editedLayer.deletes.findIndex(
                   (y) =>
-                    y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                    y.PERMANENT_IDENTIFIER ===
+                    x.attributes.PERMANENT_IDENTIFIER,
                 );
-                const idx2 = edits.published.findIndex((y) => 
-                    y.attributes.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                const idx2 = edits.published.findIndex(
+                  (y) =>
+                    y.attributes.PERMANENT_IDENTIFIER ===
+                    x.attributes.PERMANENT_IDENTIFIER,
                 );
                 return idx === -1 && idx2 === -1;
               });
@@ -970,7 +979,11 @@ function Publish() {
       });
     });
 
-    if(layerEdits.adds.length === 0 && layerEdits.updates.length === 0 && layerEdits.deletes.length === 0) {
+    if (
+      layerEdits.adds.length === 0 &&
+      layerEdits.updates.length === 0 &&
+      layerEdits.deletes.length === 0
+    ) {
       setPublishPartialResponse({
         status: 'success',
         summary: { success: '', failed: '' },
@@ -1031,11 +1044,13 @@ function Publish() {
 
                 // update the published for this layer
                 if (changes.hasOwnProperty(decisionUUID)) {
-                  const exist = changes[decisionUUID].published.findIndex((x) => 
-                    x.attributes.PERMANENT_IDENTIFIER === 
-                    origItem.attributes.PERMANENT_IDENTIFIER
-                  ) > -1;
-                  if(!exist) changes[decisionUUID].published.push(origItem);
+                  const exist =
+                    changes[decisionUUID].published.findIndex(
+                      (x) =>
+                        x.attributes.PERMANENT_IDENTIFIER ===
+                        origItem.attributes.PERMANENT_IDENTIFIER,
+                    ) > -1;
+                  if (!exist) changes[decisionUUID].published.push(origItem);
                 } else {
                   changes[decisionUUID] = {
                     adds: [],
@@ -1237,14 +1252,17 @@ function Publish() {
             }
 
             const edits = changes[editedLayer.uuid];
-            if(edits) {
+            if (edits) {
               const oldPublished = editedLayer.published.filter((x) => {
                 const idx = editedLayer.deletes.findIndex(
                   (y) =>
-                    y.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                    y.PERMANENT_IDENTIFIER ===
+                    x.attributes.PERMANENT_IDENTIFIER,
                 );
-                const idx2 = edits.published.findIndex((y) => 
-                    y.attributes.PERMANENT_IDENTIFIER === x.attributes.PERMANENT_IDENTIFIER,
+                const idx2 = edits.published.findIndex(
+                  (y) =>
+                    y.attributes.PERMANENT_IDENTIFIER ===
+                    x.attributes.PERMANENT_IDENTIFIER,
                 );
                 return idx === -1 && idx2 === -1;
               });
@@ -1697,7 +1715,7 @@ function Publish() {
         <p>
           Publish the configured TOTS output to your ArcGIS Online account. A
           summary of the selections made on the Configure Output step is below.
-          By default, only you and the ArcGIS Online adminstrator can access
+          By default, only you and the ArcGIS Online administrator can access
           content created. Provide other collaborators access to TOTS content by{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"

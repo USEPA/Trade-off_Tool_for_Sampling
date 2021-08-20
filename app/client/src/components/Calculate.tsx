@@ -856,7 +856,7 @@ function Calculate() {
           />
 
           <label htmlFor="surface-area-input">
-            Surface Area (ft<sup>2</sup>) (optional)
+            Area of Interest Surface Area (ft<sup>2</sup>) (optional)
           </label>
           <input
             id="surface-area-input"
