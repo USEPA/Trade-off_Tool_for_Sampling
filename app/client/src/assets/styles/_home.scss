@@ -1,0 +1,39 @@
+// Main container
+.iw-container {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+}
+
+// Wide container (with sidebar and content)
+.iw-wide-container {
+  max-width: 75rem;
+  margin: 0 auto;
+}
+
+// Main site nav boxes (global between front-page nav and top nav-bar)
+.iw-nav-box {
+  color: unset;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  text-decoration: none;
+
+  &:hover {
+    cursor: pointer;
+    background: color('blue-warm-5');
+    @include u-shadow(1);
+  }
+
+  .iw-nav-icon {
+    color: color('cyan-30v');
+  }
+}
+
+// Spacing/Scaffolding
+.iw-flex {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
