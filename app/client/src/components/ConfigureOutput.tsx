@@ -130,9 +130,13 @@ const nextInstructionStyles = css`
   margin-top: 20px;
 `;
 
-const infoIconStyels = css`
+const infoIconStyles = css`
   margin-left: 10px;
   color: #19a3dd;
+`;
+
+const nestedAccordionStyles = css`
+  margin: 20px 20px 10px 20px;
 `;
 
 // --- components (ConfigureOutput) ---
@@ -143,10 +147,10 @@ function ConfigureOutput() {
     setPublishSamplesMode,
     sampleTypeSelections,
     setSampleTypeSelections,
-    includeFullPlan,
-    setIncludeFullPlan,
-    includeFullPlanWebMap,
-    setIncludeFullPlanWebMap,
+    // includeFullPlan,
+    // setIncludeFullPlan,
+    // includeFullPlanWebMap,
+    // setIncludeFullPlanWebMap,
     includePartialPlan,
     setIncludePartialPlan,
     includePartialPlanWebMap,
@@ -175,7 +179,7 @@ function ConfigureOutput() {
 
   const [editAttributesOpen, setEditAttributesOpen] = React.useState(false);
   const [attributesIndex, setAttributesIndex] = React.useState(-1);
-  const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
+  // const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
   const [isPartialOpen, setIsPartialOpen] = React.useState(includePartialPlan);
   const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(
     includeCustomSampleTypes,
@@ -184,7 +188,7 @@ function ConfigureOutput() {
   const webMapIcon = (id: string) => (
     <InfoIcon
       id={id}
-      cssStyles={infoIconStyels}
+      cssStyles={infoIconStyles}
       tooltip="A web map is used with Field Maps and supports field data collection activities."
       place="right"
       type="info"
@@ -225,7 +229,7 @@ function ConfigureOutput() {
           </p>
         </div>
         <AccordionList>
-        <AccordionItem
+        {/* <AccordionItem
           isOpenParam={isFullOpen}
           onChange={(isOpen) => {
             setIsFullOpen(!isFullOpen);
@@ -271,7 +275,7 @@ function ConfigureOutput() {
               {webMapIcon('full-web-map-icon')}
             </div>
           </div>
-        </AccordionItem>
+        </AccordionItem> */}
         <AccordionItem
           isOpenParam={isPartialOpen}
           onChange={(isOpen) => {
@@ -283,7 +287,7 @@ function ConfigureOutput() {
           title={
             <label css={labelStyles}>
               <strong>
-                Include Tailored TOTS Output for Field Data Collection
+                Include TOTS Sampling Plan (and optional custom attributes)
               </strong>
               <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
                 <Switch
@@ -292,7 +296,7 @@ function ConfigureOutput() {
                     setIncludePartialPlan(!includePartialPlan);
                     setIsPartialOpen(!includePartialPlan);
                   }}
-                  ariaLabel="Include TOTS Partial Reference File"
+                  ariaLabel="Include TOTS Sampling Plan"
                 />
               </div>
             </label>
@@ -300,13 +304,10 @@ function ConfigureOutput() {
         >
           <div css={sectionContainer}>
             <p>
-              A subset of TOTS output will be published by default (see
-              attributes below). Specify additional user-defined attributes to
-              use with field data collection apps by clicking the
-              <strong> Add New Attribute</strong> button. A new window will open
-              to assist you with defining the attribute. Click the{' '}
-              <strong>Edit</strong> or <strong>Delete</strong> icons to modify
-              attributes previously added.
+              A subset of TOTS output will be published by default. 
+              Click Add User-Defined Attributes to optionally add
+              additional attributes to use with field data collection
+              apps.
             </p>
           </div>
           <div css={sectionContainer}>
@@ -324,86 +325,99 @@ function ConfigureOutput() {
             </label>
             {webMapIcon('partial-web-map-icon')}
           </div>
-          <div css={tableContainer}>
-            <button
-              onClick={() => {
-                setAttributesIndex(-1);
-                setEditAttributesOpen(true);
-              }}
-            >
-              Add New Attribute
-            </button>
-            <br />
-            <label htmlFor="">
-              <strong>Attributes to Include:</strong>
-            </label>
-            <ReactTable
-              id="tots-survey123-attributes-table"
-              data={partialPlanAttributes}
-              idColumn={'ID'}
-              striped={true}
-              initialSelectedRowIds={{ ids: [] }}
-              allowHighlight={false}
-              sortBy={[{ id: 'ID', desc: false }]}
-              getColumns={(tableWidth: any) => {
-                return [
-                  {
-                    Header: 'ID',
-                    accessor: 'ID',
-                    width: 0,
-                    show: false,
-                  },
-                  {
-                    Header: 'Field',
-                    accessor: 'label',
-                    width: 128,
-                  },
-                  {
-                    Header: 'Type',
-                    accessor: 'dataType',
-                    width: 50,
-                  },
-                  {
-                    Header: () => null,
-                    id: 'edit-column',
-                    renderCell: true,
-                    width: 34,
-                    Cell: ({ row }: { row: any }) => {
-                      if (row.index <= 10) return <span></span>;
+          <div css={nestedAccordionStyles}>
+            <AccordionList>
+              <AccordionItem title="Add User-Defined Attributes">
+                <div css={tableContainer}>
+                  <p>
+                    Default attributes are shown. Click
+                    <strong> Add New Attribute</strong> to add user-defined attributes. 
+                    A new window will open to assist you with defining the attribute. 
+                    Click the <strong>Edit</strong> or <strong>Delete</strong> icons to 
+                    modify attributes previously added.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setAttributesIndex(-1);
+                      setEditAttributesOpen(true);
+                    }}
+                  >
+                    Add New Attribute
+                  </button>
+                  <br />
+                  <label htmlFor="">
+                    <strong>Attributes to Include:</strong>
+                  </label>
+                  <ReactTable
+                    id="tots-survey123-attributes-table"
+                    data={partialPlanAttributes}
+                    idColumn={'ID'}
+                    striped={true}
+                    initialSelectedRowIds={{ ids: [] }}
+                    allowHighlight={false}
+                    sortBy={[{ id: 'ID', desc: false }]}
+                    getColumns={(tableWidth: any) => {
+                      return [
+                        {
+                          Header: 'ID',
+                          accessor: 'ID',
+                          width: 0,
+                          show: false,
+                        },
+                        {
+                          Header: 'Field',
+                          accessor: 'label',
+                          width: 128,
+                        },
+                        {
+                          Header: 'Type',
+                          accessor: 'dataType',
+                          width: 50,
+                        },
+                        {
+                          Header: () => null,
+                          id: 'edit-column',
+                          renderCell: true,
+                          width: 34,
+                          Cell: ({ row }: { row: any }) => {
+                            if (row.index <= 10) return <span></span>;
 
-                      return (
-                        <div css={editColumnContainerStyles}>
-                          <button
-                            css={editButtonStyles}
-                            onClick={(event) => {
-                              setAttributesIndex(row.index);
-                              setEditAttributesOpen(true);
-                            }}
-                          >
-                            <i className="fas fa-edit" />
-                          </button>
-                          <button
-                            css={editButtonStyles}
-                            onClick={(event) => {
-                              setPartialPlanAttributes((attr) => {
-                                return attr.filter(
-                                  (x) =>
-                                    x.id !== row.original.id ||
-                                    x.name !== row.original.name ||
-                                    x.label !== row.original.label,
-                                );
-                              });
-                            }}
-                          >
-                            <i className="fas fa-trash-alt" />
-                          </button>
-                        </div>
-                      );
-                    },
-                  },
-                ];
-              }}
-            />
+                            return (
+                              <div css={editColumnContainerStyles}>
+                                <button
+                                  css={editButtonStyles}
+                                  onClick={(event) => {
+                                    setAttributesIndex(row.index);
+                                    setEditAttributesOpen(true);
+                                  }}
+                                >
+                                  <i className="fas fa-edit" />
+                                </button>
+                                <button
+                                  css={editButtonStyles}
+                                  onClick={(event) => {
+                                    setPartialPlanAttributes((attr) => {
+                                      return attr.filter(
+                                        (x) =>
+                                          x.id !== row.original.id ||
+                                          x.name !== row.original.name ||
+                                          x.label !== row.original.label,
+                                      );
+                                    });
+                                  }}
+                                >
+                                  <i className="fas fa-trash-alt" />
+                                </button>
+                              </div>
+                            );
+                          },
+                        },
+                      ];
+                    }}
+                  />
+                </div>
+              </AccordionItem>
+            </AccordionList>
           </div>
         </AccordionItem>
         <AccordionItem
@@ -802,7 +816,7 @@ function EditAttributePopup({
             <label htmlFor="attribute-name-input">Enter Field Name:</label>
             <InfoIcon
               id="field-name-input-icon"
-              cssStyles={infoIconStyels}
+              cssStyles={infoIconStyles}
               tooltip="Field names should not contain special characters, such as spaces, hyphens, parentheses, brackets, or characters such as $, %, and #."
               place="right"
               type="info"
@@ -820,7 +834,7 @@ function EditAttributePopup({
             <label htmlFor="attribute-label-input">Enter Display Name:</label>
             <InfoIcon
               id="display-name-input-icon"
-              cssStyles={infoIconStyels}
+              cssStyles={infoIconStyles}
               tooltip="An alternative name or alias for a field that is more descriptive and user-friendly than the name."
               place="right"
               type="info"
@@ -883,7 +897,7 @@ function EditAttributePopup({
               </label>
               <InfoIcon
                 id="domain-type-input-icon"
-                cssStyles={infoIconStyels}
+                cssStyles={infoIconStyles}
                 tooltip="Used for limiting the values users can input into this field. This can either be a predefined list of values (Coded Values) or a numerical range (Range). The Coded Values option allows for drop-down, radio button, and switch options when creating surveys in Esri Field Maps."
                 place="right"
                 type="info"

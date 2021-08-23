@@ -198,9 +198,9 @@ export function useStartOver() {
     setSampleTableName('');
     setSampleTypeSelections([]);
     setSelectedService(null);
-    setIncludeFullPlan(true);
+    setIncludeFullPlan(false);
     setIncludeFullPlanWebMap(true);
-    setIncludePartialPlan(false);
+    setIncludePartialPlan(true);
     setIncludePartialPlanWebMap(true);
     setIncludeCustomSampleTypes(false);
     setPartialPlanAttributes(defaultPlanAttributes);
