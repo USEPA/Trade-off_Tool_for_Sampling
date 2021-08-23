@@ -154,11 +154,11 @@ export const PublishContext = React.createContext<PublishType>({
   setSampleTableNameAvailable: () => {},
   selectedService: null,
   setSelectedService: () => {},
-  includeFullPlan: true,
+  includeFullPlan: false,
   setIncludeFullPlan: () => {},
   includeFullPlanWebMap: true,
   setIncludeFullPlanWebMap: () => {},
-  includePartialPlan: false,
+  includePartialPlan: true,
   setIncludePartialPlan: () => {},
   includePartialPlanWebMap: true,
   setIncludePartialPlanWebMap: () => {},
@@ -194,11 +194,11 @@ export function PublishProvider({ children }: Props) {
     selectedService,
     setSelectedService,
   ] = React.useState<ServiceMetaDataType | null>(null);
-  const [includeFullPlan, setIncludeFullPlan] = React.useState(true);
+  const [includeFullPlan, setIncludeFullPlan] = React.useState(false);
   const [includeFullPlanWebMap, setIncludeFullPlanWebMap] = React.useState(
     true,
   );
-  const [includePartialPlan, setIncludePartialPlan] = React.useState(false);
+  const [includePartialPlan, setIncludePartialPlan] = React.useState(true);
   const [
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,

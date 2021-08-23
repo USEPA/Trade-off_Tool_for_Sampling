@@ -1791,29 +1791,6 @@ function Publish() {
         <h3>Publish Summary</h3>
         <p>
           <strong>
-            {includeFullPlan ? (
-              <i className="fas fa-check" css={checkedStyles}></i>
-            ) : (
-              <i className="fas fa-times" css={unCheckedStyles}></i>
-            )}
-            Include TOTS Full Reference Files:
-          </strong>
-          {includeFullPlan && (
-            <React.Fragment>
-              <br />
-              <strong css={webMapContainerCheckboxStyles}>
-                {includeFullPlanWebMap ? (
-                  <i className="fas fa-check" css={checkedStyles}></i>
-                ) : (
-                  <i className="fas fa-times" css={unCheckedStyles}></i>
-                )}
-                Include Web Map:
-              </strong>
-            </React.Fragment>
-          )}
-        </p>
-        <p>
-          <strong>
             {includePartialPlan ? (
               <i className="fas fa-check" css={checkedStyles}></i>
             ) : (

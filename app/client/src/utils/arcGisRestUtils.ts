@@ -1292,13 +1292,6 @@ export function addWebMap({
         baseMap: {
           baseMapLayers: [
             {
-              id: 'World_Hillshade_2559',
-              title: 'World Hillshade',
-              url:
-                'https://ibasemaps-api.arcgis.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer',
-              layerType: 'ArcGISTiledMapServiceLayer',
-            },
-            {
               id: 'VectorTile_9568',
               title: 'World Topographic Map',
               layerType: 'VectorTileLayer',
