@@ -167,6 +167,7 @@ function Publish() {
     setLayers,
     sampleAttributes,
     selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
@@ -740,6 +741,14 @@ function Publish() {
             return updatedLayer;
           }),
         );
+
+        setSelectedScenario((selectedScenario) => {
+          if(!selectedScenario) return selectedScenario;
+
+          selectedScenario.status = 'published';
+          selectedScenario.portalId = portalId;
+          return selectedScenario
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);

@@ -1340,23 +1340,25 @@ const {
                         <i className="fas fa-trash-alt" />
                         <span className="sr-only">Delete Plan</span>
                       </button>
-                      <button
-                        css={iconButtonStyles}
-                        title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        onClick={() => {
-                          setAddScenarioVisible(false);
-                          setEditScenarioVisible(!editScenarioVisible);
-                        }}
-                      >
-                        <i
-                          className={
-                            editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
-                          }
-                        />
-                        <span className="sr-only">
-                          {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        </span>
-                      </button>
+                      {selectedScenario.status !== 'published' && (
+                        <button
+                          css={iconButtonStyles}
+                          title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          onClick={() => {
+                            setAddScenarioVisible(false);
+                            setEditScenarioVisible(!editScenarioVisible);
+                          }}
+                        >
+                          <i
+                            className={
+                              editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                            }
+                          />
+                          <span className="sr-only">
+                            {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          </span>
+                        </button>
+                      )}
                     </React.Fragment>
                   )}
                   <button
