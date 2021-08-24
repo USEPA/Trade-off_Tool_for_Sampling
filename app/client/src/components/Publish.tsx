@@ -778,6 +778,7 @@ function Publish() {
     publishButtonClicked,
     hasNameBeenChecked,
     selectedScenario,
+    setSelectedScenario,
   ]);
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -1341,13 +1342,13 @@ function Publish() {
           />
         )}
       {(publishResponse.summary.success ||
-        sketchLayer?.status === 'published') &&
+        selectedScenario?.status === 'published') &&
         publishSuccessMessage}
       {!signedIn && notLoggedInMessage}
       {sampleCount === 0 && noSamplesPublishMessage}
       {publishResponse.status !== 'name-not-available' &&
-        sketchLayer &&
-        sketchLayer.status !== 'published' &&
+        selectedScenario &&
+        selectedScenario.status !== 'published' &&
         sampleCount !== 0 && (
           <div css={publishButtonContainerStyles}>
             <button

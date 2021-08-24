@@ -1582,6 +1582,9 @@ const {
                                   ...editsScenario.layers.slice(0, layerIndex),
                                   ...editsScenario.layers.slice(layerIndex + 1),
                                 ];
+                                if(editsScenario.status === 'published') {
+                                  editsScenario.status = 'edited';
+                                }
 
                                 return {
                                   count: edits.count + 1,
