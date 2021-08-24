@@ -855,7 +855,7 @@ function ResultCard({ result }: ResultCardProps) {
 
     // check if result was added as a user defined sample type
     Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
-      if (sample.serviceId === result.id) added = true;
+      if (sample.serviceId === result.id && sample.status === 'published-ago') added = true;
     });
 
     setAdded(added);
@@ -1587,7 +1587,7 @@ function ResultCard({ result }: ResultCardProps) {
                   newAttributes[attributes.TYPEUUID] = {
                     status: newAttributes[attributes.TYPEUUID]?.status
                       ? newAttributes[attributes.TYPEUUID].status
-                      : 'published',
+                      : 'published-ago',
                     serviceId: result.id,
                     attributes: {
                       OBJECTID: attributes.OBJECTID,
@@ -1635,6 +1635,7 @@ function ResultCard({ result }: ResultCardProps) {
               setUserDefinedAttributes((item) => {
                 Object.keys(newAttributes).forEach((key) => {
                   const attributes = newAttributes[key];
+                  attributes.status = 'published-ago';
                   sampleAttributes[attributes.attributes.TYPEUUID as any] =
                     attributes.attributes;
                   item.sampleTypes[
@@ -1650,6 +1651,20 @@ function ResultCard({ result }: ResultCardProps) {
 
               setUserDefinedOptions((options) => {
                 return [...options, ...newUserSampleTypes];
+              });
+            } else {
+              setUserDefinedAttributes((item) => {
+                Object.keys(item.sampleTypes).forEach((key) => {
+                  const attributes = item.sampleTypes[key];
+                  if (attributes?.serviceId === result.id) {
+                    attributes.status = 'published-ago';
+                  }
+                });
+
+                return {
+                  editCount: item.editCount + 1,
+                  sampleTypes: item.sampleTypes,
+                };
               });
             }
 
@@ -1816,6 +1831,7 @@ function ResultCard({ result }: ResultCardProps) {
     type RemovalObject = {
       layer: LayerType;
       graphics: __esri.Graphic[];
+      pointsGraphics: __esri.Graphic[];
     };
     const removalObject: RemovalObject[] = [];
 
@@ -1835,10 +1851,20 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
-      if (graphicsToRemove.length > 0) {
+      const pointsGraphicsToRemove: __esri.Graphic[] = [];
+      if (layer.pointsLayer) {
+        layer.pointsLayer.graphics.forEach((graphic) => {
+          if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+            pointsGraphicsToRemove.push(graphic);
+          }
+        });
+      }
+
+      if (graphicsToRemove.length > 0 || pointsGraphicsToRemove.length > 0) {
         removalObject.push({
           layer: layer,
           graphics: graphicsToRemove,
+          pointsGraphics: pointsGraphicsToRemove,
         });
       }
     });
@@ -1884,6 +1910,7 @@ function ResultCard({ result }: ResultCardProps) {
         removalObject.forEach((object) => {
           if (object.layer.sketchLayer.type === 'graphics') {
             object.layer.sketchLayer.removeMany(object.graphics);
+            if(object.layer.pointsLayer) object.layer.pointsLayer.removeMany(object.pointsGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);

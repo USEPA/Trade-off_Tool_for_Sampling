@@ -167,6 +167,7 @@ function Publish() {
     setLayers,
     sampleAttributes,
     selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
@@ -740,6 +741,14 @@ function Publish() {
             return updatedLayer;
           }),
         );
+
+        setSelectedScenario((selectedScenario) => {
+          if(!selectedScenario) return selectedScenario;
+
+          selectedScenario.status = 'published';
+          selectedScenario.portalId = portalId;
+          return selectedScenario
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -769,6 +778,7 @@ function Publish() {
     publishButtonClicked,
     hasNameBeenChecked,
     selectedScenario,
+    setSelectedScenario,
   ]);
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -977,7 +987,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -995,7 +1005,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1332,13 +1342,13 @@ function Publish() {
           />
         )}
       {(publishResponse.summary.success ||
-        sketchLayer?.status === 'published') &&
+        selectedScenario?.status === 'published') &&
         publishSuccessMessage}
       {!signedIn && notLoggedInMessage}
       {sampleCount === 0 && noSamplesPublishMessage}
       {publishResponse.status !== 'name-not-available' &&
-        sketchLayer &&
-        sketchLayer.status !== 'published' &&
+        selectedScenario &&
+        selectedScenario.status !== 'published' &&
         sampleCount !== 0 && (
           <div css={publishButtonContainerStyles}>
             <button
