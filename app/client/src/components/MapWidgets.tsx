@@ -186,7 +186,7 @@ const { userInfo } = React.useContext(AuthenticationContext);
       layer: sketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol: defaultSymbols.symbols['Samples'],
-      pointSymbol: defaultSymbols.symbols['Samples'],
+      pointSymbol: defaultSymbols.symbols['Samples'] as any,
     });
 
     const tempSvm = svm as any;
@@ -212,7 +212,7 @@ const { userInfo } = React.useContext(AuthenticationContext);
       layer: aoiSketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol: defaultSymbols.symbols['Area of Interest'],
-      pointSymbol: defaultSymbols.symbols['Area of Interest'],
+      pointSymbol: defaultSymbols.symbols['Area of Interest'] as any,
     });
 
     const tempSvm = svm as any;
