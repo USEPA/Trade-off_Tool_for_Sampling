@@ -855,7 +855,7 @@ function ResultCard({ result }: ResultCardProps) {
 
     // check if result was added as a user defined sample type
     Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
-      if (sample.serviceId === result.id) added = true;
+      if (sample.serviceId === result.id && sample.status === 'published-ago') added = true;
     });
 
     setAdded(added);
@@ -1587,7 +1587,7 @@ function ResultCard({ result }: ResultCardProps) {
                   newAttributes[attributes.TYPEUUID] = {
                     status: newAttributes[attributes.TYPEUUID]?.status
                       ? newAttributes[attributes.TYPEUUID].status
-                      : 'published',
+                      : 'published-ago',
                     serviceId: result.id,
                     attributes: {
                       OBJECTID: attributes.OBJECTID,

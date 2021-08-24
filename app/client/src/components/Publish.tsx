@@ -987,7 +987,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1005,7 +1005,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
