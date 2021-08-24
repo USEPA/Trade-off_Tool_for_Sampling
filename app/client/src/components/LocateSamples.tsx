@@ -1322,6 +1322,14 @@ const {
 
                           if (!map) return;
 
+                          // make the new selection visible
+                          if (scenarios.length > 0) {
+                            const newSelection = map.layers.find(
+                              (layer) => layer.id === scenarios[0].layerId,
+                            );
+                            if (newSelection) newSelection.visible = true;
+                          }
+
                           // remove the scenario from the map
                           const mapLayer = map.layers.find(
                             (layer) => layer.id === selectedScenario.layerId,
