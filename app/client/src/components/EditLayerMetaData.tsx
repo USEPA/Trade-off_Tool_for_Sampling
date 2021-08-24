@@ -98,6 +98,7 @@ function EditScenario({
     edits,
     setEdits,
     map,
+    layers,
     setLayers,
     setSelectedScenario,
     setSketchLayer,
@@ -180,7 +181,22 @@ function EditScenario({
         title: scenarioName,
       });
 
-      const layers: LayerEditsType[] = [];
+      // hide all other plans from the map
+      layers.forEach((layer) => {
+        if (layer.parentLayer) {
+          layer.parentLayer.visible = false;
+          return;
+        }
+
+        if (
+          layer.layerType === 'Samples' ||
+          layer.layerType === 'VSP'
+        ) {
+          layer.sketchLayer.visible = false;
+        }
+      });
+
+      const newLayers: LayerEditsType[] = [];
       let tempSketchLayer: LayerType | null = null;
       if (addDefaultSampleLayer) {
         edits.edits.forEach((edit) => {
@@ -188,18 +204,18 @@ function EditScenario({
             edit.type === 'layer' && 
               (edit.layerType === 'Samples' || edit.layerType === 'VSP')
           ) {
-            layers.push(edit);
+            newLayers.push(edit);
           }
         });
 
-        if(layers.length === 0) {
+        if(newLayers.length === 0) {
           // no sketchable layers were available, create one
           tempSketchLayer = createSampleLayer(
             GraphicsLayer,
             undefined,
             groupLayer,
           );
-          layers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+          newLayers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
         }
       }
 
@@ -222,17 +238,35 @@ function EditScenario({
         listMode: 'show',
         scenarioName: scenarioName,
         scenarioDescription: scenarioDescription,
-        layers,
+        layers: newLayers,
       };
 
       // make a copy of the edits context variable
       setEdits((edits) => {
         const newEdits = edits.edits.filter((edit) => {
-          const idx = layers.findIndex((l) => 
+          const idx = newLayers.findIndex((l) => 
             l.layerId === edit.layerId
           );
 
           return idx === -1;
+        });
+
+        newEdits.forEach((edit) => {
+          let visible = edit.visible;
+
+          if (edit.type === 'scenario') {
+            visible =
+              edit.layerId === newScenario.layerId ? true : false;
+          }
+          if (edit.type === 'layer') {
+            if (
+              edit.layerType === 'Samples' ||
+              edit.layerType === 'VSP'
+            ) {
+              visible = false;
+            }
+          }
+          edit.visible = visible;
         });
 
         return {
