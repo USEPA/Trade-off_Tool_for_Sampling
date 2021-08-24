@@ -1816,6 +1816,7 @@ function ResultCard({ result }: ResultCardProps) {
     type RemovalObject = {
       layer: LayerType;
       graphics: __esri.Graphic[];
+      pointsGraphics: __esri.Graphic[];
     };
     const removalObject: RemovalObject[] = [];
 
@@ -1835,10 +1836,20 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
-      if (graphicsToRemove.length > 0) {
+      const pointsGraphicsToRemove: __esri.Graphic[] = [];
+      if (layer.pointsLayer) {
+        layer.pointsLayer.graphics.forEach((graphic) => {
+          if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+            pointsGraphicsToRemove.push(graphic);
+          }
+        });
+      }
+
+      if (graphicsToRemove.length > 0 || pointsGraphicsToRemove.length > 0) {
         removalObject.push({
           layer: layer,
           graphics: graphicsToRemove,
+          pointsGraphics: pointsGraphicsToRemove,
         });
       }
     });
@@ -1884,6 +1895,7 @@ function ResultCard({ result }: ResultCardProps) {
         removalObject.forEach((object) => {
           if (object.layer.sketchLayer.type === 'graphics') {
             object.layer.sketchLayer.removeMany(object.graphics);
+            if(object.layer.pointsLayer) object.layer.pointsLayer.removeMany(object.pointsGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);
