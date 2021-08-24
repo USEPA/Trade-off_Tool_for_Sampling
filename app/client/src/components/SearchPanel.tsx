@@ -1635,6 +1635,7 @@ function ResultCard({ result }: ResultCardProps) {
               setUserDefinedAttributes((item) => {
                 Object.keys(newAttributes).forEach((key) => {
                   const attributes = newAttributes[key];
+                  attributes.status = 'published-ago';
                   sampleAttributes[attributes.attributes.TYPEUUID as any] =
                     attributes.attributes;
                   item.sampleTypes[
@@ -1650,6 +1651,20 @@ function ResultCard({ result }: ResultCardProps) {
 
               setUserDefinedOptions((options) => {
                 return [...options, ...newUserSampleTypes];
+              });
+            } else {
+              setUserDefinedAttributes((item) => {
+                Object.keys(item.sampleTypes).forEach((key) => {
+                  const attributes = item.sampleTypes[key];
+                  if (attributes?.serviceId === result.id) {
+                    attributes.status = 'published-ago';
+                  }
+                });
+
+                return {
+                  editCount: item.editCount + 1,
+                  sampleTypes: item.sampleTypes,
+                };
               });
             }
 
