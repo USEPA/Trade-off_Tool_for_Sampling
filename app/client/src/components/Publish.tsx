@@ -145,6 +145,7 @@ function Publish() {
     layers,
     setLayers,
     selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
@@ -778,6 +779,14 @@ function Publish() {
             return updatedLayer;
           }),
         );
+
+        setSelectedScenario((selectedScenario) => {
+          if(!selectedScenario) return selectedScenario;
+
+          selectedScenario.status = 'published';
+          selectedScenario.portalId = portalId;
+          return selectedScenario
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -803,6 +812,7 @@ function Publish() {
     portal,
     layers,
     selectedScenario,
+    setSelectedScenario,
   ]);
 
   const [
@@ -1305,6 +1315,14 @@ function Publish() {
             return updatedLayer;
           }),
         );
+
+        setSelectedScenario((selectedScenario) => {
+          if(!selectedScenario) return selectedScenario;
+
+          selectedScenario.status = 'published';
+          selectedScenario.portalId = portalId;
+          return selectedScenario
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -1330,6 +1348,7 @@ function Publish() {
     portal,
     layers,
     selectedScenario,
+    setSelectedScenario,
   ]);
 
   const [
@@ -1411,7 +1430,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1429,7 +1448,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1624,7 +1643,6 @@ function Publish() {
     ) {
       return;
     }
-
     setPublishButtonClicked(false);
 
     if (includeFullPlan) {
