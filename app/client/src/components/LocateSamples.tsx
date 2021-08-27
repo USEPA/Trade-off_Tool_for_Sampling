@@ -1320,6 +1320,14 @@ function LocateSamples() {
 
                           if (!map) return;
 
+                          // make the new selection visible
+                          if (scenarios.length > 0) {
+                            const newSelection = map.layers.find(
+                              (layer) => layer.id === scenarios[0].layerId,
+                            );
+                            if (newSelection) newSelection.visible = true;
+                          }
+
                           // remove the scenario from the map
                           const mapLayer = map.layers.find(
                             (layer) => layer.id === selectedScenario.layerId,
@@ -1330,23 +1338,25 @@ function LocateSamples() {
                         <i className="fas fa-trash-alt" />
                         <span className="sr-only">Delete Plan</span>
                       </button>
-                      <button
-                        css={iconButtonStyles}
-                        title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        onClick={() => {
-                          setAddScenarioVisible(false);
-                          setEditScenarioVisible(!editScenarioVisible);
-                        }}
-                      >
-                        <i
-                          className={
-                            editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
-                          }
-                        />
-                        <span className="sr-only">
-                          {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        </span>
-                      </button>
+                      {selectedScenario.status !== 'published' && (
+                        <button
+                          css={iconButtonStyles}
+                          title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          onClick={() => {
+                            setAddScenarioVisible(false);
+                            setEditScenarioVisible(!editScenarioVisible);
+                          }}
+                        >
+                          <i
+                            className={
+                              editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                            }
+                          />
+                          <span className="sr-only">
+                            {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          </span>
+                        </button>
+                      )}
                     </React.Fragment>
                   )}
                   <button
@@ -1570,6 +1580,9 @@ function LocateSamples() {
                                   ...editsScenario.layers.slice(0, layerIndex),
                                   ...editsScenario.layers.slice(layerIndex + 1),
                                 ];
+                                if(editsScenario.status === 'published') {
+                                  editsScenario.status = 'edited';
+                                }
 
                                 return {
                                   count: edits.count + 1,

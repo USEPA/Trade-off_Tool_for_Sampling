@@ -1,0 +1,91 @@
+{
+    "swagger": "2.0"
+   ,"info": {
+       "title": "US EPA Trade-off Tool for Sampling (TOTS)"
+      ,"contact": {
+          "name": "US EPA Homeland Security Research Program (HSRP)"
+      }
+      ,"license": {
+          "name": "Creative Commons Zero Public Domain Dedication"
+         ,"url": "https://edg.epa.gov/EPA_Data_License.html"
+      }
+      ,"version": "0.0.1"
+   }
+   ,"host": "tots-stage.app.cloud.gov"
+   ,"basePath": "/"
+   ,"schemes": [
+      "https"
+   ]
+   ,"consumes": [
+      "application/json"
+   ]
+   ,"produces": [
+      "application/json"
+   ]
+   ,"securityDefinitions": {
+      "basicAuth": {
+         "type": "basic"
+      }
+   }
+   ,"security": [
+      {
+         "basicAuth": []
+      }
+   ]
+   ,"parameters": {
+       "url": {
+          "name": "url"
+         ,"in": "query"
+         ,"type": "string"
+         ,"required": true
+         ,"default": "https://geopub.epa.gov/arcgis/rest/services/ORD/TOTS/GPServer?f=json"
+      }
+   }
+   ,"paths": {
+       "/proxy": {
+          "get": {
+             "parameters": [
+                {
+                   "$ref": "#/parameters/url"
+               }
+            ]
+            ,"tags": [
+                "Trade-off Tool for Sampling (TOTS)"
+            ]
+            ,"responses": {
+                "200": {
+                   "description": "Placeholder."
+                  ,"schema": {
+                      "$ref": "#/definitions/generic"
+                  }
+               }
+            }
+         }
+      }
+      ,"/health": {
+          "get": {
+             "tags": [
+               "Trade-off Tool for Sampling (TOTS)"
+            ]
+            ,"responses": {
+               "200": {
+                   "description": "Placeholder."
+                  ,"schema": {
+                      "$ref": "#/definitions/generic"
+                  }
+               }
+            }
+         }
+      }
+   }
+   ,"definitions": {
+       "generic": {
+          "type": "object"
+         ,"properties": {
+             "Results": {
+                "type": "string"
+            }
+         }
+      }
+   }
+}

@@ -183,12 +183,22 @@ export function updateLayerEdits({
     // otherwise add the layer to the root of edits.
     if (editsScenario) {
       editsScenario.layers.push(editsLayer);
+      if (editsScenario.status === 'published') editsScenario.status = 'edited';
     } else {
       editsCopy.edits.push(editsLayer);
     }
   } else if (scenario && editsScenario && type === 'move') {
     editsLayer.visible = true;
+    editsLayer.adds = editsLayer.updates;
+    editsLayer.updates = [];
+    editsLayer.published.forEach((edit) => {
+      const indx = editsLayer.adds.findIndex((x) => x.attributes.PERMANENT_IDENTIFIER === edit.attributes.PERMANENT_IDENTIFIER);
+      if(indx === -1) editsLayer.adds.push(edit);
+    });
+    editsLayer.published = [];
+    editsLayer.deletes = [];
     editsScenario.layers.push(editsLayer);
+    if (editsScenario.status === 'published') editsScenario.status = 'edited';
     editsCopy.edits = editsCopy.edits.filter(
       (edit) => edit.layerId !== editsLayer.layerId,
     );
