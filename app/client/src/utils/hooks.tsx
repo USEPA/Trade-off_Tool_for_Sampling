@@ -180,7 +180,7 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
-    setShowAsPoints(false);
+    setShowAsPoints(true);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
