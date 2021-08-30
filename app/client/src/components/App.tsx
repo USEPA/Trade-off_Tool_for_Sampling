@@ -550,7 +550,7 @@ function App() {
                           <div css={resizerButtonStyles}></div>
                         </div>
                         <div
-                          id="tots-panel-scroll-container"
+                          id="tots-attributes-panel-scroll-container"
                           css={floatPanelScrollContainerStyles}
                         >
                           <div css={tablePanelHeaderStyles}>
@@ -651,6 +651,7 @@ function App() {
                                           }}
                                         >
                                           <i className="fas fa-search-plus" />
+                                          <span className="sr-only">Zoom to sample</span>
                                         </button>
                                       </div>
                                     ),
