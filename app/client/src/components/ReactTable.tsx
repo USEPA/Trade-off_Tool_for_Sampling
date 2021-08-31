@@ -301,34 +301,33 @@ export function ReactTable({
         key={key}
         rowIndex={index}
       >
-        <div style={style}>
-          <div
-            id={row.original[idColumn]}
-            className={`rt-tr ${striped ? 'rt-striped' : ''} ${
-              isEven ? '-odd' : '-even'
-            } ${selected ? 'rt-selected' : ''}`}
-            role="row"
-            {...row.getRowProps()}
-            onClick={() => {
-              row.toggleRowSelected(!selected);
+        <div
+          id={row.original[idColumn]}
+          className={`rt-tr ${striped ? 'rt-striped' : ''} ${
+            isEven ? '-odd' : '-even'
+          } ${selected ? 'rt-selected' : ''}`}
+          role="row"
+          {...row.getRowProps()}
+          onClick={() => {
+            row.toggleRowSelected(!selected);
 
-              if (!onSelectionChange) return;
+            if (!onSelectionChange) return;
 
-              onSelectionChange(row);
-            }}
-          >
-            {row.cells.map((cell: any) => {
-              const column: any = cell.column;
-              if (typeof column.show === 'boolean' && !column.show) {
-                return null;
-              }
-              return (
-                <div className="rt-td" role="gridcell" {...cell.getCellProps()}>
-                  {cell.render('Cell')}
-                </div>
-              );
-            })}
-          </div>
+            onSelectionChange(row);
+          }}
+          style={style}
+        >
+          {row.cells.map((cell: any) => {
+            const column: any = cell.column;
+            if (typeof column.show === 'boolean' && !column.show) {
+              return null;
+            }
+            return (
+              <div className="rt-td" role="gridcell" {...cell.getCellProps()}>
+                {cell.render('Cell')}
+              </div>
+            );
+          })}
         </div>
       </CellMeasurer>
     );

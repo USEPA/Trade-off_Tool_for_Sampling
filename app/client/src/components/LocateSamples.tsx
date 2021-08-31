@@ -271,7 +271,7 @@ const submitButtonStyles = css`
 
 const sampleCountStyles = css`
   font-size: 26px;
-  color: #00bde3;
+  color: #0085e3;
 `;
 
 // --- components (SketchButton) ---
@@ -1379,7 +1379,7 @@ function LocateSamples() {
                 </div>
               </div>
               <Select
-                id="scenario-select-input"
+                id="scenario-select-input-container"
                 inputId="scenario-select-input"
                 css={layerSelectStyles}
                 isDisabled={addScenarioVisible || editScenarioVisible}
@@ -2150,7 +2150,7 @@ function LocateSamples() {
                     using additional controls now available to you.
                   </p>
                   <div css={iconButtonContainerStyles}>
-                    <label htmlFor="sample-type-select-input">
+                    <label htmlFor="cst-sample-type-select-input">
                       Sample Type
                     </label>
                     <div>
@@ -2391,8 +2391,8 @@ function LocateSamples() {
                     </div>
                   </div>
                   <Select
-                    id="sample-type-select"
-                    inputId="sample-type-select-input"
+                    id="cst-sample-type-select"
+                    inputId="cst-sample-type-select-input"
                     css={fullWidthSelectStyles}
                     isDisabled={editingStatus ? true : false}
                     value={userDefinedSampleType}
