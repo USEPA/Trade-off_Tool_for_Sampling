@@ -87,11 +87,6 @@ const searchButtonStyles = css`
   border-radius: 4px;
 `;
 
-const buttonHiddenTextStyles = css`
-  font: 0/0 a, sans-serif;
-  text-indent: -999em;
-`;
-
 const filterContainerStyles = css`
   /* This is disabled and only ever enabled for testing.
    * In development, it is sometimes helpful enable
@@ -170,6 +165,11 @@ const exitDisclaimerStyles = css`
   a {
     margin: 0 0 0 0.3333333333em;
   }
+`;
+
+const highContrastSpan = css`
+  color: black;
+  background-color: white;
 `;
 
 // --- components (SearchPanel) ---
@@ -549,7 +549,7 @@ function SearchPanel() {
           onClick={(ev) => setSearch(searchText)}
         >
           <i className="fas fa-search"></i>
-          <span css={buttonHiddenTextStyles}>Search</span>
+          <span className="sr-only" css={highContrastSpan}>Search</span>
         </button>
       </form>
       <div css={filterContainerStyles}>
@@ -669,7 +669,7 @@ function SearchPanel() {
                 sortOrder === 'desc' ? 'up' : 'down'
               }`}
             ></i>
-            <span css={buttonHiddenTextStyles}>
+            <span className="sr-only">
               {sortOrder === 'desc' ? 'Sort Ascending' : 'Sort Descending'}
             </span>
           </button>
@@ -718,7 +718,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(1)}
                   >
                     <i className="fas fa-angle-double-left"></i>
-                    <span css={buttonHiddenTextStyles}>Go to first page</span>
+                    <span className="sr-only">Go to first page</span>
                   </button>
                   <button
                     css={pageControlStyles}
@@ -726,7 +726,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(pageNumber - 1)}
                   >
                     <i className="fas fa-angle-left"></i>
-                    <span css={buttonHiddenTextStyles}>Previous</span>
+                    <span className="sr-only">Previous</span>
                   </button>
                   <span>{pageNumber}</span>
                   <button
@@ -735,7 +735,7 @@ function SearchPanel() {
                     onClick={() => setPageNumber(pageNumber + 1)}
                   >
                     <i className="fas fa-angle-right"></i>
-                    <span css={buttonHiddenTextStyles}>Next</span>
+                    <span className="sr-only">Next</span>
                   </button>
                   <span css={totalStyles}>
                     {searchResults.data.total.toLocaleString()} Items

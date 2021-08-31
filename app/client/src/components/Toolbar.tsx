@@ -284,7 +284,7 @@ function Toolbar() {
     setLayerToRemove, //
   ] = React.useState<__esri.Layer | null>(null);
   React.useEffect(() => {
-    if (!mapView) return;
+    if (!mapView || layers.length === 0 || legendInitialized) return;
 
     // clear out the legend container
     const legendContainer: HTMLElement | null = document.getElementById(
@@ -545,7 +545,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols]);
+  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols, layers, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -756,7 +756,6 @@ function Toolbar() {
         <div>
           <button
             css={toolBarButtonStyles}
-            disabled={!legendInitialized}
             className={basemapVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setBasemapVisible(!basemapVisible);
@@ -773,7 +772,6 @@ function Toolbar() {
         <div>
           <button
             css={toolBarButtonStyles}
-            disabled={!legendInitialized}
             className={legendVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setLegendVisible(!legendVisible);
@@ -782,7 +780,11 @@ function Toolbar() {
           >
             Legend{' '}
           </button>
-          <div css={legendStyles(legendVisible)} id="legend-container" />
+          <div css={legendStyles(legendVisible)} id="legend-container">
+            <div className="esri-layer-list__no-items">
+              There are currently no items to display.
+            </div>
+          </div>
         </div>
         {oAuthInfo && (
           <button
