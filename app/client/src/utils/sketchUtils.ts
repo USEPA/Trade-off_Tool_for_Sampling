@@ -183,11 +183,13 @@ export function updateLayerEdits({
     // otherwise add the layer to the root of edits.
     if (editsScenario) {
       editsScenario.layers.push(editsLayer);
+      if (editsScenario.status === 'published') editsScenario.status = 'edited';
     } else {
       editsCopy.edits.push(editsLayer);
     }
   } else if (scenario && editsScenario && type === 'move') {
     editsLayer.visible = true;
+    if (editsScenario.status === 'published') editsScenario.status = 'edited';
     editsScenario.layers.push(editsLayer);
     editsCopy.edits = editsCopy.edits.filter(
       (edit) => edit.layerId !== editsLayer.layerId,

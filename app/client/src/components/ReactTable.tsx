@@ -13,6 +13,12 @@ import {
   Row,
   HeaderGroup,
 } from 'react-table';
+import {
+  AutoSizer,
+  CellMeasurer,
+  CellMeasurerCache,
+  List,
+} from 'react-virtualized';
 
 const inputStyles = css`
   width: 100%;
@@ -231,6 +237,8 @@ function ReactTable({
     setTableWidth(node.getBoundingClientRect().width);
   }, []);
 
+  const [scrollToRow, setScrollToRow] = React.useState(-1);
+
   React.useEffect(() => {
     // don't scroll for row clicks
     const ids = Object.keys(initialSelectedRowIds.ids);
@@ -238,20 +246,95 @@ function ReactTable({
       ids.length === 0 ||
       initialSelectedRowIds.selectionMethod === 'row-click'
     ) {
+      setScrollToRow(-1);
       return;
     }
+    const firstRowId = ids[0] as any;
 
-    // get the first row element
-    const firstRowId = ids[0];
-    const uuid = data[parseInt(firstRowId)].PERMANENT_IDENTIFIER;
-    const firstRow = document.getElementById(uuid);
+    const index = rows.findIndex(
+      (row: any) => row.original.PERMANENT_IDENTIFIER === firstRowId,
+    );
 
-    // scroll the table down to the first row
-    const table = document.getElementById(id);
-    if (firstRow && table) {
-      table.scrollTop = firstRow.offsetTop - firstRow.offsetHeight;
-    }
-  }, [initialSelectedRowIds, data, id]);
+    setScrollToRow(index);
+  }, [initialSelectedRowIds, data, id, rows]);
+
+  function rowRenderer({
+    index,
+    isScrolling,
+    key,
+    parent,
+    style,
+  }: {
+    index: any;
+    isScrolling: any;
+    key: any;
+    parent: any;
+    style: any;
+  }) {
+    // cast as any to workaround toggleRowSelected not being on the type
+    const row = rows[index] as any;
+
+    const selected = Object.keys(selectedRowIds).includes(
+      row.original.PERMANENT_IDENTIFIER,
+    );
+    const isEven = index % 2 === 0;
+    prepareRow(row);
+    return (
+      <CellMeasurer
+        cache={cache}
+        columnIndex={0}
+        rowCount={rows.length}
+        parent={parent}
+        key={key}
+        rowIndex={index}
+      >
+        <div
+          id={row.original[idColumn]}
+          className={`rt-tr ${striped ? 'rt-striped' : ''} ${
+            isEven ? '-odd' : '-even'
+          } ${selected ? 'rt-selected' : ''}`}
+          role="row"
+          {...row.getRowProps()}
+          onClick={() => {
+            row.toggleRowSelected(!selected);
+
+            if (!onSelectionChange) return;
+
+            onSelectionChange(row);
+          }}
+          style={style}
+        >
+          {row.cells.map((cell: any) => {
+            const column: any = cell.column;
+            if (typeof column.show === 'boolean' && !column.show) {
+              return null;
+            }
+            return (
+              <div className="rt-td" role="gridcell" {...cell.getCellProps()}>
+                {cell.render('Cell')}
+              </div>
+            );
+          })}
+        </div>
+      </CellMeasurer>
+    );
+  }
+
+  const [cache] = React.useState(
+    new CellMeasurerCache({
+      defaultHeight: 36,
+      fixedWidth: true,
+    }),
+  );
+  const listRef = React.useRef<any>(null);
+
+  // Resizes the rows (accordion items) of the react-virtualized list.
+  // This is done anytime an accordion item is expanded/collapsed
+  React.useEffect(() => {
+    cache.clearAll();
+    const tempListRef = listRef as any;
+    if (listRef?.current) tempListRef.current.recomputeRowHeights();
+  }, [cache, listRef, data]);
 
   return (
     <div
@@ -314,47 +397,22 @@ function ReactTable({
           ))}
         </div>
         <div className="rt-tbody" {...getTableBodyProps()}>
-          {rows.map((row, i) => {
-            // cast as any to workaround toggleRowSelected not being on the type
-            const tempRow = row as any;
-
-            const selected = Object.keys(selectedRowIds).includes(row.id);
-            const isEven = i % 2 === 0;
-            prepareRow(row);
-            return (
-              <div
-                id={tempRow.original[idColumn]}
-                className={`rt-tr ${striped ? 'rt-striped' : ''} ${
-                  isEven ? '-odd' : '-even'
-                } ${selected ? 'rt-selected' : ''}`}
-                role="row"
-                {...row.getRowProps()}
-                onClick={() => {
-                  tempRow.toggleRowSelected(!selected);
-
-                  if (!onSelectionChange) return;
-
-                  onSelectionChange(tempRow);
-                }}
-              >
-                {row.cells.map((cell) => {
-                  const column: any = cell.column;
-                  if (typeof column.show === 'boolean' && !column.show) {
-                    return null;
-                  }
-                  return (
-                    <div
-                      className="rt-td"
-                      role="gridcell"
-                      {...cell.getCellProps()}
-                    >
-                      {cell.render('Cell')}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+          <AutoSizer disableHeight>
+            {({ width }) => (
+              <List
+                ref={listRef}
+                // autoHeight
+                deferredMeasurementCache={cache}
+                height={height - 94}
+                width={width}
+                rowCount={rows.length}
+                rowHeight={cache.rowHeight}
+                rowRenderer={rowRenderer}
+                overscanRowCount={20}
+                scrollToIndex={scrollToRow}
+              />
+            )}
+          </AutoSizer>
         </div>
       </div>
     </div>

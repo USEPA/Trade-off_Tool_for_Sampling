@@ -134,7 +134,12 @@ const inputStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const { Graphic, GraphicsLayer, IdentityManager, Portal } = useEsriModulesContext();
+  const {
+    Graphic,
+    GraphicsLayer,
+    IdentityManager,
+    Portal,
+  } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
@@ -162,12 +167,13 @@ function Publish() {
     setLayers,
     sampleAttributes,
     selectedScenario,
+    setSelectedScenario,
     sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
-    setUserDefinedOptions
+    setUserDefinedOptions,
   } = React.useContext(SketchContext);
-  
+
   const sampleTypeContext = useSampleTypesContext();
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -735,6 +741,14 @@ function Publish() {
             return updatedLayer;
           }),
         );
+
+        setSelectedScenario((selectedScenario) => {
+          if(!selectedScenario) return selectedScenario;
+
+          selectedScenario.status = 'published';
+          selectedScenario.portalId = portalId;
+          return selectedScenario
+        });
       })
       .catch((err) => {
         console.error('isServiceNameAvailable error', err);
@@ -764,6 +778,7 @@ function Publish() {
     publishButtonClicked,
     hasNameBeenChecked,
     selectedScenario,
+    setSelectedScenario,
   ]);
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -928,7 +943,7 @@ function Publish() {
     };
 
     function publishSampleTypes() {
-      if(!portal || !publishSampleTableMetaData) return;
+      if (!portal || !publishSampleTableMetaData) return;
 
       // exit early if there are no edits
       if (
@@ -972,7 +987,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -990,7 +1005,7 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = 'published';
+                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1037,7 +1052,8 @@ function Publish() {
           const failed = totals.failed
             ? `${totals.failed} item(s) failed to publish. Check the console log for details.`
             : '';
-          if (failed) console.error('Some items failed to publish: ', res.edits);
+          if (failed)
+            console.error('Some items failed to publish: ', res.edits);
 
           newUserDefinedAttributes.editCount =
             newUserDefinedAttributes.editCount + 1;
@@ -1066,7 +1082,7 @@ function Publish() {
         });
     }
 
-    if(publishSamplesMode === 'new') {
+    if (publishSamplesMode === 'new') {
       sampleTypeSelections.forEach((type) => {
         if (!type.value) return;
 
@@ -1083,7 +1099,7 @@ function Publish() {
       return;
     }
 
-    if(!selectedService) return;
+    if (!selectedService) return;
 
     // get the list of feature layers in this feature server
     getFeatureTables(selectedService.url, token)
@@ -1110,7 +1126,7 @@ function Publish() {
               // get the graphics from the layer
               layerFeatures.features.forEach((feature: any) => {
                 const uuid = feature.attributes.TYPEUUID;
-                if(!existingTypeUuids.includes(uuid)) {
+                if (!existingTypeUuids.includes(uuid)) {
                   existingTypeUuids.push(uuid);
                 }
               });
@@ -1118,18 +1134,18 @@ function Publish() {
 
             sampleTypeSelections.forEach((type) => {
               if (!type.value) return;
-        
+
               const sampleType = userDefinedAttributes.sampleTypes[type.value];
               const item = {
                 attributes: sampleType.attributes,
               };
               const typeUuid = item.attributes.TYPEUUID || '';
 
-              if(existingTypeUuids.includes(typeUuid)) {
-                if(sampleType.status === 'delete') changes.deletes.push(item);
+              if (existingTypeUuids.includes(typeUuid)) {
+                if (sampleType.status === 'delete') changes.deletes.push(item);
                 else changes.updates.push(item);
               } else {
-                if(sampleType.status !== 'delete') changes.adds.push(item);
+                if (sampleType.status !== 'delete') changes.adds.push(item);
               }
             });
 
@@ -1217,7 +1233,9 @@ function Publish() {
     userDefinedAttributes.sampleTypes,
   ).map((type) => {
     return {
-      label: `${type.attributes.TYPE}${type.status === 'delete' ? ' (deleted)' : ''}`,
+      label: `${type.attributes.TYPE}${
+        type.status === 'delete' ? ' (deleted)' : ''
+      }`,
       value: type.attributes.TYPEUUID,
       serviceId: type.serviceId,
       status: type.status,
@@ -1241,17 +1259,16 @@ function Publish() {
       <h2>Publish Plan</h2>
       <div css={sectionContainer}>
         <p>
-          Publish the created plan to ArcGIS Online. A hosted feature layer is
-          created in your ArcGIS Online organization account. By default, only
-          you and the administrator can access the feature layer created. To
-          allow others access to the plan, via Collector or Survey123 for
-          example,{' '}
+          Publish the created plan to your ArcGIS Online account. A hosted
+          feature layer is created in your ArcGIS Online organization account.
+          By default, only you and the administrator can access the feature
+          layer created. Provide other collaborators access to TOTS content by{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/share-maps/share-items.htm"
             target="_blank"
             rel="noopener noreferrer"
           >
-            share
+            sharing
           </a>{' '}
           <a
             className="exit-disclaimer"
@@ -1261,8 +1278,8 @@ function Publish() {
           >
             EXIT
           </a>{' '}
-          the layer and file with everyone (the public), your organization, or
-          members of specific groups. You can edit{' '}
+          the content to everyone (the public), your organization, or members of
+          specific groups. You can edit{' '}
           <a
             href="https://doc.arcgis.com/en/arcgis-online/manage-data/item-details.htm"
             target="_blank"
@@ -1325,13 +1342,13 @@ function Publish() {
           />
         )}
       {(publishResponse.summary.success ||
-        sketchLayer?.status === 'published') &&
+        selectedScenario?.status === 'published') &&
         publishSuccessMessage}
       {!signedIn && notLoggedInMessage}
       {sampleCount === 0 && noSamplesPublishMessage}
       {publishResponse.status !== 'name-not-available' &&
-        sketchLayer &&
-        sketchLayer.status !== 'published' &&
+        selectedScenario &&
+        selectedScenario.status !== 'published' &&
         sampleCount !== 0 && (
           <div css={publishButtonContainerStyles}>
             <button
@@ -1345,9 +1362,11 @@ function Publish() {
 
       <div>
         <p>
-          Publish user defined sample types to ArcGIS Online. Select the user
-          defined sample types you would like to publish. Then select whether
-          you would like to publish to a new or existing feature service.
+          Publish custom sample types to ArcGIS Online. Select one or more
+          custom sample types from the drop-down list and specify whether to
+          publish output to a new or existing feature service. If appending
+          output to an existing feature service, select the feature service from
+          the drop-down list. Click Publish Custom Sample Types.
         </p>
         <div>
           <label htmlFor="publish-sample-select">Sample Types to Publish</label>
@@ -1397,7 +1416,9 @@ function Publish() {
 
         {publishSamplesMode === 'new' && (
           <React.Fragment>
-            <label htmlFor="sample-table-name-input">Custom Sample Type Table Name</label>
+            <label htmlFor="sample-table-name-input">
+              Custom Sample Type Table Name
+            </label>
             <input
               id="sample-table-name-input"
               css={inputStyles}
@@ -1406,7 +1427,9 @@ function Publish() {
               value={sampleTableName}
               onChange={(ev) => setSampleTableName(ev.target.value)}
             />
-            <label htmlFor="scenario-description-input">Custom Sample Type Table Description</label>
+            <label htmlFor="scenario-description-input">
+              Custom Sample Type Table Description
+            </label>
             <input
               id="scenario-description-input"
               css={inputStyles}

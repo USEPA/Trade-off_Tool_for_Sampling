@@ -1,0 +1,65 @@
+// -------------------------------------
+// Set uswds asset paths via theme variables - this fixes webpack issues
+$theme-hero-image: '~uswds/dist/img/hero.png';
+$theme-image-path: '~uswds/dist/img';
+$theme-font-path: '~uswds/dist/fonts';
+
+// Enable tablet-lg breakpoint
+$theme-utility-breakpoints: (
+  'card': false,
+  // 160px
+    'card-lg': false,
+  // 240px
+    'mobile': false,
+  // 320px
+    'mobile-lg': true,
+  // 480px
+    'tablet': true,
+  // 640px
+    'tablet-lg': true,
+  // 800px
+    'desktop': true,
+  // 1040px
+    'desktop-lg': false,
+  // 1200px
+    'widescreen': false,
+  // 1400px,,,
+);
+
+// -------------------------------------
+// Set uswds theme variables for preferred fonts, sizes, etc.
+// See here for more info on theming: https://designsystem.digital.gov/documentation/settings/#general
+
+// The USWDS fonts appear more blurry than the same EPA-provided fonts
+// USWDS adds "Web" to the name, e.g. "Source Sans Pro Web".
+// So, we set custom typeface tokens to reference the EPA-provided non-web version (locally downloaded at assets/fonts)
+$theme-typeface-tokens: (
+  merriweather: (
+    display-name: 'Merriweather',
+    cap-height: 371px,
+    stack: '"Georgia", "Cambria", "Times New Roman", "Times", serif',
+  ),
+  source-sans-pro: (
+    display-name: 'Source Sans Pro',
+    cap-height: 340px,
+    stack: '"Helvetica Neue", "Helvetica", "Roboto", "Arial", sans-serif',
+  ),
+);
+
+$theme-show-notifications: false;
+
+// -------------------------------------
+// Import uswds main scss now that theme vars are set
+@import '~uswds/dist/scss/uswds';
+
+// -------------------------------------
+// Import app-specific style modules
+@import 'fonts';
+@import 'content';
+@import 'form';
+@import 'home';
+@import 'inputs';
+
+// -------------------------------------
+// Import font-awesome icons
+@import '~@fortawesome/fontawesome-free/css/all.min.css';

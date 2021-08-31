@@ -11,6 +11,7 @@ import MessageBox from 'components/MessageBox';
 import NavigationButton from 'components/NavigationButton';
 import Select from 'components/Select';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import {
@@ -270,7 +271,7 @@ const submitButtonStyles = css`
 
 const sampleCountStyles = css`
   font-size: 26px;
-  color: #00bde3;
+  color: #0085e3;
 `;
 
 // --- components (SketchButton) ---
@@ -404,6 +405,9 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
+const {
+  userInfo,
+} = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const {
     setGoTo,
@@ -753,6 +757,8 @@ function LocateSamples() {
                     PERMANENT_IDENTIFIER:
                       feature.attributes.PERMANENT_IDENTIFIER,
                     UPDATEDDATE: timestamp,
+                    USERNAME: userInfo?.username || '',
+                    ORGANIZATION: userInfo?.orgId || '',
                   },
                   symbol,
                   geometry: new Polygon({
@@ -1316,6 +1322,14 @@ function LocateSamples() {
 
                           if (!map) return;
 
+                          // make the new selection visible
+                          if (scenarios.length > 0) {
+                            const newSelection = map.layers.find(
+                              (layer) => layer.id === scenarios[0].layerId,
+                            );
+                            if (newSelection) newSelection.visible = true;
+                          }
+
                           // remove the scenario from the map
                           const mapLayer = map.layers.find(
                             (layer) => layer.id === selectedScenario.layerId,
@@ -1326,23 +1340,25 @@ function LocateSamples() {
                         <i className="fas fa-trash-alt" />
                         <span className="sr-only">Delete Plan</span>
                       </button>
-                      <button
-                        css={iconButtonStyles}
-                        title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        onClick={() => {
-                          setAddScenarioVisible(false);
-                          setEditScenarioVisible(!editScenarioVisible);
-                        }}
-                      >
-                        <i
-                          className={
-                            editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
-                          }
-                        />
-                        <span className="sr-only">
-                          {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
-                        </span>
-                      </button>
+                      {selectedScenario.status !== 'published' && (
+                        <button
+                          css={iconButtonStyles}
+                          title={editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          onClick={() => {
+                            setAddScenarioVisible(false);
+                            setEditScenarioVisible(!editScenarioVisible);
+                          }}
+                        >
+                          <i
+                            className={
+                              editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                            }
+                          />
+                          <span className="sr-only">
+                            {editScenarioVisible ? 'Cancel' : 'Edit Plan'}
+                          </span>
+                        </button>
+                      )}
                     </React.Fragment>
                   )}
                   <button
@@ -1365,7 +1381,7 @@ function LocateSamples() {
                 </div>
               </div>
               <Select
-                id="scenario-select-input"
+                id="scenario-select-input-container"
                 inputId="scenario-select-input"
                 css={layerSelectStyles}
                 isDisabled={addScenarioVisible || editScenarioVisible}
@@ -1476,6 +1492,9 @@ function LocateSamples() {
                                 ],
                               };
                             });
+
+                            if(sketchLayer.sketchLayer) parentLayer.remove(sketchLayer.sketchLayer);
+                            if(sketchLayer.pointsLayer) parentLayer.remove(sketchLayer.pointsLayer);
                           } else {
                             // remove the scenario from edits
                             setEdits((edits) => {
@@ -1563,6 +1582,9 @@ function LocateSamples() {
                                   ...editsScenario.layers.slice(0, layerIndex),
                                   ...editsScenario.layers.slice(layerIndex + 1),
                                 ];
+                                if(editsScenario.status === 'published') {
+                                  editsScenario.status = 'edited';
+                                }
 
                                 return {
                                   count: edits.count + 1,
@@ -2130,7 +2152,7 @@ function LocateSamples() {
                     using additional controls now available to you.
                   </p>
                   <div css={iconButtonContainerStyles}>
-                    <label htmlFor="sample-type-select-input">
+                    <label htmlFor="cst-sample-type-select-input">
                       Sample Type
                     </label>
                     <div>
@@ -2371,8 +2393,8 @@ function LocateSamples() {
                     </div>
                   </div>
                   <Select
-                    id="sample-type-select"
-                    inputId="sample-type-select-input"
+                    id="cst-sample-type-select"
+                    inputId="cst-sample-type-select-input"
                     css={fullWidthSelectStyles}
                     isDisabled={editingStatus ? true : false}
                     value={userDefinedSampleType}
@@ -2486,7 +2508,7 @@ function LocateSamples() {
                           onChange={(ev) => setTtps(ev.target.value)}
                         /> */}
                         <label htmlFor="lod_p-input">
-                          Limit of Detection (CFU) Porous{' '}
+                          Limit of Detection for Porous Surfaces per Sample (CFU){' '}
                           <em>(only used for reference)</em>
                         </label>
                         <input
@@ -2497,7 +2519,7 @@ function LocateSamples() {
                           onChange={(ev) => setLodp(ev.target.value)}
                         />
                         <label htmlFor="lod_non-input">
-                          Limit of Detection (CFU) Nonporous{' '}
+                          Limit of Detection for Nonporous Surfaces per Sample (CFU){' '}
                           <em>(only used for reference)</em>
                         </label>
                         <input

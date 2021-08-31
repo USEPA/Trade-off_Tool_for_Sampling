@@ -1,6 +1,7 @@
 {
   "_comment": "values should be lowercase",
   "urls": [
-    "ags.erg.com"
+    "ags.erg.com",
+    "geopub.epa.gov"
   ]
 }
