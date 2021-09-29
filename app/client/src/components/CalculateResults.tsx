@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React, { ReactNode } from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import xl from 'excel4node';
 import { saveAs } from 'file-saver';
 // components
@@ -184,6 +184,8 @@ function CalculateResults() {
               map.layers.forEach((layer) => {
                 layer.visible = originalVisiblity[layer.id];
               });
+
+              window.logErrorToGa(err);
             });
         }, 3000);
       });
@@ -291,6 +293,8 @@ function CalculateResults() {
       .catch((err: any) => {
         console.error(err);
         setDownloadStatus('excel-failure');
+
+        window.logErrorToGa(err);
       });
 
     // --- functions for creating the content for each sheet ---
@@ -722,7 +726,7 @@ function CalculateResults() {
 
       resultsSheet
         .cell(5, 5)
-        .string('Time to Analyze (pesron hours)')
+        .string('Time to Analyze (person hours)')
         .style(labelStyle);
       resultsSheet.cell(5, 6).number(calculateResults.data['Time to Analyze']);
 
@@ -741,10 +745,10 @@ function CalculateResults() {
         .number(calculateResults.data['Analysis Material Cost'])
         .style(currencyStyle);
 
-      resultsSheet.cell(8, 5).string('Waste Volume (L)').style(labelStyle);
+      resultsSheet.cell(8, 5).string('Total Waste Volume (L)').style(labelStyle);
       resultsSheet.cell(8, 6).number(calculateResults.data['Waste Volume']);
 
-      resultsSheet.cell(9, 5).string('Waste Weight (lbs)').style(labelStyle);
+      resultsSheet.cell(9, 5).string('Total Waste Weight (lbs)').style(labelStyle);
       resultsSheet.cell(9, 6).number(calculateResults.data['Waste Weight']);
     }
 
@@ -1022,11 +1026,11 @@ function CalculateResults() {
               isMonetary={true}
             />
             <LabelValue
-              label="Waste Volume (L)"
+              label="Total Waste Volume (L)"
               value={calculateResults.data['Waste Volume']}
             />
             <LabelValue
-              label="Waste Weight (lbs)"
+              label="Total Waste Weight (lbs)"
               value={calculateResults.data['Waste Weight']}
             />
           </div>

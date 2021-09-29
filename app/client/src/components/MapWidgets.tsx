@@ -1,7 +1,8 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
@@ -10,10 +11,12 @@ import { LayerType, LayerTypeName } from 'types/Layer';
 // utils
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
 } from 'utils/sketchUtils';
+import { ScenarioEditsType } from 'types/Edits';
 
 // Makes all sketch buttons no longer active by removing
 // the sketch-button-selected class.
@@ -55,14 +58,17 @@ function getUpdateEventInfo(
   // Get the layer from the event. It's better to get the layer from the graphics
   // since that will persist when changing tabs. For delete events we have to get
   // the layer from the target, since delete events never have the layer on the graphic.
-  const eventLayer = type === 'delete' ? event.target.layer : changes[0].layer;
+  const eventLayer = type === 'delete' ? event.target?.layer : changes[0].layer;
 
   // look up the layer for this event
   let updateLayer: LayerType | null = null;
   let updateLayerIndex = -1;
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (layer.layerId === eventLayer.id) {
+    if (
+      (eventLayer && layer.layerId === eventLayer.id) ||
+      (!eventLayer && layer.layerId === changes[0].attributes?.DECISIONUNITUUID)
+    ) {
       updateLayer = layer;
       updateLayerIndex = i;
       break;
@@ -84,6 +90,7 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
+const { userInfo } = React.useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } = React.useContext(
     NavigationContext,
   );
@@ -103,11 +110,14 @@ function MapWidgets({ mapView }: Props) {
     aoiSketchLayer,
     setAoiSketchLayer,
     selectedScenario,
+    setSelectedScenario,
+    showAsPoints,
     layers,
     setLayers,
     map,
   } = React.useContext(SketchContext);
   const {
+    Graphic,
     Handles,
     Home,
     Locate,
@@ -176,7 +186,7 @@ function MapWidgets({ mapView }: Props) {
       layer: sketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol: defaultSymbols.symbols['Samples'],
-      pointSymbol: defaultSymbols.symbols['Samples'],
+      pointSymbol: defaultSymbols.symbols['Samples'] as any,
     });
 
     const tempSvm = svm as any;
@@ -202,7 +212,7 @@ function MapWidgets({ mapView }: Props) {
       layer: aoiSketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol: defaultSymbols.symbols['Area of Interest'],
-      pointSymbol: defaultSymbols.symbols['Area of Interest'],
+      pointSymbol: defaultSymbols.symbols['Area of Interest'] as any,
     });
 
     const tempSvm = svm as any;
@@ -286,8 +296,12 @@ function MapWidgets({ mapView }: Props) {
           if (id === 'sampling-mask') {
             layerType = 'Sampling Mask';
             graphic.attributes = {
+              DECISIONUNITUUID: graphic.layer.id,
+              DECISIONUNIT: graphic.layer.title,
+              DECISIONUNITSORT: 0,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
+              OBJECTID: -1,
               TYPE: layerType,
             };
           } else {
@@ -295,10 +309,15 @@ function MapWidgets({ mapView }: Props) {
               ...(window as any).totsSampleAttributes[id],
               DECISIONUNITUUID: graphic.layer.id,
               DECISIONUNIT: graphic.layer.title,
+              DECISIONUNITSORT: 0,
               PERMANENT_IDENTIFIER: uuid,
               GLOBALID: uuid,
+              OBJECTID: -1,
               Notes: '',
               CREATEDDATE: getCurrentDateTime(),
+              UPDATEDDATE: getCurrentDateTime(),
+              USERNAME: userInfo?.username || '',
+              ORGANIZATION: userInfo?.orgId || '',
             };
           }
 
@@ -311,6 +330,17 @@ function MapWidgets({ mapView }: Props) {
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
             createBuffer(graphic);
+          }
+
+          if (id !== 'sampling-mask') {
+            // find the points version of the layer
+            const layerId = graphic.layer.id;
+            const pointLayer = (graphic.layer as any).parent.layers.find(
+              (layer: any) => `${layerId}-points` === layer.id,
+            );
+            if (pointLayer) {
+              pointLayer.add(convertToPoint(Graphic, graphic));
+            }
           }
 
           // save the graphic
@@ -336,11 +366,49 @@ function MapWidgets({ mapView }: Props) {
           if (event.state === 'complete') {
             event.graphics.forEach((graphic) => {
               graphic.attributes.UPDATEDDATE = getCurrentDateTime();
+              graphic.attributes.USERNAME = userInfo?.username || '';
+              graphic.attributes.ORGANIZATION = userInfo?.orgId || '';
             });
             sketchEventSetter(event);
           }
 
           isActive = false;
+        }
+
+        if (event.state === 'active') {
+          // find the points version of the layer
+          event.graphics.forEach((graphic) => {
+            const layerId = graphic.layer?.id;
+            const pointLayer: __esri.GraphicsLayer = (graphic.layer as any).parent.layers.find(
+              (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
+            );
+            if (!pointLayer) return;
+
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            pointLayer.graphics.forEach((pointVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                pointVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(pointVersion);
+              }
+            });
+            pointLayer.removeMany(graphicsToRemove);
+
+            // Re-add the point version of the graphic
+            const symbol = graphic.symbol as __esri.SimpleFillSymbol;
+            (pointLayer as any).add({
+              attributes: graphic.attributes,
+              geometry: (graphic.geometry as __esri.Polygon).centroid,
+              popupTemplate: graphic.popupTemplate,
+              symbol: {
+                color: symbol.color,
+                outline: symbol.outline,
+                type: 'simple-marker',
+              },
+            });
+          });
         }
 
         const isShapeChange =
@@ -371,10 +439,31 @@ function MapWidgets({ mapView }: Props) {
       // is now an option.
       const tempSketchVM = sketchViewModel as any;
       tempSketchVM.on('delete', (event: any) => {
+        // find the points version of the layer
+        event.graphics.forEach((graphic: any) => {
+          const layerId = tempSketchVM.layer?.id;
+          const pointLayer: __esri.GraphicsLayer = (tempSketchVM.layer as any).parent.layers.find(
+            (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
+          );
+          if (!pointLayer) return;
+
+          // Find the original point graphic and remove it
+          const graphicsToRemove: __esri.Graphic[] = [];
+          pointLayer.graphics.forEach((pointVersion) => {
+            if (
+              graphic.attributes.PERMANENT_IDENTIFIER ===
+              pointVersion.attributes.PERMANENT_IDENTIFIER
+            ) {
+              graphicsToRemove.push(pointVersion);
+            }
+          });
+          pointLayer.removeMany(graphicsToRemove);
+        });
+
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, PopupTemplate],
+    [createBuffer, getPopupTemplate, getTrainingMode, Graphic, PopupTemplate, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -514,6 +603,11 @@ function MapWidgets({ mapView }: Props) {
     // update the edits state
     setEdits(editsCopy);
 
+    const newScenario = editsCopy.edits.find((e) => 
+      e.type === 'scenario' && e.layerId === selectedScenario?.layerId
+    ) as ScenarioEditsType;
+    if(newScenario) setSelectedScenario(newScenario);
+
     // updated the edited layer
     setLayers([
       ...layers.slice(0, updateLayer.layerIndex),
@@ -527,7 +621,7 @@ function MapWidgets({ mapView }: Props) {
         return layer ? { ...layer, editType: updateLayer.eventType } : null;
       });
     }
-  }, [edits, setEdits, updateLayer, layers, setLayers]);
+  }, [edits, setEdits, updateLayer, layers, setLayers, selectedScenario, setSelectedScenario]);
 
   // Reactivate aoiSketchVM after the updateSketchEvent is null
   React.useEffect(() => {
@@ -568,23 +662,22 @@ function MapWidgets({ mapView }: Props) {
 
     // update the popupTemplate for all Sample/VSP layers
     layers.forEach((layer) => {
-      if (
-        layer.sketchLayer.type === 'graphics' &&
-        (layer.layerType === 'Samples' || layer.layerType === 'VSP')
-      ) {
-        layer.sketchLayer.graphics.forEach((graphic) => {
-          graphic.popupTemplate = popupTemplate;
-        });
+      if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
+        if (layer.sketchLayer.type === 'graphics') {
+          layer.sketchLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
+        if (layer.pointsLayer?.type === 'graphics') {
+          layer.pointsLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
       }
     });
   }, [PopupTemplate, getPopupTemplate, trainingMode, layers]);
 
   // Gets the graphics to be highlighted and highlights them
-  type HighlightType = {
-    graphics: __esri.Graphic[];
-    handle: __esri.Handle | null;
-  };
-
   const [handles] = React.useState(new Handles());
   React.useEffect(() => {
     if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
@@ -635,6 +728,31 @@ function MapWidgets({ mapView }: Props) {
       handles.remove(group);
     } catch (e) {}
 
+    // Highlights graphics on the provided layer that matches the provided 
+    // list of uuids.
+    function highlightGraphics(
+      layer: __esri.GraphicsLayer | __esri.FeatureLayer | null, 
+      uuids: any,
+    ) {
+      if(!layer) return;
+
+      const itemsToHighlight: __esri.Graphic[] = [];
+      const tempLayer = layer as __esri.GraphicsLayer;
+      tempLayer.graphics.forEach((graphic) => {
+        if (uuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
+          itemsToHighlight.push(graphic);
+        }
+      });
+      
+      // Highlight the graphics with a contam value
+      if (itemsToHighlight.length === 0) return;
+
+      mapView.whenLayerView(tempLayer).then((layerView) => {
+        const handle = layerView.highlight(itemsToHighlight);
+        handles.add(handle, group);
+      });
+    }
+
     const samples: any = {};
     selectedSampleIds.forEach((sample) => {
       if (!samples.hasOwnProperty(sample.DECISIONUNITUUID)) {
@@ -651,23 +769,10 @@ function MapWidgets({ mapView }: Props) {
 
       if (!layer) return;
 
-      const highlightGraphics: __esri.Graphic[] = [];
-      const tempLayer = layer.sketchLayer as __esri.GraphicsLayer;
-      tempLayer.graphics.forEach((graphic) => {
-        if (sampleUuids.includes(graphic.attributes.PERMANENT_IDENTIFIER)) {
-          highlightGraphics.push(graphic);
-        }
-      });
-
-      // Highlight the graphics with a contam value
-      if (highlightGraphics.length === 0) return;
-
-      mapView.whenLayerView(tempLayer).then((layerView) => {
-        const handle = layerView.highlight(highlightGraphics);
-        handles.add(handle, group);
-      });
+      highlightGraphics(layer.sketchLayer, sampleUuids);
+      highlightGraphics(layer.pointsLayer, sampleUuids);
     });
-  }, [map, handles, layers, mapView, selectedSampleIds]);
+  }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
 
   return null;
 }

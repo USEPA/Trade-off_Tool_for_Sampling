@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -16,6 +16,7 @@ import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType } from 'types/Layer';
+import { ErrorType } from 'types/Misc';
 // config
 import {
   contaminationHitsSuccessMessage,
@@ -32,7 +33,7 @@ import { CalculateResultsType } from 'types/CalculateResults';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
 import { updateLayerEdits } from 'utils/sketchUtils';
-import { chunkArray } from 'utils/utils';
+import { chunkArray, createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -46,6 +47,7 @@ type ContaminationResultsType = {
     | 'fetching'
     | 'success'
     | 'failure';
+  error?: ErrorType;
   data: any[] | null;
 };
 
@@ -61,7 +63,7 @@ function getGraphics(map: __esri.Map, layerId: string) {
   if (tempGroupLayer) {
     groupLayer = tempGroupLayer as __esri.GroupLayer;
     groupLayer.layers.forEach((layer) => {
-      if (layer.type !== 'graphics') return;
+      if (layer.type !== 'graphics' || layer.id.includes('-points')) return;
 
       const graphicsLayer = layer as __esri.GraphicsLayer;
       graphics.push(...graphicsLayer.graphics.toArray());
@@ -426,6 +428,11 @@ function Calculate() {
                 alias: 'Permanent Identifier',
               },
               {
+                name: 'TYPEUUID',
+                type: 'string',
+                alias: 'Sampling Method Type ID',
+              },
+              {
                 name: 'TYPE',
                 type: 'string',
                 alias: 'Sampling Method Type',
@@ -548,6 +555,10 @@ function Calculate() {
                 console.error(res.error);
                 setContaminationResults({
                   status: 'failure',
+                  error: {
+                    error: createErrorObject(res),
+                    message: res.error.message,
+                  },
                   data: null,
                 });
                 return;
@@ -666,8 +677,14 @@ function Calculate() {
 
             setContaminationResults({
               status: 'failure',
+              error: {
+                error: createErrorObject(err),
+                message: err.message,
+              },
               data: null,
             });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
@@ -678,8 +695,14 @@ function Calculate() {
 
         setContaminationResults({
           status: 'failure',
+          error: {
+            error: createErrorObject(err),
+            message: err.message,
+          },
           data: null,
         });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -833,7 +856,7 @@ function Calculate() {
           />
 
           <label htmlFor="surface-area-input">
-            Surface Area (ft<sup>2</sup>) (optional)
+            Area of Interest Surface Area (ft<sup>2</sup>) (optional)
           </label>
           <input
             id="surface-area-input"
@@ -882,7 +905,7 @@ function Calculate() {
                           id="contamination-map-select"
                           inputId="contamination-map-select-input"
                           css={fullWidthSelectStyles}
-                          styles={reactSelectStyles}
+                          styles={reactSelectStyles as any}
                           value={contaminationMap}
                           onChange={(ev) =>
                             setContaminationMap(ev as LayerType)
@@ -910,7 +933,7 @@ function Calculate() {
                         <LoadingSpinner />
                       )}
                       {contaminationResults.status === 'failure' &&
-                        webServiceErrorMessage}
+                        webServiceErrorMessage(contaminationResults.error)}
                       {contaminationResults.status === 'no-map' &&
                         noContaminationMapMessage}
                       {contaminationResults.status === 'no-layer' &&

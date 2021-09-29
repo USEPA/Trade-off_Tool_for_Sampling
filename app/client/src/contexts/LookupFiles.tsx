@@ -16,6 +16,8 @@ function getLookupFile(filename: string, setVariable: Function) {
     .catch((err) => {
       console.error(err);
       setVariable({ status: 'failure', data: err });
+
+      window.logErrorToGa(err);
     });
 }
 
@@ -76,14 +78,47 @@ function useServicesContext() {
   if (!servicesInitialized) {
     servicesInitialized = true;
 
+    // get origin for mapping proxy calls
+    const loc = window.location;
+    const origin =
+      loc.hostname === 'localhost'
+        ? `${loc.protocol}//${loc.hostname}:9091`
+        : loc.origin;
+
     // fetch the lookup file
     lookupFetch('config/services.json')
-      .then((data) => {
+      .then((data: any) => {
+        const googleAnalyticsMapping: any[] = [];
+        data.googleAnalyticsMapping.forEach((item: any) => {
+          // get base url
+          let urlLookup = origin;
+          if (item.urlLookup !== 'origin') {
+            urlLookup = data;
+            const pathParts = item.urlLookup.split('.');
+            pathParts.forEach((part: any) => {
+              urlLookup = urlLookup[part];
+            });
+          }
+
+          let wildcardUrl = item.wildcardUrl;
+          wildcardUrl = wildcardUrl.replace(/\{proxyUrl\}/g, data.proxyUrl);
+          wildcardUrl = wildcardUrl.replace(/\{urlLookup\}/g, urlLookup);
+
+          googleAnalyticsMapping.push({
+            wildcardUrl,
+            name: item.name,
+          });
+        });
+
+        window.googleAnalyticsMapping = googleAnalyticsMapping;
+
         setServices({ status: 'success', data });
       })
       .catch((err) => {
         console.error(err);
         setServices({ status: 'failure', data: err });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -107,8 +142,9 @@ function useSampleTypesContext() {
       const sampleSelectOptions: SampleSelectType[] = [];
       const sampleAttributes = newValue.data.sampleAttributes;
       Object.keys(sampleAttributes).forEach((key: any) => {
-        const value = sampleAttributes[key].TYPE;
-        sampleSelectOptions.push({ value, label: value, isPredefined: true });
+        const value = sampleAttributes[key].TYPEUUID;
+        const label = sampleAttributes[key].TYPE;
+        sampleSelectOptions.push({ value, label, isPredefined: true });
       });
       newValue.data['sampleSelectOptions'] = sampleSelectOptions;
       setSampleTypes(newValue);

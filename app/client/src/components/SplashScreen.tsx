@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import Cookies from 'universal-cookie';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // contexts
@@ -172,7 +172,7 @@ function SplashScreen() {
 
         <p>
           TOTS currently addresses biological contamination sampling and will
-          cover other agents in the future. TOTS allows user to create sampling
+          cover other agents in the future. TOTS allows users to create sampling
           designs and estimate the associated resource demand through
           interactive, point-and-click tools to visually develop sampling plans.
           Users can plot sample locations in conjunction with externally

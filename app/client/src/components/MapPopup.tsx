@@ -1,13 +1,15 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import Select from 'components/Select';
 // types
 import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
 // utils
 import { getSketchableLayers } from 'utils/sketchUtils';
+// config
+import { notesCharacterLimit } from 'config/layerProps';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -29,7 +31,8 @@ const containerStyles = css`
 `;
 
 const noteStyles = css`
-  height: 75px;
+  resize: vertical;
+  min-height: 75px;
   width: 100%;
 `;
 
@@ -126,7 +129,7 @@ function MapPopup({
     if (layerInitialized) return;
 
     if (feature?.graphic?.layer) {
-      const activeLayerId = feature.graphic.layer.id;
+      const activeLayerId = feature.graphic.layer.id.replace('-points', '');
       // find the layer
       const sketchLayer = layers.find(
         (layer) => layer.layerId === activeLayerId,
@@ -234,11 +237,14 @@ function MapPopup({
                   id="graphic-note"
                   css={noteStyles}
                   value={note}
+                  maxLength={notesCharacterLimit}
                   onChange={(ev) => {
                     setSaveStatus('none');
                     setNote(ev.target.value);
                   }}
                 />
+                <br />
+                <span>{note.length} / 2000 characters</span>
               </div>
               <div css={saveButtonContainerStyles}>
                 <button
@@ -254,7 +260,7 @@ function MapPopup({
                       setGraphicNote(note);
 
                       // move the graphic if it is on a different layer
-                      if (activeLayerId !== selectedLayer?.layerId) {
+                      if (activeLayerId.replace('-points', '') !== selectedLayer?.layerId.replace('-points', '')) {
                         onClick(ev, feature, 'Move', selectedLayer);
                       } else {
                         onClick(ev, feature, 'Save');
@@ -266,7 +272,7 @@ function MapPopup({
                     }
                   }}
                 >
-                  {saveStatus === 'none' && 'Save'}
+                  {(saveStatus === 'none' || saveStatus === 'success') && 'Save'}
                   {saveStatus === 'failure' && (
                     <React.Fragment>
                       <i className="fas fa-exclamation-triangle" /> Error

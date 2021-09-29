@@ -114,7 +114,11 @@ function MapMouseEvents({ mapView }: Props) {
             });
           }
         })
-        .catch((err: any) => console.error(err));
+        .catch((err: any) => {
+          console.error(err);
+
+          window.logErrorToGa(err);
+        });
     },
     [setSelectedSampleIds],
   );
@@ -144,7 +148,7 @@ function MapMouseEvents({ mapView }: Props) {
 
     // find the layer
     const layer = layers.find(
-      (layer) => layer.layerId === sampleToDelete.layer.id,
+      (layer) => layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
     );
     if (!layer || layer.sketchLayer.type !== 'graphics') return;
 
@@ -158,7 +162,31 @@ function MapMouseEvents({ mapView }: Props) {
 
     setEdits(editsCopy);
 
-    layer.sketchLayer.remove(sampleToDelete);
+    // Find the original point graphic and remove it
+    let graphicsToRemove: __esri.Graphic[] = [];
+    layer.sketchLayer.graphics.forEach((polygonVersion) => {
+      if (
+        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        polygonVersion.attributes.PERMANENT_IDENTIFIER
+      ) {
+        graphicsToRemove.push(polygonVersion);
+      }
+    });
+    layer.sketchLayer.removeMany(graphicsToRemove);
+
+    if (!layer.pointsLayer) return;
+
+    // Find the original point graphic and remove it
+    graphicsToRemove = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (
+        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        pointVersion.attributes.PERMANENT_IDENTIFIER
+      ) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
 
     // close the popup
     mapView?.popup.close();

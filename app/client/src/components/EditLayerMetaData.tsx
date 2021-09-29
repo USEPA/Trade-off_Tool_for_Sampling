@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 // contexts
@@ -16,7 +16,9 @@ import {
   createSampleLayer,
   updateLayerEdits,
 } from 'utils/sketchUtils';
+import { createErrorObject } from 'utils/utils';
 // types
+import { ErrorType } from 'types/Misc';
 import { LayerType } from 'types/Layer';
 // config
 import {
@@ -35,6 +37,11 @@ export type SaveStatusType =
   | 'failure'
   | 'fetch-failure'
   | 'name-not-available';
+
+export type SaveResultsType = {
+  status: SaveStatusType;
+  error?: ErrorType;
+};
 
 // --- styles (EditScenario) ---
 const inputStyles = css`
@@ -91,6 +98,7 @@ function EditScenario({
     edits,
     setEdits,
     map,
+    layers,
     setLayers,
     setSelectedScenario,
     setSketchLayer,
@@ -104,7 +112,7 @@ function EditScenario({
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveStatusType>(initialStatus);
+  ] = React.useState<SaveResultsType>({ status: initialStatus });
 
   const [scenarioName, setScenarioName] = React.useState(
     initialScenario ? initialScenario.scenarioName : '',
@@ -173,22 +181,49 @@ function EditScenario({
         title: scenarioName,
       });
 
-      const layers: LayerEditsType[] = [];
+      // hide all other plans from the map
+      layers.forEach((layer) => {
+        if (layer.parentLayer) {
+          layer.parentLayer.visible = false;
+          return;
+        }
+
+        if (
+          layer.layerType === 'Samples' ||
+          layer.layerType === 'VSP'
+        ) {
+          layer.sketchLayer.visible = false;
+        }
+      });
+
+      const newLayers: LayerEditsType[] = [];
       let tempSketchLayer: LayerType | null = null;
       if (addDefaultSampleLayer) {
-        // no sketchable layers were available, create one
-        tempSketchLayer = createSampleLayer(
-          GraphicsLayer,
-          undefined,
-          groupLayer,
-        );
-        layers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        edits.edits.forEach((edit) => {
+          if(
+            edit.type === 'layer' && 
+              (edit.layerType === 'Samples' || edit.layerType === 'VSP')
+          ) {
+            newLayers.push(edit);
+          }
+        });
+
+        if(newLayers.length === 0) {
+          // no sketchable layers were available, create one
+          tempSketchLayer = createSampleLayer(
+            GraphicsLayer,
+            undefined,
+            groupLayer,
+          );
+          newLayers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        }
       }
 
       // create the scenario to be added to edits
       const newScenario: ScenarioEditsType = {
         type: 'scenario',
         id: -1,
+        pointsId: -1,
         layerId: groupLayer.id,
         portalId: '',
         name: scenarioName,
@@ -203,14 +238,40 @@ function EditScenario({
         listMode: 'show',
         scenarioName: scenarioName,
         scenarioDescription: scenarioDescription,
-        layers,
+        layers: newLayers,
       };
 
       // make a copy of the edits context variable
       setEdits((edits) => {
+        const newEdits = edits.edits.filter((edit) => {
+          const idx = newLayers.findIndex((l) => 
+            l.layerId === edit.layerId
+          );
+
+          return idx === -1;
+        });
+
+        newEdits.forEach((edit) => {
+          let visible = edit.visible;
+
+          if (edit.type === 'scenario') {
+            visible =
+              edit.layerId === newScenario.layerId ? true : false;
+          }
+          if (edit.type === 'layer') {
+            if (
+              edit.layerType === 'Samples' ||
+              edit.layerType === 'VSP'
+            ) {
+              visible = false;
+            }
+          }
+          edit.visible = visible;
+        });
+
         return {
           count: edits.count + 1,
-          edits: [...edits.edits, newScenario],
+          edits: [...newEdits, newScenario],
         };
       });
 
@@ -219,6 +280,9 @@ function EditScenario({
 
       if (addDefaultSampleLayer && tempSketchLayer) {
         groupLayer.add(tempSketchLayer.sketchLayer);
+        if (tempSketchLayer.pointsLayer) {
+          groupLayer.add(tempSketchLayer.pointsLayer);
+        }
 
         // update layers (set parent layer)
         setLayers((layers) => {
@@ -235,7 +299,7 @@ function EditScenario({
       map.add(groupLayer);
     }
 
-    setSaveStatus('success');
+    setSaveStatus({ status: 'success' });
 
     if (onSave) onSave();
   }
@@ -250,14 +314,25 @@ function EditScenario({
       return;
     }
 
-    setSaveStatus('fetching');
+    setSaveStatus({ status: 'fetching' });
 
     // if the user is signed in, go ahead and check if the
     // service (scenario) name is availble before continuing
     isServiceNameAvailable(portal, scenarioName)
       .then((res: any) => {
+        if (res.error) {
+          setSaveStatus({
+            status: 'failure',
+            error: {
+              error: createErrorObject(res),
+              message: res.error.message,
+            },
+          });
+          return;
+        }
+
         if (!res.available) {
-          setSaveStatus('name-not-available');
+          setSaveStatus({ status: 'name-not-available' });
           return;
         }
 
@@ -265,7 +340,12 @@ function EditScenario({
       })
       .catch((err: any) => {
         console.error('isServiceNameAvailable error', err);
-        setSaveStatus('failure');
+        setSaveStatus({
+          status: 'failure',
+          error: { error: createErrorObject(err), message: err.message },
+        });
+
+        window.logErrorToGa(err);
       });
   }
 
@@ -287,7 +367,7 @@ function EditScenario({
         value={scenarioName}
         onChange={(ev) => {
           setScenarioName(ev.target.value);
-          setSaveStatus('changes');
+          setSaveStatus({ status: 'changes' });
         }}
       />
       <label htmlFor="scenario-description-input">Plan Description</label>
@@ -302,38 +382,39 @@ function EditScenario({
         value={scenarioDescription}
         onChange={(ev) => {
           setScenarioDescription(ev.target.value);
-          setSaveStatus('changes');
+          setSaveStatus({ status: 'changes' });
         }}
       />
 
-      {saveStatus === 'fetching' && <LoadingSpinner />}
-      {saveStatus === 'failure' && webServiceErrorMessage}
-      {saveStatus === 'name-not-available' &&
+      {saveStatus.status === 'fetching' && <LoadingSpinner />}
+      {saveStatus.status === 'failure' &&
+        webServiceErrorMessage(saveStatus.error)}
+      {saveStatus.status === 'name-not-available' &&
         scenarioNameTakenMessage(scenarioName ? scenarioName : '')}
       {(!initialScenario || initialScenario.status === 'added') && (
         <div css={saveButtonContainerStyles}>
           <button
-            css={saveButtonStyles(saveStatus)}
+            css={saveButtonStyles(saveStatus.status)}
             type="submit"
             disabled={
-              saveStatus === 'none' ||
-              saveStatus === 'fetching' ||
-              saveStatus === 'success'
+              saveStatus.status === 'none' ||
+              saveStatus.status === 'fetching' ||
+              saveStatus.status === 'success'
             }
             onClick={handleSave}
           >
-            {(saveStatus === 'none' ||
-              saveStatus === 'changes' ||
-              saveStatus === 'fetching') &&
+            {(saveStatus.status === 'none' ||
+              saveStatus.status === 'changes' ||
+              saveStatus.status === 'fetching') &&
               buttonText}
-            {saveStatus === 'success' && (
+            {saveStatus.status === 'success' && (
               <React.Fragment>
                 <i className="fas fa-check" /> Saved
               </React.Fragment>
             )}
-            {(saveStatus === 'failure' ||
-              saveStatus === 'fetch-failure' ||
-              saveStatus === 'name-not-available') && (
+            {(saveStatus.status === 'failure' ||
+              saveStatus.status === 'fetch-failure' ||
+              saveStatus.status === 'name-not-available') && (
               <React.Fragment>
                 <i className="fas fa-exclamation-triangle" /> Error
               </React.Fragment>
@@ -418,6 +499,7 @@ function EditLayer({
       // update the title of the layer on the map
       const mapLayer = layers.find((layer) => layer.layerId === layerId);
       if (mapLayer) mapLayer.sketchLayer.title = layerName;
+      if (mapLayer?.pointsLayer) mapLayer.pointsLayer.title = layerName;
 
       // update the active sketchLayer
       setSketchLayer((sketchLayer) => {
@@ -486,6 +568,9 @@ function EditLayer({
       if (groupLayer && groupLayer.type === 'group') {
         const tempGroupLayer = groupLayer as __esri.GroupLayer;
         tempGroupLayer.add(tempLayer.sketchLayer);
+        if (tempLayer.pointsLayer) {
+          tempGroupLayer.add(tempLayer.pointsLayer);
+        }
       }
 
       // make the new layer the active sketch layer

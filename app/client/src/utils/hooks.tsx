@@ -1,8 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { jsx } from '@emotion/core';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
@@ -11,6 +10,7 @@ import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -22,6 +22,7 @@ import {
   FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
+  ServiceMetaDataType,
 } from 'types/Edits';
 import {
   FieldInfos,
@@ -30,10 +31,15 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
-import { findLayerInEdits, updateLayerEdits } from 'utils/sketchUtils';
+import {
+  convertToPoint,
+  findLayerInEdits,
+  updateLayerEdits,
+} from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
   SampleIssues,
@@ -66,6 +72,11 @@ export async function writeToStorage(
       title: 'Session Storage Limit Reached',
       ariaLabel: 'Session Storage Limit Reached',
       description: message,
+    });
+
+    window.logToGa('send', 'exception', {
+      exDescription: `${key}:${message}`,
+      exFatal: false,
     });
   }
 }
@@ -113,16 +124,26 @@ export function useStartOver() {
     setTrainingMode,
   } = React.useContext(NavigationContext);
   const {
+    setPublishSamplesMode,
+    setPublishSampleTableMetaData,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+  const {
     basemapWidget,
     map,
     mapView,
     homeWidget,
     setLayers,
+    resetDefaultSymbols,
     setEdits,
     setUrlLayers,
     setReferenceLayers,
     setPortalLayers,
     setSelectedScenario,
+    setShowAsPoints,
     setSketchLayer,
     setAoiSketchLayer,
     setUserDefinedAttributes,
@@ -139,11 +160,12 @@ export function useStartOver() {
 
     // set the layers to just the defaults
     setLayers([]);
+    resetDefaultSymbols();
     setEdits({ count: 0, edits: [] });
     setUrlLayers([]);
     setReferenceLayers([]);
     setPortalLayers([]);
-    setUserDefinedAttributes({ editCount: 0, attributes: {} });
+    setUserDefinedAttributes({ editCount: 0, sampleTypes: {} });
     setUserDefinedOptions([]);
 
     // clear navigation
@@ -158,14 +180,24 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
+    setShowAsPoints(true);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
+
+    // clear publish
+    setPublishSamplesMode('');
+    setPublishSampleTableMetaData(null);
+    setSampleTableDescription('');
+    setSampleTableName('');
+    setSampleTypeSelections([]);
+    setSelectedService(null);
 
     // reset the zoom
     if (mapView) {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
+      mapView.popup?.close();
 
       if (homeWidget) {
         homeWidget.viewpoint = mapView.viewpoint;
@@ -399,14 +431,16 @@ export function useGeometryTools() {
         if (
           sampleTypeContext.status === 'success' &&
           sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-            graphic.attributes.TYPE,
+            graphic.attributes.TYPEUUID,
           )
         ) {
           performAreaToleranceCheck();
 
           // check sample attributes against predefined attributes
           const predefinedAttributes: any =
-            sampleTypeContext.data.sampleAttributes[graphic.attributes.TYPE];
+            sampleTypeContext.data.sampleAttributes[
+              graphic.attributes.TYPEUUID
+            ];
           Object.keys(predefinedAttributes).forEach((key) => {
             if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
             if (
@@ -875,16 +909,13 @@ export function useDynamicPopup() {
     // set the clicked button as active until the drawing is complete
     deactivateButtons();
 
-    const target = ev.target as HTMLElement;
-    target.classList.add('sketch-button-selected');
-
     const changes = new Collection<__esri.Graphic>();
 
     // find the layer
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
-      (layer) => layer.layerId === tempLayer.id,
+      (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
     );
     if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
       return;
@@ -897,6 +928,13 @@ export function useDynamicPopup() {
         tempGraphic.attributes.PERMANENT_IDENTIFIER,
     );
     graphic.attributes = tempGraphic.attributes;
+    
+    const pointGraphic: __esri.Graphic | undefined = tempSketchLayer.pointsLayer?.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        graphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    if(pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
 
     if (type === 'Save') {
       changes.add(graphic);
@@ -938,6 +976,17 @@ export function useDynamicPopup() {
       const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
       tempNewLayer.addMany(changes.toArray());
       tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = newLayer.sketchLayer;
+
+      if(pointGraphic && tempSketchLayer.pointsLayer) {
+        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
+        tempNewPointsLayer.add(pointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
     }
   };
 
@@ -976,6 +1025,15 @@ export function useDynamicPopup() {
     includeContaminationFields: boolean = false,
   ) {
     if (type === 'Sampling Mask') {
+      const actions = new Collection<any>();
+      actions.addMany([
+        {
+          title: 'Delete Sample',
+          id: 'delete',
+          className: 'esri-icon-trash',
+        },
+      ]);
+
       return {
         title: '',
         content: [
@@ -984,6 +1042,7 @@ export function useDynamicPopup() {
             fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
           },
         ],
+        actions,
       };
     }
     if (type === 'Area of Interest') {
@@ -1020,10 +1079,10 @@ export function useDynamicPopup() {
         { fieldName: 'SA', label: 'Reference Surface Area (sq inch)' },
         { fieldName: 'AA', label: 'Actual Surface Area (sq inch)' },
         { fieldName: 'AC', label: 'Equivalent TOTS Samples' },
-        {
-          fieldName: 'TCPS',
-          label: 'Total Cost Per Sample (Labor + Material + Waste)',
-        },
+        // {
+        //   fieldName: 'TCPS',
+        //   label: 'Total Cost Per Sample (Labor + Material + Waste)',
+        // },
         { fieldName: 'Notes', label: 'Notes' },
         { fieldName: 'ALC', label: 'Analysis Labor Cost' },
         { fieldName: 'AMC', label: 'Analysis Material Cost' },
@@ -1034,10 +1093,10 @@ export function useDynamicPopup() {
         },
         { fieldName: 'TTC', label: 'Time to Collect (person hrs/sample)' },
         { fieldName: 'TTA', label: 'Time to Analyze (person hrs/sample)' },
-        {
-          fieldName: 'TTPS',
-          label: 'Total Time per Sample (person hrs/sample)',
-        },
+        // {
+        //   fieldName: 'TTPS',
+        //   label: 'Total Time per Sample (person hrs/sample)',
+        // },
         { fieldName: 'LOD_P', label: 'Limit of Detection (CFU) Porous' },
         {
           fieldName: 'LOD_NON',
@@ -1167,6 +1226,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
   } = useEsriModulesContext();
   const {
@@ -1217,12 +1277,19 @@ function useEditsLayerStorage() {
         visible: editsLayer.visible,
         listMode: editsLayer.listMode,
       });
+      const pointsLayer = new GraphicsLayer({
+        title: editsLayer.label,
+        id: editsLayer.uuid + '-points',
+        visible: false,
+        listMode: 'hide',
+      });
 
       const popupTemplate = getPopupTemplate(
         editsLayer.layerType,
         editsLayer.hasContaminationRan,
       );
-      const features: __esri.Graphic[] = [];
+      const polyFeatures: __esri.Graphic[] = [];
+      const pointFeatures: __esri.Graphic[] = [];
       const idsUsed: string[] = [];
       const displayedFeatures: FeatureEditsType[] = [];
 
@@ -1258,29 +1325,39 @@ function useEditsLayerStorage() {
         if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
 
         // set the symbol styles based on sample/layer type
-        let symbol = defaultSymbols.symbols[layerType];
-        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPE)) {
-          symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
+        let symbol = defaultSymbols.symbols[layerType] as any;
+        if (
+          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+        ) {
+          symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         }
 
-        features.push(
-          new Graphic({
-            attributes: { ...graphic.attributes },
-            symbol,
-            geometry: new Polygon({
-              spatialReference: {
-                wkid: 3857,
-              },
-              rings: graphic.geometry.rings,
-            }),
-            popupTemplate,
+        const poly = new Graphic({
+          attributes: { ...graphic.attributes },
+          popupTemplate,
+          symbol,
+          geometry: new Polygon({
+            spatialReference: {
+              wkid: 3857,
+            },
+            rings: graphic.geometry.rings,
           }),
-        );
+        });
+
+        polyFeatures.push(poly);
+        pointFeatures.push(convertToPoint(Graphic, poly));
       });
-      sketchLayer.addMany(features);
+      sketchLayer.addMany(polyFeatures);
+      if (
+        editsLayer.layerType === 'Samples' ||
+        editsLayer.layerType === 'VSP'
+      ) {
+        pointsLayer.addMany(pointFeatures);
+      }
 
       newLayers.push({
         id: editsLayer.id,
+        pointsId: editsLayer.pointsId,
         uuid: editsLayer.uuid,
         layerId: editsLayer.layerId,
         portalId: editsLayer.portalId,
@@ -1296,10 +1373,14 @@ function useEditsLayerStorage() {
         sort: editsLayer.sort,
         geometryType: 'esriGeometryPolygon',
         sketchLayer,
+        pointsLayer:
+          editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+            ? pointsLayer
+            : null,
         parentLayer,
       });
 
-      return sketchLayer;
+      return [sketchLayer, pointsLayer];
     }
 
     const newLayers: LayerType[] = [];
@@ -1307,7 +1388,7 @@ function useEditsLayerStorage() {
     edits.edits.forEach((editsLayer) => {
       // add layer edits directly
       if (editsLayer.type === 'layer') {
-        graphicsLayers.push(createLayer(editsLayer, newLayers));
+        graphicsLayers.push(...createLayer(editsLayer, newLayers));
       }
       // scenarios need to be added to a group layer first
       if (editsLayer.type === 'scenario') {
@@ -1321,7 +1402,7 @@ function useEditsLayerStorage() {
         // create the layers and add them to the group layer
         const scenarioLayers: __esri.GraphicsLayer[] = [];
         editsLayer.layers.forEach((layer) => {
-          scenarioLayers.push(createLayer(layer, newLayers, groupLayer));
+          scenarioLayers.push(...createLayer(layer, newLayers, groupLayer));
         });
         groupLayer.addMany(scenarioLayers);
 
@@ -1339,6 +1420,7 @@ function useEditsLayerStorage() {
     Graphic,
     GraphicsLayer,
     GroupLayer,
+    Point,
     Polygon,
     defaultSymbols,
     setEdits,
@@ -1481,7 +1563,11 @@ function useUrlLayerStorage() {
               return [...urlLayers, urlLayer];
             });
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+
+            window.logErrorToGa(err);
+          });
         return;
       }
       if (type === 'WMS') {
@@ -2153,8 +2239,9 @@ function useUserDefinedSampleAttributesStorage() {
       newSampleAttributes = { ...sampleTypeContext.data.sampleAttributes };
     }
 
-    Object.keys(userDefinedAttributes.attributes).forEach((key) => {
-      newSampleAttributes[key] = userDefinedAttributes.attributes[key];
+    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
+      newSampleAttributes[key] =
+        userDefinedAttributes.sampleTypes[key].attributes;
     });
 
     setSampleAttributes(newSampleAttributes);
@@ -2219,6 +2306,143 @@ function useTablePanelStorage() {
   }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
 }
 
+type SampleMetaDataType = {
+  publishSampleTableMetaData: ServiceMetaDataType | null;
+  sampleTableDescription: string;
+  sampleTableName: string;
+  selectedService: ServiceMetaDataType | null;
+};
+
+// Uses browser storage for holding the currently selected sample layer.
+function usePublishStorage() {
+  const key = 'tots_sample_type_selections';
+  const key2 = 'tots_sample_table_metadata';
+  const key3 = 'tots_publish_samples_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const {
+    publishSamplesMode,
+    setPublishSamplesMode,
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
+    sampleTypeSelections,
+    setSampleTypeSelections,
+    selectedService,
+    setSelectedService,
+  } = React.useContext(PublishContext);
+
+  // Retreives the selected sample layer (sketchLayer) from browser storage
+  // when the app loads
+  const [
+    localSampleTypeInitialized,
+    setLocalSampleTypeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localSampleTypeInitialized) return;
+
+    setLocalSampleTypeInitialized(true);
+
+    // set the selected scenario first
+    const sampleSelectionsStr = readFromStorage(key);
+    if (sampleSelectionsStr) {
+      const sampleSelections = JSON.parse(sampleSelectionsStr);
+      setSampleTypeSelections(sampleSelections as SampleTypeOptions);
+    }
+
+    // set the selected scenario first
+    const sampleMetaDataStr = readFromStorage(key2);
+    if (sampleMetaDataStr) {
+      const sampleMetaData: SampleMetaDataType = JSON.parse(sampleMetaDataStr);
+      setPublishSampleTableMetaData(sampleMetaData.publishSampleTableMetaData);
+      setSampleTableDescription(sampleMetaData.sampleTableDescription);
+      setSampleTableName(sampleMetaData.sampleTableName);
+      setSelectedService(sampleMetaData.selectedService);
+    }
+
+    // set the selected scenario first
+    const publishSamplesMode = readFromStorage(key3);
+    if (publishSamplesMode !== null) {
+      setPublishSamplesMode(publishSamplesMode as any);
+    }
+  }, [
+    localSampleTypeInitialized,
+    setPublishSamplesMode,
+    setPublishSampleTableMetaData,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSampleTypeSelections,
+    setSelectedService,
+  ]);
+
+  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key, sampleTypeSelections, setOptions);
+  }, [sampleTypeSelections, localSampleTypeInitialized, setOptions]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    const data = {
+      publishSampleTableMetaData,
+      sampleTableDescription,
+      sampleTableName,
+      selectedService,
+    };
+    writeToStorage(key2, data, setOptions);
+  }, [
+    localSampleTypeInitialized,
+    publishSampleTableMetaData,
+    sampleTableDescription,
+    sampleTableName,
+    selectedService,
+    setOptions,
+  ]);
+
+  // Saves the selected scenario to browser storage whenever it changes
+  React.useEffect(() => {
+    if (!localSampleTypeInitialized) return;
+
+    writeToStorage(key3, publishSamplesMode, setOptions);
+  }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
+}
+
+// Uses browser storage for holding the display mode (points or polygons) selection.
+function useDisplayModeStorage() {
+  const key = 'tots_display_mode';
+
+  const { setOptions } = React.useContext(DialogContext);
+  const { showAsPoints, setShowAsPoints } = React.useContext(SketchContext);
+
+  // Retreives display mode data from browser storage when the app loads
+  const [
+    localDisplayModeInitialized,
+    setLocalDisplayModeInitialized,
+  ] = React.useState(false);
+  React.useEffect(() => {
+    if (localDisplayModeInitialized) return;
+
+    setLocalDisplayModeInitialized(true);
+
+    const displayModeStr = readFromStorage(key);
+    if (!displayModeStr) return;
+
+    const trainingMode = JSON.parse(displayModeStr);
+    setShowAsPoints(trainingMode);
+  }, [localDisplayModeInitialized, setShowAsPoints]);
+
+  React.useEffect(() => {
+    if (!localDisplayModeInitialized) return;
+
+    writeToStorage(key, showAsPoints, setOptions);
+  }, [showAsPoints, localDisplayModeInitialized, setOptions]);
+}
 // Saves/Retrieves data to browser storage
 export function useSessionStorage() {
   useTrainingModeStorage();
@@ -2238,4 +2462,6 @@ export function useSessionStorage() {
   useUserDefinedSampleOptionsStorage();
   useUserDefinedSampleAttributesStorage();
   useTablePanelStorage();
+  usePublishStorage();
+  useDisplayModeStorage();
 }

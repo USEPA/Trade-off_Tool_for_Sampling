@@ -1,8 +1,11 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
+// components
+import InfoIcon from 'components/InfoIcon';
+import Switch from 'components/Switch';
 // contexts
 import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
@@ -57,6 +60,7 @@ type LegendRowType = {
   title: string;
   value: string;
   symbol: PolygonSymbol;
+  style: string | null;
 };
 
 // --- styles (Toolbar) ---
@@ -69,6 +73,18 @@ const toolBarTitle = css`
   line-height: 1.3;
 `;
 
+const switchLabelContainer = css`
+  display: flex;
+  align-items: center;
+  color: white;
+  margin: 0;
+  font-weight: bold;
+`;
+
+const switchLabel = css`
+  margin: 0 10px;
+`;
+
 const toolBarStyles = css`
   display: flex;
   align-items: center;
@@ -79,7 +95,6 @@ const toolBarStyles = css`
 `;
 
 const toolBarButtonsStyles = css`
-  margin-left: auto;
   display: flex;
   justify-content: flex-end;
 `;
@@ -187,6 +202,8 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
+    showAsPoints,
+    setShowAsPoints,
   } = React.useContext(SketchContext);
   const {
     signedIn,
@@ -204,13 +221,7 @@ function Toolbar() {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
-      // Swap this ID out with registered application ID
-      // TODO: We need to get the app id that will be using for development and or production
       appId: process.env.REACT_APP_ARCGIS_APP_ID,
-      // Uncomment the next line and update if using your own portal
-      // portalUrl: "https://<host>:<port>/arcgis"
-      // Uncomment the next line to prevent the user's signed in state from being shared with other apps on the same domain with the same authNamespace value.
-      // authNamespace: "portal_oauth_inline",
       popup: false,
     });
     IdentityManager.registerOAuthInfos([info]);
@@ -273,7 +284,7 @@ function Toolbar() {
     setLayerToRemove, //
   ] = React.useState<__esri.Layer | null>(null);
   React.useEffect(() => {
-    if (!mapView) return;
+    if (!mapView || layers.length === 0 || legendInitialized) return;
 
     // clear out the legend container
     const legendContainer: HTMLElement | null = document.getElementById(
@@ -311,8 +322,12 @@ function Toolbar() {
         let subtitle = '';
         const legendItems: LegendRowType[] = [];
         const layer = (window as any).totsLayers?.find(
-          (layer: LayerType) => layer.layerId === item?.layer?.id,
+          (layer: LayerType) =>
+            layer.layerId === item?.layer?.id ||
+            layer.pointsLayer?.id === item?.layer?.id,
         );
+
+        const isPoints = item.layer.id.includes('-points');
 
         const defaultSymbols: DefaultSymbolsType = (window as any)
           .totsDefaultSymbols;
@@ -326,6 +341,7 @@ function Toolbar() {
             value: 'Area of Interest',
             title: 'Area of Interest',
             symbol: defaultSymbols.symbols['Area of Interest'],
+            style: null,
           });
         }
         if (layer?.layerType === 'Contamination Map') {
@@ -333,6 +349,7 @@ function Toolbar() {
             value: 'Contamination Map',
             title: 'Contamination Map',
             symbol: defaultSymbols.symbols['Contamination Map'],
+            style: null,
           });
         }
         if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
@@ -340,17 +357,23 @@ function Toolbar() {
 
           (window as any).totsAllSampleOptions?.forEach(
             (option: SampleSelectType) => {
+              const style = isPoints
+                ? (window as any).totsSampleAttributes[option.value]
+                    .POINT_STYLE || null
+                : null;
               if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
                 legendItems.push({
                   value: option.value,
                   title: option.label,
                   symbol: defaultSymbols.symbols[option.value],
+                  style,
                 });
               } else {
                 legendItems.push({
                   value: 'Samples',
                   title: option.label,
                   symbol: defaultSymbols.symbols['Samples'],
+                  style,
                 });
               }
             },
@@ -370,32 +393,17 @@ function Toolbar() {
                   <div className="esri-legend__layer-caption">{subtitle}</div>
                 )}
                 <div className="esri-legend__layer-body">
-                  {legendItems.map((row, index) => {
+                  {legendItems.map((row: LegendRowType, index) => {
                     return (
                       <div key={index} className="esri-legend__layer-row">
                         <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
                           <div className="esri-legend__symbol">
                             <div css={graphicsIconStyles}>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="22"
-                                height="22"
-                              >
-                                <defs></defs>
-                                <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
-                                  <path
-                                    fill={`rgba(${row.symbol.color.toString()})`}
-                                    fillRule="evenodd"
-                                    stroke={`rgba(${row.symbol.outline.color.toString()})`}
-                                    strokeWidth={row.symbol.outline.width}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeDasharray="none"
-                                    strokeMiterlimit="4"
-                                    d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
-                                  />
-                                </g>
-                              </svg>
+                              <ShapeStyle
+                                color={row.symbol.color}
+                                outline={row.symbol.outline}
+                                style={row.style}
+                              />
                             </div>
                           </div>
                         </div>
@@ -537,7 +545,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols]);
+  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols, layers, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -667,7 +675,7 @@ function Toolbar() {
       filterFunction: (basemap: __esri.Basemap) => {
         return basemapNames.indexOf(basemap.portalItem.title) !== -1;
       },
-      updateBasemapsCallback: (basemaps: __esri.Collection<__esri.Basemap>) => {
+      updateBasemapsCallback: (basemaps: __esri.Basemap[]) => {
         // sort the basemaps based on the ordering of basemapNames
         return basemaps.sort((a, b) => {
           return (
@@ -694,16 +702,58 @@ function Toolbar() {
     setBasemapWidget,
   ]);
 
+  // Switches between point and polygon representations
+  React.useEffect(() => {
+    // Loop through the layers and switch between point/polygon representations
+    layers.forEach((layer) => {
+      if (
+        showAsPoints &&
+        layer.pointsLayer &&
+        layer.sketchLayer.listMode === 'show'
+      ) {
+        // make points layers visible
+        layer.pointsLayer.listMode = layer.sketchLayer.listMode;
+        layer.pointsLayer.visible = layer.sketchLayer.visible;
+        layer.sketchLayer.listMode = 'hide';
+        layer.sketchLayer.visible = false;
+      } else if (
+        !showAsPoints &&
+        layer.pointsLayer &&
+        layer.pointsLayer.listMode === 'show'
+      ) {
+        // make polygons layer visible
+        layer.sketchLayer.listMode = layer.pointsLayer.listMode;
+        layer.sketchLayer.visible = layer.pointsLayer.visible;
+        layer.pointsLayer.listMode = 'hide';
+        layer.pointsLayer.visible = false;
+      }
+    });
+  }, [showAsPoints, layers]);
+
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
       <h2 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
       </h2>
+      <div css={switchLabelContainer}>
+        <span css={switchLabel}>Polygons</span>
+        <Switch
+          checked={showAsPoints}
+          onChange={(checked) => setShowAsPoints(checked)}
+          ariaLabel="Points or Polygons"
+        />
+        <span css={switchLabel}>Points</span>
+        <InfoIcon 
+          id="poly-points-switch"
+          tooltip={'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'}
+          place="bottom"
+          type="info"
+        />
+      </div>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
             css={toolBarButtonStyles}
-            disabled={!legendInitialized}
             className={basemapVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setBasemapVisible(!basemapVisible);
@@ -720,7 +770,6 @@ function Toolbar() {
         <div>
           <button
             css={toolBarButtonStyles}
-            disabled={!legendInitialized}
             className={legendVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setLegendVisible(!legendVisible);
@@ -729,7 +778,11 @@ function Toolbar() {
           >
             Legend{' '}
           </button>
-          <div css={legendStyles(legendVisible)} id="legend-container" />
+          <div css={legendStyles(legendVisible)} id="legend-container">
+            <div className="esri-layer-list__no-items">
+              There are currently no items to display.
+            </div>
+          </div>
         </div>
         {oAuthInfo && (
           <button
@@ -759,6 +812,180 @@ function Toolbar() {
       </div>
     </div>
   );
+}
+
+type ShapeStyleProps = {
+  color: any;
+  outline: any;
+  style?: string | null;
+};
+
+function ShapeStyle({ color, outline, style }: ShapeStyleProps) {
+  const path =
+    style && style.includes('path|') ? style.replace('path|', '') : '';
+
+  const polygon = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+      <defs></defs>
+      <g transform="matrix(1.047619104385376,0,0,1.047619104385376,11.000000953674316,11.000000953674316)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M -10,-10 L 10,0 L 10,10 L -10,10 L -10,-10 Z"
+        />
+      </g>
+    </svg>
+  );
+
+  const custom = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19">
+      <defs></defs>
+      <g transform="matrix(0.8382353186607361,0,0,0.8382353186607361,-1.3970588445663452,-1.3970588445663452)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d={path}
+        />
+      </g>
+    </svg>
+  );
+
+  const circle = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19">
+      <defs></defs>
+      <g transform="matrix(1,0,0,1,9.5,9.5)">
+        <circle
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          cx="0"
+          cy="0"
+          r="8"
+        />
+      </g>
+    </svg>
+  );
+
+  const cross = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+      <defs></defs>
+      <g transform="matrix(0.8571428656578064,0,0,0.8571428656578064,1.1428571939468384,1.1428571939468384)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M 0 8 L 16 8 M 8 0 L 8 16"
+        />
+      </g>
+    </svg>
+  );
+
+  const diamond = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19">
+      <defs></defs>
+      <g transform="matrix(1,0,0,1,1.5,1.5)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M 0 8 L 8 0 L 16 8 L 8 16 Z"
+        />
+      </g>
+    </svg>
+  );
+
+  const square = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19">
+      <defs></defs>
+      <g transform="matrix(1,0,0,1,1.5,1.5)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M 0 0 L 16 0 L 16 16 L 0 16 Z"
+        />
+      </g>
+    </svg>
+  );
+
+  const triangle = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19">
+      <defs></defs>
+      <g transform="matrix(1,0,0,1,1.5,1.5)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M 8 0 L 16 16 L 0 16 Z"
+        />
+      </g>
+    </svg>
+  );
+
+  const x = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+      <defs></defs>
+      <g transform="matrix(0.8571428656578064,0,0,0.8571428656578064,1.1428571939468384,1.1428571939468384)">
+        <path
+          fill={`rgba(${color.toString()})`}
+          fillRule="evenodd"
+          stroke={`rgba(${outline.color.toString()})`}
+          strokeWidth={outline.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="none"
+          strokeMiterlimit="4"
+          d="M 0 0 L 16 16 M 16 0 L 0 16"
+        />
+      </g>
+    </svg>
+  );
+
+  if (style === 'circle') return circle;
+  if (style === 'cross') return cross;
+  if (style === 'diamond') return diamond;
+  if (style === 'square') return square;
+  if (style === 'triangle') return triangle;
+  if (style === 'x') return x;
+  if (path) return custom;
+  return polygon;
 }
 
 export default Toolbar;

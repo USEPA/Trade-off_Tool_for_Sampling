@@ -1,7 +1,7 @@
-/** @jsx jsx */
+/** @jsxImportSource @emotion/react */
 
 import React from 'react';
-import { jsx, css } from '@emotion/core';
+import { css } from '@emotion/react';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -23,20 +23,22 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
+  convertToPoint,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { chunkArray } from 'utils/utils';
+import { chunkArray, createErrorObject } from 'utils/utils';
 // types
+import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
+import { ErrorType } from 'types/Misc';
 // config
 import { defaultLayerProps } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
   fileReadErrorMessage,
-  importErrorMessage,
   invalidFileTypeMessage,
   missingAttributesMessage,
   noDataMessage,
@@ -227,7 +229,7 @@ type UploadStatusType =
   | 'file-read-error';
 
 function FilePanel() {
-  const { portal } = React.useContext(AuthenticationContext);
+  const { portal, userInfo } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
     NavigationContext,
@@ -246,6 +248,9 @@ function FilePanel() {
     getGpMaxRecordCount,
     sampleAttributes,
     allSampleOptions,
+    selectedScenario,
+    setSelectedScenario,
+    setSketchLayer,
   } = React.useContext(SketchContext);
   const {
     GraphicsLayer,
@@ -275,7 +280,7 @@ function FilePanel() {
   );
   const [fileValidated, setFileValidated] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
-  const [esriMessage, setEsriMessage] = React.useState<string>('');
+  const [error, setError] = React.useState<ErrorType | null>(null);
   const [missingAttributes, setMissingAttributes] = React.useState('');
 
   const [
@@ -328,7 +333,7 @@ function FilePanel() {
 
     // reset state management values
     setUploadStatus('fetching');
-    setEsriMessage('');
+    setError(null);
     setAnalyzeResponse(null);
     setGenerateResponse(null);
     setFeaturesAdded(false);
@@ -449,6 +454,12 @@ function FilePanel() {
       .catch((err) => {
         console.error(err);
         setUploadStatus('failure');
+        setError({
+          error: createErrorObject(err),
+          message: err.message,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [file, firstGeocodeService, portal, sharingUrl]);
 
@@ -472,6 +483,8 @@ function FilePanel() {
     if (file.file.esriFileType === 'kml') return; // KML doesn't need to do this
     if (file.file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
     if (layerType.value === 'VSP' && !sampleType) return; // VSP layers need a sample type
+
+    const localSampleType = sampleType;
 
     setFile((file: any) => {
       return {
@@ -540,7 +553,10 @@ function FilePanel() {
       .then((res: any) => {
         if (res.error) {
           setUploadStatus('import-error');
-          setEsriMessage(res.error.message);
+          setError({
+            error: createErrorObject(res.error),
+            message: res.error.message,
+          });
           return;
         }
         if (layerType.value !== 'VSP') {
@@ -550,7 +566,7 @@ function FilePanel() {
 
         // this should never happen, but if sample type wasn't selected
         // exit early
-        if (!sampleType) return;
+        if (!localSampleType) return;
 
         const features: __esri.Graphic[] = [];
         let layerDefinition: any;
@@ -583,7 +599,7 @@ function FilePanel() {
           fields: defaultLayerProps.fields,
           features: [
             {
-              attributes: sampleAttributes[sampleType.value as any],
+              attributes: sampleAttributes[localSampleType.value as any],
             },
           ],
         };
@@ -615,7 +631,7 @@ function FilePanel() {
               const params = {
                 f: 'json',
                 Input_VSP: inputVspSet,
-                Sample_Type: sampleType.value,
+                Sample_Type: localSampleType.label,
                 Sample_Type_Parameters: sampleTypeFeatureSet,
               };
               appendEnvironmentObjectParam(params);
@@ -628,6 +644,7 @@ function FilePanel() {
               requests.push(request);
             });
 
+            const timestamp = getCurrentDateTime();
             Promise.all(requests)
               .then((responses) => {
                 // get the first result for filling in metadata
@@ -636,7 +653,26 @@ function FilePanel() {
 
                 // build an array with all of the features
                 responses.forEach((res) => {
-                  features.push(...res.results[0].value.features);
+                  const innerFeatures: any[] = [];
+                  res.results[0].value.features.forEach((feature: any) => {
+                    innerFeatures.push({
+                      geometry: feature.geometry,
+                      attributes: {
+                        ...(window as any).totsSampleAttributes[
+                          localSampleType.value
+                        ],
+                        CREATEDDATE: timestamp,
+                        OBJECTID: feature.attributes.OBJECTID,
+                        GLOBALID: feature.attributes.GLOBALID,
+                        PERMANENT_IDENTIFIER:
+                          feature.attributes.PERMANENT_IDENTIFIER,
+                        UPDATEDDATE: timestamp,
+                        USERNAME: userInfo?.username || '',
+                        ORGANIZATION: userInfo?.orgId || '',
+                      },
+                    });
+                  });
+                  features.push(...innerFeatures);
                 });
 
                 const layers: any[] = [];
@@ -659,16 +695,34 @@ function FilePanel() {
               .catch((err) => {
                 console.error(err);
                 setUploadStatus('failure');
+                setError({
+                  error: createErrorObject(err),
+                  message: err.message,
+                });
+
+                window.logErrorToGa(err);
               });
           })
           .catch((err) => {
             console.error(err);
             setUploadStatus('failure');
+            setError({
+              error: createErrorObject(err),
+              message: err.message,
+            });
+
+            window.logErrorToGa(err);
           });
       })
       .catch((err) => {
         console.error(err);
         setUploadStatus('failure');
+        setError({
+          error: createErrorObject(err),
+          message: err.message,
+        });
+
+        window.logErrorToGa(err);
       });
   }, [
     // esri modules
@@ -692,6 +746,7 @@ function FilePanel() {
     getGpMaxRecordCount,
     services,
     sampleAttributes,
+    userInfo,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
@@ -798,10 +853,21 @@ function FilePanel() {
       visible,
       listMode,
     });
+    const pointsLayer = new GraphicsLayer({
+      id: layerUuid + '-points',
+      title: layerName,
+      visible: false,
+      listMode: 'hide',
+    });
+
+    const groupLayer = selectedScenario ? map.layers.find(
+      (layer) => layer.id === selectedScenario?.layerId,
+    ) as __esri.GroupLayer : null;
 
     // create the graphics layer
     const layerToAdd: LayerType = {
       id: -1,
+      pointsId: -1,
       uuid: layerUuid,
       layerId: graphicsLayer.id,
       portalId: '',
@@ -817,10 +883,15 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
-      parentLayer: null,
+      pointsLayer:
+        layerType.value === 'Samples' || layerType.value === 'VSP'
+          ? pointsLayer
+          : null,
+      parentLayer: groupLayer ? groupLayer : null,
     };
 
     const graphics: __esri.Graphic[] = [];
+    const points: __esri.Graphic[] = [];
     let missingAttributes: string[] = [];
     let unknownSampleTypes: boolean = false;
     generateResponse.featureCollection.layers.forEach((layer: any) => {
@@ -861,6 +932,7 @@ function FilePanel() {
             graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
             graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
             graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+            graphic.attributes['DECISIONUNITSORT'] = 0;
             graphic.attributes['GLOBALID'] = uuid;
           }
         }
@@ -871,6 +943,7 @@ function FilePanel() {
           graphic.attributes['AC'] = null;
           graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
           graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+          graphic.attributes['DECISIONUNITSORT'] = 0;
           if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
         }
 
@@ -900,21 +973,21 @@ function FilePanel() {
         }
 
         // set the symbol styles based on the sample/layer type
-        if (graphic?.geometry?.type === 'polygon') {
-          if (defaultSymbols.hasOwnProperty(graphic.attributes.TYPE)) {
-            graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPE];
-          } else {
-            graphic.symbol =
-              defaultSymbols.symbols[
-                layerType.value === 'VSP' ? 'Samples' : layerType.value
-              ];
-          }
+        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+          graphic.symbol =
+            defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+        } else {
+          graphic.symbol =
+            defaultSymbols.symbols[
+              layerType.value === 'VSP' ? 'Samples' : layerType.value
+            ];
         }
 
         // add the popup template
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         graphics.push(graphic);
+        points.push(convertToPoint(Graphic, graphic));
       });
     });
 
@@ -936,10 +1009,12 @@ function FilePanel() {
     }
 
     graphicsLayer.addMany(graphics);
+    pointsLayer.addMany(points);
 
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
       edits,
+      scenario: selectedScenario,
       layer: layerToAdd,
       type: 'add',
       changes: graphicsLayer.graphics,
@@ -948,11 +1023,44 @@ function FilePanel() {
     setEdits(editsCopy);
 
     setLayers([...layers, layerToAdd]);
+
+    setSelectedScenario((selectedScenario) => {
+      if (!selectedScenario) return selectedScenario;
+
+      const scenario = editsCopy.edits.find(
+        (edit) =>
+          edit.type === 'scenario' &&
+          edit.layerId === selectedScenario.layerId,
+      ) as ScenarioEditsType;
+      const newLayer = scenario.layers.find(
+        (layer) => layer.layerId === layerToAdd.layerId,
+      );
+
+      if (!newLayer) return selectedScenario;
+
+      return {
+        ...selectedScenario,
+        layers: [...selectedScenario.layers, newLayer],
+      };
+    });
+
+    setSketchLayer(layerToAdd);
+
     map.add(graphicsLayer);
+    if (layerType.value === 'Samples' || layerType.value === 'VSP') {
+      map.add(pointsLayer);
+    }
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
-      mapView.goTo(graphics);
+      if (selectedScenario && groupLayer) {
+        groupLayer.add(layerToAdd.sketchLayer);
+        if(layerToAdd.pointsLayer) {
+          groupLayer.add(layerToAdd.pointsLayer);
+        }
+      } else {
+        mapView.goTo(graphics);
+      }
     }
 
     setUploadStatus('success');
@@ -977,6 +1085,9 @@ function FilePanel() {
     map,
     mapView,
     sampleAttributes,
+    selectedScenario,
+    setSelectedScenario,
+    setSketchLayer,
     trainingMode,
   ]);
 
@@ -1117,6 +1228,10 @@ function FilePanel() {
       if (reader.error || !event || !reader.result) {
         console.error('File Read Error: ', reader.error);
         setUploadStatus('file-read-error');
+        setError({
+          error: createErrorObject(reader.error),
+          message: reader.error?.message ? reader.error.message : '',
+        });
         return;
       }
 
@@ -1139,6 +1254,12 @@ function FilePanel() {
         .catch((err) => {
           console.error(err);
           setUploadStatus('failure');
+          setError({
+            error: createErrorObject(err),
+            message: err.message,
+          });
+
+          window.logErrorToGa(err);
         });
     };
 
@@ -1147,6 +1268,8 @@ function FilePanel() {
     } catch (ex) {
       console.error('File Read Error: ', ex);
       setUploadStatus('file-read-error');
+
+      window.logErrorToGa(ex);
     }
   }, [KMLLayer, mapView, file]);
 
@@ -1163,7 +1286,7 @@ function FilePanel() {
         onChange={(ev) => {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
-          setEsriMessage('');
+          setError(null);
         }}
         options={
           trainingMode
@@ -1221,13 +1344,15 @@ function FilePanel() {
                   }}
                   options={allSampleOptions}
                 />
-                <p css={sectionParagraph}>
-                  Add an externally-generated Visual Sample Plan (VSP) layer to
-                  analyze and/or use in conjunction with targeted sampling. Once
-                  added, you can select this layer in the next step,{' '}
-                  <strong>Create Plan</strong>, and use it to create the
-                  Sampling Plan.
-                </p>
+                {sampleType && (
+                  <p css={sectionParagraph}>
+                    Add an externally-generated Visual Sample Plan (VSP) layer
+                    to analyze and/or use in conjunction with targeted sampling.
+                    Once added, you can select this layer in the next step,{' '}
+                    <strong>Create Plan</strong>, and use it to create the
+                    Sampling Plan.
+                  </p>
+                )}
               </React.Fragment>
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
@@ -1244,12 +1369,13 @@ function FilePanel() {
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
-            ((layerType.value === 'Samples' || layerType.value === 'VSP') &&
+            (layerType.value === 'Samples' &&
               services.status === 'success' &&
               sampleTypeContext.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
-              services.status === 'success')) && (
+              services.status === 'success' &&
+              sampleTypeContext.status === 'success')) && (
             <React.Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
@@ -1346,7 +1472,8 @@ function FilePanel() {
                   {uploadStatus === 'invalid-file-type' &&
                     invalidFileTypeMessage(filename)}
                   {uploadStatus === 'import-error' &&
-                    importErrorMessage(esriMessage)}
+                    error &&
+                    webServiceErrorMessage(error, 'File Upload Error')}
                   {uploadStatus === 'file-read-error' &&
                     fileReadErrorMessage(filename)}
                   {uploadStatus === 'no-data' && noDataMessage(filename)}
@@ -1356,7 +1483,9 @@ function FilePanel() {
                     missingAttributesMessage(filename, missingAttributes)}
                   {uploadStatus === 'unknown-sample-type' &&
                     unknownSampleTypeMessage}
-                  {uploadStatus === 'failure' && webServiceErrorMessage}
+                  {uploadStatus === 'failure' &&
+                    error &&
+                    webServiceErrorMessage(error)}
                   {uploadStatus === 'success' &&
                     uploadSuccessMessage(filename, newLayerName)}
                   {layerType.value === 'Area of Interest' && (

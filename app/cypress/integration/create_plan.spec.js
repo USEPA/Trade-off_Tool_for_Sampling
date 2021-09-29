@@ -1,80 +1,37 @@
-describe('Create Plan Drop Down Contents', function () {
-  const sampleSelectId = '#sampling-layer-select';
-  const aoiSelectId = '#aoi-mask-select';
-  const legendId = '#legend-container';
+describe("Create Plan Drop Down Contents", function () {
+  const sampleSelectId = "#sampling-layer-select";
+  const aoiSelectId = "#aoi-mask-select";
+  const legendId = "#legend-container";
+
+  const planName = "Test Plan";
 
   beforeEach(function () {
     // clear session storage and open the app
     sessionStorage.clear();
-    cy.visit('/');
+    cy.visit("/");
 
     // close the splash screen
-    cy.findByText('OK').click();
+    cy.findByText("OK").click();
 
     // go to the create plan tab
-    cy.findByText('Create Plan').click();
+    cy.findByText("Create Plan").click();
+
+    // create a plan
+    cy.findByPlaceholderText("Enter Plan Name").type(planName);
+    cy.findByText("Save").click();
 
     // open the legend widget
-    cy.findByText('Legend').click();
+    cy.findByText("Legend").click();
   });
 
-  it('drop down has default samling layer and legend does not', function () {
-    const layerName = 'Default Sample Layer';
+  it("drop down has default samling layer and legend does not", function () {
+    const layerName = "Default Sample Layer";
 
     // check the legend contents
-    cy.get(legendId).contains(layerName).should('not.exist');
+    cy.findByTitle("Expand").click();
+    cy.get(legendId).contains(layerName).should("be.visible");
 
     // check the dropdown contents
     cy.get(sampleSelectId).contains(layerName);
-  });
-
-  it('drop down has sketched sampling mask layer and legend does not', function () {
-    const layerName = 'Sketched Sampling Mask';
-
-    // check the legend contents
-    cy.get(legendId).contains(layerName).should('not.exist');
-
-    // check the dropdown contents
-    cy.findByText('Add Multiple Random Samples').click();
-    cy.get(aoiSelectId).contains(layerName);
-  });
-
-  it('drop down has default samling layer and legend does after placing a sample', function () {
-    const layerName = 'Default Sample Layer';
-
-    // check the legend contents and close
-    cy.get(legendId).contains(layerName).should('not.exist');
-    cy.findByText('Legend').click();
-
-    // place a sample on the map
-    cy.findByText('Micro Vac').click();
-    cy.findByTestId('tots-map').click();
-
-    // check the dropdown contents
-    cy.get(sampleSelectId).contains(layerName);
-
-    // re-check the legend contents
-    cy.findByText('Legend').click();
-    cy.get(legendId).contains(layerName);
-  });
-
-  it('drop down has sketched sampling mask layer and legend does after placing a sample', function () {
-    const layerName = 'Sketched Sampling Mask';
-
-    // check the legend contents and close
-    cy.get(legendId).contains(layerName).should('not.exist');
-    cy.findByText('Legend').click();
-
-    // place a sample on the map
-    cy.findByText('Add Multiple Random Samples').click();
-    cy.findByText('Draw Area of Interest Mask').click();
-    cy.findByTestId('tots-map').click();
-
-    // check the dropdown contents
-    cy.get(aoiSelectId).contains(layerName);
-
-    // re-check the legend contents
-    cy.findByText('Legend').click();
-    cy.get(legendId).contains(layerName);
   });
 });
