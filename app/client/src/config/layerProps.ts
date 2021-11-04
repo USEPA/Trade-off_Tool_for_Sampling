@@ -387,7 +387,7 @@ export const defaultLayerProps = {
       alias: 'DECISIONUNITSORT',
       sqlType: 'sqlTypeInteger',
       length: 4,
-      nullable: false,
+      nullable: true,
       editable: false,
       domain: null,
       defaultValue: 0,
