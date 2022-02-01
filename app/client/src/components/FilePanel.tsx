@@ -26,6 +26,7 @@ import {
   convertToPoint,
   generateUUID,
   getCurrentDateTime,
+  getPointSymbol,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject } from 'utils/utils';
@@ -267,7 +268,7 @@ function FilePanel() {
   } = useEsriModulesContext();
 
   const getPopupTemplate = useDynamicPopup();
-  const { sampleValidation } = useGeometryTools();
+  const { createBuffer, sampleValidation } = useGeometryTools();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
@@ -986,8 +987,22 @@ function FilePanel() {
         // add the popup template
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
-        graphics.push(graphic);
-        points.push(convertToPoint(Graphic, graphic));
+        // Add graphics to the layers based on what the original geometry type is
+        if(graphic.geometry.type === 'point') {
+          points.push(new Graphic({
+            attributes: graphic.attributes,
+            geometry: graphic.geometry,
+            popupTemplate: graphic.popupTemplate,
+            symbol: getPointSymbol(graphic),
+          }));
+
+          const polyGraphic = graphic.clone();
+          createBuffer(polyGraphic);
+          graphics.push(polyGraphic);
+        } else {
+          graphics.push(graphic);
+          points.push(convertToPoint(Graphic, graphic));
+        }
       });
     });
 
@@ -1071,6 +1086,7 @@ function FilePanel() {
     PopupTemplate,
 
     // app
+    createBuffer,
     defaultSymbols,
     edits,
     setEdits,
