@@ -189,7 +189,7 @@ export function updateLayerEdits({
     }
   } else if (scenario && editsScenario && type === 'move') {
     editsLayer.visible = true;
-    editsLayer.adds = editsLayer.updates;
+    editsLayer.adds = [...editsLayer.adds, ...editsLayer.updates];
     editsLayer.updates = [];
     editsLayer.published.forEach((edit) => {
       const indx = editsLayer.adds.findIndex((x) => x.attributes.PERMANENT_IDENTIFIER === edit.attributes.PERMANENT_IDENTIFIER);

@@ -144,6 +144,7 @@ function Publish() {
     setEdits,
     layers,
     setLayers,
+    sampleAttributes,
     selectedScenario,
     setSelectedScenario,
     sketchLayer,
@@ -1049,6 +1050,9 @@ function Publish() {
               const origItem = layerEdits.adds[index];
               const decisionUUID = origItem.attributes.DECISIONUNITUUID;
               if (item.success) {
+                const type = origItem.attributes.TYPE;
+                origItem.attributes = { ...sampleAttributes[type] };
+                origItem.attributes.DECISIONUNITUUID = decisionUUID;
                 origItem.attributes.OBJECTID = item.objectId;
                 origItem.attributes.GLOBALID = item.globalId;
 
@@ -1111,6 +1115,9 @@ function Publish() {
               const origItem = layerEdits.updates[index];
               const decisionUUID = origItem.attributes.DECISIONUNITUUID;
               if (item.success && changes.hasOwnProperty(decisionUUID)) {
+                const type = origItem.attributes.TYPE;
+                origItem.attributes = { ...sampleAttributes[type] };
+                origItem.attributes.DECISIONUNITUUID = decisionUUID;
                 origItem.attributes.OBJECTID = item.objectId;
                 origItem.attributes.GLOBALID = item.globalId;
 
