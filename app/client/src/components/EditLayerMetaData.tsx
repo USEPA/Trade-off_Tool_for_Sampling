@@ -216,6 +216,18 @@ function EditScenario({
             groupLayer,
           );
           newLayers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        } else {
+          // update the parentLayer of layers being added to the group layer
+          setLayers((layers) => {
+            newLayers.forEach((newLayer) => {
+              const layer = layers.find((l) => l.layerId === newLayer.layerId);
+              if(!layer) return;
+
+              layer.parentLayer = groupLayer;
+            });
+
+            return layers;
+          });
         }
       }
 
