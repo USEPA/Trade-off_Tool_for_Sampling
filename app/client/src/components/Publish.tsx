@@ -1354,6 +1354,7 @@ function Publish() {
     partialPlanAttributes,
     portal,
     layers,
+    sampleAttributes,
     selectedScenario,
     setSelectedScenario,
   ]);
