@@ -17,7 +17,7 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "14.x"
+    "node": "16.x"
   },
   "scripts": {
     "client": "cd client && npm start",

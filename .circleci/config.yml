@@ -6,7 +6,7 @@ orbs:
 references:
   set-container: &set-container
     docker:
-      - image: circleci/node:14.17.3-buster # node 14 on debian 10
+      - image: circleci/node:16.13.1-buster # node 14 on debian 10
 
 jobs:
   deploy-develop:
