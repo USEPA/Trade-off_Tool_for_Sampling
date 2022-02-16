@@ -72,6 +72,53 @@
     <meta name="msapplication-TileColor" content="#2b5797" />
     <meta name="theme-color" content="#ffffff" />
 
+    <style>
+      /* bootstrap style overrides */
+      .epa-search .form-text {
+        display: inline-block;
+        margin-top: 0;
+      }
+
+      /* epa template overrides */
+      .main-footer .region-footer .row {
+        margin: 0;
+      }
+
+      .main-footer .region-footer .col:first-of-type {
+        padding-left: 0;
+      }
+
+      .main-footer .region-footer .col:last-of-type {
+        padding-right: 0;
+      }
+
+      .ieErrorBox {
+        margin: 1rem;
+        text-align: center;
+        border-color: #f5c6cb;
+        color: #721c24;
+        background-color: #f8d7da;
+      }
+
+      .ieOnly {
+        display: none;
+      }
+
+      @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+        /* IE10 and IE11 styles */
+        .ieOnly {
+          display: block;
+        }
+      }
+    </style>
+    <!-- IE9 and below styles -->
+    <!--[if IE]>
+      <style>
+        .ieOnly {
+          display: block;
+        }
+      </style>
+    <![endif]-->
     <!-- Google Tag Manager -->
     <script>
       (function (w, d, s, l, i) {
@@ -142,19 +189,19 @@
       //Only setup the logging for public sites, ie don't log from localhost
       window.gaTarget = '';
       if (
-        document.location.hostname.indexOf('epa.gov') > -1 ||
-        document.location.hostname === 'tots-prod.app.cloud.gov'
+        window.location.hostname.indexOf('epa.gov') > -1 ||
+        window.location.hostname === 'tots-prod.app.cloud.gov'
       ) {
         //EPA (Production) - Just initialize the TOTS logs by setting gaTarget
         window.gaTarget = 'EPA';
-      } else if (document.location.hostname === 'tots-stage.app.cloud.gov') {
+      } else if (window.location.hostname === 'tots-stage.app.cloud.gov') {
         addGoogleAnalyticsObject();
         ga('create', 'UA-37504877-9', 'auto', 'ERG'); //Stage
         window.gaTarget = 'ERG';
         logToGa('send', 'pageview');
       } else if (
-        document.location.hostname === 'tots-dev.app.cloud.gov' ||
-        document.location.hostname === 'localhost'
+        window.location.hostname === 'tots-dev.app.cloud.gov' ||
+        window.location.hostname === 'localhost'
       ) {
         addGoogleAnalyticsObject();
         ga('create', 'UA-37504877-8', 'auto', 'ERG'); //Dev
@@ -165,15 +212,7 @@
       //Only setup the logging for public sites, ie don't log from localhost
       if (gaTarget) {
         // create the locationChange event
-        let event;
-        if (typeof Event === 'function') {
-          // used for modern browsers
-          event = new Event('locationchange');
-        } else {
-          // used for supporting internet explorer
-          event = document.createEvent('Event');
-          event.initEvent('locationchange', false, false);
-        }
+        const locationChangeEvent = new Event('locationchange');
 
         // create the location change event listener
         window.addEventListener('locationchange', function (event) {
@@ -186,15 +225,15 @@
         var pushState = history.pushState;
         history.pushState = function () {
           pushState.apply(history, arguments);
-          window.dispatchEvent(event);
+          window.dispatchEvent(locationChangeEvent);
         };
         var replaceState = history.replaceState;
         history.replaceState = function () {
           replaceState.apply(this, arguments);
-          window.dispatchEvent(event);
+          window.dispatchEvent(locationChangeEvent);
         };
         window.addEventListener('popstate', function () {
-          window.dispatchEvent(event);
+          window.dispatchEvent(locationChangeEvent);
         });
 
         function wildcardIncludes(str, rule) {
@@ -243,7 +282,7 @@
             action =
               'ord-tots1-' + (action ? action : event.target.text.trim());
 
-            if (document.location.hostname === event.target.hostname) {
+            if (window.location.hostname === event.target.hostname) {
               //Part of the TOTS application
               const extension = href.split('.').pop;
               if (extension === '.pdf' || extension === '.zip')
@@ -441,7 +480,39 @@
               <noscript>
                 You need to enable JavaScript to run this app.
               </noscript>
-              <div id="root"></div>
+              <div id="root">
+                <div class="ieOnly">
+                  <div class="ieErrorBox">
+                    <strong
+                      >Internet Explorer is not supported. Please use another browser
+                      such as Chrome, Safari, Edge, or Firfox.</strong
+                    >
+                    <br />
+                    Trade-off Tool for Sampling (TOTS) utilizes Esri's ArcGIS JavaScript API for advanced
+                    mapping features, which are not supported by Internet Explorer. For
+                    more information visit the following links:
+                    <a
+                      href="https://developers.arcgis.com/javascript/latest/system-requirements/#:~:text=Supported%20browsers&text=Firefox%2093%20or%20later,Safari%2014%20or%20later"
+                      >ArcGIS System Requirements</a
+                    >
+                    and
+                    <a
+                      href="https://www.esri.com/arcgis-blog/products/arcgis/announcements/so-long-internet-explorer-11/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >So Long Internet Explorer</a
+                    >.
+                    <a
+                      class="exit-disclaimer"
+                      href="https://www.epa.gov/home/exit-epa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      EXIT
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

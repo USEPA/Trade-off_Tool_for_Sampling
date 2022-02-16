@@ -15,14 +15,6 @@ const textAreaStyles = css`
   width: 100%;
 `;
 
-export const unsupportedBrowserMessage = (
-  <MessageBox
-    severity="error"
-    title="Unsupported Browser"
-    message="Chrome and Edge are the preferred browsers when working in Trade-off Tool for Sampling (TOTS). TOTS does not support Internet Explorer."
-  />
-);
-
 export const webServiceErrorMessage = (
   error: ErrorType = {
     error: {},
