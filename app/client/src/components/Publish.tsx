@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import IdentityManager from '@arcgis/core/identity/IdentityManager';
 // components
 import {
   EditCustomSampleTypesTable,
@@ -12,7 +14,6 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
@@ -115,7 +116,6 @@ const webMapContainerCheckboxStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const { GraphicsLayer, IdentityManager } = useEsriModulesContext();
   const {
     oAuthInfo,
     portal,
@@ -182,14 +182,7 @@ function Publish() {
       setGoToOptions({ continuePublish: true });
       IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
     }
-  }, [
-    IdentityManager,
-    setGoToOptions,
-    portal,
-    signedIn,
-    oAuthInfo,
-    publishButtonClicked,
-  ]);
+  }, [setGoToOptions, portal, signedIn, oAuthInfo, publishButtonClicked]);
 
   // Check if the scenario name is available
   const [hasNameBeenChecked, setHasNameBeenChecked] = React.useState(false);
@@ -782,11 +775,11 @@ function Publish() {
         );
 
         setSelectedScenario((selectedScenario) => {
-          if(!selectedScenario) return selectedScenario;
+          if (!selectedScenario) return selectedScenario;
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
-          return selectedScenario
+          return selectedScenario;
         });
       })
       .catch((err) => {
@@ -804,7 +797,6 @@ function Publish() {
         window.logErrorToGa(err);
       });
   }, [
-    GraphicsLayer,
     edits,
     setEdits,
     includeFullPlanWebMap,
@@ -816,14 +808,12 @@ function Publish() {
     setSelectedScenario,
   ]);
 
-  const [
-    publishPartialResponse,
-    setPublishPartialResponse,
-  ] = React.useState<PublishType>({
-    status: 'none',
-    summary: { success: '', failed: '' },
-    rawData: null,
-  });
+  const [publishPartialResponse, setPublishPartialResponse] =
+    React.useState<PublishType>({
+      status: 'none',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
 
   // publishes a plan with all of the attributes
   const publishPartialPlan = React.useCallback(() => {
@@ -1324,11 +1314,11 @@ function Publish() {
         );
 
         setSelectedScenario((selectedScenario) => {
-          if(!selectedScenario) return selectedScenario;
+          if (!selectedScenario) return selectedScenario;
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
-          return selectedScenario
+          return selectedScenario;
         });
       })
       .catch((err) => {
@@ -1346,7 +1336,6 @@ function Publish() {
         window.logErrorToGa(err);
       });
   }, [
-    GraphicsLayer,
     edits,
     setEdits,
     includePartialPlanWebMap,
@@ -1359,14 +1348,12 @@ function Publish() {
     setSelectedScenario,
   ]);
 
-  const [
-    publishSamplesResponse,
-    setPublishSamplesResponse,
-  ] = React.useState<PublishType>({
-    status: 'none',
-    summary: { success: '', failed: '' },
-    rawData: null,
-  });
+  const [publishSamplesResponse, setPublishSamplesResponse] =
+    React.useState<PublishType>({
+      status: 'none',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
 
   // publishes custom sample types
   const publishSampleTypes = React.useCallback(() => {
@@ -1438,7 +1425,9 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
+                origUdt.status = origUdt.serviceId
+                  ? 'published-ago'
+                  : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1456,7 +1445,9 @@ function Publish() {
                   origItem.attributes.TYPEUUID
                 ];
               if (item.success) {
-                origUdt.status = origUdt.serviceId ? 'published-ago' : 'published';
+                origUdt.status = origUdt.serviceId
+                  ? 'published-ago'
+                  : 'published';
                 origUdt.serviceId = res.service.featureService.serviceItemId;
                 origUdt.attributes.GLOBALID = item.globalId;
                 origUdt.attributes.OBJECTID = item.objectId;
@@ -1700,14 +1691,10 @@ function Publish() {
     });
   }
 
-  const [
-    publishNameCheck,
-    setPublishNameCheck,
-  ] = React.useState<SaveResultsType>({ status: 'none' });
-  const [
-    sampleTypesNameCheck,
-    setSampleTypesNameCheck,
-  ] = React.useState<SaveResultsType>({ status: 'none' });
+  const [publishNameCheck, setPublishNameCheck] =
+    React.useState<SaveResultsType>({ status: 'none' });
+  const [sampleTypesNameCheck, setSampleTypesNameCheck] =
+    React.useState<SaveResultsType>({ status: 'none' });
 
   const isPublishPlanReady =
     (!includeFullPlan && !includePartialPlan) ||
@@ -1905,9 +1892,14 @@ function Publish() {
             message={publishSamplesResponse.summary.failed}
           />
         )}
-      {(!includeFullPlan || (includeFullPlan && publishResponse.status === 'success')) &&
-        (!includePartialPlan || (includePartialPlan && publishPartialResponse.status === 'success')) &&
-        (!includeCustomSampleTypes || (includeCustomSampleTypes && publishSamplesResponse.status === 'success')) &&
+      {(!includeFullPlan ||
+        (includeFullPlan && publishResponse.status === 'success')) &&
+        (!includePartialPlan ||
+          (includePartialPlan &&
+            publishPartialResponse.status === 'success')) &&
+        (!includeCustomSampleTypes ||
+          (includeCustomSampleTypes &&
+            publishSamplesResponse.status === 'success')) &&
         publishSuccessMessage}
 
       {!signedIn && notLoggedInMessage}

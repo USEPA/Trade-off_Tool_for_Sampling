@@ -2,12 +2,34 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
+import Collection from '@arcgis/core/core/Collection';
+import CSVLayer from '@arcgis/core/layers/CSVLayer';
+import Extent from '@arcgis/core/geometry/Extent';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import Field from '@arcgis/core/layers/support/Field';
+import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
+import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
+import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
+import KMLLayer from '@arcgis/core/layers/KMLLayer';
+import Layer from '@arcgis/core/layers/Layer';
+import Point from '@arcgis/core/geometry/Point';
+import Polygon from '@arcgis/core/geometry/Polygon';
+import PortalItem from '@arcgis/core/portal/PortalItem';
+import * as projection from '@arcgis/core/geometry/projection';
+import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
+import SpatialReference from '@arcgis/core/geometry/SpatialReference';
+import Viewpoint from '@arcgis/core/Viewpoint';
+import * as watchUtils from '@arcgis/core/core/watchUtils';
+import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
+import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
@@ -112,7 +134,6 @@ function getCenterOfGeometry(geometry: __esri.Geometry) {
 // Hook that allows the user to easily start over without
 // having to manually start a new session.
 export function useStartOver() {
-  const { Point } = useEsriModulesContext();
   const { resetCalculateContext } = React.useContext(CalculateContext);
   const { setOptions } = React.useContext(DialogContext);
   const {
@@ -247,14 +268,6 @@ export function useStartOver() {
 //                       library is ready for use.
 export function useGeometryTools() {
   const sampleTypeContext = useSampleTypesContext();
-  const {
-    geometryEngine,
-    Graphic,
-    Polygon,
-    projection,
-    SpatialReference,
-    webMercatorUtils,
-  } = useEsriModulesContext();
 
   // Load the esri projection module. This needs
   // to happen before the projection module will work.
@@ -303,7 +316,7 @@ export function useGeometryTools() {
       const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
       return areaSI;
     },
-    [geometryEngine, loadedProjection, SpatialReference, webMercatorUtils],
+    [loadedProjection],
   );
 
   // Creates a square buffer around the center of the provided graphic,
@@ -375,13 +388,7 @@ export function useGeometryTools() {
 
       graphic.geometry = reprojectedGeometry;
     },
-    [
-      geometryEngine,
-      Polygon,
-      loadedProjection,
-      SpatialReference,
-      webMercatorUtils,
-    ],
+    [loadedProjection],
   );
 
   // Validates that the area of samples is within tolerance and that sample
@@ -492,7 +499,7 @@ export function useGeometryTools() {
 
       return output;
     },
-    [calculateArea, Graphic, Polygon, sampleTypeContext],
+    [calculateArea, sampleTypeContext],
   );
 
   return { calculateArea, createBuffer, loadedProjection, sampleValidation };
@@ -502,12 +509,6 @@ export function useGeometryTools() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const {
-    geometryEngine,
-    Polygon,
-    SpatialReference,
-    webMercatorUtils,
-  } = useEsriModulesContext();
   const { edits, layers, selectedScenario } = React.useContext(SketchContext);
   const {
     numLabs,
@@ -748,20 +749,7 @@ export function useCalculatePlan() {
     });
     setCalcGraphics(calcGraphics);
     setTotalArea(totalAreaSquereFeet);
-  }, [
-    // esri modules
-    geometryEngine,
-    loadedProjection,
-    Polygon,
-    SpatialReference,
-    webMercatorUtils,
-
-    // TOTS items
-    edits,
-    layers,
-    selectedScenario,
-    calculateArea,
-  ]);
+  }, [calculateArea, edits, layers, loadedProjection, selectedScenario]);
 
   // perform non-geospatial calculations
   React.useEffect(() => {
@@ -896,7 +884,6 @@ export function useCalculatePlan() {
 // Allows using a dynamicPopup that has access to react state/context.
 // This is primarily needed for sample popups.
 export function useDynamicPopup() {
-  const { Collection } = useEsriModulesContext();
   const { edits, setEdits, layers } = React.useContext(SketchContext);
 
   // Makes all sketch buttons no longer active by removing
@@ -941,12 +928,13 @@ export function useDynamicPopup() {
     );
     graphic.attributes = tempGraphic.attributes;
 
-    const pointGraphic: __esri.Graphic | undefined = tempSketchLayer.pointsLayer?.graphics.find(
-      (item) =>
-        item.attributes.PERMANENT_IDENTIFIER ===
-        graphic.attributes.PERMANENT_IDENTIFIER,
-    );
-    if(pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+    const pointGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.pointsLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
 
     if (type === 'Save') {
       changes.add(graphic);
@@ -991,7 +979,7 @@ export function useDynamicPopup() {
 
       feature.graphic.layer = newLayer.sketchLayer;
 
-      if(pointGraphic && tempSketchLayer.pointsLayer) {
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
         pointGraphic.attributes.DECISIONUNIT = newLayer.label;
         pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
 
@@ -1162,16 +1150,12 @@ function useGraphicColor() {
   const key = 'tots_polygon_symbol';
 
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    defaultSymbols,
-    setDefaultSymbols,
-    setSymbolsInitialized,
-  } = React.useContext(SketchContext);
+  const { defaultSymbols, setDefaultSymbols, setSymbolsInitialized } =
+    React.useContext(SketchContext);
 
   // Retreives training mode data from browser storage when the app loads
-  const [localPolygonInitialized, setLocalPolygonInitialized] = React.useState(
-    false,
-  );
+  const [localPolygonInitialized, setLocalPolygonInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (localPolygonInitialized) return;
 
@@ -1207,10 +1191,8 @@ function useTrainingModeStorage() {
   const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
 
   // Retreives training mode data from browser storage when the app loads
-  const [
-    localTrainingModeInitialized,
-    setLocalTrainingModeInitialized,
-  ] = React.useState(false);
+  const [localTrainingModeInitialized, setLocalTrainingModeInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (localTrainingModeInitialized) return;
 
@@ -1234,13 +1216,6 @@ function useTrainingModeStorage() {
 function useEditsLayerStorage() {
   const key = 'tots_edits';
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    Graphic,
-    GraphicsLayer,
-    GroupLayer,
-    Point,
-    Polygon,
-  } = useEsriModulesContext();
   const {
     defaultSymbols,
     edits,
@@ -1357,7 +1332,7 @@ function useEditsLayerStorage() {
         });
 
         polyFeatures.push(poly);
-        pointFeatures.push(convertToPoint(Graphic, poly));
+        pointFeatures.push(convertToPoint(poly));
       });
       sketchLayer.addMany(polyFeatures);
       if (
@@ -1429,11 +1404,6 @@ function useEditsLayerStorage() {
 
     setLayersInitialized(true);
   }, [
-    Graphic,
-    GraphicsLayer,
-    GroupLayer,
-    Point,
-    Polygon,
     defaultSymbols,
     setEdits,
     getPopupTemplate,
@@ -1456,21 +1426,12 @@ function useEditsLayerStorage() {
 function useReferenceLayerStorage() {
   const key = 'tots_reference_layers';
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    rendererJsonUtils,
-  } = useEsriModulesContext();
-  const { map, referenceLayers, setReferenceLayers } = React.useContext(
-    SketchContext,
-  );
+  const { map, referenceLayers, setReferenceLayers } =
+    React.useContext(SketchContext);
 
   // Retreives reference layers from browser storage when the app loads
-  const [
-    localReferenceLayerInitialized,
-    setLocalReferenceLayerInitialized,
-  ] = React.useState(false);
+  const [localReferenceLayerInitialized, setLocalReferenceLayerInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!map || !setReferenceLayers || localReferenceLayerInitialized) return;
 
@@ -1514,15 +1475,7 @@ function useReferenceLayerStorage() {
 
     map.addMany(layersToAdd);
     setReferenceLayers(referenceLayers);
-  }, [
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    localReferenceLayerInitialized,
-    map,
-    rendererJsonUtils,
-    setReferenceLayers,
-  ]);
+  }, [localReferenceLayerInitialized, map, setReferenceLayers]);
 
   // Saves the reference layers to browser storage everytime they change
   React.useEffect(() => {
@@ -1535,20 +1488,11 @@ function useReferenceLayerStorage() {
 function useUrlLayerStorage() {
   const key = 'tots_url_layers';
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    CSVLayer,
-    GeoRSSLayer,
-    KMLLayer,
-    Layer,
-    WMSLayer,
-  } = useEsriModulesContext();
   const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
-  const [
-    localUrlLayerInitialized,
-    setLocalUrlLayerInitialized,
-  ] = React.useState(false);
+  const [localUrlLayerInitialized, setLocalUrlLayerInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!map || !setUrlLayers || localUrlLayerInitialized) return;
 
@@ -1610,18 +1554,7 @@ function useUrlLayerStorage() {
     setUrlLayers((urlLayers) => {
       return [...urlLayers, ...newUrlLayers];
     });
-  }, [
-    // Esri Modules
-    CSVLayer,
-    GeoRSSLayer,
-    KMLLayer,
-    Layer,
-    WMSLayer,
-
-    localUrlLayerInitialized,
-    map,
-    setUrlLayers,
-  ]);
+  }, [localUrlLayerInitialized, map, setUrlLayers]);
 
   // Saves the url layers to browser storage everytime they change
   React.useEffect(() => {
@@ -1634,16 +1567,12 @@ function useUrlLayerStorage() {
 function usePortalLayerStorage() {
   const key = 'tots_portal_layers';
   const { setOptions } = React.useContext(DialogContext);
-  const { Layer, PortalItem } = useEsriModulesContext();
-  const { map, portalLayers, setPortalLayers } = React.useContext(
-    SketchContext,
-  );
+  const { map, portalLayers, setPortalLayers } =
+    React.useContext(SketchContext);
 
   // Retreives portal layers from browser storage when the app loads
-  const [
-    localPortalLayerInitialized,
-    setLocalPortalLayerInitialized,
-  ] = React.useState(false);
+  const [localPortalLayerInitialized, setLocalPortalLayerInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!map || !setPortalLayers || localPortalLayerInitialized) return;
 
@@ -1670,14 +1599,7 @@ function usePortalLayerStorage() {
     });
 
     setPortalLayers(portalLayers);
-  }, [
-    Layer,
-    PortalItem,
-    localPortalLayerInitialized,
-    map,
-    portalLayers,
-    setPortalLayers,
-  ]);
+  }, [localPortalLayerInitialized, map, portalLayers, setPortalLayers]);
 
   // Saves the portal layers to browser storage everytime they change
   React.useEffect(() => {
@@ -1691,14 +1613,11 @@ function useMapPositionStorage() {
   const key = 'tots_map_extent';
 
   const { setOptions } = React.useContext(DialogContext);
-  const { Extent, watchUtils } = useEsriModulesContext();
   const { mapView } = React.useContext(SketchContext);
 
   // Retreives the map position and zoom level from browser storage when the app loads
-  const [
-    localMapPositionInitialized,
-    setLocalMapPositionInitialized,
-  ] = React.useState(false);
+  const [localMapPositionInitialized, setLocalMapPositionInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!mapView || localMapPositionInitialized) return;
 
@@ -1711,7 +1630,7 @@ function useMapPositionStorage() {
     mapView.extent = Extent.fromJSON(extent);
 
     setLocalMapPositionInitialized(true);
-  }, [Extent, mapView, localMapPositionInitialized]);
+  }, [mapView, localMapPositionInitialized]);
 
   // Saves the map position and zoom level to browser storage whenever it changes
   const [
@@ -1727,7 +1646,6 @@ function useMapPositionStorage() {
 
     setWatchExtentInitialized(true);
   }, [
-    watchUtils,
     mapView,
     watchExtentInitialized,
     localMapPositionInitialized,
@@ -1740,14 +1658,11 @@ function useHomeWidgetStorage() {
   const key = 'tots_home_viewpoint';
 
   const { setOptions } = React.useContext(DialogContext);
-  const { Viewpoint, watchUtils } = useEsriModulesContext();
   const { homeWidget } = React.useContext(SketchContext);
 
   // Retreives the home widget viewpoint from browser storage when the app loads
-  const [
-    localHomeWidgetInitialized,
-    setLocalHomeWidgetInitialized,
-  ] = React.useState(false);
+  const [localHomeWidgetInitialized, setLocalHomeWidgetInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!homeWidget || localHomeWidgetInitialized) return;
 
@@ -1759,7 +1674,7 @@ function useHomeWidgetStorage() {
       const viewpoint = JSON.parse(viewpointStr) as any;
       homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
     }
-  }, [Viewpoint, homeWidget, localHomeWidgetInitialized]);
+  }, [homeWidget, localHomeWidgetInitialized]);
 
   // Saves the home widget viewpoint to browser storage whenever it changes
   const [
@@ -1778,7 +1693,7 @@ function useHomeWidgetStorage() {
     );
 
     setWatchHomeWidgetInitialized(true);
-  }, [watchUtils, homeWidget, watchHomeWidgetInitialized, setOptions]);
+  }, [homeWidget, watchHomeWidgetInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the currently selected sample layer.
@@ -1798,10 +1713,8 @@ function useSamplesLayerStorage() {
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
-  const [
-    localSampleLayerInitialized,
-    setLocalSampleLayerInitialized,
-  ] = React.useState(false);
+  const [localSampleLayerInitialized, setLocalSampleLayerInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (layers.length === 0 || localSampleLayerInitialized) return;
 
@@ -1892,10 +1805,8 @@ function useGenerateRandomMaskStorage() {
 
   // Retreives the selected sampling mask from browser storage
   // when the app loads
-  const [
-    localAoiLayerInitialized,
-    setLocalAoiLayerInitialized,
-  ] = React.useState(false);
+  const [localAoiLayerInitialized, setLocalAoiLayerInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (layers.length === 0 || localAoiLayerInitialized) return;
 
@@ -2175,9 +2086,8 @@ function useBasemapStorage() {
 function useUserDefinedSampleOptionsStorage() {
   const key = 'tots_user_defined_sample_options';
   const { setOptions } = React.useContext(DialogContext);
-  const { userDefinedOptions, setUserDefinedOptions } = React.useContext(
-    SketchContext,
-  );
+  const { userDefinedOptions, setUserDefinedOptions } =
+    React.useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
   const [
@@ -2284,9 +2194,8 @@ function useTablePanelStorage() {
   } = React.useContext(NavigationContext);
 
   // Retreives table info data from browser storage when the app loads
-  const [tablePanelInitialized, setTablePanelInitialized] = React.useState(
-    false,
-  );
+  const [tablePanelInitialized, setTablePanelInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (tablePanelInitialized) return;
 
@@ -2371,10 +2280,8 @@ function usePublishStorage() {
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
-  const [
-    localSampleTypeInitialized,
-    setLocalSampleTypeInitialized,
-  ] = React.useState(false);
+  const [localSampleTypeInitialized, setLocalSampleTypeInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (localSampleTypeInitialized) return;
 
@@ -2509,10 +2416,8 @@ function useDisplayModeStorage() {
   const { showAsPoints, setShowAsPoints } = React.useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
-  const [
-    localDisplayModeInitialized,
-    setLocalDisplayModeInitialized,
-  ] = React.useState(false);
+  const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (localDisplayModeInitialized) return;
 

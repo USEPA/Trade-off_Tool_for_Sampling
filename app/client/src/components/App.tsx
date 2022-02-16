@@ -3,6 +3,8 @@
 import React from 'react';
 import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
+import esriConfig from '@arcgis/core/config';
+import * as urlUtils from '@arcgis/core/core/urlUtils';
 // components
 import AlertDialog from 'components/AlertDialog';
 import ErrorBoundary from 'components/ErrorBoundary';
@@ -16,12 +18,13 @@ import { ReactTable } from 'components/ReactTable';
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
-import { LookupFilesProvider } from 'contexts/LookupFiles';
+import { LookupFilesProvider, useServicesContext } from 'contexts/LookupFiles';
 import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
 import { PublishProvider } from 'contexts/Publish';
 import { SketchProvider, SketchContext } from 'contexts/Sketch';
-import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
+import { getEnvironmentString } from 'utils/arcGisRestUtils';
+import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
 import { useSessionStorage } from 'utils/hooks';
 import { getSampleTableColumns } from 'utils/sketchUtils';
 import { isIE } from 'utils/utils';
@@ -271,6 +274,7 @@ function App() {
     selectedScenario,
   } = React.useContext(SketchContext);
 
+  const services = useServicesContext();
   useSessionStorage();
 
   const { height, width } = useWindowSize();
@@ -390,6 +394,85 @@ function App() {
     ids,
   };
 
+  // setup esri interceptors for logging to google analytics
+  const [interceptorsInitialized, setInterceptorsInitialized] =
+    React.useState(false);
+  React.useEffect(() => {
+    if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
+
+    var callId = 0;
+    var callDurations: any = {};
+
+    if (services.status === 'success') {
+      // Have ESRI use the proxy for communicating with the TOTS GP Server
+      urlUtils.addProxyRule({
+        proxyUrl: services.data.proxyUrl,
+        urlPrefix: 'https://ags.erg.com',
+      });
+      urlUtils.addProxyRule({
+        proxyUrl: services.data.proxyUrl,
+        urlPrefix: 'http://ags.erg.com',
+      });
+    }
+
+    if (!esriConfig?.request?.interceptors) return;
+
+    // intercept esri calls to gispub
+    const urls: string[] = ['https://www.arcgis.com/sharing/rest/'];
+    esriConfig.request.interceptors.push({
+      urls,
+
+      // Workaround for ESRI CORS cacheing issue, when switching between
+      // environments.
+      before: function (params) {
+        // if this environment has a phony variable use it
+        const envString = getEnvironmentString();
+        if (envString) {
+          params.requestOptions.query[envString] = 1;
+        }
+
+        // add the callId to the query so we can tie the response back
+        params.requestOptions.query['callId'] = callId;
+
+        // add the call's start time to the dictionary
+        callDurations[callId] = performance.now();
+
+        // increment the callId
+        callId = callId + 1;
+      },
+
+      // Log esri api calls to Google Analytics
+      after: function (response: any) {
+        // get the execution time for the call
+        const callId = response.requestOptions.query.callId;
+        const startTime = callDurations[callId];
+
+        logCallToGoogleAnalytics(response.url, 200, startTime);
+
+        // delete the execution time from the dictionary
+        delete callDurations[callId];
+      },
+
+      error: function (error) {
+        // get the execution time for the call
+        const details = error.details;
+        const callId = details.requestOptions.query.callId;
+        const startTime = callDurations[callId];
+
+        logCallToGoogleAnalytics(
+          details.url,
+          details.httpStatus ? details.httpStatus : error.message,
+          startTime,
+        );
+
+        // delete the execution time from the dictionary
+        delete callDurations[callId];
+      },
+    });
+
+    setInterceptorsInitialized(true);
+  }, [interceptorsInitialized, services]);
+
   return (
     <React.Fragment>
       <Global styles={gloablStyles} />
@@ -470,15 +553,12 @@ function App() {
                             e.preventDefault();
                             startY = e.clientY;
 
-                            const mapDiv = document.getElementById(
-                              'tots-map-div',
-                            ); // adjust height
-                            const tableDiv = document.getElementById(
-                              'tots-table-div',
-                            ); // adjust height
-                            const reactTableElm = document.getElementById(
-                              'tots-samples-table',
-                            );
+                            const mapDiv =
+                              document.getElementById('tots-map-div'); // adjust height
+                            const tableDiv =
+                              document.getElementById('tots-table-div'); // adjust height
+                            const reactTableElm =
+                              document.getElementById('tots-samples-table');
                             const buttonDiv = document.getElementById(
                               'tots-table-button-div',
                             ); // move top
@@ -651,7 +731,9 @@ function App() {
                                           }}
                                         >
                                           <i className="fas fa-search-plus" />
-                                          <span className="sr-only">Zoom to sample</span>
+                                          <span className="sr-only">
+                                            Zoom to sample
+                                          </span>
                                         </button>
                                       </div>
                                     ),
@@ -681,21 +763,19 @@ function App() {
 export default function AppContainer() {
   return (
     <LookupFilesProvider>
-      <EsriModulesProvider>
-        <DialogProvider>
-          <AuthenticationProvider>
-            <CalculateProvider>
-              <NavigationProvider>
-                <PublishProvider>
-                  <SketchProvider>
-                    <App />
-                  </SketchProvider>
-                </PublishProvider>
-              </NavigationProvider>
-            </CalculateProvider>
-          </AuthenticationProvider>
-        </DialogProvider>
-      </EsriModulesProvider>
+      <DialogProvider>
+        <AuthenticationProvider>
+          <CalculateProvider>
+            <NavigationProvider>
+              <PublishProvider>
+                <SketchProvider>
+                  <App />
+                </SketchProvider>
+              </PublishProvider>
+            </NavigationProvider>
+          </CalculateProvider>
+        </AuthenticationProvider>
+      </DialogProvider>
     </LookupFilesProvider>
   );
 }

@@ -3,11 +3,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/react';
+import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
+import Collection from '@arcgis/core/core/Collection';
+import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import LayerList from '@arcgis/core/widgets/LayerList';
+import Legend from '@arcgis/core/widgets/Legend';
+import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
+import Portal from '@arcgis/core/portal/Portal';
+import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
 import Switch from 'components/Switch';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
@@ -170,17 +178,6 @@ const graphicsIconStyles = css`
 
 // --- components (Toolbar) ---
 function Toolbar() {
-  const {
-    BasemapGallery,
-    Collection,
-    IdentityManager,
-    LayerList,
-    Legend,
-    OAuthInfo,
-    Portal,
-    PortalBasemapsSource,
-    Slider,
-  } = useEsriModulesContext();
   const { setContaminationMap } = React.useContext(CalculateContext);
   const { trainingMode } = React.useContext(NavigationContext);
   const {
@@ -227,7 +224,7 @@ function Toolbar() {
     IdentityManager.registerOAuthInfos([info]);
 
     setOAuthInfo(info);
-  }, [IdentityManager, OAuthInfo, setOAuthInfo, oAuthInfo]);
+  }, [setOAuthInfo, oAuthInfo]);
 
   // Check the user's sign in status
   const [
@@ -251,14 +248,7 @@ function Toolbar() {
       .catch(() => {
         setSignedIn(false);
       });
-  }, [
-    IdentityManager,
-    oAuthInfo,
-    Portal,
-    setSignedIn,
-    setPortal,
-    hasCheckedSignInStatus,
-  ]);
+  }, [oAuthInfo, setSignedIn, setPortal, hasCheckedSignInStatus]);
 
   // Get the user information
   React.useEffect(() => {
@@ -287,9 +277,8 @@ function Toolbar() {
     if (!mapView || layers.length === 0 || legendInitialized) return;
 
     // clear out the legend container
-    const legendContainer: HTMLElement | null = document.getElementById(
-      'legend-container',
-    );
+    const legendContainer: HTMLElement | null =
+      document.getElementById('legend-container');
     if (legendContainer) legendContainer.innerHTML = '';
 
     // create the layer list using the same styles and structure as the
@@ -545,7 +534,7 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols, layers, legendInitialized]);
+  }, [mapView, defaultSymbols, layers, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   React.useEffect(() => {
@@ -694,13 +683,7 @@ function Toolbar() {
       }),
     );
     setBasemapInitialized(true);
-  }, [
-    BasemapGallery,
-    PortalBasemapsSource,
-    mapView,
-    basemapInitialized,
-    setBasemapWidget,
-  ]);
+  }, [mapView, basemapInitialized, setBasemapWidget]);
 
   // Switches between point and polygon representations
   React.useEffect(() => {
@@ -745,9 +728,11 @@ function Toolbar() {
           offHandleColor="#129c12"
         />
         <span css={switchLabel}>Points</span>
-        <InfoIcon 
+        <InfoIcon
           id="poly-points-switch"
-          tooltip={'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'}
+          tooltip={
+            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+          }
           place="bottom"
           type="info"
         />

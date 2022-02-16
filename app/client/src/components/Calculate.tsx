@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -9,7 +11,6 @@ import Select from 'components/Select';
 import ShowLessMore from 'components/ShowLessMore';
 import NavigationButton from 'components/NavigationButton';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { CalculateContext } from 'contexts/Calculate';
 import { useServicesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
@@ -127,10 +128,8 @@ const fullWidthSelectStyles = css`
 
 // --- components (Calculate) ---
 function Calculate() {
-  const { FeatureSet, Geoprocessor, PopupTemplate } = useEsriModulesContext();
-  const { setGoTo, setGoToOptions, trainingMode } = React.useContext(
-    NavigationContext,
-  );
+  const { setGoTo, setGoToOptions, trainingMode } =
+    React.useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -534,7 +533,6 @@ function Calculate() {
           appendEnvironmentObjectParam(params);
 
           const request = geoprocessorFetch({
-            Geoprocessor,
             url: `${services.data.totsGPServer}/Contamination Results`,
             inputParameters: params,
           });

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import EsriSearch from '@arcgis/core/widgets/Search';
 // components
 import NavigationButton from 'components/NavigationButton';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 
 // --- styles (Search) ---
@@ -66,14 +66,13 @@ const searchBoxStyles = css`
 
 // --- components (Search) ---
 function Search() {
-  const { Search } = useEsriModulesContext();
   const { mapView } = React.useContext(SketchContext);
 
   const [searchInitialized, setSearchInitialized] = React.useState(false);
   React.useEffect(() => {
     if (!mapView || searchInitialized) return;
 
-    new Search({
+    new EsriSearch({
       view: mapView,
       container: 'search-container',
       locationEnabled: false,
@@ -82,7 +81,7 @@ function Search() {
     });
 
     setSearchInitialized(true);
-  }, [Search, mapView, searchInitialized]);
+  }, [mapView, searchInitialized]);
 
   // Starts a poll which eventually sets the id of the esri search input.
   // This code is needed to work aroudn a 508 compliance issue. Adding the

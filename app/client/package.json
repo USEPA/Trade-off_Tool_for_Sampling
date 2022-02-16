@@ -23,6 +23,7 @@
     "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
+    "@arcgis/core": "4.22.2",
     "@emotion/react": "11.7.1",
     "@emotion/styled": "11.6.0",
     "@reach/dialog": "0.16.2",
@@ -33,7 +34,6 @@
     "@types/react-table": "7.7.9",
     "@types/react-virtualized": "9.21.18",
     "@types/uuid": "8.3.4",
-    "esri-loader": "3.4.0",
     "excel4node": "1.7.2",
     "file-saver": "2.0.5",
     "react": "17.0.2",

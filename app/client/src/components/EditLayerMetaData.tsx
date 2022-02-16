@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
+import Portal from '@arcgis/core/portal/Portal';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
@@ -112,7 +113,6 @@ function EditScenario({
     portal,
     signedIn, //
   } = React.useContext(AuthenticationContext);
-  const { GraphicsLayer, GroupLayer } = useEsriModulesContext();
   const {
     edits,
     setEdits,
@@ -207,10 +207,7 @@ function EditScenario({
           return;
         }
 
-        if (
-          layer.layerType === 'Samples' ||
-          layer.layerType === 'VSP'
-        ) {
+        if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
           layer.sketchLayer.visible = false;
         }
       });
@@ -219,28 +216,24 @@ function EditScenario({
       let tempSketchLayer: LayerType | null = null;
       if (addDefaultSampleLayer) {
         edits.edits.forEach((edit) => {
-          if(
-            edit.type === 'layer' && 
-              (edit.layerType === 'Samples' || edit.layerType === 'VSP')
+          if (
+            edit.type === 'layer' &&
+            (edit.layerType === 'Samples' || edit.layerType === 'VSP')
           ) {
             newLayers.push(edit);
           }
         });
 
-        if(newLayers.length === 0) {
+        if (newLayers.length === 0) {
           // no sketchable layers were available, create one
-          tempSketchLayer = createSampleLayer(
-            GraphicsLayer,
-            undefined,
-            groupLayer,
-          );
+          tempSketchLayer = createSampleLayer(undefined, groupLayer);
           newLayers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
         } else {
           // update the parentLayer of layers being added to the group layer
           setLayers((layers) => {
             newLayers.forEach((newLayer) => {
               const layer = layers.find((l) => l.layerId === newLayer.layerId);
-              if(!layer) return;
+              if (!layer) return;
 
               layer.parentLayer = groupLayer;
               groupLayer.add(layer.sketchLayer);
@@ -282,9 +275,7 @@ function EditScenario({
       // make a copy of the edits context variable
       setEdits((edits) => {
         const newEdits = edits.edits.filter((edit) => {
-          const idx = newLayers.findIndex((l) => 
-            l.layerId === edit.layerId
-          );
+          const idx = newLayers.findIndex((l) => l.layerId === edit.layerId);
 
           return idx === -1;
         });
@@ -293,14 +284,10 @@ function EditScenario({
           let visible = edit.visible;
 
           if (edit.type === 'scenario') {
-            visible =
-              edit.layerId === newScenario.layerId ? true : false;
+            visible = edit.layerId === newScenario.layerId ? true : false;
           }
           if (edit.type === 'layer') {
-            if (
-              edit.layerType === 'Samples' ||
-              edit.layerType === 'VSP'
-            ) {
+            if (edit.layerType === 'Samples' || edit.layerType === 'VSP') {
               visible = false;
             }
           }
@@ -487,7 +474,6 @@ function EditLayer({
   initialStatus = 'none',
   onSave,
 }: EditLayerProps) {
-  const { GraphicsLayer } = useEsriModulesContext();
   const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
   const {
     edits,
@@ -568,7 +554,8 @@ function EditLayer({
       });
 
       // update the layer in edits and the decisionunit attribute for each graphic
-      const sketchLayerGraphics = initialLayer.sketchLayer as __esri.GraphicsLayer;
+      const sketchLayerGraphics =
+        initialLayer.sketchLayer as __esri.GraphicsLayer;
       const graphics = sketchLayerGraphics.graphics;
       graphics.forEach((graphic) => {
         graphic.attributes.DECISIONUNIT = layerName;
@@ -583,11 +570,7 @@ function EditLayer({
       setEdits(editsCopy);
     } else {
       // create the layer
-      const tempLayer = createSampleLayer(
-        GraphicsLayer,
-        layerName,
-        parentLayer,
-      );
+      const tempLayer = createSampleLayer(layerName, parentLayer);
 
       // add the new layer to layers
       setLayers((layers) => {
@@ -714,7 +697,6 @@ function EditCustomSampleTypesTable({
   initialStatus = 'none',
   onSave,
 }: EditCustomSampleTypesTableProps) {
-  const { Portal } = useEsriModulesContext();
   const {
     portal,
     signedIn, //
@@ -767,7 +749,7 @@ function EditCustomSampleTypesTable({
         console.error(err);
         setFeatureServices({ status: 'failure', data: [] });
       });
-  }, [Portal, portal, queryInitialized]);
+  }, [portal, queryInitialized]);
 
   const handleSave = () => {
     setPublishSampleTableMetaData({

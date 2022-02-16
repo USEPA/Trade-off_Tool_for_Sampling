@@ -2,6 +2,10 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import Collection from '@arcgis/core/core/Collection';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+import Graphic from '@arcgis/core/Graphic';
+import Polygon from '@arcgis/core/geometry/Polygon';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -13,7 +17,6 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import {
   useSampleTypesContext,
   useServicesContext,
@@ -405,16 +408,10 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
-  const {
-    userInfo,
-  } = React.useContext(AuthenticationContext);
+  const { userInfo } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
-  const {
-    setGoTo,
-    setGoToOptions,
-    trainingMode,
-    setTrainingMode,
-  } = React.useContext(NavigationContext);
+  const { setGoTo, setGoToOptions, trainingMode, setTrainingMode } =
+    React.useContext(NavigationContext);
   const { setSampleTypeSelections } = React.useContext(PublishContext);
   const {
     autoZoom,
@@ -444,14 +441,6 @@ function LocateSamples() {
     allSampleOptions,
     showAsPoints,
   } = React.useContext(SketchContext);
-  const {
-    Collection,
-    FeatureSet,
-    Geoprocessor,
-    Graphic,
-    GraphicsLayer,
-    Polygon,
-  } = useEsriModulesContext();
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
@@ -480,7 +469,6 @@ function LocateSamples() {
     if (nextScenario) setSelectedScenario(nextScenario);
     if (nextLayer) setSketchLayer(nextLayer);
   }, [
-    GraphicsLayer,
     edits,
     layersInitialized,
     layers,
@@ -497,7 +485,7 @@ function LocateSamples() {
   React.useEffect(() => {
     if (!map || !layersInitialized || aoiSketchLayer) return;
 
-    const newAoiSketchLayer = getDefaultSamplingMaskLayer(GraphicsLayer);
+    const newAoiSketchLayer = getDefaultSamplingMaskLayer();
 
     // add the layer to the map
     setLayers((layers) => {
@@ -506,14 +494,7 @@ function LocateSamples() {
 
     // set the active sketch layer
     setAoiSketchLayer(newAoiSketchLayer);
-  }, [
-    GraphicsLayer,
-    map,
-    aoiSketchLayer,
-    setAoiSketchLayer,
-    layersInitialized,
-    setLayers,
-  ]);
+  }, [map, aoiSketchLayer, setAoiSketchLayer, layersInitialized, setLayers]);
 
   const [numberRandomSamples, setNumberRandomSamples] = React.useState('33');
   const [
@@ -694,7 +675,6 @@ function LocateSamples() {
           appendEnvironmentObjectParam(props);
 
           const request = geoprocessorFetch({
-            Geoprocessor,
             url: `${services.data.totsGPServer}/Generate%20Random`,
             inputParameters: props,
           });
@@ -767,7 +747,7 @@ function LocateSamples() {
                 });
 
                 graphicsToAdd.push(poly);
-                pointsToAdd.push(convertToPoint(Graphic, poly));
+                pointsToAdd.push(convertToPoint(poly));
               });
             }
 
@@ -860,10 +840,8 @@ function LocateSamples() {
       });
   }
 
-  const [
-    userDefinedSampleType,
-    setUserDefinedSampleType,
-  ] = React.useState<SampleSelectType | null>(null);
+  const [userDefinedSampleType, setUserDefinedSampleType] =
+    React.useState<SampleSelectType | null>(null);
   const [editingStatus, setEditingStatus] = React.useState<EditType | null>(
     null,
   );
@@ -1151,10 +1129,8 @@ function LocateSamples() {
   const [generateRandomMode, setGenerateRandomMode] = React.useState<
     'draw' | 'file' | ''
   >('');
-  const [
-    selectedAoiFile,
-    setSelectedAoiFile,
-  ] = React.useState<LayerType | null>(null);
+  const [selectedAoiFile, setSelectedAoiFile] =
+    React.useState<LayerType | null>(null);
 
   // get a list of scenarios from edits
   const scenarios = getScenarios(edits);
@@ -1349,7 +1325,9 @@ function LocateSamples() {
                         >
                           <i
                             className={
-                              editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                              editScenarioVisible
+                                ? 'fas fa-times'
+                                : 'fas fa-edit'
                             }
                           />
                           <span className="sr-only">
@@ -1476,10 +1454,11 @@ function LocateSamples() {
                               const editedScenario = edits.edits[
                                 index
                               ] as ScenarioEditsType;
-                              editedScenario.layers = editedScenario.layers.filter(
-                                (layer) =>
-                                  layer.layerId !== sketchLayer.layerId,
-                              );
+                              editedScenario.layers =
+                                editedScenario.layers.filter(
+                                  (layer) =>
+                                    layer.layerId !== sketchLayer.layerId,
+                                );
 
                               return {
                                 count: edits.count + 1,
@@ -1491,8 +1470,10 @@ function LocateSamples() {
                               };
                             });
 
-                            if(sketchLayer.sketchLayer) parentLayer.remove(sketchLayer.sketchLayer);
-                            if(sketchLayer.pointsLayer) parentLayer.remove(sketchLayer.pointsLayer);
+                            if (sketchLayer.sketchLayer)
+                              parentLayer.remove(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer)
+                              parentLayer.remove(sketchLayer.pointsLayer);
                           } else {
                             // remove the scenario from edits
                             setEdits((edits) => {
@@ -1580,7 +1561,7 @@ function LocateSamples() {
                                   ...editsScenario.layers.slice(0, layerIndex),
                                   ...editsScenario.layers.slice(layerIndex + 1),
                                 ];
-                                if(editsScenario.status === 'published') {
+                                if (editsScenario.status === 'published') {
                                   editsScenario.status = 'edited';
                                 }
 
@@ -1857,9 +1838,10 @@ function LocateSamples() {
 
                               const shapeType =
                                 sampleAttributes[sampleTypeUuid].ShapeType;
-                              const edited = userDefinedAttributes.sampleTypes.hasOwnProperty(
-                                sampleTypeUuid,
-                              );
+                              const edited =
+                                userDefinedAttributes.sampleTypes.hasOwnProperty(
+                                  sampleTypeUuid,
+                                );
                               return (
                                 <SketchButton
                                   key={index}
@@ -2220,7 +2202,8 @@ function LocateSamples() {
                                           return;
                                         }
 
-                                        const graphicsToRemove: __esri.Graphic[] = [];
+                                        const graphicsToRemove: __esri.Graphic[] =
+                                          [];
                                         layer.sketchLayer.graphics.forEach(
                                           (graphic) => {
                                             if (
@@ -2236,7 +2219,8 @@ function LocateSamples() {
                                         );
 
                                         if (graphicsToRemove.length > 0) {
-                                          const collection = new Collection<__esri.Graphic>();
+                                          const collection =
+                                            new Collection<__esri.Graphic>();
                                           collection.addMany(graphicsToRemove);
                                           editsCopy = updateLayerEdits({
                                             edits: editsCopy,
@@ -2506,8 +2490,8 @@ function LocateSamples() {
                           onChange={(ev) => setTtps(ev.target.value)}
                         /> */}
                         <label htmlFor="lod_p-input">
-                          Limit of Detection for Porous Surfaces per Sample (CFU){' '}
-                          <em>(only used for reference)</em>
+                          Limit of Detection for Porous Surfaces per Sample
+                          (CFU) <em>(only used for reference)</em>
                         </label>
                         <input
                           id="lod_p-input"
@@ -2517,8 +2501,8 @@ function LocateSamples() {
                           onChange={(ev) => setLodp(ev.target.value)}
                         />
                         <label htmlFor="lod_non-input">
-                          Limit of Detection for Nonporous Surfaces per Sample (CFU){' '}
-                          <em>(only used for reference)</em>
+                          Limit of Detection for Nonporous Surfaces per Sample
+                          (CFU) <em>(only used for reference)</em>
                         </label>
                         <input
                           id="lod_non-input"
@@ -2709,9 +2693,8 @@ function LocateSamples() {
                                 }
 
                                 // add/update the sample's attributes
-                                sampleAttributes[
-                                  typeUuid as any
-                                ] = newAttributes;
+                                sampleAttributes[typeUuid as any] =
+                                  newAttributes;
                                 setUserDefinedAttributes((item) => {
                                   let status:
                                     | 'add'
@@ -2796,13 +2779,15 @@ function LocateSamples() {
                                     }
 
                                     const editedGraphics = updateAttributes({
-                                      graphics: layer.sketchLayer.graphics.toArray(),
+                                      graphics:
+                                        layer.sketchLayer.graphics.toArray(),
                                       newAttributes,
                                       oldType,
                                     });
                                     if (layer.pointsLayer) {
                                       updateAttributes({
-                                        graphics: layer.pointsLayer.graphics.toArray(),
+                                        graphics:
+                                          layer.pointsLayer.graphics.toArray(),
                                         newAttributes,
                                         oldType,
                                         symbol: udtSymbol,
@@ -2810,7 +2795,8 @@ function LocateSamples() {
                                     }
 
                                     if (editedGraphics.length > 0) {
-                                      const collection = new Collection<__esri.Graphic>();
+                                      const collection =
+                                        new Collection<__esri.Graphic>();
                                       collection.addMany(editedGraphics);
                                       editsCopy = updateLayerEdits({
                                         edits: editsCopy,

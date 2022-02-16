@@ -1,9 +1,14 @@
 /** @jsxImportSource @emotion/react */
 
 import React from 'react';
+import Handles from '@arcgis/core/core/Handles';
+import Home from '@arcgis/core/widgets/Home';
+import Locate from '@arcgis/core/widgets/Locate';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
+import ScaleBar from '@arcgis/core/widgets/ScaleBar';
+import SketchViewModel from '@arcgis/core/widgets/Sketch/SketchViewModel';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
@@ -34,9 +39,8 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
   // timeout is necessary to handle race condition of loading indicator classname vs prevClassName
   setTimeout(() => {
     // get all elements with prevClassName and replace it with nextClassName
-    const elms: HTMLCollectionOf<Element> = document.getElementsByClassName(
-      prevClassName,
-    );
+    const elms: HTMLCollectionOf<Element> =
+      document.getElementsByClassName(prevClassName);
     for (let i = 0; i < elms.length; i++) {
       const el = elms[i];
       el.className = el.className.replace(prevClassName, nextClassName);
@@ -91,9 +95,8 @@ type Props = {
 
 function MapWidgets({ mapView }: Props) {
   const { userInfo } = React.useContext(AuthenticationContext);
-  const { currentPanel, trainingMode, getTrainingMode } = React.useContext(
-    NavigationContext,
-  );
+  const { currentPanel, trainingMode, getTrainingMode } =
+    React.useContext(NavigationContext);
   const {
     defaultSymbols,
     edits,
@@ -116,15 +119,6 @@ function MapWidgets({ mapView }: Props) {
     setLayers,
     map,
   } = React.useContext(SketchContext);
-  const {
-    Graphic,
-    Handles,
-    Home,
-    Locate,
-    PopupTemplate,
-    ScaleBar,
-    SketchViewModel,
-  } = useEsriModulesContext();
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
 
@@ -139,7 +133,7 @@ function MapWidgets({ mapView }: Props) {
     mapView.ui.move('zoom', 'top-right');
 
     setHomeWidget(widget);
-  }, [mapView, Home, homeWidget, setHomeWidget]);
+  }, [mapView, homeWidget, setHomeWidget]);
 
   // Creates and adds the scale bar widget to the map
   const [scaleBar, setScaleBar] = React.useState<__esri.ScaleBar | null>(null);
@@ -152,7 +146,7 @@ function MapWidgets({ mapView }: Props) {
     });
     mapView.ui.add(newScaleBar, { position: 'bottom-right', index: 1 });
     setScaleBar(newScaleBar);
-  }, [ScaleBar, mapView, scaleBar]);
+  }, [mapView, scaleBar]);
 
   // Creates and adds the locate widget to the map.
   const [
@@ -176,7 +170,7 @@ function MapWidgets({ mapView }: Props) {
 
     mapView.ui.add(widget, { position: 'top-right', index: 2 });
     setLocateWidget(widget);
-  }, [mapView, Locate, locateWidget]);
+  }, [mapView, locateWidget]);
 
   // Creates the SketchViewModel
   React.useEffect(() => {
@@ -195,14 +189,7 @@ function MapWidgets({ mapView }: Props) {
       tempSvm._internalGraphicsLayer.id;
 
     setSketchVM(svm);
-  }, [
-    SketchViewModel,
-    defaultSymbols,
-    mapView,
-    sketchVM,
-    setSketchVM,
-    sketchLayer,
-  ]);
+  }, [defaultSymbols, mapView, sketchVM, setSketchVM, sketchLayer]);
 
   // Creates the SketchViewModel
   React.useEffect(() => {
@@ -220,14 +207,7 @@ function MapWidgets({ mapView }: Props) {
     tempWindow.aoiSketchVmInternalLayerId = tempSvm._internalGraphicsLayer.id;
 
     setAoiSketchVM(svm);
-  }, [
-    SketchViewModel,
-    defaultSymbols,
-    mapView,
-    aoiSketchVM,
-    setAoiSketchVM,
-    aoiSketchLayer,
-  ]);
+  }, [defaultSymbols, mapView, aoiSketchVM, setAoiSketchVM, aoiSketchLayer]);
 
   // Updates the selected layer of the sketchViewModel
   React.useEffect(() => {
@@ -240,7 +220,7 @@ function MapWidgets({ mapView }: Props) {
       sketchVM.layer = sketchLayer.sketchLayer;
     } else {
       // disable the sketch vm for any panel other than locateSamples
-      sketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+      sketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
   }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
 
@@ -262,7 +242,7 @@ function MapWidgets({ mapView }: Props) {
       ] as any;
     } else {
       // disable the sketch vm for any panel other than locateSamples
-      aoiSketchVM.layer = (null as unknown) as __esri.GraphicsLayer;
+      aoiSketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
   }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
 
@@ -339,7 +319,7 @@ function MapWidgets({ mapView }: Props) {
               (layer: any) => `${layerId}-points` === layer.id,
             );
             if (pointLayer) {
-              pointLayer.add(convertToPoint(Graphic, graphic));
+              pointLayer.add(convertToPoint(graphic));
             }
           }
 
@@ -379,7 +359,9 @@ function MapWidgets({ mapView }: Props) {
           // find the points version of the layer
           event.graphics.forEach((graphic) => {
             const layerId = graphic.layer?.id;
-            const pointLayer: __esri.GraphicsLayer = (graphic.layer as any).parent.layers.find(
+            const pointLayer: __esri.GraphicsLayer = (
+              graphic.layer as any
+            ).parent.layers.find(
               (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
             );
             if (!pointLayer) return;
@@ -442,7 +424,9 @@ function MapWidgets({ mapView }: Props) {
         // find the points version of the layer
         event.graphics.forEach((graphic: any) => {
           const layerId = tempSketchVM.layer?.id;
-          const pointLayer: __esri.GraphicsLayer = (tempSketchVM.layer as any).parent.layers.find(
+          const pointLayer: __esri.GraphicsLayer = (
+            tempSketchVM.layer as any
+          ).parent.layers.find(
             (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
           );
           if (!pointLayer) return;
@@ -463,7 +447,7 @@ function MapWidgets({ mapView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, Graphic, PopupTemplate, userInfo],
+    [createBuffer, getPopupTemplate, getTrainingMode, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -603,10 +587,10 @@ function MapWidgets({ mapView }: Props) {
     // update the edits state
     setEdits(editsCopy);
 
-    const newScenario = editsCopy.edits.find((e) => 
-      e.type === 'scenario' && e.layerId === selectedScenario?.layerId
+    const newScenario = editsCopy.edits.find(
+      (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
     ) as ScenarioEditsType;
-    if(newScenario) setSelectedScenario(newScenario);
+    if (newScenario) setSelectedScenario(newScenario);
 
     // updated the edited layer
     setLayers([
@@ -621,7 +605,15 @@ function MapWidgets({ mapView }: Props) {
         return layer ? { ...layer, editType: updateLayer.eventType } : null;
       });
     }
-  }, [edits, setEdits, updateLayer, layers, setLayers, selectedScenario, setSelectedScenario]);
+  }, [
+    edits,
+    setEdits,
+    updateLayer,
+    layers,
+    setLayers,
+    selectedScenario,
+    setSelectedScenario,
+  ]);
 
   // Reactivate aoiSketchVM after the updateSketchEvent is null
   React.useEffect(() => {
@@ -675,7 +667,7 @@ function MapWidgets({ mapView }: Props) {
         }
       }
     });
-  }, [PopupTemplate, getPopupTemplate, trainingMode, layers]);
+  }, [getPopupTemplate, trainingMode, layers]);
 
   // Gets the graphics to be highlighted and highlights them
   const [handles] = React.useState(new Handles());
@@ -728,13 +720,13 @@ function MapWidgets({ mapView }: Props) {
       handles.remove(group);
     } catch (e) {}
 
-    // Highlights graphics on the provided layer that matches the provided 
+    // Highlights graphics on the provided layer that matches the provided
     // list of uuids.
     function highlightGraphics(
-      layer: __esri.GraphicsLayer | __esri.FeatureLayer | null, 
+      layer: __esri.GraphicsLayer | __esri.FeatureLayer | null,
       uuids: any,
     ) {
-      if(!layer) return;
+      if (!layer) return;
 
       const itemsToHighlight: __esri.Graphic[] = [];
       const tempLayer = layer as __esri.GraphicsLayer;
@@ -743,7 +735,7 @@ function MapWidgets({ mapView }: Props) {
           itemsToHighlight.push(graphic);
         }
       });
-      
+
       // Highlight the graphics with a contam value
       if (itemsToHighlight.length === 0) return;
 

@@ -5,6 +5,14 @@ import { css } from '@emotion/react';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+import Field from '@arcgis/core/layers/support/Field';
+import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
+import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
 // components
 import ColorPicker from 'components/ColorPicker';
 import MessageBox from 'components/MessageBox';
@@ -15,7 +23,6 @@ import {
   useSampleTypesContext,
   useServicesContext,
 } from 'contexts/LookupFiles';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
@@ -232,9 +239,8 @@ type UploadStatusType =
 function FilePanel() {
   const { portal, userInfo } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
-  const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
-    NavigationContext,
-  );
+  const { goToOptions, setGoToOptions, trainingMode } =
+    React.useContext(NavigationContext);
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
@@ -253,19 +259,6 @@ function FilePanel() {
     setSelectedScenario,
     setSketchLayer,
   } = React.useContext(SketchContext);
-  const {
-    GraphicsLayer,
-    FeatureLayer,
-    FeatureSet,
-    Field,
-    geometryJsonUtils,
-    Graphic,
-    Geoprocessor,
-    KMLLayer,
-    PopupTemplate,
-    rendererJsonUtils,
-    SpatialReference,
-  } = useEsriModulesContext();
 
   const getPopupTemplate = useDynamicPopup();
   const { createBuffer, sampleValidation } = useGeometryTools();
@@ -276,9 +269,8 @@ function FilePanel() {
   const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
   const [generateResponse, setGenerateResponse] = React.useState<any>(null);
   const [featuresAdded, setFeaturesAdded] = React.useState(false);
-  const [fileValidationStarted, setFileValidationStarted] = React.useState(
-    false,
-  );
+  const [fileValidationStarted, setFileValidationStarted] =
+    React.useState(false);
   const [fileValidated, setFileValidated] = React.useState(false);
   const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
   const [error, setError] = React.useState<ErrorType | null>(null);
@@ -372,8 +364,10 @@ function FilePanel() {
   React.useEffect(() => {
     if (!portal || batchGeocodeServices) return;
 
-    const worldExp = /(arcgis.com\/arcgis\/rest\/services\/world\/geocodeserver).*/gi;
-    const worldProxyExp = /(\/servers\/[\da-z.-]+\/rest\/services\/world\/geocodeserver).*/gi;
+    const worldExp =
+      /(arcgis.com\/arcgis\/rest\/services\/world\/geocodeserver).*/gi;
+    const worldProxyExp =
+      /(\/servers\/[\da-z.-]+\/rest\/services\/world\/geocodeserver).*/gi;
 
     // get batch geocode services
     const newBatchGeocodeServices: any[] = [];
@@ -638,7 +632,6 @@ function FilePanel() {
               appendEnvironmentObjectParam(params);
 
               const request = geoprocessorFetch({
-                Geoprocessor,
                 url: `${services.data.totsGPServer}/VSP%20Import`,
                 inputParameters: params,
               });
@@ -726,15 +719,6 @@ function FilePanel() {
         window.logErrorToGa(err);
       });
   }, [
-    // esri modules
-    FeatureSet,
-    Field,
-    geometryJsonUtils,
-    Geoprocessor,
-    Graphic,
-    SpatialReference,
-
-    // app
     generalizeFeatures,
     analyzeResponse,
     file,
@@ -861,9 +845,11 @@ function FilePanel() {
       listMode: 'hide',
     });
 
-    const groupLayer = selectedScenario ? map.layers.find(
-      (layer) => layer.id === selectedScenario?.layerId,
-    ) as __esri.GroupLayer : null;
+    const groupLayer = selectedScenario
+      ? (map.layers.find(
+          (layer) => layer.id === selectedScenario?.layerId,
+        ) as __esri.GroupLayer)
+      : null;
 
     // create the graphics layer
     const layerToAdd: LayerType = {
@@ -974,9 +960,10 @@ function FilePanel() {
         }
 
         // set the symbol styles based on the sample/layer type
-        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-          graphic.symbol =
-            defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+        if (
+          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+        ) {
+          graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         } else {
           graphic.symbol =
             defaultSymbols.symbols[
@@ -988,20 +975,22 @@ function FilePanel() {
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
         // Add graphics to the layers based on what the original geometry type is
-        if(graphic.geometry.type === 'point') {
-          points.push(new Graphic({
-            attributes: graphic.attributes,
-            geometry: graphic.geometry,
-            popupTemplate: graphic.popupTemplate,
-            symbol: getPointSymbol(graphic),
-          }));
+        if (graphic.geometry.type === 'point') {
+          points.push(
+            new Graphic({
+              attributes: graphic.attributes,
+              geometry: graphic.geometry,
+              popupTemplate: graphic.popupTemplate,
+              symbol: getPointSymbol(graphic),
+            }),
+          );
 
           const polyGraphic = graphic.clone();
           createBuffer(polyGraphic);
           graphics.push(polyGraphic);
         } else {
           graphics.push(graphic);
-          points.push(convertToPoint(Graphic, graphic));
+          points.push(convertToPoint(graphic));
         }
       });
     });
@@ -1044,8 +1033,7 @@ function FilePanel() {
 
       const scenario = editsCopy.edits.find(
         (edit) =>
-          edit.type === 'scenario' &&
-          edit.layerId === selectedScenario.layerId,
+          edit.type === 'scenario' && edit.layerId === selectedScenario.layerId,
       ) as ScenarioEditsType;
       const newLayer = scenario.layers.find(
         (layer) => layer.layerId === layerToAdd.layerId,
@@ -1070,7 +1058,7 @@ function FilePanel() {
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
       if (selectedScenario && groupLayer) {
         groupLayer.add(layerToAdd.sketchLayer);
-        if(layerToAdd.pointsLayer) {
+        if (layerToAdd.pointsLayer) {
           groupLayer.add(layerToAdd.pointsLayer);
         }
       } else {
@@ -1080,12 +1068,6 @@ function FilePanel() {
 
     setUploadStatus('success');
   }, [
-    // esri modules
-    Graphic,
-    GraphicsLayer,
-    PopupTemplate,
-
-    // app
     createBuffer,
     defaultSymbols,
     edits,
@@ -1207,14 +1189,6 @@ function FilePanel() {
 
     setUploadStatus('success');
   }, [
-    // esri modules
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    Graphic,
-    rendererJsonUtils,
-
-    // app
     layerType,
     generateResponse,
     featuresAdded,
@@ -1287,7 +1261,7 @@ function FilePanel() {
 
       window.logErrorToGa(ex);
     }
-  }, [KMLLayer, mapView, file]);
+  }, [mapView, file]);
 
   const filename = file?.file?.name ? file.file.name : '';
 

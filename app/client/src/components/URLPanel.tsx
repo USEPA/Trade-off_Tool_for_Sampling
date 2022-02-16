@@ -2,11 +2,15 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import CSVLayer from '@arcgis/core/layers/CSVLayer';
+import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
+import KMLLayer from '@arcgis/core/layers/KMLLayer';
+import Layer from '@arcgis/core/layers/Layer';
+import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 // config
 import {
@@ -53,14 +57,6 @@ type SupportedUrlLayerTypes =
 
 function URLPanel() {
   const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
-  const {
-    CSVLayer,
-    GeoRSSLayer,
-    KMLLayer,
-    Layer,
-    WMSLayer,
-    //WMTSLayer, // not yet supported in the 4.X API
-  } = useEsriModulesContext();
 
   // filters
   const [

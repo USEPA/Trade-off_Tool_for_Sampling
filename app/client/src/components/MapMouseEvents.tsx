@@ -1,6 +1,6 @@
 import React from 'react';
+import Collection from '@arcgis/core/core/Collection';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
@@ -26,11 +26,9 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView }: Props) {
-  const { Collection } = useEsriModulesContext();
   const { setTablePanelExpanded } = React.useContext(NavigationContext);
-  const { edits, setEdits, layers, setSelectedSampleIds } = React.useContext(
-    SketchContext,
-  );
+  const { edits, setEdits, layers, setSelectedSampleIds } =
+    React.useContext(SketchContext);
 
   const handleMapClick = React.useCallback(
     (event, mapView) => {
@@ -136,10 +134,8 @@ function MapMouseEvents({ mapView }: Props) {
     setInitialized(true);
   }, [mapView, handleMapClick, initialized]);
 
-  const [
-    sampleToDelete,
-    setSampleToDelete,
-  ] = React.useState<__esri.Graphic | null>(null);
+  const [sampleToDelete, setSampleToDelete] =
+    React.useState<__esri.Graphic | null>(null);
   React.useEffect(() => {
     if (!sampleToDelete) return;
 
@@ -148,7 +144,8 @@ function MapMouseEvents({ mapView }: Props) {
 
     // find the layer
     const layer = layers.find(
-      (layer) => layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
+      (layer) =>
+        layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
     );
     if (!layer || layer.sketchLayer.type !== 'graphics') return;
 
@@ -192,11 +189,10 @@ function MapMouseEvents({ mapView }: Props) {
     mapView?.popup.close();
 
     setSampleToDelete(null);
-  }, [Collection, edits, setEdits, layers, mapView, sampleToDelete]);
+  }, [edits, setEdits, layers, mapView, sampleToDelete]);
 
-  const [popupActionsInitialized, setPopupActionsInitialized] = React.useState(
-    false,
-  );
+  const [popupActionsInitialized, setPopupActionsInitialized] =
+    React.useState(false);
   React.useEffect(() => {
     if (!mapView || popupActionsInitialized) return;
 

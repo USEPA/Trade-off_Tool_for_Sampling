@@ -2,13 +2,23 @@
 
 import React from 'react';
 import { css } from '@emotion/react';
+import Collection from '@arcgis/core/core/Collection';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import Field from '@arcgis/core/layers/support/Field';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
+import Layer from '@arcgis/core/layers/Layer';
+import Portal from '@arcgis/core/portal/Portal';
+import PortalItem from '@arcgis/core/portal/PortalItem';
+import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
+import * as watchUtils from '@arcgis/core/core/watchUtils';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
@@ -204,7 +214,6 @@ type SearchResultsType = {
 function SearchPanel() {
   const { portal, userInfo } = React.useContext(AuthenticationContext);
   const { mapView } = React.useContext(SketchContext);
-  const { Portal, watchUtils } = useEsriModulesContext();
 
   // filters
   const [
@@ -236,10 +245,8 @@ function SearchPanel() {
     searchResults,
     setSearchResults, //
   ] = React.useState<SearchResultsType>({ status: 'none', data: null });
-  const [
-    currentExtent,
-    setCurrentExtent,
-  ] = React.useState<__esri.Extent | null>(null);
+  const [currentExtent, setCurrentExtent] =
+    React.useState<__esri.Extent | null>(null);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [sortBy, setSortBy] = React.useState<SortByType>({
     value: 'none',
@@ -399,7 +406,6 @@ function SearchPanel() {
   }, [
     currentExtent,
     group,
-    Portal,
     portal,
     layerTypeFilter,
     location,
@@ -460,7 +466,7 @@ function SearchPanel() {
 
         window.logErrorToGa(err);
       });
-  }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
+  }, [pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
   const [watchViewInitialized, setWatchViewInitialized] = React.useState(false);
@@ -477,7 +483,7 @@ function SearchPanel() {
     return function cleanup() {
       watchEvent.remove();
     };
-  }, [mapView, watchUtils, watchViewInitialized]);
+  }, [mapView, watchViewInitialized]);
 
   const [showFilterOptions, setShowFilterOptions] = React.useState(false);
 
@@ -549,7 +555,9 @@ function SearchPanel() {
           onClick={(ev) => setSearch(searchText)}
         >
           <i className="fas fa-search"></i>
-          <span className="sr-only" css={highContrastSpan}>Search</span>
+          <span className="sr-only" css={highContrastSpan}>
+            Search
+          </span>
         </button>
       </form>
       <div css={filterContainerStyles}>
@@ -811,18 +819,6 @@ function ResultCard({ result }: ResultCardProps) {
   const { setSampleTypeSelections } = React.useContext(PublishContext);
   const sampleTypeContext = useSampleTypesContext();
   const {
-    Collection,
-    FeatureLayer,
-    Field,
-    Graphic,
-    GraphicsLayer,
-    GroupLayer,
-    Layer,
-    PortalItem,
-    rendererJsonUtils,
-    watchUtils,
-  } = useEsriModulesContext();
-  const {
     defaultSymbols,
     setDefaultSymbols,
     edits,
@@ -854,7 +850,8 @@ function ResultCard({ result }: ResultCardProps) {
 
     // check if result was added as a user defined sample type
     Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
-      if (sample.serviceId === result.id && sample.status === 'published-ago') added = true;
+      if (sample.serviceId === result.id && sample.status === 'published-ago')
+        added = true;
     });
 
     setAdded(added);
@@ -986,9 +983,8 @@ function ResultCard({ result }: ResultCardProps) {
                     const attributes = newAttributes[key];
                     sampleAttributes[attributes.attributes.TYPEUUID as any] =
                       attributes.attributes;
-                    item.sampleTypes[
-                      attributes.attributes.TYPEUUID as any
-                    ] = attributes;
+                    item.sampleTypes[attributes.attributes.TYPEUUID as any] =
+                      attributes;
                   });
 
                   return {
@@ -1370,7 +1366,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // convert the polygon graphics into points
                   let pointGraphics: __esri.Graphic[] = [];
                   graphicsList.forEach((graphic) => {
-                    pointGraphics.push(convertToPoint(Graphic, graphic));
+                    pointGraphics.push(convertToPoint(graphic));
                   });
 
                   const pointsLayer = new GraphicsLayer({
@@ -1681,9 +1677,8 @@ function ResultCard({ result }: ResultCardProps) {
                   attributes.status = 'published-ago';
                   sampleAttributes[attributes.attributes.TYPEUUID as any] =
                     attributes.attributes;
-                  item.sampleTypes[
-                    attributes.attributes.TYPEUUID as any
-                  ] = attributes;
+                  item.sampleTypes[attributes.attributes.TYPEUUID as any] =
+                    attributes;
                 });
 
                 return {
@@ -1953,7 +1948,8 @@ function ResultCard({ result }: ResultCardProps) {
         removalObject.forEach((object) => {
           if (object.layer.sketchLayer.type === 'graphics') {
             object.layer.sketchLayer.removeMany(object.graphics);
-            if(object.layer.pointsLayer) object.layer.pointsLayer.removeMany(object.pointsGraphics);
+            if (object.layer.pointsLayer)
+              object.layer.pointsLayer.removeMany(object.pointsGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);
