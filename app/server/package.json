@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "browser-sync": "2.27.5",
-    "husky": "7.0.1",
+    "husky": "7.0.2",
     "lint-staged": "11.1.2",
     "nodemon": "2.0.12",
     "prettier": "2.3.2"

@@ -333,24 +333,36 @@ export const noSamplesPublishMessage = (
   />
 );
 
+export const noSampleTypesPublishMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Custom Sample Types Exist"
+    message="There are no custom sample types created and/or loaded. Please add custom sample types to the plan and try again."
+  />
+);
+
+export const noServiceSelectedMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Service Selected"
+    message="There is no feature service selected to publish the custom sample types to. Please select a feature service and try again."
+  />
+);
+
+export const noServiceNameMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Service Name Provided"
+    message="No feature service name provided for publishing the custom sample types. Please provide a feature service name and try again."
+  />
+);
+
 export const publishSuccessMessage = (
   <MessageBox
     severity="info"
     title="Publish Succeeded"
     message={
-      'To view or share your plan with others, go to the ' +
-      'My Content menu in the Content section of your ArcGIS ' +
-      'Online organization.'
-    }
-  />
-);
-
-export const pulblishSamplesSuccessMessage = (
-  <MessageBox
-    severity="info"
-    title="Publish Succeeded"
-    message={
-      'To view or share your sample types with others, go to the ' +
+      'To view or share your TOTS content with others, go to the ' +
       'My Content menu in the Content section of your ArcGIS ' +
       'Online organization.'
     }
@@ -362,7 +374,7 @@ export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
     title="Plan Name Not Available"
-    message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
+    message={`The "${scenarioName}" name is already in use within your organization. Please rename the plan and try again.`}
   />
 );
 
