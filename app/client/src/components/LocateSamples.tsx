@@ -26,7 +26,7 @@ import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultLayerProps } from 'config/layerProps';
+import { defaultFields } from 'config/layerProps';
 import {
   AttributeItems,
   SampleSelectType,
@@ -405,9 +405,9 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
-const {
-  userInfo,
-} = React.useContext(AuthenticationContext);
+  const {
+    userInfo,
+  } = React.useContext(AuthenticationContext);
   const { setOptions } = React.useContext(DialogContext);
   const {
     setGoTo,
@@ -663,7 +663,7 @@ const {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultLayerProps.fields,
+          fields: defaultFields,
           features: [
             {
               attributes: sampleAttributes[typeuuid as any],
@@ -745,9 +745,7 @@ const {
               results.features.forEach((feature: any) => {
                 const poly = new Graphic({
                   attributes: {
-                    ...(window as any).totsSampleAttributes[
-                      typeuuid
-                    ],
+                    ...(window as any).totsSampleAttributes[typeuuid],
                     CREATEDDATE: timestamp,
                     DECISIONUNITUUID: sketchLayer.uuid,
                     DECISIONUNIT: sketchLayer.label,
@@ -1595,7 +1593,7 @@ const {
                                     {
                                       ...editsLayer,
                                       visible: false,
-                                    }
+                                    },
                                   ],
                                 };
                               }
@@ -1695,11 +1693,11 @@ const {
                             }
 
                             // show the newly added layer
-                            if(showAsPoints && sketchLayer.pointsLayer) {
+                            if (showAsPoints && sketchLayer.pointsLayer) {
                               sketchLayer.pointsLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;
-                            }     
+                            }
 
                             // update layers (set parent layer)
                             setLayers((layers) => {
@@ -2171,8 +2169,8 @@ const {
                                     title: 'Would you like to continue?',
                                     ariaLabel: 'Would you like to continue?',
                                     description:
-                                      'Sample plans are referencing samples based on one or more of the custom sample types. ' + 
-                                      'This operation will delete any samples from the sampling plan that are associated ' + 
+                                      'Sample plans are referencing samples based on one or more of the custom sample types. ' +
+                                      'This operation will delete any samples from the sampling plan that are associated ' +
                                       'with these custom sample types that you are attempting to remove.',
                                     onContinue: () => {
                                       setUserDefinedOptions(
