@@ -90,7 +90,7 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
-const { userInfo } = React.useContext(AuthenticationContext);
+  const { userInfo } = React.useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } = React.useContext(
     NavigationContext,
   );

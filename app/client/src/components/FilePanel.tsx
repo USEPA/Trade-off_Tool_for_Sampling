@@ -35,7 +35,7 @@ import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultLayerProps } from 'config/layerProps';
+import { defaultFields } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
@@ -597,7 +597,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultLayerProps.fields,
+          fields: defaultFields,
           features: [
             {
               attributes: sampleAttributes[localSampleType.value as any],

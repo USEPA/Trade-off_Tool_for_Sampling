@@ -123,8 +123,8 @@ function GettingStarted({ isOpen, children }: Props) {
 
         <p>
           View the{' '}
-          <a 
-            href={`${baseUrl}/data/documents/TOTS-Users-Guide.pdf`} 
+          <a
+            href={`${baseUrl}/data/documents/TOTS-Users-Guide.pdf`}
             target="_blank"
             rel="noopener noreferrer"
           >
