@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, { Fragment, isValidElement, ReactNode, useState } from 'react';
 // styles
 import { linkButtonStyles } from 'styles';
 
@@ -11,14 +11,14 @@ type Props = {
 };
 
 function ShowLessMore({ text, charLimit }: Props) {
-  const [truncated, setTruncated] = React.useState(true);
+  const [truncated, setTruncated] = useState(true);
 
   if (typeof text === 'string') {
-    if (!text) return <React.Fragment />;
-    if (text.length < charLimit) return <React.Fragment>{text}</React.Fragment>;
+    if (!text) return <Fragment />;
+    if (text.length < charLimit) return <Fragment>{text}</Fragment>;
 
     return (
-      <React.Fragment>
+      <Fragment>
         {truncated ? `${text.substring(0, charLimit)}...` : text}
         <button
           css={linkButtonStyles}
@@ -26,13 +26,13 @@ function ShowLessMore({ text, charLimit }: Props) {
         >
           Show {truncated ? 'more' : 'less'}
         </button>
-      </React.Fragment>
+      </Fragment>
     );
   }
 
-  if (React.isValidElement(text)) {
+  if (isValidElement(text)) {
     return (
-      <React.Fragment>
+      <Fragment>
         {truncated ? '...' : text}
         <button
           css={linkButtonStyles}
@@ -40,7 +40,7 @@ function ShowLessMore({ text, charLimit }: Props) {
         >
           Show {truncated ? 'more' : 'less'}
         </button>
-      </React.Fragment>
+      </Fragment>
     );
   }
 

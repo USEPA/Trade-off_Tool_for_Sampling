@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
@@ -129,7 +135,7 @@ const fullWidthSelectStyles = css`
 // --- components (Calculate) ---
 function Calculate() {
   const { setGoTo, setGoToOptions, trainingMode } =
-    React.useContext(NavigationContext);
+    useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -139,7 +145,7 @@ function Calculate() {
     sketchLayer,
     selectedScenario,
     getGpMaxRecordCount,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const {
     contaminationMap,
     setContaminationMap,
@@ -170,13 +176,13 @@ function Calculate() {
     inputSurfaceArea,
     setInputSurfaceArea,
     setUpdateContextValues,
-  } = React.useContext(CalculateContext);
+  } = useContext(CalculateContext);
 
   const getPopupTemplate = useDynamicPopup();
   const services = useServicesContext();
 
   // callback for closing the results panel when leaving this tab
-  const closePanel = React.useCallback(() => {
+  const closePanel = useCallback(() => {
     setCalculateResults((calculateResults: CalculateResultsType) => {
       return {
         ...calculateResults,
@@ -187,15 +193,15 @@ function Calculate() {
 
   // Cleanup useEffect for closing the results panel when leaving
   // this tab
-  React.useEffect(() => {
+  useEffect(() => {
     return function cleanup() {
       closePanel();
     };
   }, [closePanel]);
 
   // Initialize the contamination map to the first available one
-  const [contamMapInitialized, setContamMapInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [contamMapInitialized, setContamMapInitialized] = useState(false);
+  useEffect(() => {
     if (contamMapInitialized) return;
 
     setContamMapInitialized(true);
@@ -280,7 +286,7 @@ function Calculate() {
   const [
     contaminationResults,
     setContaminationResults, //
-  ] = React.useState<ContaminationResultsType>({ status: 'none', data: null });
+  ] = useState<ContaminationResultsType>({ status: 'none', data: null });
 
   // Call the GP Server to run calculations against the contamination
   // map.
@@ -706,7 +712,7 @@ function Calculate() {
 
   // Run calculations when the user exits this tab, by updating
   // the context values.
-  React.useEffect(() => {
+  useEffect(() => {
     return function cleanup() {
       setUpdateContextValues(true);
     };
@@ -725,11 +731,11 @@ function Calculate() {
             <strong>View Detailed Results</strong> to display a detailed summary
             of the results.{' '}
             {trainingMode && (
-              <React.Fragment>
+              <Fragment>
                 If you have a contamination map layer, click{' '}
                 <strong>View Contamination Hits</strong> to see if any of your
                 samples would have resulted in contamination hits.{' '}
-              </React.Fragment>
+              </Fragment>
             )}
             Click <strong>Next</strong> to configure your output.
           </p>
@@ -879,7 +885,7 @@ function Calculate() {
         </div>
 
         {trainingMode && (
-          <React.Fragment>
+          <Fragment>
             <div css={sectionContainer}>
               <p>
                 <strong>TRAINING MODE</strong>: If you have a contamination
@@ -894,7 +900,7 @@ function Calculate() {
                   {services.status === 'failure' &&
                     featureNotAvailableMessage('Include Contamination Map')}
                   {services.status === 'success' && (
-                    <React.Fragment>
+                    <Fragment>
                       <label htmlFor="contamination-map-select-input">
                         Contamination map
                       </label>
@@ -954,12 +960,12 @@ function Calculate() {
                       >
                         View Contamination Hits
                       </button>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                 </div>
               </AccordionItem>
             </AccordionList>
-          </React.Fragment>
+          </Fragment>
         )}
       </div>
       <div css={sectionContainer}>

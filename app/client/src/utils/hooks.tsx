@@ -1,6 +1,14 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Dispatch,
+  MouseEvent as ReactMouseEvent,
+  SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import ReactDOM from 'react-dom';
 import Collection from '@arcgis/core/core/Collection';
 import CSVLayer from '@arcgis/core/layers/CSVLayer';
@@ -74,7 +82,7 @@ import {
 export async function writeToStorage(
   key: string,
   data: string | boolean | object,
-  setOptions: React.Dispatch<React.SetStateAction<AlertDialogOptions | null>>,
+  setOptions: Dispatch<SetStateAction<AlertDialogOptions | null>>,
 ) {
   const itemSize = Math.round(JSON.stringify(data).length / 1024);
 
@@ -134,8 +142,8 @@ function getCenterOfGeometry(geometry: __esri.Geometry) {
 // Hook that allows the user to easily start over without
 // having to manually start a new session.
 export function useStartOver() {
-  const { resetCalculateContext } = React.useContext(CalculateContext);
-  const { setOptions } = React.useContext(DialogContext);
+  const { resetCalculateContext } = useContext(CalculateContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     setCurrentPanel,
     setGettingStartedOpen,
@@ -143,7 +151,7 @@ export function useStartOver() {
     setGoToOptions,
     setLatestStepIndex,
     setTrainingMode,
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
   const {
     setIncludeFullPlan,
     setIncludeFullPlanWebMap,
@@ -157,7 +165,7 @@ export function useStartOver() {
     setSampleTableName,
     setSampleTypeSelections,
     setSelectedService,
-  } = React.useContext(PublishContext);
+  } = useContext(PublishContext);
   const {
     basemapWidget,
     map,
@@ -175,7 +183,7 @@ export function useStartOver() {
     setAoiSketchLayer,
     setUserDefinedAttributes,
     setUserDefinedOptions,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   function startOver() {
     setSelectedScenario(null);
@@ -274,8 +282,8 @@ export function useGeometryTools() {
   const [
     loadedProjection,
     setLoadedProjection, //
-  ] = React.useState<__esri.projection | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.projection | null>(null);
+  useEffect(() => {
     projection.load().then(() => {
       setLoadedProjection(projection);
     });
@@ -283,7 +291,7 @@ export function useGeometryTools() {
 
   // Calculates the area of the provided graphic using a
   // spatial reference system based on where the sample is located.
-  const calculateArea = React.useCallback(
+  const calculateArea = useCallback(
     (graphic: __esri.Graphic) => {
       if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
@@ -321,7 +329,7 @@ export function useGeometryTools() {
 
   // Creates a square buffer around the center of the provided graphic,
   // where the width of the sqaure is the provided width.
-  const createBuffer = React.useCallback(
+  const createBuffer = useCallback(
     (graphic: __esri.Graphic) => {
       if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
@@ -396,7 +404,7 @@ export function useGeometryTools() {
   const sampleValidation: (
     graphics: __esri.Graphic[],
     isFullGraphic?: boolean,
-  ) => SampleIssuesOutput = React.useCallback(
+  ) => SampleIssuesOutput = useCallback(
     (graphics: __esri.Graphic[], isFullGraphic: boolean = false) => {
       let areaOutOfTolerance = false;
       let attributeMismatch = false;
@@ -509,7 +517,7 @@ export function useGeometryTools() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { edits, layers, selectedScenario } = React.useContext(SketchContext);
+  const { edits, layers, selectedScenario } = useContext(SketchContext);
   const {
     numLabs,
     numLabHours,
@@ -520,14 +528,14 @@ export function useCalculatePlan() {
     samplingLaborCost,
     surfaceArea,
     setCalculateResults,
-  } = React.useContext(CalculateContext);
+  } = useContext(CalculateContext);
 
   const { calculateArea, loadedProjection } = useGeometryTools();
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
-  const [calcGraphics, setCalcGraphics] = React.useState<__esri.Graphic[]>([]);
-  React.useEffect(() => {
+  const [calcGraphics, setCalcGraphics] = useState<__esri.Graphic[]>([]);
+  useEffect(() => {
     // Get the number of graphics for the selected scenario
     let numGraphics = 0;
     if (selectedScenario && selectedScenario.layers.length > 0) {
@@ -577,7 +585,7 @@ export function useCalculatePlan() {
     setCalculateResults,
   ]);
 
-  const [totals, setTotals] = React.useState({
+  const [totals, setTotals] = useState({
     ttpk: 0,
     ttc: 0,
     tta: 0,
@@ -593,10 +601,10 @@ export function useCalculatePlan() {
     amc: 0,
     ac: 0,
   });
-  const [totalArea, setTotalArea] = React.useState(0);
+  const [totalArea, setTotalArea] = useState(0);
 
   // perform geospatial calculatations
-  React.useEffect(() => {
+  useEffect(() => {
     // exit early checks
     if (!loadedProjection) return;
     if (
@@ -752,7 +760,7 @@ export function useCalculatePlan() {
   }, [calculateArea, edits, layers, loadedProjection, selectedScenario]);
 
   // perform non-geospatial calculations
-  React.useEffect(() => {
+  useEffect(() => {
     // exit early checks
     if (calcGraphics.length === 0 || totalArea === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
@@ -884,7 +892,7 @@ export function useCalculatePlan() {
 // Allows using a dynamicPopup that has access to react state/context.
 // This is primarily needed for sample popups.
 export function useDynamicPopup() {
-  const { edits, setEdits, layers } = React.useContext(SketchContext);
+  const { edits, setEdits, layers } = useContext(SketchContext);
 
   // Makes all sketch buttons no longer active by removing
   // the sketch-button-selected class.
@@ -898,7 +906,7 @@ export function useDynamicPopup() {
 
   // handles the sketch button clicks
   const handleClick = (
-    ev: React.MouseEvent<HTMLElement>,
+    ev: ReactMouseEvent<HTMLElement>,
     feature: any,
     type: string,
     newLayer: LayerType | null = null,
@@ -1149,14 +1157,13 @@ export function useDynamicPopup() {
 function useGraphicColor() {
   const key = 'tots_polygon_symbol';
 
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const { defaultSymbols, setDefaultSymbols, setSymbolsInitialized } =
-    React.useContext(SketchContext);
+    useContext(SketchContext);
 
   // Retreives training mode data from browser storage when the app loads
-  const [localPolygonInitialized, setLocalPolygonInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+  const [localPolygonInitialized, setLocalPolygonInitialized] = useState(false);
+  useEffect(() => {
     if (localPolygonInitialized) return;
 
     setLocalPolygonInitialized(true);
@@ -1175,7 +1182,7 @@ function useGraphicColor() {
     setSymbolsInitialized(true);
   }, [localPolygonInitialized, setDefaultSymbols, setSymbolsInitialized]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localPolygonInitialized) return;
 
     const polygonObj = defaultSymbols as object;
@@ -1187,13 +1194,13 @@ function useGraphicColor() {
 function useTrainingModeStorage() {
   const key = 'tots_training_mode';
 
-  const { setOptions } = React.useContext(DialogContext);
-  const { trainingMode, setTrainingMode } = React.useContext(NavigationContext);
+  const { setOptions } = useContext(DialogContext);
+  const { trainingMode, setTrainingMode } = useContext(NavigationContext);
 
   // Retreives training mode data from browser storage when the app loads
   const [localTrainingModeInitialized, setLocalTrainingModeInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (localTrainingModeInitialized) return;
 
     setLocalTrainingModeInitialized(true);
@@ -1205,7 +1212,7 @@ function useTrainingModeStorage() {
     setTrainingMode(trainingMode);
   }, [localTrainingModeInitialized, setTrainingMode]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localTrainingModeInitialized) return;
 
     writeToStorage(key, trainingMode, setOptions);
@@ -1215,7 +1222,7 @@ function useTrainingModeStorage() {
 // Uses browser storage for holding any editable layers.
 function useEditsLayerStorage() {
   const key = 'tots_edits';
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     defaultSymbols,
     edits,
@@ -1226,11 +1233,11 @@ function useEditsLayerStorage() {
     setLayers,
     map,
     symbolsInitialized,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
 
   // Retreives edit data from browser storage when the app loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !map ||
       !setEdits ||
@@ -1416,7 +1423,7 @@ function useEditsLayerStorage() {
   ]);
 
   // Saves the edits to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!layersInitialized) return;
     writeToStorage(key, edits, setOptions);
   }, [edits, layersInitialized, setOptions]);
@@ -1425,14 +1432,14 @@ function useEditsLayerStorage() {
 // Uses browser storage for holding the reference layers that have been added.
 function useReferenceLayerStorage() {
   const key = 'tots_reference_layers';
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const { map, referenceLayers, setReferenceLayers } =
-    React.useContext(SketchContext);
+    useContext(SketchContext);
 
   // Retreives reference layers from browser storage when the app loads
   const [localReferenceLayerInitialized, setLocalReferenceLayerInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (!map || !setReferenceLayers || localReferenceLayerInitialized) return;
 
     setLocalReferenceLayerInitialized(true);
@@ -1478,7 +1485,7 @@ function useReferenceLayerStorage() {
   }, [localReferenceLayerInitialized, map, setReferenceLayers]);
 
   // Saves the reference layers to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localReferenceLayerInitialized) return;
     writeToStorage(key, referenceLayers, setOptions);
   }, [referenceLayers, localReferenceLayerInitialized, setOptions]);
@@ -1487,13 +1494,13 @@ function useReferenceLayerStorage() {
 // Uses browser storage for holding the url layers that have been added.
 function useUrlLayerStorage() {
   const key = 'tots_url_layers';
-  const { setOptions } = React.useContext(DialogContext);
-  const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { map, urlLayers, setUrlLayers } = useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
   const [localUrlLayerInitialized, setLocalUrlLayerInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (!map || !setUrlLayers || localUrlLayerInitialized) return;
 
     setLocalUrlLayerInitialized(true);
@@ -1557,7 +1564,7 @@ function useUrlLayerStorage() {
   }, [localUrlLayerInitialized, map, setUrlLayers]);
 
   // Saves the url layers to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localUrlLayerInitialized) return;
     writeToStorage(key, urlLayers, setOptions);
   }, [urlLayers, localUrlLayerInitialized, setOptions]);
@@ -1566,14 +1573,13 @@ function useUrlLayerStorage() {
 // Uses browser storage for holding the portal layers that have been added.
 function usePortalLayerStorage() {
   const key = 'tots_portal_layers';
-  const { setOptions } = React.useContext(DialogContext);
-  const { map, portalLayers, setPortalLayers } =
-    React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { map, portalLayers, setPortalLayers } = useContext(SketchContext);
 
   // Retreives portal layers from browser storage when the app loads
   const [localPortalLayerInitialized, setLocalPortalLayerInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (!map || !setPortalLayers || localPortalLayerInitialized) return;
 
     setLocalPortalLayerInitialized(true);
@@ -1602,7 +1608,7 @@ function usePortalLayerStorage() {
   }, [localPortalLayerInitialized, map, portalLayers, setPortalLayers]);
 
   // Saves the portal layers to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localPortalLayerInitialized) return;
     writeToStorage(key, portalLayers, setOptions);
   }, [portalLayers, localPortalLayerInitialized, setOptions]);
@@ -1612,13 +1618,13 @@ function usePortalLayerStorage() {
 function useMapPositionStorage() {
   const key = 'tots_map_extent';
 
-  const { setOptions } = React.useContext(DialogContext);
-  const { mapView } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { mapView } = useContext(SketchContext);
 
   // Retreives the map position and zoom level from browser storage when the app loads
   const [localMapPositionInitialized, setLocalMapPositionInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (!mapView || localMapPositionInitialized) return;
 
     setLocalMapPositionInitialized(true);
@@ -1636,8 +1642,8 @@ function useMapPositionStorage() {
   const [
     watchExtentInitialized,
     setWatchExtentInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!mapView || watchExtentInitialized) return;
 
     watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
@@ -1657,13 +1663,13 @@ function useMapPositionStorage() {
 function useHomeWidgetStorage() {
   const key = 'tots_home_viewpoint';
 
-  const { setOptions } = React.useContext(DialogContext);
-  const { homeWidget } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { homeWidget } = useContext(SketchContext);
 
   // Retreives the home widget viewpoint from browser storage when the app loads
   const [localHomeWidgetInitialized, setLocalHomeWidgetInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (!homeWidget || localHomeWidgetInitialized) return;
 
     setLocalHomeWidgetInitialized(true);
@@ -1680,8 +1686,8 @@ function useHomeWidgetStorage() {
   const [
     watchHomeWidgetInitialized,
     setWatchHomeWidgetInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
     watchUtils.watch(
@@ -1701,7 +1707,7 @@ function useSamplesLayerStorage() {
   const key = 'tots_selected_sample_layer';
   const key2 = 'tots_selected_scenario';
 
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     edits,
     layers,
@@ -1709,13 +1715,13 @@ function useSamplesLayerStorage() {
     setSelectedScenario,
     sketchLayer,
     setSketchLayer,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
   const [localSampleLayerInitialized, setLocalSampleLayerInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (layers.length === 0 || localSampleLayerInitialized) return;
 
     setLocalSampleLayerInitialized(true);
@@ -1741,7 +1747,7 @@ function useSamplesLayerStorage() {
   ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleLayerInitialized) return;
 
     const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
@@ -1749,7 +1755,7 @@ function useSamplesLayerStorage() {
   }, [sketchLayer, localSampleLayerInitialized, setOptions]);
 
   // Saves the selected scenario to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleLayerInitialized) return;
 
     const data = selectedScenario?.layerId ? selectedScenario.layerId : '';
@@ -1760,20 +1766,20 @@ function useSamplesLayerStorage() {
 // Uses browser storage for holding the currently selected contamination map layer.
 function useContaminationMapStorage() {
   const key = 'tots_selected_contamination_layer';
-  const { setOptions } = React.useContext(DialogContext);
-  const { layers } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { layers } = useContext(SketchContext);
   const {
     contaminationMap,
     setContaminationMap, //
-  } = React.useContext(CalculateContext);
+  } = useContext(CalculateContext);
 
   // Retreives the selected contamination map from browser storage
   // when the app loads
   const [
     localContaminationLayerInitialized,
     setLocalContaminationLayerInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (layers.length === 0 || localContaminationLayerInitialized) return;
 
     setLocalContaminationLayerInitialized(true);
@@ -1785,7 +1791,7 @@ function useContaminationMapStorage() {
   }, [layers, setContaminationMap, localContaminationLayerInitialized]);
 
   // Saves the selected contamination map to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localContaminationLayerInitialized) return;
 
     const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
@@ -1796,18 +1802,18 @@ function useContaminationMapStorage() {
 // Uses browser storage for holding the currently selected sampling mask layer.
 function useGenerateRandomMaskStorage() {
   const key = 'tots_generate_random_mask_layer';
-  const { setOptions } = React.useContext(DialogContext);
-  const { layers } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { layers } = useContext(SketchContext);
   const {
     aoiSketchLayer,
     setAoiSketchLayer, //
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // Retreives the selected sampling mask from browser storage
   // when the app loads
   const [localAoiLayerInitialized, setLocalAoiLayerInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (layers.length === 0 || localAoiLayerInitialized) return;
 
     setLocalAoiLayerInitialized(true);
@@ -1819,7 +1825,7 @@ function useGenerateRandomMaskStorage() {
   }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
 
   // Saves the selected sampling mask to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localAoiLayerInitialized) return;
 
     const data = aoiSketchLayer?.layerId ? aoiSketchLayer.layerId : '';
@@ -1830,7 +1836,7 @@ function useGenerateRandomMaskStorage() {
 // Uses browser storage for holding the current calculate settings.
 function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     setNumLabs,
     setNumLabHours,
@@ -1856,7 +1862,7 @@ function useCalculateSettingsStorage() {
     setInputSamplingLaborCost,
     inputSurfaceArea,
     setInputSurfaceArea,
-  } = React.useContext(CalculateContext);
+  } = useContext(CalculateContext);
 
   type CalculateSettingsType = {
     numLabs: number;
@@ -1870,8 +1876,8 @@ function useCalculateSettingsStorage() {
   };
 
   // Reads the calculate settings from browser storage.
-  const [settingsInitialized, setSettingsInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
+  useEffect(() => {
     if (settingsInitialized) return;
     const settingsStr = readFromStorage(key);
 
@@ -1917,7 +1923,7 @@ function useCalculateSettingsStorage() {
   ]);
 
   // Saves the calculate settings to browser storage
-  React.useEffect(() => {
+  useEffect(() => {
     const settings: CalculateSettingsType = {
       numLabs: inputNumLabs,
       numLabHours: inputNumLabHours,
@@ -1952,20 +1958,20 @@ function useCurrentTabSettings() {
     goToOptions: GoToOptions;
   };
 
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     goTo,
     setGoTo,
     goToOptions,
     setGoToOptions, //
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
 
   // Retreives the current tab and current tab's options from browser storage
   const [
     localTabDataInitialized,
     setLocalTabDataInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (localTabDataInitialized) return;
 
     setLocalTabDataInitialized(true);
@@ -1980,7 +1986,7 @@ function useCurrentTabSettings() {
   }, [setGoTo, setGoToOptions, localTabDataInitialized]);
 
   // Saves the current tab and optiosn to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localTabDataInitialized) return;
 
     let data: PanelSettingsType = { goTo: '', goToOptions: null };
@@ -2006,19 +2012,19 @@ function useCurrentTabSettings() {
 function useBasemapStorage() {
   const key = 'tots_selected_basemap_layer';
 
-  const { setOptions } = React.useContext(DialogContext);
-  const { basemapWidget } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { basemapWidget } = useContext(SketchContext);
 
   // Retreives the selected basemap from browser storage when the app loads
   const [
     localBasemapInitialized,
     setLocalBasemapInitialized, //
-  ] = React.useState(false);
+  ] = useState(false);
   const [
     watchHandler,
     setWatchHandler, //
-  ] = React.useState<__esri.WatchHandle | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.WatchHandle | null>(null);
+  useEffect(() => {
     if (!basemapWidget || watchHandler || localBasemapInitialized) return;
 
     const portalId = readFromStorage(key);
@@ -2052,7 +2058,7 @@ function useBasemapStorage() {
   }, [basemapWidget, watchHandler, localBasemapInitialized]);
 
   // destroys the watch handler after initialization completes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!watchHandler || !localBasemapInitialized) return;
 
     watchHandler.remove();
@@ -2063,8 +2069,8 @@ function useBasemapStorage() {
   const [
     watchBasemapInitialized,
     setWatchBasemapInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!basemapWidget || !localBasemapInitialized || watchBasemapInitialized) {
       return;
     }
@@ -2085,16 +2091,16 @@ function useBasemapStorage() {
 // Uses browser storage for holding the url layers that have been added.
 function useUserDefinedSampleOptionsStorage() {
   const key = 'tots_user_defined_sample_options';
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const { userDefinedOptions, setUserDefinedOptions } =
-    React.useContext(SketchContext);
+    useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
   const [
     localUserDefinedSamplesInitialized,
     setLocalUserDefinedSamplesInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!setUserDefinedOptions || localUserDefinedSamplesInitialized) return;
 
     setLocalUserDefinedSamplesInitialized(true);
@@ -2109,7 +2115,7 @@ function useUserDefinedSampleOptionsStorage() {
   }, [localUserDefinedSamplesInitialized, setUserDefinedOptions]);
 
   // Saves the url layers to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localUserDefinedSamplesInitialized) return;
     writeToStorage(key, userDefinedOptions, setOptions);
   }, [userDefinedOptions, localUserDefinedSamplesInitialized, setOptions]);
@@ -2119,19 +2125,19 @@ function useUserDefinedSampleOptionsStorage() {
 function useUserDefinedSampleAttributesStorage() {
   const key = 'tots_user_defined_sample_attributes';
   const sampleTypeContext = useSampleTypesContext();
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     setSampleAttributes,
     userDefinedAttributes,
     setUserDefinedAttributes,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // Retreives url layers from browser storage when the app loads
   const [
     localUserDefinedSamplesInitialized,
     setLocalUserDefinedSamplesInitialized,
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!setUserDefinedAttributes || localUserDefinedSamplesInitialized) return;
 
     setLocalUserDefinedSamplesInitialized(true);
@@ -2153,7 +2159,7 @@ function useUserDefinedSampleAttributesStorage() {
   ]);
 
   // add the user defined attributes to the global attributes
-  React.useEffect(() => {
+  useEffect(() => {
     // add the user defined attributes to the global attributes
     let newSampleAttributes: any = {};
 
@@ -2175,7 +2181,7 @@ function useUserDefinedSampleAttributesStorage() {
   ]);
 
   // Saves the url layers to browser storage everytime they change
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localUserDefinedSamplesInitialized) return;
     writeToStorage(key, userDefinedAttributes, setOptions);
   }, [userDefinedAttributes, localUserDefinedSamplesInitialized, setOptions]);
@@ -2185,18 +2191,17 @@ function useUserDefinedSampleAttributesStorage() {
 function useTablePanelStorage() {
   const key = 'tots_table_panel';
 
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     tablePanelExpanded,
     setTablePanelExpanded,
     tablePanelHeight,
     setTablePanelHeight,
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
 
   // Retreives table info data from browser storage when the app loads
-  const [tablePanelInitialized, setTablePanelInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+  const [tablePanelInitialized, setTablePanelInitialized] = useState(false);
+  useEffect(() => {
     if (tablePanelInitialized) return;
 
     setTablePanelInitialized(true);
@@ -2216,7 +2221,7 @@ function useTablePanelStorage() {
     setTablePanelHeight(tablePanel.height);
   }, [tablePanelInitialized, setTablePanelExpanded, setTablePanelHeight]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!tablePanelInitialized) return;
 
     const tablePanel: object = {
@@ -2242,7 +2247,7 @@ function usePublishStorage() {
   const key4 = 'tots_output_settings';
   const key5 = 'tots_partial_plan_attributes';
 
-  const { setOptions } = React.useContext(DialogContext);
+  const { setOptions } = useContext(DialogContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
@@ -2268,7 +2273,7 @@ function usePublishStorage() {
     setIncludeCustomSampleTypes,
     partialPlanAttributes,
     setPartialPlanAttributes,
-  } = React.useContext(PublishContext);
+  } = useContext(PublishContext);
 
   type OutputSettingsType = {
     includeFullPlan: boolean;
@@ -2281,8 +2286,8 @@ function usePublishStorage() {
   // Retreives the selected sample layer (sketchLayer) from browser storage
   // when the app loads
   const [localSampleTypeInitialized, setLocalSampleTypeInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (localSampleTypeInitialized) return;
 
     setLocalSampleTypeInitialized(true);
@@ -2344,14 +2349,14 @@ function usePublishStorage() {
   ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
     writeToStorage(key, sampleTypeSelections, setOptions);
   }, [sampleTypeSelections, localSampleTypeInitialized, setOptions]);
 
   // Saves the selected scenario to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
     const data = {
@@ -2371,14 +2376,14 @@ function usePublishStorage() {
   ]);
 
   // Saves the selected scenario to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
     writeToStorage(key3, publishSamplesMode, setOptions);
   }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
 
   // Saves the publish output settings to browser storage whenever it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
     const settings: OutputSettingsType = {
@@ -2401,7 +2406,7 @@ function usePublishStorage() {
   ]);
 
   // Saves the partial plan attributes list to browser storage whenever it changers
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localSampleTypeInitialized) return;
 
     writeToStorage(key5, partialPlanAttributes, setOptions);
@@ -2412,13 +2417,13 @@ function usePublishStorage() {
 function useDisplayModeStorage() {
   const key = 'tots_display_mode';
 
-  const { setOptions } = React.useContext(DialogContext);
-  const { showAsPoints, setShowAsPoints } = React.useContext(SketchContext);
+  const { setOptions } = useContext(DialogContext);
+  const { showAsPoints, setShowAsPoints } = useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
   const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+    useState(false);
+  useEffect(() => {
     if (localDisplayModeInitialized) return;
 
     setLocalDisplayModeInitialized(true);
@@ -2430,7 +2435,7 @@ function useDisplayModeStorage() {
     setShowAsPoints(trainingMode);
   }, [localDisplayModeInitialized, setShowAsPoints]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localDisplayModeInitialized) return;
 
     writeToStorage(key, showAsPoints, setOptions);

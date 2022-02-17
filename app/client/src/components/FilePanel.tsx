@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -237,10 +243,10 @@ type UploadStatusType =
   | 'file-read-error';
 
 function FilePanel() {
-  const { portal, userInfo } = React.useContext(AuthenticationContext);
-  const { setOptions } = React.useContext(DialogContext);
+  const { portal, userInfo } = useContext(AuthenticationContext);
+  const { setOptions } = useContext(DialogContext);
   const { goToOptions, setGoToOptions, trainingMode } =
-    React.useContext(NavigationContext);
+    useContext(NavigationContext);
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
@@ -258,31 +264,30 @@ function FilePanel() {
     selectedScenario,
     setSelectedScenario,
     setSketchLayer,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   const getPopupTemplate = useDynamicPopup();
   const { createBuffer, sampleValidation } = useGeometryTools();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
-  const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
-  const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
-  const [generateResponse, setGenerateResponse] = React.useState<any>(null);
-  const [featuresAdded, setFeaturesAdded] = React.useState(false);
-  const [fileValidationStarted, setFileValidationStarted] =
-    React.useState(false);
-  const [fileValidated, setFileValidated] = React.useState(false);
-  const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
-  const [error, setError] = React.useState<ErrorType | null>(null);
-  const [missingAttributes, setMissingAttributes] = React.useState('');
+  const [generalizeFeatures, setGeneralizeFeatures] = useState(false);
+  const [analyzeResponse, setAnalyzeResponse] = useState<any>(null);
+  const [generateResponse, setGenerateResponse] = useState<any>(null);
+  const [featuresAdded, setFeaturesAdded] = useState(false);
+  const [fileValidationStarted, setFileValidationStarted] = useState(false);
+  const [fileValidated, setFileValidated] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatusType>('');
+  const [error, setError] = useState<ErrorType | null>(null);
+  const [missingAttributes, setMissingAttributes] = useState('');
 
   const [
     layerType,
     setLayerType, //
-  ] = React.useState<LayerSelectType | null>(null);
+  ] = useState<LayerSelectType | null>(null);
 
   // Handle navigation options
-  React.useEffect(() => {
+  useEffect(() => {
     if (goToOptions?.from !== 'file') return;
 
     let optionValue: LayerSelectType | null = null;
@@ -295,8 +300,8 @@ function FilePanel() {
   }, [goToOptions, setGoToOptions]);
 
   // Handles the user uploading a file
-  const [file, setFile] = React.useState<any>(null);
-  const onDrop = React.useCallback((acceptedFiles) => {
+  const [file, setFile] = useState<any>(null);
+  const onDrop = useCallback((acceptedFiles) => {
     // Do something with the files
     if (
       !acceptedFiles ||
@@ -352,16 +357,16 @@ function FilePanel() {
   const [
     batchGeocodeServices,
     setBatchGeocodeServices, //
-  ] = React.useState<any>(null);
+  ] = useState<any>(null);
   const [
     firstGeocodeService,
     setFirstGeocodeService, //
-  ] = React.useState<any>(null);
+  ] = useState<any>(null);
   const [
     sharingUrl,
     setSharingUrl, //
-  ] = React.useState('https://www.arcgis.com/sharing/rest');
-  React.useEffect(() => {
+  ] = useState('https://www.arcgis.com/sharing/rest');
+  useEffect(() => {
     if (!portal || batchGeocodeServices) return;
 
     const worldExp =
@@ -408,7 +413,7 @@ function FilePanel() {
   }, [portal, batchGeocodeServices]);
 
   // analyze csv files
-  React.useEffect(() => {
+  useEffect(() => {
     if (!file?.file?.esriFileType || !sharingUrl || file.analyzeCalled) return;
     if (
       file.file.name === file.lastFileName ||
@@ -462,8 +467,8 @@ function FilePanel() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType | null>(null);
-  React.useEffect(() => {
+  ] = useState<SampleSelectType | null>(null);
+  useEffect(() => {
     if (
       !mapView ||
       !layerType ||
@@ -736,7 +741,7 @@ function FilePanel() {
 
   // validate the area and attributes of features of the uploads. If there is an
   // issue, display a popup asking the user if they would like the samples to be updated.
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -801,8 +806,8 @@ function FilePanel() {
 
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
-  const [newLayerName, setNewLayerName] = React.useState('');
-  React.useEffect(() => {
+  const [newLayerName, setNewLayerName] = useState('');
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -1091,7 +1096,7 @@ function FilePanel() {
 
   // add features to the map as feature layers. This is only for reference layer
   // types. This is so users can view popups but not edit the features.
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -1202,7 +1207,7 @@ function FilePanel() {
   ]);
 
   // handle loading of the KMLLayer
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !file?.file?.esriFileType ||
       !mapView ||
@@ -1287,14 +1292,14 @@ function FilePanel() {
         }
       />
       {!layerType ? (
-        <React.Fragment>
+        <Fragment>
           <p css={sectionParagraph}>Locate the file you want to import.</p>
           <div css={sectionParagraph}>
             <MessageBox
               severity="warning"
               title="Requirements for uploading files:"
               message={
-                <React.Fragment>
+                <Fragment>
                   <p css={layerInfo}>
                     <strong>Shapefile</strong> - ZIP archive containing all
                     required shapefile files
@@ -1311,17 +1316,17 @@ function FilePanel() {
                     <strong>GeoJSON</strong> - open standard format for simple
                     geographical
                   </p>
-                </React.Fragment>
+                </Fragment>
               }
             />
           </div>
-        </React.Fragment>
+        </Fragment>
       ) : (
-        <React.Fragment>
+        <Fragment>
           {layerType.value === 'VSP' &&
             services.status === 'success' &&
             sampleTypeContext.status === 'success' && (
-              <React.Fragment>
+              <Fragment>
                 <label htmlFor="sample-type-select-input">Sample Type</label>
                 <Select
                   id="sample-type-select"
@@ -1343,7 +1348,7 @@ function FilePanel() {
                     Sampling Plan.
                   </p>
                 )}
-              </React.Fragment>
+              </Fragment>
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
             (services.status === 'fetching' ||
@@ -1366,12 +1371,12 @@ function FilePanel() {
               sampleType &&
               services.status === 'success' &&
               sampleTypeContext.status === 'success')) && (
-            <React.Fragment>
+            <Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
-                <React.Fragment>
+                <Fragment>
                   {layerType.value === 'Contamination Map' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Polygon layer containing the area of contamination as
                         well as the concentration of the contamination. This
@@ -1386,7 +1391,7 @@ function FilePanel() {
                           severity="warning"
                           title="The Contamination Map layer must include the following attributes to be uploaded:"
                           message={
-                            <React.Fragment>
+                            <Fragment>
                               <p css={layerInfo}>
                                 <strong>CONTAMTYPE</strong> (domain values:
                                 chemical, radiological, biological)
@@ -1398,14 +1403,14 @@ function FilePanel() {
                                 <strong>CONTAMUNIT</strong> (domain values: cfu,
                                 others TBD)
                               </p>
-                            </React.Fragment>
+                            </Fragment>
                           }
                         />
                       </div>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Samples' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Layer containing pre-existing samples to use as a
                         starting point in the next step,{' '}
@@ -1414,10 +1419,10 @@ function FilePanel() {
                         Wet Vac, Robot, Aggressive Air, or Swab) attribute to be
                         uploaded.
                       </p>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Reference Layer' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Additional contextual reference layers to include in
                         your analysis (e.g., building footprints, landmarks,
@@ -1440,10 +1445,10 @@ function FilePanel() {
                           }
                         />
                       </div>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Area of Interest' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         A polygon file that bounds the extent of your project
                         area. This layer is used to bound where samples are
@@ -1451,7 +1456,7 @@ function FilePanel() {
                         <strong>Add Multiple Random Samples</strong> feature in
                         the next step, <strong>Create Plan</strong>.
                       </p>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'VSP' && (
                     <p>
@@ -1532,11 +1537,11 @@ function FilePanel() {
                       </div>
                     )}
                   </div>
-                </React.Fragment>
+                </Fragment>
               )}
-            </React.Fragment>
+            </Fragment>
           )}
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

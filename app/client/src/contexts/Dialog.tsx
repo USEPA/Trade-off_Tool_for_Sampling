@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useState,
+} from 'react';
 
 export type AlertDialogOptions = {
   title: string;
@@ -12,10 +18,10 @@ export type AlertDialogOptions = {
 
 type DialogType = {
   options: AlertDialogOptions | null;
-  setOptions: React.Dispatch<React.SetStateAction<AlertDialogOptions | null>>;
+  setOptions: Dispatch<SetStateAction<AlertDialogOptions | null>>;
 };
 
-export const DialogContext = React.createContext<DialogType>({
+export const DialogContext = createContext<DialogType>({
   options: null,
   setOptions: () => {},
 });
@@ -23,7 +29,7 @@ export const DialogContext = React.createContext<DialogType>({
 type Props = { children: ReactNode };
 
 export function DialogProvider({ children }: Props) {
-  const [options, setOptions] = React.useState<AlertDialogOptions | null>(null);
+  const [options, setOptions] = useState<AlertDialogOptions | null>(null);
 
   return (
     <DialogContext.Provider

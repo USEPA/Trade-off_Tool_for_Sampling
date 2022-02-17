@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/react';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
@@ -178,8 +178,8 @@ const graphicsIconStyles = css`
 
 // --- components (Toolbar) ---
 function Toolbar() {
-  const { setContaminationMap } = React.useContext(CalculateContext);
-  const { trainingMode } = React.useContext(NavigationContext);
+  const { setContaminationMap } = useContext(CalculateContext);
+  const { trainingMode } = useContext(NavigationContext);
   const {
     setBasemapWidget,
     defaultSymbols,
@@ -201,7 +201,7 @@ function Toolbar() {
     setSketchLayer,
     showAsPoints,
     setShowAsPoints,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const {
     signedIn,
     setSignedIn,
@@ -211,10 +211,10 @@ function Toolbar() {
     setPortal,
     userInfo,
     setUserInfo,
-  } = React.useContext(AuthenticationContext);
+  } = useContext(AuthenticationContext);
 
   // Initialize the OAuth
-  React.useEffect(() => {
+  useEffect(() => {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
@@ -230,8 +230,8 @@ function Toolbar() {
   const [
     hasCheckedSignInStatus,
     setHasCheckedSignInStatus, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!oAuthInfo || hasCheckedSignInStatus) return;
 
     setHasCheckedSignInStatus(true);
@@ -251,7 +251,7 @@ function Toolbar() {
   }, [oAuthInfo, setSignedIn, setPortal, hasCheckedSignInStatus]);
 
   // Get the user information
-  React.useEffect(() => {
+  useEffect(() => {
     if (!portal || userInfo) return;
 
     const tempPortal: any = portal;
@@ -267,13 +267,13 @@ function Toolbar() {
   }, [portal, userInfo, setUserInfo]);
 
   // Create the layer list toolbar widget
-  const [legendVisible, setLegendVisible] = React.useState(false);
-  const [legendInitialized, setLegendInitialized] = React.useState(false);
+  const [legendVisible, setLegendVisible] = useState(false);
+  const [legendInitialized, setLegendInitialized] = useState(false);
   const [
     layerToRemove,
     setLayerToRemove, //
-  ] = React.useState<__esri.Layer | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.Layer | null>(null);
+  useEffect(() => {
     if (!mapView || layers.length === 0 || legendInitialized) return;
 
     // clear out the legend container
@@ -537,7 +537,7 @@ function Toolbar() {
   }, [mapView, defaultSymbols, layers, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !layerToRemove) return;
 
     setLayerToRemove(null);
@@ -655,9 +655,9 @@ function Toolbar() {
   ]);
 
   // Create the basemap toolbar widget
-  const [basemapVisible, setBasemapVisible] = React.useState(false);
-  const [basemapInitialized, setBasemapInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [basemapVisible, setBasemapVisible] = useState(false);
+  const [basemapInitialized, setBasemapInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || basemapInitialized) return;
 
     const basemapsSource = new PortalBasemapsSource({
@@ -686,7 +686,7 @@ function Toolbar() {
   }, [mapView, basemapInitialized, setBasemapWidget]);
 
   // Switches between point and polygon representations
-  React.useEffect(() => {
+  useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
       if (

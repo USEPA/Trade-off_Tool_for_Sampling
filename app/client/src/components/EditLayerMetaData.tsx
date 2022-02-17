@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Portal from '@arcgis/core/portal/Portal';
@@ -112,7 +112,7 @@ function EditScenario({
   const {
     portal,
     signedIn, //
-  } = React.useContext(AuthenticationContext);
+  } = useContext(AuthenticationContext);
   const {
     edits,
     setEdits,
@@ -121,22 +121,22 @@ function EditScenario({
     setLayers,
     setSelectedScenario,
     setSketchLayer,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // focus on the first input
-  React.useEffect(() => {
+  useEffect(() => {
     document.getElementById('scenario-name-input')?.focus();
   }, []);
 
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveResultsType>({ status: initialStatus });
+  ] = useState<SaveResultsType>({ status: initialStatus });
 
-  const [scenarioName, setScenarioName] = React.useState(
+  const [scenarioName, setScenarioName] = useState(
     initialScenario ? initialScenario.scenarioName : '',
   );
-  const [scenarioDescription, setScenarioDescription] = React.useState(
+  const [scenarioDescription, setScenarioDescription] = useState(
     initialScenario ? initialScenario.scenarioDescription : '',
   );
 
@@ -437,16 +437,16 @@ function EditScenario({
               saveStatus.status === 'fetching') &&
               buttonText}
             {saveStatus.status === 'success' && (
-              <React.Fragment>
+              <Fragment>
                 <i className="fas fa-check" /> Saved
-              </React.Fragment>
+              </Fragment>
             )}
             {(saveStatus.status === 'failure' ||
               saveStatus.status === 'fetch-failure' ||
               saveStatus.status === 'name-not-available') && (
-              <React.Fragment>
+              <Fragment>
                 <i className="fas fa-exclamation-triangle" /> Error
-              </React.Fragment>
+              </Fragment>
             )}
           </button>
         </div>
@@ -474,7 +474,7 @@ function EditLayer({
   initialStatus = 'none',
   onSave,
 }: EditLayerProps) {
-  const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
+  const { setGoTo, setGoToOptions } = useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -484,19 +484,19 @@ function EditLayer({
     setSelectedScenario,
     setSketchLayer,
     map,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveStatusType>(initialStatus);
+  ] = useState<SaveStatusType>(initialStatus);
 
-  const [layerName, setLayerName] = React.useState(
+  const [layerName, setLayerName] = useState(
     initialLayer ? initialLayer.label : '',
   );
 
   // focus on the first input
-  React.useEffect(() => {
+  useEffect(() => {
     document.getElementById('layer-name-input')?.focus();
   }, []);
 
@@ -672,9 +672,9 @@ function EditLayer({
         >
           {(saveStatus === 'none' || saveStatus === 'changes') && buttonText}
           {saveStatus === 'success' && (
-            <React.Fragment>
+            <Fragment>
               <i className="fas fa-check" /> Saved
-            </React.Fragment>
+            </Fragment>
           )}
         </button>
       </div>
@@ -700,7 +700,7 @@ function EditCustomSampleTypesTable({
   const {
     portal,
     signedIn, //
-  } = React.useContext(AuthenticationContext);
+  } = useContext(AuthenticationContext);
   const {
     publishSampleTableMetaData,
     setPublishSampleTableMetaData,
@@ -711,18 +711,19 @@ function EditCustomSampleTypesTable({
     setSampleTableName,
     selectedService,
     setSelectedService,
-  } = React.useContext(PublishContext);
+  } = useContext(PublishContext);
 
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveResultsType>({ status: initialStatus });
+  ] = useState<SaveResultsType>({ status: initialStatus });
 
-  const [queryInitialized, setQueryInitialized] = React.useState(false);
-  const [featureServices, setFeatureServices] = React.useState<FeatureServices>(
-    { status: 'fetching', data: [] },
-  );
-  React.useEffect(() => {
+  const [queryInitialized, setQueryInitialized] = useState(false);
+  const [featureServices, setFeatureServices] = useState<FeatureServices>({
+    status: 'fetching',
+    data: [],
+  });
+  useEffect(() => {
     if (queryInitialized) return;
 
     setQueryInitialized(true);
@@ -764,9 +765,9 @@ function EditCustomSampleTypesTable({
   };
 
   return (
-    <React.Fragment>
+    <Fragment>
       {publishSamplesMode === 'new' && (
-        <React.Fragment>
+        <Fragment>
           <label htmlFor="sample-table-name-input">
             Custom Sample Type Table Name
           </label>
@@ -789,14 +790,14 @@ function EditCustomSampleTypesTable({
             value={sampleTableDescription}
             onChange={(ev) => setSampleTableDescription(ev.target.value)}
           />
-        </React.Fragment>
+        </Fragment>
       )}
       {publishSamplesMode === 'existing' && (
         <div>
           {featureServices.status === 'fetching' && <LoadingSpinner />}
           {featureServices.status === 'failure' && <p>Error!</p>}
           {featureServices.status === 'success' && (
-            <React.Fragment>
+            <Fragment>
               <label htmlFor="feature-service-select">
                 Feature Service Select
               </label>
@@ -807,7 +808,7 @@ function EditCustomSampleTypesTable({
                 onChange={(ev) => setSelectedService(ev as SelectedService)}
                 options={featureServices.data}
               />
-            </React.Fragment>
+            </Fragment>
           )}
         </div>
       )}
@@ -894,20 +895,20 @@ function EditCustomSampleTypesTable({
             saveStatus.status === 'fetching') &&
             'Save'}
           {saveStatus.status === 'success' && (
-            <React.Fragment>
+            <Fragment>
               <i className="fas fa-check" /> Saved
-            </React.Fragment>
+            </Fragment>
           )}
           {(saveStatus.status === 'failure' ||
             saveStatus.status === 'fetch-failure' ||
             saveStatus.status === 'name-not-available') && (
-            <React.Fragment>
+            <Fragment>
               <i className="fas fa-exclamation-triangle" /> Error
-            </React.Fragment>
+            </Fragment>
           )}
         </button>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }
 

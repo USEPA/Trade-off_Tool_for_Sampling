@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import ReactTooltip from 'react-tooltip';
 
 type Props = {
@@ -21,21 +21,21 @@ function InfoIcon({
   effect = 'float',
 }: Props) {
   return (
-    <React.Fragment>
-      <ReactTooltip 
+    <Fragment>
+      <ReactTooltip
         id={id}
         place={place}
         type={type}
         effect={effect}
         multiline={true}
       />
-      <i 
+      <i
         className="fas fa-info-circle"
         css={cssStyles}
         data-for={id}
         data-tip={tooltip}
       ></i>
-    </React.Fragment>
+    </Fragment>
   );
 }
 

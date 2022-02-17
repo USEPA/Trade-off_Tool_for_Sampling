@@ -1,6 +1,13 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import Handles from '@arcgis/core/core/Handles';
 import Home from '@arcgis/core/widgets/Home';
 import Locate from '@arcgis/core/widgets/Locate';
@@ -53,7 +60,7 @@ function replaceClassName(prevClassName: string, nextClassName: string) {
 function getUpdateEventInfo(
   layers: LayerType[],
   event: any,
-  setter: React.Dispatch<React.SetStateAction<LayerType | null>> | null,
+  setter: Dispatch<SetStateAction<LayerType | null>> | null,
 ) {
   // get type and changes
   const type = event.type === 'create' ? 'add' : event.type;
@@ -94,9 +101,9 @@ type Props = {
 };
 
 function MapWidgets({ mapView }: Props) {
-  const { userInfo } = React.useContext(AuthenticationContext);
+  const { userInfo } = useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } =
-    React.useContext(NavigationContext);
+    useContext(NavigationContext);
   const {
     defaultSymbols,
     edits,
@@ -118,13 +125,13 @@ function MapWidgets({ mapView }: Props) {
     layers,
     setLayers,
     map,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
-  React.useEffect(() => {
+  useEffect(() => {
     if (!mapView || !setHomeWidget || homeWidget) return;
 
     const widget = new Home({ view: mapView });
@@ -136,8 +143,8 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, homeWidget, setHomeWidget]);
 
   // Creates and adds the scale bar widget to the map
-  const [scaleBar, setScaleBar] = React.useState<__esri.ScaleBar | null>(null);
-  React.useEffect(() => {
+  const [scaleBar, setScaleBar] = useState<__esri.ScaleBar | null>(null);
+  useEffect(() => {
     if (!mapView || scaleBar) return;
 
     const newScaleBar = new ScaleBar({
@@ -152,8 +159,8 @@ function MapWidgets({ mapView }: Props) {
   const [
     locateWidget,
     setLocateWidget, //
-  ] = React.useState<__esri.Locate | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.Locate | null>(null);
+  useEffect(() => {
     if (!mapView || locateWidget) return;
 
     const widget = new Locate({ view: mapView });
@@ -173,7 +180,7 @@ function MapWidgets({ mapView }: Props) {
   }, [mapView, locateWidget]);
 
   // Creates the SketchViewModel
-  React.useEffect(() => {
+  useEffect(() => {
     if (!sketchLayer) return;
     if (sketchVM) return;
     const svm = new SketchViewModel({
@@ -192,7 +199,7 @@ function MapWidgets({ mapView }: Props) {
   }, [defaultSymbols, mapView, sketchVM, setSketchVM, sketchLayer]);
 
   // Creates the SketchViewModel
-  React.useEffect(() => {
+  useEffect(() => {
     if (!aoiSketchLayer) return;
     if (aoiSketchVM) return;
     const svm = new SketchViewModel({
@@ -210,7 +217,7 @@ function MapWidgets({ mapView }: Props) {
   }, [defaultSymbols, mapView, aoiSketchVM, setAoiSketchVM, aoiSketchLayer]);
 
   // Updates the selected layer of the sketchViewModel
-  React.useEffect(() => {
+  useEffect(() => {
     if (!sketchVM) return;
 
     if (
@@ -225,7 +232,7 @@ function MapWidgets({ mapView }: Props) {
   }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the aoiSketchViewModel
-  React.useEffect(() => {
+  useEffect(() => {
     if (!aoiSketchVM) return;
 
     if (
@@ -247,11 +254,11 @@ function MapWidgets({ mapView }: Props) {
   }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
 
   // Creates the sketchVM events for placing the graphic on the map
-  const setupEvents = React.useCallback(
+  const setupEvents = useCallback(
     (
       sketchViewModel: __esri.SketchViewModel,
-      setter: React.Dispatch<React.SetStateAction<boolean>>,
-      sketchEventSetter: React.Dispatch<any>,
+      setter: Dispatch<SetStateAction<boolean>>,
+      sketchEventSetter: Dispatch<any>,
     ) => {
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
@@ -451,13 +458,13 @@ function MapWidgets({ mapView }: Props) {
   );
 
   // Setup the sketch view model events for the base sketchVM
-  const [sketchVMActive, setSketchVMActive] = React.useState(false);
+  const [sketchVMActive, setSketchVMActive] = useState(false);
   const [
     sketchEventsInitialized,
     setSketchEventsInitialized, //
-  ] = React.useState(false);
-  const [updateSketchEvent, setUpdateSketchEvent] = React.useState<any>(null);
-  React.useEffect(() => {
+  ] = useState(false);
+  const [updateSketchEvent, setUpdateSketchEvent] = useState<any>(null);
+  useEffect(() => {
     if (!sketchVM || !loadedProjection || sketchEventsInitialized) return;
     setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
 
@@ -471,16 +478,16 @@ function MapWidgets({ mapView }: Props) {
   ]);
 
   // Setup the sketch view model events for the Sampling Mask sketchVM
-  const [aoiSketchVMActive, setAoiSketchVMActive] = React.useState(false);
+  const [aoiSketchVMActive, setAoiSketchVMActive] = useState(false);
   const [
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized, //
-  ] = React.useState(false);
+  ] = useState(false);
   const [
     aoiUpdateSketchEvent,
     setAoiUpdateSketchEvent, //
-  ] = React.useState<any>(null);
-  React.useEffect(() => {
+  ] = useState<any>(null);
+  useEffect(() => {
     if (!aoiSketchVM || !loadedProjection || aoiSketchEventsInitialized) return;
     setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
@@ -498,9 +505,9 @@ function MapWidgets({ mapView }: Props) {
   const [
     targetSketchVM,
     setTargetSketchVM, //
-  ] = React.useState<SketchVMName>('');
-  const [bothEqualSet, setBothEqualSet] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState<SketchVMName>('');
+  const [bothEqualSet, setBothEqualSet] = useState(false);
+  useEffect(() => {
     let newTarget: SketchVMName = '';
     let newBothEqualSet = bothEqualSet;
 
@@ -534,9 +541,9 @@ function MapWidgets({ mapView }: Props) {
     eventChanges: any;
     layer: LayerType | null;
     layerIndex: number;
-    setter: React.Dispatch<React.SetStateAction<LayerType | null>> | null;
+    setter: Dispatch<SetStateAction<LayerType | null>> | null;
   };
-  const [updateLayer, setUpdateLayer] = React.useState<UpdateLayerEventType>({
+  const [updateLayer, setUpdateLayer] = useState<UpdateLayerEventType>({
     eventType: null,
     eventChanges: null,
     layer: null,
@@ -545,7 +552,7 @@ function MapWidgets({ mapView }: Props) {
   });
 
   // set the updateLayer for the updateSketchEvent
-  React.useEffect(() => {
+  useEffect(() => {
     if (layers.length === 0 || !updateSketchEvent) return;
     setUpdateSketchEvent(null);
 
@@ -555,7 +562,7 @@ function MapWidgets({ mapView }: Props) {
   }, [updateSketchEvent, layers, setSketchLayer]);
 
   // set the updateLayer for the aoiUpdateSketchEvent
-  React.useEffect(() => {
+  useEffect(() => {
     if (layers.length === 0 || !aoiUpdateSketchEvent) return;
     setAoiUpdateSketchEvent(null);
 
@@ -565,7 +572,7 @@ function MapWidgets({ mapView }: Props) {
   }, [aoiUpdateSketchEvent, layers, setAoiSketchLayer]);
 
   // save the updated graphic to the edits data structure for later publishing
-  React.useEffect(() => {
+  useEffect(() => {
     if (!updateLayer.layer) return;
     setUpdateLayer({
       eventType: null,
@@ -616,7 +623,7 @@ function MapWidgets({ mapView }: Props) {
   ]);
 
   // Reactivate aoiSketchVM after the updateSketchEvent is null
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       updateSketchEvent ||
       !aoiSketchVM ||
@@ -631,7 +638,7 @@ function MapWidgets({ mapView }: Props) {
   }, [currentPanel, updateSketchEvent, aoiSketchVM, aoiSketchLayer]);
 
   // Reactivate sketchVM after the aoiUpdateSketchEvent is null
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       aoiUpdateSketchEvent ||
       !sketchVM ||
@@ -646,7 +653,7 @@ function MapWidgets({ mapView }: Props) {
   }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer]);
 
   // Updates the popupTemplates when trainingMode is toggled on/off
-  React.useEffect(() => {
+  useEffect(() => {
     // get the popupTemplate
     const popupTemplate = new PopupTemplate(
       getPopupTemplate('Samples', trainingMode),
@@ -670,8 +677,8 @@ function MapWidgets({ mapView }: Props) {
   }, [getPopupTemplate, trainingMode, layers]);
 
   // Gets the graphics to be highlighted and highlights them
-  const [handles] = React.useState(new Handles());
-  React.useEffect(() => {
+  const [handles] = useState(new Handles());
+  useEffect(() => {
     if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
       return;
     }
@@ -710,7 +717,7 @@ function MapWidgets({ mapView }: Props) {
     }
   }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map) {
       return;
     }

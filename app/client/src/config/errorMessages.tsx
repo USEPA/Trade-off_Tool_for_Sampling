@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
@@ -29,7 +29,7 @@ export const webServiceErrorMessage = (
       severity="error"
       title={title}
       message={
-        <React.Fragment>
+        <Fragment>
           <span>{error.message}</span>
           <br />
           <ShowLessMore
@@ -58,7 +58,7 @@ export const webServiceErrorMessage = (
           >
             Copy Detailed Error
           </button>
-        </React.Fragment>
+        </Fragment>
       }
     />
   );
@@ -69,12 +69,12 @@ export const errorBoundaryMessage = (
     severity="error"
     title="Error"
     message={
-      <React.Fragment>
+      <Fragment>
         Something went wrong. Please contact the application owner, Timothy Boe,
         at <a href="mailto:boe.timothy@epa.gov.">boe.timothy@epa.gov.</a>.
         Please include as much detail related to the sequence of interactions
         that triggered the error with your message.
-      </React.Fragment>
+      </Fragment>
     }
   />
 );

@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
 import esriConfig from '@arcgis/core/config';
@@ -249,7 +255,7 @@ const zoomButtonStyles = css`
 `;
 
 function App() {
-  const { calculateResults } = React.useContext(CalculateContext);
+  const { calculateResults } = useContext(CalculateContext);
   const {
     currentPanel,
     panelExpanded,
@@ -259,14 +265,14 @@ function App() {
     tablePanelHeight,
     setTablePanelHeight,
     trainingMode,
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
   const {
     mapView,
     layers,
     selectedSampleIds,
     setSelectedSampleIds,
     selectedScenario,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   const services = useServicesContext();
   useSessionStorage();
@@ -274,10 +280,10 @@ function App() {
   const { height, width } = useWindowSize();
 
   // calculate height of div holding actions info
-  const [contentHeight, setContentHeight] = React.useState(0);
-  const [toolbarHeight, setToolbarHeight] = React.useState(0);
-  const mapRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const [contentHeight, setContentHeight] = useState(0);
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  const mapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!mapRef?.current) return;
 
     const mapHeight = mapRef.current.getBoundingClientRect().height;
@@ -300,8 +306,8 @@ function App() {
   ]);
 
   // calculate height of div holding actions info
-  const toolbarRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!toolbarRef?.current) return;
 
     const barHeight = toolbarRef.current.getBoundingClientRect().height;
@@ -311,9 +317,9 @@ function App() {
   const [
     sizeCheckInitialized,
     setSizeCheckInitialized, //
-  ] = React.useState(false);
-  const { setOptions } = React.useContext(DialogContext);
-  React.useEffect(() => {
+  ] = useState(false);
+  const { setOptions } = useContext(DialogContext);
+  useEffect(() => {
     if (sizeCheckInitialized) return;
 
     if (width < 1024 || height < 600) {
@@ -328,9 +334,9 @@ function App() {
     setSizeCheckInitialized(true);
   }, [width, height, sizeCheckInitialized, setOptions]);
 
-  const totsRef = React.useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = React.useState(0);
-  React.useEffect(() => {
+  const totsRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
     if (!totsRef?.current) return;
 
     setOffset(totsRef.current.offsetTop);
@@ -389,9 +395,8 @@ function App() {
   };
 
   // setup esri interceptors for logging to google analytics
-  const [interceptorsInitialized, setInterceptorsInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+  const [interceptorsInitialized, setInterceptorsInitialized] = useState(false);
+  useEffect(() => {
     if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
 
     var callId = 0;
@@ -468,12 +473,12 @@ function App() {
   }, [interceptorsInitialized, services]);
 
   return (
-    <React.Fragment>
+    <Fragment>
       <Global styles={gloablStyles} />
 
       <div className="tots" ref={totsRef}>
         <ErrorBoundary>
-          <React.Fragment>
+          <Fragment>
             <SplashScreen />
             <AlertDialog />
             {window.location.search.includes('devMode=true') && (
@@ -511,9 +516,7 @@ function App() {
                       aria-label={`${
                         tablePanelExpanded ? 'Collapse' : 'Expand'
                       } Table Panel`}
-                      onClick={() =>
-                        setTablePanelExpanded(!tablePanelExpanded)
-                      }
+                      onClick={() => setTablePanelExpanded(!tablePanelExpanded)}
                     >
                       <i
                         className={
@@ -589,10 +592,7 @@ function App() {
                             const maxTableHeight = panelHeight - minMapHeight;
 
                             // prevent map being taller then content box
-                            if (
-                              newMapHeight + resizerHeight >=
-                              contentHeight
-                            ) {
+                            if (newMapHeight + resizerHeight >= contentHeight) {
                               newMapHeight = contentHeight - resizerHeight;
                               newTableHeight = resizerHeight;
                             }
@@ -743,10 +743,10 @@ function App() {
                 )}
               </div>
             </div>
-          </React.Fragment>
+          </Fragment>
         </ErrorBoundary>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }
 

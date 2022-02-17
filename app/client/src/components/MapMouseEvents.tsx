@@ -1,4 +1,4 @@
-import React from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import Collection from '@arcgis/core/core/Collection';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
@@ -26,11 +26,11 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView }: Props) {
-  const { setTablePanelExpanded } = React.useContext(NavigationContext);
+  const { setTablePanelExpanded } = useContext(NavigationContext);
   const { edits, setEdits, layers, setSelectedSampleIds } =
-    React.useContext(SketchContext);
+    useContext(SketchContext);
 
-  const handleMapClick = React.useCallback(
+  const handleMapClick = useCallback(
     (event, mapView) => {
       // perform a hittest on the click location
       mapView
@@ -122,8 +122,8 @@ function MapMouseEvents({ mapView }: Props) {
   );
 
   // Sets up the map mouse events when the component initializes
-  const [initialized, setInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [initialized, setInitialized] = useState(false);
+  useEffect(() => {
     if (initialized) return;
 
     // setup the mouse click and mouse over events
@@ -134,9 +134,10 @@ function MapMouseEvents({ mapView }: Props) {
     setInitialized(true);
   }, [mapView, handleMapClick, initialized]);
 
-  const [sampleToDelete, setSampleToDelete] =
-    React.useState<__esri.Graphic | null>(null);
-  React.useEffect(() => {
+  const [sampleToDelete, setSampleToDelete] = useState<__esri.Graphic | null>(
+    null,
+  );
+  useEffect(() => {
     if (!sampleToDelete) return;
 
     const changes = new Collection<__esri.Graphic>();
@@ -191,9 +192,8 @@ function MapMouseEvents({ mapView }: Props) {
     setSampleToDelete(null);
   }, [edits, setEdits, layers, mapView, sampleToDelete]);
 
-  const [popupActionsInitialized, setPopupActionsInitialized] =
-    React.useState(false);
-  React.useEffect(() => {
+  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || popupActionsInitialized) return;
 
     setPopupActionsInitialized(true);

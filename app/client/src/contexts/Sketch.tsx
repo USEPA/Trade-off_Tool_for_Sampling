@@ -1,6 +1,13 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from 'react';
 // contexts
 import {
   useSampleTypesContext,
@@ -23,73 +30,59 @@ import {
 
 type SketchType = {
   autoZoom: boolean;
-  setAutoZoom: React.Dispatch<React.SetStateAction<boolean>>;
+  setAutoZoom: Dispatch<SetStateAction<boolean>>;
   basemapWidget: __esri.BasemapGallery | null;
-  setBasemapWidget: React.Dispatch<
-    React.SetStateAction<__esri.BasemapGallery | null>
-  >;
+  setBasemapWidget: Dispatch<SetStateAction<__esri.BasemapGallery | null>>;
   defaultSymbols: DefaultSymbolsType;
-  setDefaultSymbols: React.Dispatch<React.SetStateAction<DefaultSymbolsType>>;
+  setDefaultSymbols: Dispatch<SetStateAction<DefaultSymbolsType>>;
   setDefaultSymbolSingle: Function;
   resetDefaultSymbols: Function;
   edits: EditsType;
-  setEdits: React.Dispatch<React.SetStateAction<EditsType>>;
+  setEdits: Dispatch<SetStateAction<EditsType>>;
   homeWidget: __esri.Home | null;
-  setHomeWidget: React.Dispatch<React.SetStateAction<__esri.Home | null>>;
+  setHomeWidget: Dispatch<SetStateAction<__esri.Home | null>>;
   symbolsInitialized: boolean;
-  setSymbolsInitialized: React.Dispatch<React.SetStateAction<boolean>>;
+  setSymbolsInitialized: Dispatch<SetStateAction<boolean>>;
   layersInitialized: boolean;
-  setLayersInitialized: React.Dispatch<React.SetStateAction<boolean>>;
+  setLayersInitialized: Dispatch<SetStateAction<boolean>>;
   layers: LayerType[];
-  setLayers: React.Dispatch<React.SetStateAction<LayerType[]>>;
+  setLayers: Dispatch<SetStateAction<LayerType[]>>;
   portalLayers: PortalLayerType[];
-  setPortalLayers: React.Dispatch<React.SetStateAction<PortalLayerType[]>>;
+  setPortalLayers: Dispatch<SetStateAction<PortalLayerType[]>>;
   referenceLayers: any[];
-  setReferenceLayers: React.Dispatch<React.SetStateAction<any[]>>;
+  setReferenceLayers: Dispatch<SetStateAction<any[]>>;
   urlLayers: UrlLayerType[];
-  setUrlLayers: React.Dispatch<React.SetStateAction<UrlLayerType[]>>;
+  setUrlLayers: Dispatch<SetStateAction<UrlLayerType[]>>;
   sketchLayer: LayerType | null;
-  setSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
+  setSketchLayer: Dispatch<SetStateAction<LayerType | null>>;
   aoiSketchLayer: LayerType | null;
-  setAoiSketchLayer: React.Dispatch<React.SetStateAction<LayerType | null>>;
+  setAoiSketchLayer: Dispatch<SetStateAction<LayerType | null>>;
   map: __esri.Map | null;
-  setMap: React.Dispatch<React.SetStateAction<__esri.Map | null>>;
+  setMap: Dispatch<SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
-  setMapView: React.Dispatch<React.SetStateAction<__esri.MapView | null>>;
+  setMapView: Dispatch<SetStateAction<__esri.MapView | null>>;
   selectedSampleIds: SelectedSampleType[];
-  setSelectedSampleIds: React.Dispatch<
-    React.SetStateAction<SelectedSampleType[]>
-  >;
+  setSelectedSampleIds: Dispatch<SetStateAction<SelectedSampleType[]>>;
   selectedScenario: ScenarioEditsType | null;
-  setSelectedScenario: React.Dispatch<
-    React.SetStateAction<ScenarioEditsType | null>
-  >;
+  setSelectedScenario: Dispatch<SetStateAction<ScenarioEditsType | null>>;
   sketchVM: __esri.SketchViewModel | null;
-  setSketchVM: React.Dispatch<
-    React.SetStateAction<__esri.SketchViewModel | null>
-  >;
+  setSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
   aoiSketchVM: __esri.SketchViewModel | null;
-  setAoiSketchVM: React.Dispatch<
-    React.SetStateAction<__esri.SketchViewModel | null>
-  >;
+  setAoiSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
   getGpMaxRecordCount: (() => Promise<number>) | null;
   userDefinedOptions: SampleSelectType[];
-  setUserDefinedOptions: React.Dispatch<
-    React.SetStateAction<SampleSelectType[]>
-  >;
+  setUserDefinedOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
   userDefinedAttributes: UserDefinedAttributes;
-  setUserDefinedAttributes: React.Dispatch<
-    React.SetStateAction<UserDefinedAttributes>
-  >;
+  setUserDefinedAttributes: Dispatch<SetStateAction<UserDefinedAttributes>>;
   sampleAttributes: any[];
-  setSampleAttributes: React.Dispatch<React.SetStateAction<any[]>>;
+  setSampleAttributes: Dispatch<SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
-  setAllSampleOptions: React.Dispatch<React.SetStateAction<SampleSelectType[]>>;
+  setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
   showAsPoints: boolean;
-  setShowAsPoints: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowAsPoints: Dispatch<SetStateAction<boolean>>;
 };
 
-export const SketchContext = React.createContext<SketchType>({
+export const SketchContext = createContext<SketchType>({
   autoZoom: false,
   setAutoZoom: () => {},
   basemapWidget: null,
@@ -100,7 +93,7 @@ export const SketchContext = React.createContext<SketchType>({
   },
   setDefaultSymbols: () => {},
   setDefaultSymbolSingle: () => {},
-  resetDefaultSymbols: () =>  {},
+  resetDefaultSymbols: () => {},
   edits: { count: 0, edits: [] },
   setEdits: () => {},
   homeWidget: null,
@@ -170,80 +163,75 @@ export function SketchProvider({ children }: Props) {
     editCount: 0,
   };
 
-  const [autoZoom, setAutoZoom] = React.useState(false);
+  const [autoZoom, setAutoZoom] = useState(false);
   const [
     basemapWidget,
     setBasemapWidget, //
-  ] = React.useState<__esri.BasemapGallery | null>(null);
-  const [
-    defaultSymbols,
-    setDefaultSymbols,
-  ] = React.useState<DefaultSymbolsType>(initialDefaultSymbols);
-  const [edits, setEdits] = React.useState<EditsType>({ count: 0, edits: [] });
-  const [layersInitialized, setLayersInitialized] = React.useState(false);
-  const [layers, setLayers] = React.useState<LayerType[]>([]);
-  const [portalLayers, setPortalLayers] = React.useState<PortalLayerType[]>([]);
-  const [referenceLayers, setReferenceLayers] = React.useState<any[]>([]);
-  const [urlLayers, setUrlLayers] = React.useState<UrlLayerType[]>([]);
-  const [sketchLayer, setSketchLayer] = React.useState<LayerType | null>(null);
-  const [aoiSketchLayer, setAoiSketchLayer] = React.useState<LayerType | null>(
-    null,
+  ] = useState<__esri.BasemapGallery | null>(null);
+  const [defaultSymbols, setDefaultSymbols] = useState<DefaultSymbolsType>(
+    initialDefaultSymbols,
   );
-  const [homeWidget, setHomeWidget] = React.useState<__esri.Home | null>(null);
-  const [symbolsInitialized, setSymbolsInitialized] = React.useState(false);
-  const [map, setMap] = React.useState<__esri.Map | null>(null);
-  const [mapView, setMapView] = React.useState<__esri.MapView | null>(null);
-  const [selectedSampleIds, setSelectedSampleIds] = React.useState<
+  const [edits, setEdits] = useState<EditsType>({ count: 0, edits: [] });
+  const [layersInitialized, setLayersInitialized] = useState(false);
+  const [layers, setLayers] = useState<LayerType[]>([]);
+  const [portalLayers, setPortalLayers] = useState<PortalLayerType[]>([]);
+  const [referenceLayers, setReferenceLayers] = useState<any[]>([]);
+  const [urlLayers, setUrlLayers] = useState<UrlLayerType[]>([]);
+  const [sketchLayer, setSketchLayer] = useState<LayerType | null>(null);
+  const [aoiSketchLayer, setAoiSketchLayer] = useState<LayerType | null>(null);
+  const [homeWidget, setHomeWidget] = useState<__esri.Home | null>(null);
+  const [symbolsInitialized, setSymbolsInitialized] = useState(false);
+  const [map, setMap] = useState<__esri.Map | null>(null);
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [selectedSampleIds, setSelectedSampleIds] = useState<
     SelectedSampleType[]
   >([]);
   const [
     selectedScenario,
     setSelectedScenario, //
-  ] = React.useState<ScenarioEditsType | null>(null);
+  ] = useState<ScenarioEditsType | null>(null);
   const [
     sketchVM,
     setSketchVM, //
-  ] = React.useState<__esri.SketchViewModel | null>(null);
+  ] = useState<__esri.SketchViewModel | null>(null);
   const [
     aoiSketchVM,
     setAoiSketchVM, //
-  ] = React.useState<__esri.SketchViewModel | null>(null);
-  const [userDefinedOptions, setUserDefinedOptions] = React.useState<
+  ] = useState<__esri.SketchViewModel | null>(null);
+  const [userDefinedOptions, setUserDefinedOptions] = useState<
     SampleSelectType[]
   >([]);
-  const [
-    userDefinedAttributes,
-    setUserDefinedAttributes,
-  ] = React.useState<UserDefinedAttributes>({ editCount: 0, sampleTypes: {} });
-  const [sampleAttributes, setSampleAttributes] = React.useState<any[]>([]);
-  const [allSampleOptions, setAllSampleOptions] = React.useState<
-    SampleSelectType[]
-  >([]);
-  const [showAsPoints, setShowAsPoints] = React.useState<boolean>(true);
+  const [userDefinedAttributes, setUserDefinedAttributes] =
+    useState<UserDefinedAttributes>({ editCount: 0, sampleTypes: {} });
+  const [sampleAttributes, setSampleAttributes] = useState<any[]>([]);
+  const [allSampleOptions, setAllSampleOptions] = useState<SampleSelectType[]>(
+    [],
+  );
+  const [showAsPoints, setShowAsPoints] = useState<boolean>(true);
 
   // Update totsSampleAttributes variable on the window object. This is a workaround
   // to an issue where the sampleAttributes state variable is not available within esri
   // event handlers.
-  React.useEffect(() => {
+  useEffect(() => {
     (window as any).totsSampleAttributes = sampleAttributes;
   }, [sampleAttributes]);
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
   // event handlers.
-  React.useEffect(() => {
+  useEffect(() => {
     (window as any).totsLayers = layers;
   }, [layers]);
 
   // Update totsDefaultSymbols variable on the window object. This is a workaround
   // to an issue where the defaultSymbols state variable is not available within esri
   // event handlers.
-  React.useEffect(() => {
+  useEffect(() => {
     (window as any).totsDefaultSymbols = defaultSymbols;
   }, [defaultSymbols]);
 
   // Keep the allSampleOptions array up to date
-  React.useEffect(() => {
+  useEffect(() => {
     if (sampleTypeContext.status !== 'success') return;
 
     let allSampleOptions: SampleSelectType[] = [];
@@ -273,9 +261,7 @@ export function SketchProvider({ children }: Props) {
 
   // define the context funtion for getting the max record count
   // of the gp server
-  const [gpMaxRecordCount, setGpMaxRecordCount] = React.useState<number | null>(
-    null,
-  );
+  const [gpMaxRecordCount, setGpMaxRecordCount] = useState<number | null>(null);
   function getGpMaxRecordCount(): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       if (services.status !== 'success')
@@ -288,8 +274,10 @@ export function SketchProvider({ children }: Props) {
       }
 
       let url = '';
-      if(services.data.useProxyForGPServer) url = services.data.proxyUrl;
-      url += `${services.data.totsGPServer}?f=json${getEnvironmentStringParam()}`;
+      if (services.data.useProxyForGPServer) url = services.data.proxyUrl;
+      url += `${
+        services.data.totsGPServer
+      }?f=json${getEnvironmentStringParam()}`;
 
       // get the max record count from the gp server
       fetchCheck(url)

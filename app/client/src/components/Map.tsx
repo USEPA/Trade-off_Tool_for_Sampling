@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import EsriMap from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -27,7 +33,7 @@ type Props = {
 };
 
 function Map({ height }: Props) {
-  const mapRef = React.useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
 
   const {
     autoZoom,
@@ -38,10 +44,10 @@ function Map({ height }: Props) {
     setMapView,
     sketchLayer,
     aoiSketchLayer,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // Creates the map and view
-  React.useEffect(() => {
+  useEffect(() => {
     if (!mapRef.current) return;
     if (mapView) return;
 
@@ -70,8 +76,8 @@ function Map({ height }: Props) {
   }, [mapView, setMap, setMapView]);
 
   // Creates a watch event that is used for reordering the layers
-  const [watchInitialized, setWatchInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [watchInitialized, setWatchInitialized] = useState(false);
+  useEffect(() => {
     if (!map || watchInitialized) return;
 
     // whenever layers are added, reorder them
@@ -131,7 +137,7 @@ function Map({ height }: Props) {
   }, [map, watchInitialized]);
 
   // Zooms to the graphics whenever the sketchLayer changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !mapView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
@@ -150,10 +156,10 @@ function Map({ height }: Props) {
   return (
     <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
       {mapView && (
-        <React.Fragment>
+        <Fragment>
           <MapWidgets mapView={mapView} />
           <MapMouseEvents mapView={mapView} />
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import IdentityManager from '@arcgis/core/identity/IdentityManager';
@@ -120,8 +126,8 @@ function Publish() {
     oAuthInfo,
     portal,
     signedIn, //
-  } = React.useContext(AuthenticationContext);
-  const { goToOptions, setGoToOptions } = React.useContext(NavigationContext);
+  } = useContext(AuthenticationContext);
+  const { goToOptions, setGoToOptions } = useContext(NavigationContext);
   const {
     publishSamplesMode,
     publishSampleTableMetaData,
@@ -138,7 +144,7 @@ function Publish() {
     includePartialPlanWebMap,
     includeCustomSampleTypes,
     partialPlanAttributes,
-  } = React.useContext(PublishContext);
+  } = useContext(PublishContext);
   const {
     edits,
     setEdits,
@@ -150,12 +156,12 @@ function Publish() {
     sketchLayer,
     userDefinedAttributes,
     setUserDefinedAttributes,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // Checks browser storage to determine if the user clicked publish and logged in.
-  const [publishButtonClicked, setPublishButtonClicked] = React.useState(false);
-  const [continueInitialized, setContinueInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [publishButtonClicked, setPublishButtonClicked] = useState(false);
+  const [continueInitialized, setContinueInitialized] = useState(false);
+  useEffect(() => {
     if (continueInitialized) return;
 
     // continue publish is not true, exit early
@@ -174,7 +180,7 @@ function Publish() {
   }, [portal, signedIn, goToOptions, setGoToOptions, continueInitialized]);
 
   // Sign in if necessary
-  React.useEffect(() => {
+  useEffect(() => {
     if (!oAuthInfo || !publishButtonClicked) return;
 
     // have the user login if necessary
@@ -185,8 +191,8 @@ function Publish() {
   }, [setGoToOptions, portal, signedIn, oAuthInfo, publishButtonClicked]);
 
   // Check if the scenario name is available
-  const [hasNameBeenChecked, setHasNameBeenChecked] = React.useState(false);
-  React.useEffect(() => {
+  const [hasNameBeenChecked, setHasNameBeenChecked] = useState(false);
+  useEffect(() => {
     if (!portal || !publishButtonClicked) return;
 
     // see if names have already been verified as available
@@ -302,14 +308,14 @@ function Publish() {
     layers,
   ]);
 
-  const [publishResponse, setPublishResponse] = React.useState<PublishType>({
+  const [publishResponse, setPublishResponse] = useState<PublishType>({
     status: 'none',
     summary: { success: '', failed: '' },
     rawData: null,
   });
 
   // publishes a plan with all of the attributes
-  const publishFullPlan = React.useCallback(() => {
+  const publishFullPlan = useCallback(() => {
     if (!portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
@@ -809,14 +815,14 @@ function Publish() {
   ]);
 
   const [publishPartialResponse, setPublishPartialResponse] =
-    React.useState<PublishType>({
+    useState<PublishType>({
       status: 'none',
       summary: { success: '', failed: '' },
       rawData: null,
     });
 
   // publishes a plan with all of the attributes
-  const publishPartialPlan = React.useCallback(() => {
+  const publishPartialPlan = useCallback(() => {
     if (!portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
@@ -1349,14 +1355,14 @@ function Publish() {
   ]);
 
   const [publishSamplesResponse, setPublishSamplesResponse] =
-    React.useState<PublishType>({
+    useState<PublishType>({
       status: 'none',
       summary: { success: '', failed: '' },
       rawData: null,
     });
 
   // publishes custom sample types
-  const publishSampleTypes = React.useCallback(() => {
+  const publishSampleTypes = useCallback(() => {
     if (!portal) return;
 
     setPublishSamplesResponse({
@@ -1624,7 +1630,7 @@ function Publish() {
   ]);
 
   // Run the publish
-  React.useEffect(() => {
+  useEffect(() => {
     if (!oAuthInfo || !portal || !signedIn) return;
     if (!publishButtonClicked || !hasNameBeenChecked) return;
     if (
@@ -1691,10 +1697,11 @@ function Publish() {
     });
   }
 
-  const [publishNameCheck, setPublishNameCheck] =
-    React.useState<SaveResultsType>({ status: 'none' });
+  const [publishNameCheck, setPublishNameCheck] = useState<SaveResultsType>({
+    status: 'none',
+  });
   const [sampleTypesNameCheck, setSampleTypesNameCheck] =
-    React.useState<SaveResultsType>({ status: 'none' });
+    useState<SaveResultsType>({ status: 'none' });
 
   const isPublishPlanReady =
     (!includeFullPlan && !includePartialPlan) ||
@@ -1784,7 +1791,7 @@ function Publish() {
           />
         )}
         {publishResponse.status !== 'name-not-available' && (
-          <React.Fragment>
+          <Fragment>
             <p css={layerInfo}>
               <strong>Plan Name: </strong>
               {selectedScenario?.scenarioName}
@@ -1796,7 +1803,7 @@ function Publish() {
                 charLimit={20}
               />
             </p>
-          </React.Fragment>
+          </Fragment>
         )}
       </div>
 
@@ -1812,7 +1819,7 @@ function Publish() {
             Include Tailored TOTS Output Files:
           </strong>
           {includePartialPlan && (
-            <React.Fragment>
+            <Fragment>
               <br />
               <strong css={webMapContainerCheckboxStyles}>
                 {includePartialPlanWebMap ? (
@@ -1822,7 +1829,7 @@ function Publish() {
                 )}
                 Include Web Map:
               </strong>
-            </React.Fragment>
+            </Fragment>
           )}
         </p>
 
@@ -1838,21 +1845,21 @@ function Publish() {
               <strong>Publish Custom Sample Types to:</strong>
               <br />
               {selectedService ? (
-                <React.Fragment>
+                <Fragment>
                   <strong>Feature Service Name: </strong>
                   {selectedService.label}
                   <br />
                   <strong>Feature Service Description: </strong>
                   {selectedService.description}
-                </React.Fragment>
+                </Fragment>
               ) : (
-                <React.Fragment>
+                <Fragment>
                   <strong>Feature Service Name: </strong>
                   {sampleTableName}
                   <br />
                   <strong>Feature Service Description: </strong>
                   {sampleTableDescription}
-                </React.Fragment>
+                </Fragment>
               )}
             </p>
           </div>
@@ -1907,7 +1914,7 @@ function Publish() {
         sampleCount === 0 &&
         noSamplesPublishMessage}
       {includeCustomSampleTypes && (
-        <React.Fragment>
+        <Fragment>
           {sampleTypeSelections.length === 0 && noSampleTypesPublishMessage}
           {publishSamplesMode === 'new' &&
             publishSamplesResponse.status === 'none' &&
@@ -1917,7 +1924,7 @@ function Publish() {
             publishSamplesResponse.status === 'none' &&
             !selectedService &&
             noServiceSelectedMessage}
-        </React.Fragment>
+        </Fragment>
       )}
 
       {publishSamplesResponse.status === 'name-not-available' &&

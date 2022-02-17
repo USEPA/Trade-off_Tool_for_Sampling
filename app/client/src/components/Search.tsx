@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import EsriSearch from '@arcgis/core/widgets/Search';
 // components
@@ -66,10 +66,10 @@ const searchBoxStyles = css`
 
 // --- components (Search) ---
 function Search() {
-  const { mapView } = React.useContext(SketchContext);
+  const { mapView } = useContext(SketchContext);
 
-  const [searchInitialized, setSearchInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [searchInitialized, setSearchInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || searchInitialized) return;
 
     new EsriSearch({
@@ -86,8 +86,8 @@ function Search() {
   // Starts a poll which eventually sets the id of the esri search input.
   // This code is needed to work aroudn a 508 compliance issue. Adding the
   // id to the Search constructor (above) does not add an id to the DOM element.
-  const [pollInitialized, setPollInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [pollInitialized, setPollInitialized] = useState(false);
+  useEffect(() => {
     if (pollInitialized) return;
 
     setPollInitialized(true);

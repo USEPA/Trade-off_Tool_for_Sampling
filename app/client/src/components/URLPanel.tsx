@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  MouseEvent as ReactMouseEvent,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
@@ -56,22 +62,22 @@ type SupportedUrlLayerTypes =
   | __esri.CSVLayer;
 
 function URLPanel() {
-  const { map, urlLayers, setUrlLayers } = React.useContext(SketchContext);
+  const { map, urlLayers, setUrlLayers } = useContext(SketchContext);
 
   // filters
   const [
     urlType,
     setUrlType, //
-  ] = React.useState<UrlType>({
+  ] = useState<UrlType>({
     value: 'ArcGIS',
     label: 'An ArcGIS Server Web Service',
   });
-  const [url, setUrl] = React.useState('');
-  const [showSampleUrls, setShowSampleUrls] = React.useState(false);
-  const [status, setStatus] = React.useState<UrlStatusType>('none');
+  const [url, setUrl] = useState('');
+  const [showSampleUrls, setShowSampleUrls] = useState(false);
+  const [status, setStatus] = useState<UrlStatusType>('none');
 
-  const [layer, setLayer] = React.useState<SupportedUrlLayerTypes | null>(null);
-  React.useEffect(() => {
+  const [layer, setLayer] = useState<SupportedUrlLayerTypes | null>(null);
+  useEffect(() => {
     if (!map || !layer) return;
 
     // keep the original set of url layers in case the layer errors out
@@ -108,7 +114,7 @@ function URLPanel() {
 
   if (!map) return null;
 
-  const handleAdd = (ev: React.MouseEvent<HTMLButtonElement>) => {
+  const handleAdd = (ev: ReactMouseEvent<HTMLButtonElement>) => {
     // make sure the url hasn't already been added
     const index = urlLayers.findIndex(
       (layer) => layer.url.toLowerCase() === url.toLowerCase(),
@@ -239,7 +245,7 @@ function URLPanel() {
       </button>
 
       {showSampleUrls && (
-        <React.Fragment>
+        <Fragment>
           {urlType.value === 'ArcGIS' && (
             <div>
               <p>
@@ -283,7 +289,7 @@ function URLPanel() {
               </p>
             </div>
           )}
-        </React.Fragment>
+        </Fragment>
       )}
     </form>
   );

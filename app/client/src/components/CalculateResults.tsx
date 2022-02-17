@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  Fragment,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import xl from 'excel4node';
 import { saveAs } from 'file-saver';
@@ -86,30 +92,25 @@ function CalculateResults() {
   const {
     calculateResults,
     contaminationMap, //
-  } = React.useContext(CalculateContext);
-  const {
-    aoiSketchLayer,
-    layers,
-    map,
-    mapView,
-    selectedScenario,
-  } = React.useContext(SketchContext);
+  } = useContext(CalculateContext);
+  const { aoiSketchLayer, layers, map, mapView, selectedScenario } =
+    useContext(SketchContext);
 
   const [
     downloadStatus,
     setDownloadStatus, //
-  ] = React.useState<DownloadStatus>('none');
+  ] = useState<DownloadStatus>('none');
 
   // take the screenshot
   const [
     screenshotInitialized,
     setScreenshotInitialized, //
-  ] = React.useState(false);
+  ] = useState(false);
   const [
     screenshot,
     setScreenshot, //
-  ] = React.useState<__esri.Screenshot | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.Screenshot | null>(null);
+  useEffect(() => {
     if (screenshotInitialized) return;
     if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
       return;
@@ -204,9 +205,9 @@ function CalculateResults() {
   ]);
 
   // convert the screenshot to base64
-  const [base64Initialized, setBase64Initialized] = React.useState(false);
-  const [base64Screenshot, setBase64Screenshot] = React.useState('');
-  React.useEffect(() => {
+  const [base64Initialized, setBase64Initialized] = useState(false);
+  const [base64Screenshot, setBase64Screenshot] = useState('');
+  useEffect(() => {
     if (base64Initialized) return;
     if (downloadStatus !== 'fetching' || !screenshot) return;
 
@@ -239,7 +240,7 @@ function CalculateResults() {
   }, [screenshot, downloadStatus, base64Initialized]);
 
   // export the excel doc
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !selectedScenario ||
       downloadStatus !== 'fetching' ||
@@ -745,10 +746,16 @@ function CalculateResults() {
         .number(calculateResults.data['Analysis Material Cost'])
         .style(currencyStyle);
 
-      resultsSheet.cell(8, 5).string('Total Waste Volume (L)').style(labelStyle);
+      resultsSheet
+        .cell(8, 5)
+        .string('Total Waste Volume (L)')
+        .style(labelStyle);
       resultsSheet.cell(8, 6).number(calculateResults.data['Waste Volume']);
 
-      resultsSheet.cell(9, 5).string('Total Waste Weight (lbs)').style(labelStyle);
+      resultsSheet
+        .cell(9, 5)
+        .string('Total Waste Weight (lbs)')
+        .style(labelStyle);
       resultsSheet.cell(9, 6).number(calculateResults.data['Waste Weight']);
     }
 
@@ -795,13 +802,8 @@ function CalculateResults() {
 
         const graphicsLayer = layer as __esri.GraphicsLayer;
         graphicsLayer.graphics.forEach((graphic) => {
-          const {
-            PERMANENT_IDENTIFIER,
-            TYPE,
-            CONTAMVAL,
-            CONTAMUNIT,
-            Notes,
-          } = graphic.attributes;
+          const { PERMANENT_IDENTIFIER, TYPE, CONTAMVAL, CONTAMUNIT, Notes } =
+            graphic.attributes;
 
           if (PERMANENT_IDENTIFIER) {
             samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
@@ -856,7 +858,7 @@ function CalculateResults() {
         </p>
       )}
       {calculateResults.status === 'success' && calculateResults.data && (
-        <React.Fragment>
+        <Fragment>
           <div>
             <h3>Summary</h3>
             <LabelValue
@@ -941,17 +943,17 @@ function CalculateResults() {
             <h4>Spatial Information</h4>
             <LabelValue
               label={
-                <React.Fragment>
+                <Fragment>
                   Total Sampled Area (ft<sup>2</sup>)
-                </React.Fragment>
+                </Fragment>
               }
               value={calculateResults.data['Total Sampled Area']}
             />
             <LabelValue
               label={
-                <React.Fragment>
+                <Fragment>
                   User Specified Total Area of Interest (ft<sup>2</sup>)
-                </React.Fragment>
+                </Fragment>
               }
               value={calculateResults.data['User Specified Total AOI']}
             />
@@ -1056,7 +1058,7 @@ function CalculateResults() {
               </button>
             </div>
           </div>
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

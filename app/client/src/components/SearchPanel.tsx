@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import Collection from '@arcgis/core/core/Collection';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
@@ -212,51 +212,52 @@ type SearchResultsType = {
 };
 
 function SearchPanel() {
-  const { portal, userInfo } = React.useContext(AuthenticationContext);
-  const { mapView } = React.useContext(SketchContext);
+  const { portal, userInfo } = useContext(AuthenticationContext);
+  const { mapView } = useContext(SketchContext);
 
   // filters
   const [
     location,
     setLocation, //
-  ] = React.useState<LocationType>({
+  ] = useState<LocationType>({
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
   });
   const [
     layerTypeFilter,
     setLayerTypeFilter, //
-  ] = React.useState<LayerTypeFilter>({
+  ] = useState<LayerTypeFilter>({
     value: 'All',
     label: 'All',
   });
-  const [group, setGroup] = React.useState<GroupType | null>(null);
-  const [search, setSearch] = React.useState('');
-  const [searchText, setSearchText] = React.useState('');
-  const [withinMap, setWithinMap] = React.useState(false);
-  const [mapService, setMapService] = React.useState(false);
-  const [featureService, setFeatureService] = React.useState(false);
-  const [imageService, setImageService] = React.useState(false);
-  const [vectorTileService, setVectorTileService] = React.useState(false);
-  const [kml, setKml] = React.useState(false);
-  const [wms, setWms] = React.useState(false);
+  const [group, setGroup] = useState<GroupType | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [withinMap, setWithinMap] = useState(false);
+  const [mapService, setMapService] = useState(false);
+  const [featureService, setFeatureService] = useState(false);
+  const [imageService, setImageService] = useState(false);
+  const [vectorTileService, setVectorTileService] = useState(false);
+  const [kml, setKml] = useState(false);
+  const [wms, setWms] = useState(false);
 
   const [
     searchResults,
     setSearchResults, //
-  ] = React.useState<SearchResultsType>({ status: 'none', data: null });
-  const [currentExtent, setCurrentExtent] =
-    React.useState<__esri.Extent | null>(null);
-  const [pageNumber, setPageNumber] = React.useState(1);
-  const [sortBy, setSortBy] = React.useState<SortByType>({
+  ] = useState<SearchResultsType>({ status: 'none', data: null });
+  const [currentExtent, setCurrentExtent] = useState<__esri.Extent | null>(
+    null,
+  );
+  const [pageNumber, setPageNumber] = useState(1);
+  const [sortBy, setSortBy] = useState<SortByType>({
     value: 'none',
     label: 'Relevance',
     defaultSort: 'desc',
   });
-  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Initializes the group selection
-  React.useEffect(() => {
+  useEffect(() => {
     if (group || !userInfo?.groups || userInfo.groups.length === 0) return;
 
     const firstGroup = userInfo.groups.sort((a: any, b: any) =>
@@ -270,7 +271,7 @@ function SearchPanel() {
   }, [group, userInfo]);
 
   // Builds and executes the search query on search button click
-  React.useEffect(() => {
+  useEffect(() => {
     setSearchResults({ status: 'fetching', data: null });
 
     const tmpPortal = portal ? portal : new Portal();
@@ -424,8 +425,8 @@ function SearchPanel() {
   ]);
 
   // Runs the query for changing pages of the result set
-  const [lastPageNumber, setLastPageNumber] = React.useState(1);
-  React.useEffect(() => {
+  const [lastPageNumber, setLastPageNumber] = useState(1);
+  useEffect(() => {
     if (!searchResults.data || pageNumber === lastPageNumber) return;
 
     // prevent running the same query multiple times
@@ -469,8 +470,8 @@ function SearchPanel() {
   }, [pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
-  const [watchViewInitialized, setWatchViewInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [watchViewInitialized, setWatchViewInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || watchViewInitialized) return;
 
     const watchEvent = watchUtils.whenTrue(mapView, 'stationary', () => {
@@ -485,10 +486,10 @@ function SearchPanel() {
     };
   }, [mapView, watchViewInitialized]);
 
-  const [showFilterOptions, setShowFilterOptions] = React.useState(false);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
 
   return (
-    <React.Fragment>
+    <Fragment>
       <label htmlFor="locations-select">Data Location</label>
       <Select
         inputId="locations-select"
@@ -502,7 +503,7 @@ function SearchPanel() {
         ]}
       />
       {location.value === 'My Groups' && (
-        <React.Fragment>
+        <Fragment>
           <label htmlFor="group-select">Group</label>
           <Select
             inputId="group-select"
@@ -521,7 +522,7 @@ function SearchPanel() {
                 : []
             }
           />
-        </React.Fragment>
+        </Fragment>
       )}
       <label htmlFor="layer-type-select">Type</label>
       <Select
@@ -703,14 +704,14 @@ function SearchPanel() {
         {searchResults.status === 'failure' &&
           webServiceErrorMessage(searchResults.error)}
         {searchResults.status === 'success' && (
-          <React.Fragment>
+          <Fragment>
             <div>
               {searchResults.data?.results.map((result, index) => {
                 return (
-                  <React.Fragment key={index}>
+                  <Fragment key={index}>
                     <ResultCard result={result} />
                     <hr />
-                  </React.Fragment>
+                  </Fragment>
                 );
               })}
             </div>
@@ -751,10 +752,10 @@ function SearchPanel() {
                 </div>
               </div>
             )}
-          </React.Fragment>
+          </Fragment>
         )}
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }
 
@@ -813,10 +814,10 @@ type ResultCardProps = {
 };
 
 function ResultCard({ result }: ResultCardProps) {
-  const { portal } = React.useContext(AuthenticationContext);
-  const { setOptions } = React.useContext(DialogContext);
-  const { trainingMode } = React.useContext(NavigationContext);
-  const { setSampleTypeSelections } = React.useContext(PublishContext);
+  const { portal } = useContext(AuthenticationContext);
+  const { setOptions } = useContext(DialogContext);
+  const { trainingMode } = useContext(NavigationContext);
+  const { setSampleTypeSelections } = useContext(PublishContext);
   const sampleTypeContext = useSampleTypesContext();
   const {
     defaultSymbols,
@@ -837,13 +838,13 @@ function ResultCard({ result }: ResultCardProps) {
     setUserDefinedOptions,
     userDefinedAttributes,
     setUserDefinedAttributes,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
   const { sampleValidation } = useGeometryTools();
 
   // Used to determine if the layer for this card has been added or not
-  const [added, setAdded] = React.useState(false);
-  React.useEffect(() => {
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
     let added =
       portalLayers.findIndex((portalLayer) => portalLayer.id === result.id) !==
       -1;
@@ -858,9 +859,9 @@ function ResultCard({ result }: ResultCardProps) {
   }, [portalLayers, result, userDefinedAttributes]);
 
   // removes the esri watch handle when the card is removed from the DOM.
-  const [status, setStatus] = React.useState('');
-  const [watcher, setWatcher] = React.useState<__esri.WatchHandle | null>(null);
-  React.useEffect(() => {
+  const [status, setStatus] = useState('');
+  const [watcher, setWatcher] = useState<__esri.WatchHandle | null>(null);
+  useEffect(() => {
     return function cleanup() {
       if (watcher) watcher.remove();
     };
@@ -2020,7 +2021,7 @@ function ResultCard({ result }: ResultCardProps) {
           {status === 'no-data' && 'No Data'}
         </span>
         {map && (
-          <React.Fragment>
+          <Fragment>
             {!added && (
               <button
                 css={cardButtonStyles}
@@ -2068,7 +2069,7 @@ function ResultCard({ result }: ResultCardProps) {
                 Remove
               </button>
             )}
-          </React.Fragment>
+          </Fragment>
         )}
         <a
           css={cardButtonStyles}
