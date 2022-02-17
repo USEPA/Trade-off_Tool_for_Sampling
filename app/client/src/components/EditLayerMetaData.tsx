@@ -243,6 +243,12 @@ function EditScenario({
               if(!layer) return;
 
               layer.parentLayer = groupLayer;
+              groupLayer.add(layer.sketchLayer);
+              map.layers.remove(layer.sketchLayer);
+              if (layer.pointsLayer) {
+                groupLayer.add(layer.pointsLayer);
+                map.layers.remove(layer.pointsLayer);
+              }
             });
 
             return layers;
