@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="ImageToolbar" content="false" />
     <meta http-equiv="cleartype" content="on" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="HandheldFriendly" content="true" />
     <link
       rel="shortcut icon"
@@ -92,21 +93,43 @@
         padding-right: 0;
       }
 
-      .ieErrorBox {
-        margin: 1rem;
+      .unsupportedMessageContainer {
+        position: -webkit-sticky; /* Safari */
+        position: sticky;
+        top: 0;
+        z-index: 90;
+        width: calc(100% + 34px);
+        margin-left: -17px;
+      }
+
+      .unsupportedErrorBox {
+        padding: 1rem;
         text-align: center;
         border-color: #f5c6cb;
         color: #721c24;
         background-color: #f8d7da;
       }
 
-      .ieOnly {
-        display: none;
+      .unsupportedMessage {
+        margin-right: 1rem;
+      }
+
+      .unsupportedCloseButton {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        width: 1.5rem;
+        height: 1.5rem;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.5);
       }
 
       @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
         /* IE10 and IE11 styles */
-        .ieOnly {
+        .unsupportedMessageContainer {
           display: block;
         }
       }
@@ -114,7 +137,7 @@
     <!-- IE9 and below styles -->
     <!--[if IE]>
       <style>
-        .ieOnly {
+        .unsupportedMessageContainer {
           display: block;
         }
       </style>
@@ -159,6 +182,7 @@
 
       // Wrapper for logging to GA which adds the target to the command
       function logToGa(command, ...props) {
+        if (!window.ga) return;
         ga(`${window.gaTarget}.${command}`, ...props);
       }
 
@@ -222,12 +246,12 @@
 
         // Modify the pushState, replaceState and popState events so they
         // will trigger the locationchange event.
-        var pushState = history.pushState;
+        const pushState = history.pushState;
         history.pushState = function () {
           pushState.apply(history, arguments);
           window.dispatchEvent(locationChangeEvent);
         };
-        var replaceState = history.replaceState;
+        const replaceState = history.replaceState;
         history.replaceState = function () {
           replaceState.apply(this, arguments);
           window.dispatchEvent(locationChangeEvent);
@@ -237,14 +261,14 @@
         });
 
         function wildcardIncludes(str, rule) {
-          var escapeRegex = (str) =>
+          const escapeRegex = (str) =>
             str.replace(/([.*+?^=!:${}()|\]\\])/g, '\\$1');
           return new RegExp(
             '^' + rule.split('*').map(escapeRegex).join('.*') + '$',
           ).test(str);
         }
 
-        document.addEventListener('click', function (event) {
+        window.addEventListener('click', function (event) {
           //Button clicks
           if (event.target.onclick && event.target.textContent) {
             const text = event.target.textContent.trim();
@@ -269,29 +293,26 @@
             event.target.target === '_blank'
           ) {
             const href = event.target.href;
-            let category = 'Web-service';
-            let action = '';
 
             // combine the web service and map service mappings
-            let mapping = window.googleAnalyticsMapping;
+            const mapping = window.googleAnalyticsMapping;
+            let name = '';
             mapping.forEach((item) => {
-              if (!action && wildcardIncludes(href, item.wildcardUrl)) {
-                action = item.name;
+              if (!name && wildcardIncludes(href, item.wildcardUrl)) {
+                name = item.name;
               }
             });
-            action =
-              'ord-tots1-' + (action ? action : event.target.text.trim());
+            const action =
+              'ord-tots1-' + (name ? name : event.target.text.trim());
 
-            if (window.location.hostname === event.target.hostname) {
-              //Part of the TOTS application
-              const extension = href.split('.').pop;
-              if (extension === '.pdf' || extension === '.zip')
-                category = 'Download';
-              else category = 'Internal';
-            } else {
-              //External EPA Hyperlink
-              category = 'External';
-            }
+            const extension = href.split('.').pop;
+            const category =
+              window.location.hostname === event.target.hostname
+                ? //Part of the HMW application
+                  extension === '.pdf' || extension === '.zip'
+                  ? 'Download'
+                  : 'Internal'
+                : 'External'; //External EPA Hyperlink
 
             //Log to Google Analytics
             logToGa('send', 'event', category, action, href);
@@ -307,11 +328,17 @@
           return true;
         });
       }
+
+      // hide the unsupported message initially
+      const messageStyle = document.createElement('style');
+      messageStyle.type = 'text/css';
+      messageStyle.innerHTML = '.unsupportedMessageContainer { display: none; }';
+      document.getElementsByTagName('head')[0].appendChild(messageStyle);
     </script>
     <!-- End Google Analytics-->
   </head>
 
-  <body class="html">
+  <body>
     <!-- Google Tag Manager -->
     <noscript>
       <iframe
@@ -480,12 +507,13 @@
               <noscript>
                 You need to enable JavaScript to run this app.
               </noscript>
-              <div id="root">
-                <div class="ieOnly">
-                  <div class="ieErrorBox">
+              <div id="unsupported-browser-message" class="unsupportedMessageContainer">
+                <div class="unsupportedErrorBox">
+                  <div class="unsupportedMessage">
                     <strong
-                      >Internet Explorer is not supported. Please use another browser
-                      such as Chrome, Safari, Edge, or Firfox.</strong
+                      >You are using a browser that is not supported. Trade-off Tool for Sampling (TOTS)
+                      works best on the latest verions of Chrome, Safari, Edge, or
+                      Firfox.</strong
                     >
                     <br />
                     Trade-off Tool for Sampling (TOTS) utilizes Esri's ArcGIS JavaScript API for advanced
@@ -511,8 +539,15 @@
                       EXIT
                     </a>
                   </div>
+                  <button
+                    class="unsupportedCloseButton"
+                    onClick="hideUnsupportedMessage();"
+                  >
+                    x
+                  </button>
                 </div>
               </div>
+              <div id="root"></div>
             </div>
           </div>
         </div>
@@ -689,4 +724,96 @@
       </div>
     </footer>
   </body>
+  <script>
+    // This script is used for displaying a "browser unsupported" unsupported
+    // message. This script is placed after the body to ensure the
+    // div with the "unsupported-browser-message" id exists in the dom prior
+    // to this script running.
+
+    const unsupportedMessage = document.getElementById(
+      'unsupported-browser-message',
+    );
+
+    // Allows the user to close the unsupported message
+    function hideUnsupportedMessage() {
+      unsupportedMessage.style.display = 'none';
+    }
+
+    // parse the user agent string to determine which browser the user is using
+    const { browserName, browserVersion } = (function () {
+      const ua = navigator.userAgent;
+
+      let item;
+      let M =
+        ua.match(
+          /(opera|chrome|safari|firefox|edg|msie|trident(?=\/))\/?\s*(\d+)/i,
+        ) || [];
+      if (/trident/i.test(M[1])) {
+        item = /\brv[ :]+(\d+)/g.exec(ua) || [];
+        return {
+          browserName: 'IE',
+          browserVersion: parseInt(item[1]) || 0,
+        };
+      }
+      if (M[1] === 'Chrome') {
+        item = ua.match(/\b(Edg)\/(\d+)/);
+        if (item != null) {
+          item = item.slice(1);
+          return {
+            browserName: item[0].replace('OPR', 'Opera').replace('Edg', 'Edge'),
+            browserVersion: parseInt(item[1]) || 0,
+          };
+        }
+      }
+
+      M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+      if ((item = ua.match(/version\/(\d+)/i)) != null) M.splice(1, 1, item[1]);
+
+      return {
+        browserName: M[0],
+        browserVersion: parseInt(M[1]) || 0,
+      };
+    })();
+
+    // fetch the supported browser list lookup file
+    const proxyUrl = `${origin}/proxy`;
+    const url = `${proxyUrl}?url=${origin}/data/config/supported-browsers.json`;
+    fetch(url)
+      .then((response) => {
+        if (response.status === 200) {
+          // parse the json
+          response.json().then((json) => {
+            let browserSupported = false;
+
+            // determine if the user's browser is supported
+            if (browserName === 'Chrome' && browserVersion >= json.chrome) {
+              browserSupported = true;
+            }
+            if (browserName === 'Firefox' && browserVersion >= json.firefox) {
+              browserSupported = true;
+            }
+            if (browserName === 'Safari' && browserVersion >= json.safari) {
+              browserSupported = true;
+            }
+            if (browserName === 'Edge' && browserVersion >= json.edge) {
+              browserSupported = true;
+            }
+
+            // hide/show the unsupported browser message
+            unsupportedMessage.style.display = browserSupported
+              ? 'none'
+              : 'block';
+          });
+        } else {
+          // show the unsupported browser message
+          unsupportedMessage.style.display = 'block';
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+
+        // show the unsupported browser message
+        unsupportedMessage.style.display = 'block';
+      });
+  </script>
 </html>
