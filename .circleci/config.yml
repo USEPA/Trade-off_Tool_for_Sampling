@@ -7,7 +7,7 @@ references:
   set-container: &set-container
     docker:
       - image: circleci/node:16.13.1-buster # node 14 on debian 10
-    resource_class: xlarge
+    resource_class: large
 
 jobs:
   deploy-develop:
