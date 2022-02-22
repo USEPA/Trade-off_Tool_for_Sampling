@@ -4,12 +4,6 @@ import { css, keyframes } from '@emotion/react';
 // styles
 import { colors } from 'styles';
 
-function isIE() {
-  const ua = navigator.userAgent;
-  /* MSIE used to detect old browsers and Trident used to newer ones*/
-  return ua.indexOf('MSIE ') > -1 || ua.indexOf('Trident/') > -1;
-}
-
 // --- styled components ---
 const rotate = keyframes`
   0% {
@@ -70,42 +64,10 @@ const circleStyles = css`
     ${color} 5s ease-in-out infinite;
 `;
 
-const ieSvgStyles = css`
-  display: block;
-  margin: 1rem auto;
-  animation: ${rotate} 1.5s linear infinite;
-`;
-
-const ieCircleStyles = css`
-  fill: none;
-  stroke: ${colors.blue()};
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dasharray: 10;
-  transform-origin: center;
-`;
-
 // --- components ---
 type Props = {};
 
 function LoadingSpinner({ ...props }: Props) {
-  // Internet explorer does not allow animations on svg children, so for IE
-  // we display a more simple loading spinner
-  if (isIE()) {
-    return (
-      <svg
-        data-testid="tots-loading-spinner"
-        css={ieSvgStyles}
-        width="50"
-        height="50"
-        viewBox="0 0 50 50"
-        {...props}
-      >
-        <circle css={ieCircleStyles} cx="25" cy="25" r="20" />
-      </svg>
-    );
-  }
-
   return (
     <svg
       data-testid="tots-loading-spinner"

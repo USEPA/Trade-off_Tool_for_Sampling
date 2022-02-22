@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useState,
+} from 'react';
 // types
 import { ServiceMetaDataType } from 'types/Edits';
 import { AttributesType, SampleTypeOptions } from 'types/Publish';
@@ -9,43 +15,33 @@ type NameAvailableStatus = 'unknown' | 'yes' | 'no';
 
 type PublishType = {
   publishSamplesMode: 'new' | 'existing' | '';
-  setPublishSamplesMode: React.Dispatch<
-    React.SetStateAction<'new' | 'existing' | ''>
-  >;
+  setPublishSamplesMode: Dispatch<SetStateAction<'new' | 'existing' | ''>>;
   publishSampleTableMetaData: ServiceMetaDataType | null;
-  setPublishSampleTableMetaData: React.Dispatch<
-    React.SetStateAction<ServiceMetaDataType | null>
+  setPublishSampleTableMetaData: Dispatch<
+    SetStateAction<ServiceMetaDataType | null>
   >;
   sampleTableDescription: string;
-  setSampleTableDescription: React.Dispatch<React.SetStateAction<string>>;
+  setSampleTableDescription: Dispatch<SetStateAction<string>>;
   sampleTableName: string;
-  setSampleTableName: React.Dispatch<React.SetStateAction<string>>;
+  setSampleTableName: Dispatch<SetStateAction<string>>;
   sampleTypeSelections: SampleTypeOptions;
-  setSampleTypeSelections: React.Dispatch<
-    React.SetStateAction<SampleTypeOptions>
-  >;
+  setSampleTypeSelections: Dispatch<SetStateAction<SampleTypeOptions>>;
   sampleTableNameAvailable: NameAvailableStatus;
-  setSampleTableNameAvailable: React.Dispatch<
-    React.SetStateAction<NameAvailableStatus>
-  >;
+  setSampleTableNameAvailable: Dispatch<SetStateAction<NameAvailableStatus>>;
   selectedService: ServiceMetaDataType | null;
-  setSelectedService: React.Dispatch<
-    React.SetStateAction<ServiceMetaDataType | null>
-  >;
+  setSelectedService: Dispatch<SetStateAction<ServiceMetaDataType | null>>;
   includeFullPlan: boolean;
-  setIncludeFullPlan: React.Dispatch<React.SetStateAction<boolean>>;
+  setIncludeFullPlan: Dispatch<SetStateAction<boolean>>;
   includeFullPlanWebMap: boolean;
-  setIncludeFullPlanWebMap: React.Dispatch<React.SetStateAction<boolean>>;
+  setIncludeFullPlanWebMap: Dispatch<SetStateAction<boolean>>;
   includePartialPlan: boolean;
-  setIncludePartialPlan: React.Dispatch<React.SetStateAction<boolean>>;
+  setIncludePartialPlan: Dispatch<SetStateAction<boolean>>;
   includePartialPlanWebMap: boolean;
-  setIncludePartialPlanWebMap: React.Dispatch<React.SetStateAction<boolean>>;
+  setIncludePartialPlanWebMap: Dispatch<SetStateAction<boolean>>;
   includeCustomSampleTypes: boolean;
-  setIncludeCustomSampleTypes: React.Dispatch<React.SetStateAction<boolean>>;
+  setIncludeCustomSampleTypes: Dispatch<SetStateAction<boolean>>;
   partialPlanAttributes: AttributesType[];
-  setPartialPlanAttributes: React.Dispatch<
-    React.SetStateAction<AttributesType[]>
-  >;
+  setPartialPlanAttributes: Dispatch<SetStateAction<AttributesType[]>>;
 };
 
 export const defaultPlanAttributes: AttributesType[] = [
@@ -139,7 +135,7 @@ export const defaultPlanAttributes: AttributesType[] = [
   },
 ];
 
-export const PublishContext = React.createContext<PublishType>({
+export const PublishContext = createContext<PublishType>({
   publishSamplesMode: '',
   setPublishSamplesMode: () => {},
   publishSampleTableMetaData: null,
@@ -171,43 +167,27 @@ export const PublishContext = React.createContext<PublishType>({
 type Props = { children: ReactNode };
 
 export function PublishProvider({ children }: Props) {
-  const [publishSamplesMode, setPublishSamplesMode] = React.useState<
+  const [publishSamplesMode, setPublishSamplesMode] = useState<
     'new' | 'existing' | ''
   >('');
-  const [
-    publishSampleTableMetaData,
-    setPublishSampleTableMetaData,
-  ] = React.useState<ServiceMetaDataType | null>(null);
-  const [sampleTableDescription, setSampleTableDescription] = React.useState(
-    '',
-  );
-  const [sampleTableName, setSampleTableName] = React.useState('');
-  const [
-    sampleTypeSelections,
-    setSampleTypeSelections,
-  ] = React.useState<SampleTypeOptions>([]);
-  const [
-    sampleTableNameAvailable,
-    setSampleTableNameAvailable,
-  ] = React.useState<NameAvailableStatus>('unknown');
-  const [
-    selectedService,
-    setSelectedService,
-  ] = React.useState<ServiceMetaDataType | null>(null);
-  const [includeFullPlan, setIncludeFullPlan] = React.useState(false);
-  const [includeFullPlanWebMap, setIncludeFullPlanWebMap] = React.useState(
-    true,
-  );
-  const [includePartialPlan, setIncludePartialPlan] = React.useState(true);
-  const [
-    includePartialPlanWebMap,
-    setIncludePartialPlanWebMap,
-  ] = React.useState(true);
-  const [
-    includeCustomSampleTypes,
-    setIncludeCustomSampleTypes,
-  ] = React.useState(false);
-  const [partialPlanAttributes, setPartialPlanAttributes] = React.useState<
+  const [publishSampleTableMetaData, setPublishSampleTableMetaData] =
+    useState<ServiceMetaDataType | null>(null);
+  const [sampleTableDescription, setSampleTableDescription] = useState('');
+  const [sampleTableName, setSampleTableName] = useState('');
+  const [sampleTypeSelections, setSampleTypeSelections] =
+    useState<SampleTypeOptions>([]);
+  const [sampleTableNameAvailable, setSampleTableNameAvailable] =
+    useState<NameAvailableStatus>('unknown');
+  const [selectedService, setSelectedService] =
+    useState<ServiceMetaDataType | null>(null);
+  const [includeFullPlan, setIncludeFullPlan] = useState(false);
+  const [includeFullPlanWebMap, setIncludeFullPlanWebMap] = useState(true);
+  const [includePartialPlan, setIncludePartialPlan] = useState(true);
+  const [includePartialPlanWebMap, setIncludePartialPlanWebMap] =
+    useState(true);
+  const [includeCustomSampleTypes, setIncludeCustomSampleTypes] =
+    useState(false);
+  const [partialPlanAttributes, setPartialPlanAttributes] = useState<
     AttributesType[]
   >(defaultPlanAttributes);
 

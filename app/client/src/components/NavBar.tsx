@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  MouseEvent as ReactMouseEvent,
+  useCallback,
+  useContext,
+  useEffect,
+} from 'react';
 import { css } from '@emotion/react';
 // components
 import AddData from 'components/AddData';
@@ -82,7 +88,7 @@ type NavButtonProps = {
   panel: PanelType;
   selectedPanel: PanelType | null;
   visitedStepIndex: number;
-  onClick: (ev: React.MouseEvent<HTMLElement>) => void;
+  onClick: (ev: ReactMouseEvent<HTMLElement>) => void;
 };
 
 function NavButton({
@@ -105,7 +111,7 @@ function NavButton({
   if (panelIndex <= visitedStepIndex) color = buttonVisitedColor;
 
   return (
-    <React.Fragment>
+    <Fragment>
       <div
         css={verticalButtonBar(panelIndex < 1 ? 'transparent' : color)}
       ></div>
@@ -117,7 +123,7 @@ function NavButton({
         <i className={iconClass} css={navIconStyles(color)} />
         <span css={navTextStyles}>{label}</span>
       </button>
-    </React.Fragment>
+    </Fragment>
   );
 }
 
@@ -308,7 +314,7 @@ type Props = {
 };
 
 function NavBar({ height }: Props) {
-  const { calculateResults } = React.useContext(CalculateContext);
+  const { calculateResults } = useContext(CalculateContext);
   const {
     currentPanel,
     setCurrentPanel,
@@ -322,9 +328,9 @@ function NavBar({ height }: Props) {
     setPanelExpanded,
     resultsExpanded,
     setResultsExpanded,
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
 
-  const toggleExpand = React.useCallback(
+  const toggleExpand = useCallback(
     (panel: PanelType, panelIndex: number) => {
       if (panel === currentPanel) {
         setPanelExpanded(false);
@@ -345,7 +351,7 @@ function NavBar({ height }: Props) {
     ],
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!goTo) return;
 
     // find the requested panel
@@ -364,7 +370,7 @@ function NavBar({ height }: Props) {
     setGoTo('');
   }, [goTo, setGoTo, toggleExpand]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (calculateResults.status !== 'none') {
       setResultsExpanded(true);
     }
@@ -394,7 +400,7 @@ function NavBar({ height }: Props) {
   useCalculatePlan();
 
   return (
-    <React.Fragment>
+    <Fragment>
       <GettingStarted isOpen={gettingStartedOpen}>
         <div css={helpOkContainerStyles}>
           <button
@@ -586,7 +592,7 @@ function NavBar({ height }: Props) {
           </div>
         </div>
       )}
-    </React.Fragment>
+    </Fragment>
   );
 }
 

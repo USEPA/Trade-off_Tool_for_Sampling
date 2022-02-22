@@ -1,7 +1,11 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
+import Collection from '@arcgis/core/core/Collection';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+import Graphic from '@arcgis/core/Graphic';
+import Polygon from '@arcgis/core/geometry/Polygon';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -13,7 +17,6 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import {
   useSampleTypesContext,
   useServicesContext,
@@ -320,10 +323,10 @@ function SketchButton({
           <br />
           {displayLabel}
           {count > 0 && (
-            <React.Fragment>
+            <Fragment>
               <br />
               <span css={sampleCountStyles}>{count}</span>
-            </React.Fragment>
+            </Fragment>
           )}
         </div>
       </div>
@@ -405,17 +408,11 @@ type GenerateRandomType = {
 };
 
 function LocateSamples() {
-  const {
-    userInfo,
-  } = React.useContext(AuthenticationContext);
-  const { setOptions } = React.useContext(DialogContext);
-  const {
-    setGoTo,
-    setGoToOptions,
-    trainingMode,
-    setTrainingMode,
-  } = React.useContext(NavigationContext);
-  const { setSampleTypeSelections } = React.useContext(PublishContext);
+  const { userInfo } = useContext(AuthenticationContext);
+  const { setOptions } = useContext(DialogContext);
+  const { setGoTo, setGoToOptions, trainingMode, setTrainingMode } =
+    useContext(NavigationContext);
+  const { setSampleTypeSelections } = useContext(PublishContext);
   const {
     autoZoom,
     setAutoZoom,
@@ -443,15 +440,7 @@ function LocateSamples() {
     setUserDefinedAttributes,
     allSampleOptions,
     showAsPoints,
-  } = React.useContext(SketchContext);
-  const {
-    Collection,
-    FeatureSet,
-    Geoprocessor,
-    Graphic,
-    GraphicsLayer,
-    Polygon,
-  } = useEsriModulesContext();
+  } = useContext(SketchContext);
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
@@ -464,8 +453,8 @@ function LocateSamples() {
   const [
     sketchLayerInitialized,
     setSketchLayerInitialized, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!map || !layersInitialized || sketchLayerInitialized) return;
 
     setSketchLayerInitialized(true);
@@ -480,7 +469,6 @@ function LocateSamples() {
     if (nextScenario) setSelectedScenario(nextScenario);
     if (nextLayer) setSketchLayer(nextLayer);
   }, [
-    GraphicsLayer,
     edits,
     layersInitialized,
     layers,
@@ -494,10 +482,10 @@ function LocateSamples() {
   ]);
 
   // Initializes the aoi layer for performance reasons
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !layersInitialized || aoiSketchLayer) return;
 
-    const newAoiSketchLayer = getDefaultSamplingMaskLayer(GraphicsLayer);
+    const newAoiSketchLayer = getDefaultSamplingMaskLayer();
 
     // add the layer to the map
     setLayers((layers) => {
@@ -506,23 +494,16 @@ function LocateSamples() {
 
     // set the active sketch layer
     setAoiSketchLayer(newAoiSketchLayer);
-  }, [
-    GraphicsLayer,
-    map,
-    aoiSketchLayer,
-    setAoiSketchLayer,
-    layersInitialized,
-    setLayers,
-  ]);
+  }, [map, aoiSketchLayer, setAoiSketchLayer, layersInitialized, setLayers]);
 
-  const [numberRandomSamples, setNumberRandomSamples] = React.useState('33');
+  const [numberRandomSamples, setNumberRandomSamples] = useState('33');
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType | null>(null);
+  ] = useState<SampleSelectType | null>(null);
 
   // Initialize the selected sample type to the first option
-  React.useEffect(() => {
+  useEffect(() => {
     if (sampleTypeContext.status !== 'success') return;
 
     setSampleType(sampleTypeContext.data.sampleSelectOptions[0]);
@@ -573,7 +554,7 @@ function LocateSamples() {
   const [
     generateRandomResponse,
     setGenerateRandomResponse, //
-  ] = React.useState<GenerateRandomType>({
+  ] = useState<GenerateRandomType>({
     status: 'none',
     data: [],
   });
@@ -694,7 +675,6 @@ function LocateSamples() {
           appendEnvironmentObjectParam(props);
 
           const request = geoprocessorFetch({
-            Geoprocessor,
             url: `${services.data.totsGPServer}/Generate%20Random`,
             inputParameters: props,
           });
@@ -767,7 +747,7 @@ function LocateSamples() {
                 });
 
                 graphicsToAdd.push(poly);
-                pointsToAdd.push(convertToPoint(Graphic, poly));
+                pointsToAdd.push(convertToPoint(poly));
               });
             }
 
@@ -860,34 +840,26 @@ function LocateSamples() {
       });
   }
 
-  const [
-    userDefinedSampleType,
-    setUserDefinedSampleType,
-  ] = React.useState<SampleSelectType | null>(null);
-  const [editingStatus, setEditingStatus] = React.useState<EditType | null>(
-    null,
-  );
-  const [sampleTypeName, setSampleTypeName] = React.useState<string>('');
-  const [shapeType, setShapeType] = React.useState<ShapeTypeSelect | null>(
-    null,
-  );
-  const [pointStyle, setPointStyle] = React.useState<ShapeTypeSelect | null>(
-    null,
-  );
-  const [ttpk, setTtpk] = React.useState<string | null>('');
-  const [ttc, setTtc] = React.useState<string | null>('');
-  const [tta, setTta] = React.useState<string | null>('');
-  const [ttps, setTtps] = React.useState<string | null>('');
-  const [lodp, setLodp] = React.useState<string | null>('');
-  const [lodnon, setLodnon] = React.useState<string | null>('');
-  const [mcps, setMcps] = React.useState<string | null>('');
-  const [tcps, setTcps] = React.useState<string | null>('');
-  const [wvps, setWvps] = React.useState<string | null>('');
-  const [wwps, setWwps] = React.useState<string | null>('');
-  const [sa, setSa] = React.useState<string | null>('');
-  const [alc, setAlc] = React.useState<string | null>('');
-  const [amc, setAmc] = React.useState<string | null>('');
-  const [validationMessage, setValidationMessage] = React.useState<
+  const [userDefinedSampleType, setUserDefinedSampleType] =
+    useState<SampleSelectType | null>(null);
+  const [editingStatus, setEditingStatus] = useState<EditType | null>(null);
+  const [sampleTypeName, setSampleTypeName] = useState<string>('');
+  const [shapeType, setShapeType] = useState<ShapeTypeSelect | null>(null);
+  const [pointStyle, setPointStyle] = useState<ShapeTypeSelect | null>(null);
+  const [ttpk, setTtpk] = useState<string | null>('');
+  const [ttc, setTtc] = useState<string | null>('');
+  const [tta, setTta] = useState<string | null>('');
+  const [ttps, setTtps] = useState<string | null>('');
+  const [lodp, setLodp] = useState<string | null>('');
+  const [lodnon, setLodnon] = useState<string | null>('');
+  const [mcps, setMcps] = useState<string | null>('');
+  const [tcps, setTcps] = useState<string | null>('');
+  const [wvps, setWvps] = useState<string | null>('');
+  const [wwps, setWwps] = useState<string | null>('');
+  const [sa, setSa] = useState<string | null>('');
+  const [alc, setAlc] = useState<string | null>('');
+  const [amc, setAmc] = useState<string | null>('');
+  const [validationMessage, setValidationMessage] = useState<
     JSX.Element[] | string
   >('');
 
@@ -1028,10 +1000,10 @@ function LocateSamples() {
     if (messageParts.length > 0) {
       const message = messageParts.map((part, index) => {
         return (
-          <React.Fragment key={index}>
+          <Fragment key={index}>
             {index !== 0 ? <br /> : ''}
             {part}
-          </React.Fragment>
+          </Fragment>
         );
       });
       setValidationMessage(message);
@@ -1112,7 +1084,7 @@ function LocateSamples() {
   // Changes the selected layer if the scenario is changed. The first
   // available layer in the scenario will be chosen. If the scenario
   // has no layers, then the first availble unlinked layer is chosen.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedScenario) return;
     if (
       sketchLayer &&
@@ -1144,17 +1116,16 @@ function LocateSamples() {
   }, [layers, selectedScenario, sketchLayer, setSketchLayer]);
 
   // scenario and layer edit UI visibility controls
-  const [addScenarioVisible, setAddScenarioVisible] = React.useState(false);
-  const [editScenarioVisible, setEditScenarioVisible] = React.useState(false);
-  const [addLayerVisible, setAddLayerVisible] = React.useState(false);
-  const [editLayerVisible, setEditLayerVisible] = React.useState(false);
-  const [generateRandomMode, setGenerateRandomMode] = React.useState<
+  const [addScenarioVisible, setAddScenarioVisible] = useState(false);
+  const [editScenarioVisible, setEditScenarioVisible] = useState(false);
+  const [addLayerVisible, setAddLayerVisible] = useState(false);
+  const [editLayerVisible, setEditLayerVisible] = useState(false);
+  const [generateRandomMode, setGenerateRandomMode] = useState<
     'draw' | 'file' | ''
   >('');
-  const [
-    selectedAoiFile,
-    setSelectedAoiFile,
-  ] = React.useState<LayerType | null>(null);
+  const [selectedAoiFile, setSelectedAoiFile] = useState<LayerType | null>(
+    null,
+  );
 
   // get a list of scenarios from edits
   const scenarios = getScenarios(edits);
@@ -1177,8 +1148,8 @@ function LocateSamples() {
 
   // Initialize the local user defined type symbol. Also updates this variable
   // when the user changes the user defined sample type selection.
-  const [udtSymbol, setUdtSymbol] = React.useState<PolygonSymbol | null>(null);
-  React.useEffect(() => {
+  const [udtSymbol, setUdtSymbol] = useState<PolygonSymbol | null>(null);
+  useEffect(() => {
     if (!userDefinedSampleType) return;
 
     if (defaultSymbols.symbols.hasOwnProperty(userDefinedSampleType.value)) {
@@ -1262,7 +1233,7 @@ function LocateSamples() {
               “unlink” control to remove a layer from a plan.
             </p>
           ) : (
-            <React.Fragment>
+            <Fragment>
               <p>
                 Create a sampling plan with one or more layers. Layers can
                 represent unique areas of interest or decision units that are
@@ -1275,18 +1246,18 @@ function LocateSamples() {
                 title=""
                 message="Note: Your work in TOTS only persists as long as your current browser session. Be sure to download results and/or publish your plan to retain a copy of your work."
               />
-            </React.Fragment>
+            </Fragment>
           )}
 
           {scenarios.length === 0 ? (
             <EditScenario addDefaultSampleLayer={true} />
           ) : (
-            <React.Fragment>
+            <Fragment>
               <div css={iconButtonContainerStyles}>
                 <label htmlFor="scenario-select-input">Specify Plan</label>
                 <div>
                   {selectedScenario && (
-                    <React.Fragment>
+                    <Fragment>
                       <button
                         css={iconButtonStyles}
                         title="Delete Plan"
@@ -1349,7 +1320,9 @@ function LocateSamples() {
                         >
                           <i
                             className={
-                              editScenarioVisible ? 'fas fa-times' : 'fas fa-edit'
+                              editScenarioVisible
+                                ? 'fas fa-times'
+                                : 'fas fa-edit'
                             }
                           />
                           <span className="sr-only">
@@ -1357,7 +1330,7 @@ function LocateSamples() {
                           </span>
                         </button>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   <button
                     css={iconButtonStyles}
@@ -1442,18 +1415,18 @@ function LocateSamples() {
                   onSave={() => setEditScenarioVisible(false)}
                 />
               )}
-            </React.Fragment>
+            </Fragment>
           )}
 
           {selectedScenario && !addScenarioVisible && !editScenarioVisible && (
-            <React.Fragment>
+            <Fragment>
               <div css={iconButtonContainerStyles}>
                 <label htmlFor="sampling-layer-select-input">
                   Active Sampling Layer
                 </label>
                 <div>
                   {sketchLayer && (
-                    <React.Fragment>
+                    <Fragment>
                       <button
                         css={iconButtonStyles}
                         title="Delete Layer"
@@ -1476,10 +1449,11 @@ function LocateSamples() {
                               const editedScenario = edits.edits[
                                 index
                               ] as ScenarioEditsType;
-                              editedScenario.layers = editedScenario.layers.filter(
-                                (layer) =>
-                                  layer.layerId !== sketchLayer.layerId,
-                              );
+                              editedScenario.layers =
+                                editedScenario.layers.filter(
+                                  (layer) =>
+                                    layer.layerId !== sketchLayer.layerId,
+                                );
 
                               return {
                                 count: edits.count + 1,
@@ -1491,8 +1465,10 @@ function LocateSamples() {
                               };
                             });
 
-                            if(sketchLayer.sketchLayer) parentLayer.remove(sketchLayer.sketchLayer);
-                            if(sketchLayer.pointsLayer) parentLayer.remove(sketchLayer.pointsLayer);
+                            if (sketchLayer.sketchLayer)
+                              parentLayer.remove(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer)
+                              parentLayer.remove(sketchLayer.pointsLayer);
                           } else {
                             // remove the scenario from edits
                             setEdits((edits) => {
@@ -1580,7 +1556,7 @@ function LocateSamples() {
                                   ...editsScenario.layers.slice(0, layerIndex),
                                   ...editsScenario.layers.slice(layerIndex + 1),
                                 ];
-                                if(editsScenario.status === 'published') {
+                                if (editsScenario.status === 'published') {
                                   editsScenario.status = 'edited';
                                 }
 
@@ -1762,7 +1738,7 @@ function LocateSamples() {
                           {editLayerVisible ? 'Cancel' : 'Edit Layer'}
                         </span>
                       </button>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   <button
                     css={iconButtonStyles}
@@ -1801,12 +1777,12 @@ function LocateSamples() {
                   onSave={() => setEditLayerVisible(false)}
                 />
               )}
-            </React.Fragment>
+            </Fragment>
           )}
         </div>
 
         {selectedScenario && (
-          <React.Fragment>
+          <Fragment>
             <div css={sectionContainerWidthOnly}>
               <p>
                 In the panels below, add targeted and/ or multiple samples to
@@ -1843,7 +1819,7 @@ function LocateSamples() {
                       {sampleTypeContext.status === 'failure' &&
                         featureNotAvailableMessage('Established Sample Types')}
                       {sampleTypeContext.status === 'success' && (
-                        <React.Fragment>
+                        <Fragment>
                           {sampleTypeContext.data.sampleSelectOptions.map(
                             (option: any, index: number) => {
                               const sampleTypeUuid = option.value;
@@ -1857,9 +1833,10 @@ function LocateSamples() {
 
                               const shapeType =
                                 sampleAttributes[sampleTypeUuid].ShapeType;
-                              const edited = userDefinedAttributes.sampleTypes.hasOwnProperty(
-                                sampleTypeUuid,
-                              );
+                              const edited =
+                                userDefinedAttributes.sampleTypes.hasOwnProperty(
+                                  sampleTypeUuid,
+                                );
                               return (
                                 <SketchButton
                                   key={index}
@@ -1883,7 +1860,7 @@ function LocateSamples() {
                               );
                             },
                           )}
-                        </React.Fragment>
+                        </Fragment>
                       )}
                     </div>
                   </div>
@@ -1923,7 +1900,7 @@ function LocateSamples() {
                 <div css={sectionContainer}>
                   {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
                   {sketchLayer?.layerType !== 'VSP' && (
-                    <React.Fragment>
+                    <Fragment>
                       {(services.status === 'fetching' ||
                         sampleTypeContext.status === 'fetching') && (
                         <LoadingSpinner />
@@ -1935,7 +1912,7 @@ function LocateSamples() {
                         )}
                       {services.status === 'success' &&
                         sampleTypeContext.status === 'success' && (
-                          <React.Fragment>
+                          <Fragment>
                             <p>
                               Select "Draw Sampling Mask" to draw a boundary on
                               your map for placing samples or select "Use
@@ -2022,7 +1999,7 @@ function LocateSamples() {
                               </button>
                             )}
                             {generateRandomMode === 'file' && (
-                              <React.Fragment>
+                              <Fragment>
                                 <label htmlFor="aoi-mask-select-input">
                                   Area of Interest Mask
                                 </label>
@@ -2059,10 +2036,10 @@ function LocateSamples() {
                                     Add
                                   </button>
                                 </div>
-                              </React.Fragment>
+                              </Fragment>
                             )}
                             {generateRandomMode && (
-                              <React.Fragment>
+                              <Fragment>
                                 <br />
                                 <label htmlFor="sample-type-select-input">
                                   Sample Type
@@ -2124,18 +2101,18 @@ function LocateSamples() {
                                       'fetching' && 'Submit'}
                                     {generateRandomResponse.status ===
                                       'fetching' && (
-                                      <React.Fragment>
+                                      <Fragment>
                                         <i className="fas fa-spinner fa-pulse" />
                                         &nbsp;&nbsp;Loading...
-                                      </React.Fragment>
+                                      </Fragment>
                                     )}
                                   </button>
                                 )}
-                              </React.Fragment>
+                              </Fragment>
                             )}
-                          </React.Fragment>
+                          </Fragment>
                         )}
-                    </React.Fragment>
+                    </Fragment>
                   )}
                 </div>
               </AccordionItem>
@@ -2155,7 +2132,7 @@ function LocateSamples() {
                     </label>
                     <div>
                       {userDefinedSampleType && (
-                        <React.Fragment>
+                        <Fragment>
                           {!editingStatus &&
                             !userDefinedSampleType.isPredefined && (
                               <button
@@ -2220,7 +2197,8 @@ function LocateSamples() {
                                           return;
                                         }
 
-                                        const graphicsToRemove: __esri.Graphic[] = [];
+                                        const graphicsToRemove: __esri.Graphic[] =
+                                          [];
                                         layer.sketchLayer.graphics.forEach(
                                           (graphic) => {
                                             if (
@@ -2236,7 +2214,8 @@ function LocateSamples() {
                                         );
 
                                         if (graphicsToRemove.length > 0) {
-                                          const collection = new Collection<__esri.Graphic>();
+                                          const collection =
+                                            new Collection<__esri.Graphic>();
                                           collection.addMany(graphicsToRemove);
                                           editsCopy = updateLayerEdits({
                                             edits: editsCopy,
@@ -2357,7 +2336,7 @@ function LocateSamples() {
                               </span>
                             </button>
                           )}
-                        </React.Fragment>
+                        </Fragment>
                       )}
                       <button
                         css={iconButtonStyles}
@@ -2506,8 +2485,8 @@ function LocateSamples() {
                           onChange={(ev) => setTtps(ev.target.value)}
                         /> */}
                         <label htmlFor="lod_p-input">
-                          Limit of Detection for Porous Surfaces per Sample (CFU){' '}
-                          <em>(only used for reference)</em>
+                          Limit of Detection for Porous Surfaces per Sample
+                          (CFU) <em>(only used for reference)</em>
                         </label>
                         <input
                           id="lod_p-input"
@@ -2517,8 +2496,8 @@ function LocateSamples() {
                           onChange={(ev) => setLodp(ev.target.value)}
                         />
                         <label htmlFor="lod_non-input">
-                          Limit of Detection for Nonporous Surfaces per Sample (CFU){' '}
-                          <em>(only used for reference)</em>
+                          Limit of Detection for Nonporous Surfaces per Sample
+                          (CFU) <em>(only used for reference)</em>
                         </label>
                         <input
                           id="lod_non-input"
@@ -2709,9 +2688,8 @@ function LocateSamples() {
                                 }
 
                                 // add/update the sample's attributes
-                                sampleAttributes[
-                                  typeUuid as any
-                                ] = newAttributes;
+                                sampleAttributes[typeUuid as any] =
+                                  newAttributes;
                                 setUserDefinedAttributes((item) => {
                                   let status:
                                     | 'add'
@@ -2796,13 +2774,15 @@ function LocateSamples() {
                                     }
 
                                     const editedGraphics = updateAttributes({
-                                      graphics: layer.sketchLayer.graphics.toArray(),
+                                      graphics:
+                                        layer.sketchLayer.graphics.toArray(),
                                       newAttributes,
                                       oldType,
                                     });
                                     if (layer.pointsLayer) {
                                       updateAttributes({
-                                        graphics: layer.pointsLayer.graphics.toArray(),
+                                        graphics:
+                                          layer.pointsLayer.graphics.toArray(),
                                         newAttributes,
                                         oldType,
                                         symbol: udtSymbol,
@@ -2810,7 +2790,8 @@ function LocateSamples() {
                                     }
 
                                     if (editedGraphics.length > 0) {
-                                      const collection = new Collection<__esri.Graphic>();
+                                      const collection =
+                                        new Collection<__esri.Graphic>();
                                       collection.addMany(editedGraphics);
                                       editsCopy = updateLayerEdits({
                                         edits: editsCopy,
@@ -2840,7 +2821,7 @@ function LocateSamples() {
                 </div>
               </AccordionItem>
             </AccordionList>
-          </React.Fragment>
+          </Fragment>
         )}
       </div>
       <div css={sectionContainer}>

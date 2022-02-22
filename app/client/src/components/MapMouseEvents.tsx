@@ -1,6 +1,6 @@
-import React from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import Collection from '@arcgis/core/core/Collection';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // utils
@@ -26,13 +26,11 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView }: Props) {
-  const { Collection } = useEsriModulesContext();
-  const { setTablePanelExpanded } = React.useContext(NavigationContext);
-  const { edits, setEdits, layers, setSelectedSampleIds } = React.useContext(
-    SketchContext,
-  );
+  const { setTablePanelExpanded } = useContext(NavigationContext);
+  const { edits, setEdits, layers, setSelectedSampleIds } =
+    useContext(SketchContext);
 
-  const handleMapClick = React.useCallback(
+  const handleMapClick = useCallback(
     (event, mapView) => {
       // perform a hittest on the click location
       mapView
@@ -124,8 +122,8 @@ function MapMouseEvents({ mapView }: Props) {
   );
 
   // Sets up the map mouse events when the component initializes
-  const [initialized, setInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [initialized, setInitialized] = useState(false);
+  useEffect(() => {
     if (initialized) return;
 
     // setup the mouse click and mouse over events
@@ -136,11 +134,10 @@ function MapMouseEvents({ mapView }: Props) {
     setInitialized(true);
   }, [mapView, handleMapClick, initialized]);
 
-  const [
-    sampleToDelete,
-    setSampleToDelete,
-  ] = React.useState<__esri.Graphic | null>(null);
-  React.useEffect(() => {
+  const [sampleToDelete, setSampleToDelete] = useState<__esri.Graphic | null>(
+    null,
+  );
+  useEffect(() => {
     if (!sampleToDelete) return;
 
     const changes = new Collection<__esri.Graphic>();
@@ -148,7 +145,8 @@ function MapMouseEvents({ mapView }: Props) {
 
     // find the layer
     const layer = layers.find(
-      (layer) => layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
+      (layer) =>
+        layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
     );
     if (!layer || layer.sketchLayer.type !== 'graphics') return;
 
@@ -192,12 +190,10 @@ function MapMouseEvents({ mapView }: Props) {
     mapView?.popup.close();
 
     setSampleToDelete(null);
-  }, [Collection, edits, setEdits, layers, mapView, sampleToDelete]);
+  }, [edits, setEdits, layers, mapView, sampleToDelete]);
 
-  const [popupActionsInitialized, setPopupActionsInitialized] = React.useState(
-    false,
-  );
-  React.useEffect(() => {
+  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || popupActionsInitialized) return;
 
     setPopupActionsInitialized(true);

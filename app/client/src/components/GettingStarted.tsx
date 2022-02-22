@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, ReactNode } from 'react';
 import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // styles
@@ -44,7 +44,7 @@ const headingStyles = css`
 // --- components (GettingStarted) ---
 type Props = {
   isOpen: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 function GettingStarted({ isOpen, children }: Props) {
@@ -133,7 +133,7 @@ function GettingStarted({ isOpen, children }: Props) {
           for more detailed instructions
         </p>
 
-        {children && <React.Fragment>{children}</React.Fragment>}
+        {children && <Fragment>{children}</Fragment>}
       </DialogContent>
     </DialogOverlay>
   );

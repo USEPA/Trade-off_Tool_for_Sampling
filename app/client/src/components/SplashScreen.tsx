@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import Cookies from 'universal-cookie';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
@@ -104,19 +104,19 @@ const buttonStyles = css`
 
 // --- components (SplashScreen) ---
 function SplashScreen() {
-  const { setGettingStartedOpen } = React.useContext(NavigationContext);
+  const { setGettingStartedOpen } = useContext(NavigationContext);
 
   // Initialize the cookies object
-  const [cookies, setCookies] = React.useState<Cookies | null>(null);
-  React.useEffect(() => {
+  const [cookies, setCookies] = useState<Cookies | null>(null);
+  useEffect(() => {
     setCookies(new Cookies());
   }, []);
 
   // Read the splash disabled cookie
-  const [hasCheckedCookie, setHasCheckedCookie] = React.useState(false);
-  const [preventSplashScreen, setPreventSplashScreen] = React.useState(false);
-  const [isOpen, setIsOpen] = React.useState(true);
-  React.useEffect(() => {
+  const [hasCheckedCookie, setHasCheckedCookie] = useState(false);
+  const [preventSplashScreen, setPreventSplashScreen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+  useEffect(() => {
     // only check the cookie on load
     if (!cookies || hasCheckedCookie) return;
     setHasCheckedCookie(true);
@@ -134,7 +134,7 @@ function SplashScreen() {
   }, [cookies, hasCheckedCookie]);
 
   // Set the splash disabled cookie whenever the checkbox changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!cookies) return;
 
     cookies.set('tots_splash_disabled', preventSplashScreen, {

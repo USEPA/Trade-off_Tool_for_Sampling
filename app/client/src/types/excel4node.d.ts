@@ -82,9 +82,10 @@ declare module 'excel4node' {
   /**
    * Accepts cell reference (i.e. 'A1') and returns object with corresponding row and column. (i.e. returns { row: 5, col: 2})
    */
-  export function getExcelRowCol(
-    cellRef: string,
-  ): { row: number; column: number };
+  export function getExcelRowCol(cellRef: string): {
+    row: number;
+    column: number;
+  };
 
   /**
    * Accepts column as integer and returns corresponding column reference as alpha. (i.e. returns 'J')
