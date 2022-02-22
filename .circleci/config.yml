@@ -8,7 +8,6 @@ references:
     docker:
       - image: circleci/node:16.13.1-buster # node 14 on debian 10
         environment:
-          NODE_OPTIONS: --max-old-space-size=7552
           GENERATE_SOURCEMAP: false
     resource_class: large
 
