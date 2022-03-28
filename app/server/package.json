@@ -26,7 +26,6 @@
   "dependencies": {
     "axios": "0.26.1",
     "dotenv": "16.0.0",
-    "excel4node": "1.7.2",
     "express": "4.17.3",
     "express-basic-auth": "1.2.1",
     "helmet": "5.0.2",
