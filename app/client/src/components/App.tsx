@@ -37,6 +37,7 @@ import { getSampleTableColumns } from 'utils/sketchUtils';
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
+import '@arcgis/core/assets/esri/themes/light/main.css';
 
 const resizerHeight = 10;
 const esrifooterheight = 16;
