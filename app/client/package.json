@@ -23,7 +23,7 @@
     "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
-    "@arcgis/core": "4.23.0",
+    "@arcgis/core": "4.23.1",
     "@emotion/react": "11.8.2",
     "@emotion/styled": "11.8.1",
     "@reach/dialog": "0.16.2",
