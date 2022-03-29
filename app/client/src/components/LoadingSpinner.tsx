@@ -4,7 +4,6 @@ import { css, keyframes } from '@emotion/react';
 // styles
 import { colors } from 'styles';
 
-// --- styled components ---
 const rotate = keyframes`
   0% {
     transform: rotate(0deg);
