@@ -22,7 +22,6 @@ function convertArrayToRgbColor(color: number[]) {
   } as RGBColor;
 }
 
-// --- styled components ---
 const colorStyles = (color: RGBColor) => {
   return css`
     width: 36px;
@@ -148,7 +147,6 @@ function SingleColorPicker({
   );
 }
 
-// --- styled components ---
 const colorSettingContainerStyles = css`
   margin-bottom: 15px;
 `;
