@@ -28,6 +28,8 @@ type LookupFile = {
 };
 
 type LookupFiles = {
+  notifications: LookupFile;
+  setNotifications: Function;
   sampleTypes: any;
   setSampleTypes: Function;
   services: LookupFile;
@@ -35,6 +37,8 @@ type LookupFiles = {
 };
 
 const LookupFilesContext = createContext<LookupFiles>({
+  notifications: { status: 'fetching', data: null },
+  setNotifications: () => {},
   sampleTypes: { status: 'fetching', data: null },
   setSampleTypes: () => {},
   services: { status: 'fetching', data: null },
@@ -46,6 +50,10 @@ type Props = {
 };
 
 function LookupFilesProvider({ children }: Props) {
+  const [notifications, setNotifications] = React.useState<LookupFile>({
+    status: 'fetching',
+    data: [],
+  });
   const [sampleTypes, setSampleTypes] = useState<LookupFile>({
     status: 'fetching',
     data: {},
@@ -58,6 +66,8 @@ function LookupFilesProvider({ children }: Props) {
   return (
     <LookupFilesContext.Provider
       value={{
+        notifications,
+        setNotifications,
         sampleTypes,
         setSampleTypes,
         services,
@@ -67,6 +77,21 @@ function LookupFilesProvider({ children }: Props) {
       {children}
     </LookupFilesContext.Provider>
   );
+}
+
+// Custom hook for the messages.json file.
+let notificationsInitialized = false; // global var for ensuring fetch only happens once
+function useNotificationsContext() {
+  const { notifications, setNotifications } =
+    React.useContext(LookupFilesContext);
+
+  // fetch the lookup file if necessary
+  if (!notificationsInitialized) {
+    notificationsInitialized = true;
+    getLookupFile('notifications/messages.json', setNotifications);
+  }
+
+  return notifications;
 }
 
 // Custom hook for the services.json file.
@@ -157,6 +182,7 @@ function useSampleTypesContext() {
 export {
   LookupFilesContext,
   LookupFilesProvider,
+  useNotificationsContext,
   useSampleTypesContext,
   useServicesContext,
 };
