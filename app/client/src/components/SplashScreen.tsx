@@ -22,6 +22,8 @@ const overlayStyles = css`
 const dialogStyles = css`
   color: ${colors.white()};
   background-color: ${colors.epaBlue};
+  max-height: 80vh;
+  overflow: auto;
 
   &[data-reach-dialog-content] {
     position: relative;
