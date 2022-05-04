@@ -13,6 +13,7 @@ import esriConfig from '@arcgis/core/config';
 import * as urlUtils from '@arcgis/core/core/urlUtils';
 // components
 import AlertDialog from 'components/AlertDialog';
+import AlertMessage from 'components/AlertMessage';
 import ErrorBoundary from 'components/ErrorBoundary';
 import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
@@ -482,6 +483,7 @@ function App() {
           <Fragment>
             <SplashScreen />
             <AlertDialog />
+            <AlertMessage />
             {window.location.search.includes('devMode=true') && (
               <TestingToolbar />
             )}
