@@ -1,6 +1,12 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
@@ -141,7 +147,7 @@ const nestedAccordionStyles = css`
 
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
-  const { signedIn } = React.useContext(AuthenticationContext);
+  const { signedIn } = useContext(AuthenticationContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
@@ -159,10 +165,8 @@ function ConfigureOutput() {
     setIncludeCustomSampleTypes,
     partialPlanAttributes,
     setPartialPlanAttributes,
-  } = React.useContext(PublishContext);
-  const { selectedScenario, userDefinedAttributes } = React.useContext(
-    SketchContext,
-  );
+  } = useContext(PublishContext);
+  const { selectedScenario, userDefinedAttributes } = useContext(SketchContext);
 
   const sampleTypeOptions: SampleTypeOptions = Object.values(
     userDefinedAttributes.sampleTypes,
@@ -177,11 +181,11 @@ function ConfigureOutput() {
     };
   });
 
-  const [editAttributesOpen, setEditAttributesOpen] = React.useState(false);
-  const [attributesIndex, setAttributesIndex] = React.useState(-1);
-  // const [isFullOpen, setIsFullOpen] = React.useState(includeFullPlan);
-  const [isPartialOpen, setIsPartialOpen] = React.useState(includePartialPlan);
-  const [isSampleTypesOpen, setIsSampleTypesOpen] = React.useState(
+  const [editAttributesOpen, setEditAttributesOpen] = useState(false);
+  const [attributesIndex, setAttributesIndex] = useState(-1);
+  // const [isFullOpen, setIsFullOpen] = useState(includeFullPlan);
+  const [isPartialOpen, setIsPartialOpen] = useState(includePartialPlan);
+  const [isSampleTypesOpen, setIsSampleTypesOpen] = useState(
     includeCustomSampleTypes,
   );
 
@@ -229,7 +233,7 @@ function ConfigureOutput() {
           </p>
         </div>
         <AccordionList>
-        {/* <AccordionItem
+          {/* <AccordionItem
           isOpenParam={isFullOpen}
           onChange={(isOpen) => {
             setIsFullOpen(!isFullOpen);
@@ -276,235 +280,238 @@ function ConfigureOutput() {
             </div>
           </div>
         </AccordionItem> */}
-        <AccordionItem
-          isOpenParam={isPartialOpen}
-          onChange={(isOpen) => {
-            setIsPartialOpen(!isPartialOpen);
-            if (!isOpen) return;
+          <AccordionItem
+            isOpenParam={isPartialOpen}
+            onChange={(isOpen) => {
+              setIsPartialOpen(!isPartialOpen);
+              if (!isOpen) return;
 
-            setIncludePartialPlan(true);
-          }}
-          title={
-            <label css={labelStyles}>
-              <strong>
-                Include TOTS Sampling Plan (and optional custom attributes)
-              </strong>
-              <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
-                <Switch
-                  checked={includePartialPlan}
-                  onChange={() => {
-                    setIncludePartialPlan(!includePartialPlan);
-                    setIsPartialOpen(!includePartialPlan);
-                  }}
-                  ariaLabel="Include TOTS Sampling Plan"
-                />
-              </div>
-            </label>
-          }
-        >
-          <div css={sectionContainer}>
-            <p>
-              A subset of TOTS output will be published by default. 
-              Click Add User-Defined Attributes to optionally add
-              additional attributes to use with field data collection
-              apps.
-            </p>
-          </div>
-          <div css={sectionContainer}>
-            <input
-              id="include-partial-web-map-toggle"
-              type="checkbox"
-              css={checkboxStyles}
-              checked={includePartialPlanWebMap}
-              onChange={(ev) =>
-                setIncludePartialPlanWebMap(!includePartialPlanWebMap)
-              }
-            />
-            <label htmlFor="include-partial-web-map-toggle">
-              Include web map in output
-            </label>
-            {webMapIcon('partial-web-map-icon')}
-          </div>
-          <div css={nestedAccordionStyles}>
-            <AccordionList>
-              <AccordionItem title="Add User-Defined Attributes">
-                <div css={tableContainer}>
-                  <p>
-                    Default attributes are shown. Click
-                    <strong> Add New Attribute</strong> to add user-defined attributes. 
-                    A new window will open to assist you with defining the attribute. 
-                    Click the <strong>Edit</strong> or <strong>Delete</strong> icons to 
-                    modify attributes previously added.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setAttributesIndex(-1);
-                      setEditAttributesOpen(true);
+              setIncludePartialPlan(true);
+            }}
+            title={
+              <label css={labelStyles}>
+                <strong>
+                  Include TOTS Sampling Plan (and optional custom attributes)
+                </strong>
+                <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
+                  <Switch
+                    checked={includePartialPlan}
+                    onChange={() => {
+                      setIncludePartialPlan(!includePartialPlan);
+                      setIsPartialOpen(!includePartialPlan);
                     }}
-                  >
-                    Add New Attribute
-                  </button>
-                  <br />
-                  <label htmlFor="">
-                    <strong>Attributes to Include:</strong>
-                  </label>
-                  <ReactTable
-                    id="tots-survey123-attributes-table"
-                    data={partialPlanAttributes}
-                    idColumn={'ID'}
-                    striped={true}
-                    initialSelectedRowIds={{ ids: [] }}
-                    allowHighlight={false}
-                    sortBy={[{ id: 'ID', desc: false }]}
-                    getColumns={(tableWidth: any) => {
-                      return [
-                        {
-                          Header: 'ID',
-                          accessor: 'ID',
-                          width: 0,
-                          show: false,
-                        },
-                        {
-                          Header: 'Field',
-                          accessor: 'label',
-                          width: 128,
-                        },
-                        {
-                          Header: 'Type',
-                          accessor: 'dataType',
-                          width: 50,
-                        },
-                        {
-                          Header: () => null,
-                          id: 'edit-column',
-                          renderCell: true,
-                          width: 34,
-                          Cell: ({ row }: { row: any }) => {
-                            if (row.index <= 10) return <span></span>;
-
-                            return (
-                              <div css={editColumnContainerStyles}>
-                                <button
-                                  css={editButtonStyles}
-                                  onClick={(event) => {
-                                    setAttributesIndex(row.index);
-                                    setEditAttributesOpen(true);
-                                  }}
-                                >
-                                  <i className="fas fa-edit" />
-                                </button>
-                                <button
-                                  css={editButtonStyles}
-                                  onClick={(event) => {
-                                    setPartialPlanAttributes((attr) => {
-                                      return attr.filter(
-                                        (x) =>
-                                          x.id !== row.original.id ||
-                                          x.name !== row.original.name ||
-                                          x.label !== row.original.label,
-                                      );
-                                    });
-                                  }}
-                                >
-                                  <i className="fas fa-trash-alt" />
-                                </button>
-                              </div>
-                            );
-                          },
-                        },
-                      ];
-                    }}
+                    ariaLabel="Include TOTS Sampling Plan"
                   />
                 </div>
-              </AccordionItem>
-            </AccordionList>
-          </div>
-        </AccordionItem>
-        <AccordionItem
-          isOpenParam={isSampleTypesOpen}
-          onChange={(isOpen) => {
-            setIsSampleTypesOpen(!isSampleTypesOpen);
-            if (!isOpen) return;
+              </label>
+            }
+          >
+            <div css={sectionContainer}>
+              <p>
+                A subset of TOTS output will be published by default. Click Add
+                User-Defined Attributes to optionally add additional attributes
+                to use with field data collection apps.
+              </p>
+            </div>
+            <div css={sectionContainer}>
+              <input
+                id="include-partial-web-map-toggle"
+                type="checkbox"
+                css={checkboxStyles}
+                checked={includePartialPlanWebMap}
+                onChange={(ev) =>
+                  setIncludePartialPlanWebMap(!includePartialPlanWebMap)
+                }
+              />
+              <label htmlFor="include-partial-web-map-toggle">
+                Include web map in output
+              </label>
+              {webMapIcon('partial-web-map-icon')}
+            </div>
+            <div css={nestedAccordionStyles}>
+              <AccordionList>
+                <AccordionItem title="Add User-Defined Attributes">
+                  <div css={tableContainer}>
+                    <p>
+                      Default attributes are shown. Click
+                      <strong> Add New Attribute</strong> to add user-defined
+                      attributes. A new window will open to assist you with
+                      defining the attribute. Click the <strong>Edit</strong> or{' '}
+                      <strong>Delete</strong> icons to modify attributes
+                      previously added.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setAttributesIndex(-1);
+                        setEditAttributesOpen(true);
+                      }}
+                    >
+                      Add New Attribute
+                    </button>
+                    <br />
+                    <label htmlFor="">
+                      <strong>Attributes to Include:</strong>
+                    </label>
+                    <ReactTable
+                      id="tots-survey123-attributes-table"
+                      data={partialPlanAttributes}
+                      idColumn={'ID'}
+                      striped={true}
+                      initialSelectedRowIds={{ ids: [] }}
+                      allowHighlight={false}
+                      sortBy={[{ id: 'ID', desc: false }]}
+                      getColumns={(tableWidth: any) => {
+                        return [
+                          {
+                            Header: 'ID',
+                            accessor: 'ID',
+                            width: 0,
+                            show: false,
+                          },
+                          {
+                            Header: 'Field',
+                            accessor: 'label',
+                            width: 128,
+                          },
+                          {
+                            Header: 'Type',
+                            accessor: 'dataType',
+                            width: 50,
+                          },
+                          {
+                            Header: () => null,
+                            id: 'edit-column',
+                            renderCell: true,
+                            width: 34,
+                            Cell: ({ row }: { row: any }) => {
+                              if (row.index <= 10) return <span></span>;
 
-            setIncludeCustomSampleTypes(true);
-          }}
-          title={
-            <label css={labelStyles}>
-              <strong>Include Custom Sample Types</strong>
-              <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
-                <Switch
-                  checked={includeCustomSampleTypes}
-                  onChange={() => {
-                    setIsSampleTypesOpen(!includeCustomSampleTypes);
-                    setIncludeCustomSampleTypes(!includeCustomSampleTypes);
-                  }}
-                  ariaLabel="Watershed Health Scores"
+                              return (
+                                <div css={editColumnContainerStyles}>
+                                  <button
+                                    css={editButtonStyles}
+                                    onClick={(event) => {
+                                      setAttributesIndex(row.index);
+                                      setEditAttributesOpen(true);
+                                    }}
+                                  >
+                                    <i className="fas fa-edit" />
+                                  </button>
+                                  <button
+                                    css={editButtonStyles}
+                                    onClick={(event) => {
+                                      setPartialPlanAttributes((attr) => {
+                                        return attr.filter(
+                                          (x) =>
+                                            x.id !== row.original.id ||
+                                            x.name !== row.original.name ||
+                                            x.label !== row.original.label,
+                                        );
+                                      });
+                                    }}
+                                  >
+                                    <i className="fas fa-trash-alt" />
+                                  </button>
+                                </div>
+                              );
+                            },
+                          },
+                        ];
+                      }}
+                    />
+                  </div>
+                </AccordionItem>
+              </AccordionList>
+            </div>
+          </AccordionItem>
+          <AccordionItem
+            isOpenParam={isSampleTypesOpen}
+            onChange={(isOpen) => {
+              setIsSampleTypesOpen(!isSampleTypesOpen);
+              if (!isOpen) return;
+
+              setIncludeCustomSampleTypes(true);
+            }}
+            title={
+              <label css={labelStyles}>
+                <strong>Include Custom Sample Types</strong>
+                <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
+                  <Switch
+                    checked={includeCustomSampleTypes}
+                    onChange={() => {
+                      setIsSampleTypesOpen(!includeCustomSampleTypes);
+                      setIncludeCustomSampleTypes(!includeCustomSampleTypes);
+                    }}
+                    ariaLabel="Watershed Health Scores"
+                  />
+                </div>
+              </label>
+            }
+          >
+            <div css={sectionContainer}>
+              <p>
+                Publish custom sample types to ArcGIS Online. Select one or more
+                custom sample types from the drop-down list and specify whether
+                to publish output to a new or existing feature service. If
+                appending output to an existing feature service, select the
+                feature service from the drop-down list.
+              </p>
+              <div>
+                <label htmlFor="publish-sample-select">
+                  Sample Types to Publish
+                </label>
+                <Select
+                  inputId="publish-sample-select"
+                  isMulti={true as any}
+                  isSearchable={false}
+                  options={sampleTypeOptions as any}
+                  value={sampleTypeSelections as any}
+                  onChange={(ev) => setSampleTypeSelections(ev as any)}
+                  css={multiSelectStyles}
                 />
               </div>
-            </label>
-          }
-        >
-          <div css={sectionContainer}>
-            <p>
-              Publish custom sample types to ArcGIS Online. Select one or more
-              custom sample types from the drop-down list and specify whether to
-              publish output to a new or existing feature service. If appending
-              output to an existing feature service, select the feature service
-              from the drop-down list.
-            </p>
-            <div>
-              <label htmlFor="publish-sample-select">
-                Sample Types to Publish
-              </label>
-              <Select
-                inputId="publish-sample-select"
-                isMulti={true as any}
-                isSearchable={false}
-                options={sampleTypeOptions as any}
-                value={sampleTypeSelections as any}
-                onChange={(ev) => setSampleTypeSelections(ev as any)}
-                css={multiSelectStyles}
-              />
-            </div>
 
-            <div>
-              <input
-                id="publish-sample-types-existing"
-                type="radio"
-                name="mode"
-                value="Publish to Existing Service"
-                checked={publishSamplesMode === 'new'}
-                onChange={(ev) => {
-                  setPublishSamplesMode('new');
-                }}
-              />
-              <label
-                htmlFor="publish-sample-types-existing"
-                css={radioLabelStyles}
-              >
-                Publish to new Feature Service
-              </label>
-            </div>
-            <div>
-              <input
-                id="publish-sample-types-new"
-                type="radio"
-                name="mode"
-                value="Publish to New Service"
-                checked={publishSamplesMode === 'existing'}
-                onChange={(ev) => {
-                  setPublishSamplesMode('existing');
-                }}
-              />
-              <label htmlFor="publish-sample-types-new" css={radioLabelStyles}>
-                Publish to existing Feature Service
-              </label>
-            </div>
+              <div>
+                <input
+                  id="publish-sample-types-existing"
+                  type="radio"
+                  name="mode"
+                  value="Publish to Existing Service"
+                  checked={publishSamplesMode === 'new'}
+                  onChange={(ev) => {
+                    setPublishSamplesMode('new');
+                  }}
+                />
+                <label
+                  htmlFor="publish-sample-types-existing"
+                  css={radioLabelStyles}
+                >
+                  Publish to new Feature Service
+                </label>
+              </div>
+              <div>
+                <input
+                  id="publish-sample-types-new"
+                  type="radio"
+                  name="mode"
+                  value="Publish to New Service"
+                  checked={publishSamplesMode === 'existing'}
+                  onChange={(ev) => {
+                    setPublishSamplesMode('existing');
+                  }}
+                />
+                <label
+                  htmlFor="publish-sample-types-new"
+                  css={radioLabelStyles}
+                >
+                  Publish to existing Feature Service
+                </label>
+              </div>
 
-            <EditCustomSampleTypesTable />
-          </div>
-        </AccordionItem>
-      </AccordionList>
+              <EditCustomSampleTypesTable />
+            </div>
+          </AccordionItem>
+        </AccordionList>
       </div>
 
       <div css={sectionContainer}>
@@ -530,6 +537,8 @@ const overlayStyles = css`
 const dialogStyles = css`
   color: ${colors.black()};
   background-color: ${colors.white()};
+  max-height: 80vh;
+  overflow: auto;
 
   &[data-reach-dialog-content] {
     position: relative;
@@ -592,7 +601,7 @@ const hiddenInput = css`
 type Props = {
   isOpen: boolean;
   attributes: AttributesType[];
-  setAttributes: React.Dispatch<React.SetStateAction<AttributesType[]>>;
+  setAttributes: Dispatch<SetStateAction<AttributesType[]>>;
   onClose: Function;
   onSave: Function;
   selectedIndex: number;
@@ -611,21 +620,19 @@ function EditAttributePopup({
     label: string;
   };
 
-  const [name, setName] = React.useState('');
-  const [label, setLabel] = React.useState('');
-  const [dataType, setDataType] = React.useState<DataType | null>(null);
-  const [length, setLength] = React.useState(256);
-  const [domainType, setDomainType] = React.useState<DataType | null>(null);
-  const [domainTypeOptions, setDomainTypeOptions] = React.useState<DataType[]>(
-    [],
-  );
-  const [min, setMin] = React.useState(0);
-  const [max, setMax] = React.useState(0);
-  const [codes, setCodes] = React.useState<CodedValue[]>([
+  const [name, setName] = useState('');
+  const [label, setLabel] = useState('');
+  const [dataType, setDataType] = useState<DataType | null>(null);
+  const [length, setLength] = useState(256);
+  const [domainType, setDomainType] = useState<DataType | null>(null);
+  const [domainTypeOptions, setDomainTypeOptions] = useState<DataType[]>([]);
+  const [min, setMin] = useState(0);
+  const [max, setMax] = useState(0);
+  const [codes, setCodes] = useState<CodedValue[]>([
     { id: -1, label: '', value: '' },
   ]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedIndex === -1 || attributes.length <= selectedIndex) {
       setName('');
       setLabel('');
@@ -703,7 +710,7 @@ function EditAttributePopup({
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!dataType) {
       setDomainTypeOptions([]);
       return;

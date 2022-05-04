@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 
 // --- styles (AccordionList) ---
@@ -71,9 +71,9 @@ function AccordionItem({
   onChange = () => {},
   children,
 }: AccordionItemProps) {
-  const [isOpen, setIsOpen] = React.useState(initiallyExpanded);
+  const [isOpen, setIsOpen] = useState(initiallyExpanded);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpenParam === undefined || isOpen === isOpenParam) return;
 
     setIsOpen(isOpenParam);

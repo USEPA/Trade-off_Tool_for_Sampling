@@ -799,10 +799,8 @@ export function updateFeatureLayers(
     );
 
     layers.forEach((layer) => {
-      const {
-        uniqueValueInfosPolygons,
-        uniqueValueInfosPoints,
-      } = buildRendererParams(layer);
+      const { uniqueValueInfosPolygons, uniqueValueInfosPoints } =
+        buildRendererParams(layer);
 
       // update the polygon representation
       requests.push(
@@ -1146,9 +1144,9 @@ export function applyEdits({
 }
 
 /**
- * Builds the edits arrays for publishing the sample types layer of 
+ * Builds the edits arrays for publishing the sample types layer of
  * the sampling plan feature service.
- * 
+ *
  * @param layers LayerType[] - The layers to search for sample types in
  * @param table any - The table object
  * @returns An object containing the edits arrays
@@ -1203,7 +1201,7 @@ export function buildTableEdits({
 
 /**
  * Publishes a web map version of the feature service.
- * 
+ *
  * @param portal The portal object to apply edits to
  * @param service The feature service object
  * @param layers The layers that the edits object pertain to

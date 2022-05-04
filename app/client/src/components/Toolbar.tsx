@@ -1,13 +1,21 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/react';
+import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
+import Collection from '@arcgis/core/core/Collection';
+import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import LayerList from '@arcgis/core/widgets/LayerList';
+import Legend from '@arcgis/core/widgets/Legend';
+import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
+import Portal from '@arcgis/core/portal/Portal';
+import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
 import Switch from 'components/Switch';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
@@ -170,19 +178,8 @@ const graphicsIconStyles = css`
 
 // --- components (Toolbar) ---
 function Toolbar() {
-  const {
-    BasemapGallery,
-    Collection,
-    IdentityManager,
-    LayerList,
-    Legend,
-    OAuthInfo,
-    Portal,
-    PortalBasemapsSource,
-    Slider,
-  } = useEsriModulesContext();
-  const { setContaminationMap } = React.useContext(CalculateContext);
-  const { trainingMode } = React.useContext(NavigationContext);
+  const { setContaminationMap } = useContext(CalculateContext);
+  const { trainingMode } = useContext(NavigationContext);
   const {
     setBasemapWidget,
     defaultSymbols,
@@ -204,7 +201,7 @@ function Toolbar() {
     setSketchLayer,
     showAsPoints,
     setShowAsPoints,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const {
     signedIn,
     setSignedIn,
@@ -214,10 +211,10 @@ function Toolbar() {
     setPortal,
     userInfo,
     setUserInfo,
-  } = React.useContext(AuthenticationContext);
+  } = useContext(AuthenticationContext);
 
   // Initialize the OAuth
-  React.useEffect(() => {
+  useEffect(() => {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
@@ -227,14 +224,14 @@ function Toolbar() {
     IdentityManager.registerOAuthInfos([info]);
 
     setOAuthInfo(info);
-  }, [IdentityManager, OAuthInfo, setOAuthInfo, oAuthInfo]);
+  }, [setOAuthInfo, oAuthInfo]);
 
   // Check the user's sign in status
   const [
     hasCheckedSignInStatus,
     setHasCheckedSignInStatus, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!oAuthInfo || hasCheckedSignInStatus) return;
 
     setHasCheckedSignInStatus(true);
@@ -251,17 +248,10 @@ function Toolbar() {
       .catch(() => {
         setSignedIn(false);
       });
-  }, [
-    IdentityManager,
-    oAuthInfo,
-    Portal,
-    setSignedIn,
-    setPortal,
-    hasCheckedSignInStatus,
-  ]);
+  }, [oAuthInfo, setSignedIn, setPortal, hasCheckedSignInStatus]);
 
   // Get the user information
-  React.useEffect(() => {
+  useEffect(() => {
     if (!portal || userInfo) return;
 
     const tempPortal: any = portal;
@@ -277,19 +267,18 @@ function Toolbar() {
   }, [portal, userInfo, setUserInfo]);
 
   // Create the layer list toolbar widget
-  const [legendVisible, setLegendVisible] = React.useState(false);
-  const [legendInitialized, setLegendInitialized] = React.useState(false);
+  const [legendVisible, setLegendVisible] = useState(false);
+  const [legendInitialized, setLegendInitialized] = useState(false);
   const [
     layerToRemove,
     setLayerToRemove, //
-  ] = React.useState<__esri.Layer | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.Layer | null>(null);
+  useEffect(() => {
     if (!mapView || layers.length === 0 || legendInitialized) return;
 
     // clear out the legend container
-    const legendContainer: HTMLElement | null = document.getElementById(
-      'legend-container',
-    );
+    const legendContainer: HTMLElement | null =
+      document.getElementById('legend-container');
     if (legendContainer) legendContainer.innerHTML = '';
 
     // create the layer list using the same styles and structure as the
@@ -467,7 +456,7 @@ function Toolbar() {
                 layer: item.layer,
                 title: item.layer.title,
                 hideLayers: [],
-              },
+              } as any,
             ],
           });
           container.append(legend.domNode);
@@ -545,10 +534,10 @@ function Toolbar() {
     });
 
     setLegendInitialized(true);
-  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols, layers, legendInitialized]);
+  }, [mapView, defaultSymbols, layers, legendInitialized]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !layerToRemove) return;
 
     setLayerToRemove(null);
@@ -666,9 +655,9 @@ function Toolbar() {
   ]);
 
   // Create the basemap toolbar widget
-  const [basemapVisible, setBasemapVisible] = React.useState(false);
-  const [basemapInitialized, setBasemapInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [basemapVisible, setBasemapVisible] = useState(false);
+  const [basemapInitialized, setBasemapInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || basemapInitialized) return;
 
     const basemapsSource = new PortalBasemapsSource({
@@ -694,16 +683,10 @@ function Toolbar() {
       }),
     );
     setBasemapInitialized(true);
-  }, [
-    BasemapGallery,
-    PortalBasemapsSource,
-    mapView,
-    basemapInitialized,
-    setBasemapWidget,
-  ]);
+  }, [mapView, basemapInitialized, setBasemapWidget]);
 
   // Switches between point and polygon representations
-  React.useEffect(() => {
+  useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
       if (
@@ -745,9 +728,11 @@ function Toolbar() {
           offHandleColor="#129c12"
         />
         <span css={switchLabel}>Points</span>
-        <InfoIcon 
+        <InfoIcon
           id="poly-points-switch"
-          tooltip={'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'}
+          tooltip={
+            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+          }
           place="bottom"
           type="info"
         />

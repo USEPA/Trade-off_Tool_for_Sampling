@@ -1,6 +1,13 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import {
   useTable,
@@ -191,13 +198,13 @@ export function ReactTable({
   sortBy,
 }: Props) {
   // Initializes the column widths based on the table width
-  const [tableWidth, setTableWidth] = React.useState(0);
-  const columns = React.useMemo(() => {
+  const [tableWidth, setTableWidth] = useState(0);
+  const columns = useMemo(() => {
     return getColumns(tableWidth);
   }, [tableWidth, getColumns]);
 
   // default column settings
-  const defaultColumn = React.useMemo(
+  const defaultColumn = useMemo(
     () => ({
       // When using the useFlexLayout:
       minWidth: 50, // minWidth is only used as a limit for resizing
@@ -245,14 +252,14 @@ export function ReactTable({
   ) as any;
 
   // measures the table width
-  const measuredTableRef = React.useCallback((node) => {
+  const measuredTableRef = useCallback((node) => {
     if (!node) return;
     setTableWidth(node.getBoundingClientRect().width);
   }, []);
 
-  const [scrollToRow, setScrollToRow] = React.useState(-1);
+  const [scrollToRow, setScrollToRow] = useState(-1);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // don't scroll for row clicks
     const ids = Object.keys(initialSelectedRowIds?.ids || {});
     if (
@@ -333,17 +340,17 @@ export function ReactTable({
     );
   }
 
-  const [cache] = React.useState(
+  const [cache] = useState(
     new CellMeasurerCache({
       defaultHeight: 36,
       fixedWidth: true,
     }),
   );
-  const listRef = React.useRef<any>(null);
+  const listRef = useRef<any>(null);
 
   // Resizes the rows (accordion items) of the react-virtualized list.
   // This is done anytime an accordion item is expanded/collapsed
-  React.useEffect(() => {
+  useEffect(() => {
     cache.clearAll();
     const tempListRef = listRef as any;
     if (listRef?.current) tempListRef.current.recomputeRowHeights();
@@ -415,21 +422,21 @@ export function ReactTable({
         </div>
         <div className="rt-tbody" {...getTableBodyProps()}>
           <AutoSizer disableHeight>
-              {({ width }) => (
-                <List
-                  ref={listRef}
-                  // autoHeight
-                  deferredMeasurementCache={cache}
-                  height={(height ?? 400)  - 97}
-                  width={width}
-                  rowCount={rows.length}
-                  rowHeight={cache.rowHeight}
-                  rowRenderer={rowRenderer}
-                  overscanRowCount={20}
-                  scrollToIndex={scrollToRow}
-                />
-              )}
-            </AutoSizer>
+            {({ width }) => (
+              <List
+                ref={listRef}
+                // autoHeight
+                deferredMeasurementCache={cache}
+                height={(height ?? 400) - 97}
+                width={width}
+                rowCount={rows.length}
+                rowHeight={cache.rowHeight}
+                rowRenderer={rowRenderer}
+                overscanRowCount={20}
+                scrollToIndex={scrollToRow}
+              />
+            )}
+          </AutoSizer>
         </div>
       </div>
     </div>
@@ -458,13 +465,13 @@ export function ReactTableEditable({
   onDataChange,
 }: EditableProps) {
   // Initializes the column widths based on the table width
-  const [tableWidth, setTableWidth] = React.useState(0);
-  const columns = React.useMemo(() => {
+  const [tableWidth, setTableWidth] = useState(0);
+  const columns = useMemo(() => {
     return getColumns(tableWidth);
   }, [tableWidth, getColumns]);
 
   // default column settings
-  const defaultColumn = React.useMemo(
+  const defaultColumn = useMemo(
     () => ({
       // When using the useFlexLayout:
       minWidth: 50, // minWidth is only used as a limit for resizing
@@ -507,7 +514,7 @@ export function ReactTableEditable({
   ) as any;
 
   // measures the table width
-  const measuredTableRef = React.useCallback((node) => {
+  const measuredTableRef = useCallback((node) => {
     if (!node) return;
     setTableWidth(node.getBoundingClientRect().width);
   }, []);
@@ -626,7 +633,7 @@ export function ReactTableEditableCell({
   updateMyData, // This is a custom function that we supplied to our table instance
 }: EditableCellProps) {
   // We need to keep and update the state of the cell normally
-  const [value, setValue] = React.useState(initialValue);
+  const [value, setValue] = useState(initialValue);
 
   const onChange = (e: any) => {
     setValue(e.target.value);
@@ -637,14 +644,14 @@ export function ReactTableEditableCell({
     updateMyData(index, id, value);
   };
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       updateMyData(index, id, value);
     }
   };
 
   // If the initialValue is changed external, sync it up with our state
-  React.useEffect(() => {
+  useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 

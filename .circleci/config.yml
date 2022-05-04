@@ -6,7 +6,10 @@ orbs:
 references:
   set-container: &set-container
     docker:
-      - image: circleci/node:14.17.3-buster # node 14 on debian 10
+      - image: circleci/node:16.13.1-buster # node 14 on debian 10
+        environment:
+          GENERATE_SOURCEMAP: false
+    resource_class: large
 
 jobs:
   deploy-develop:
@@ -33,7 +36,7 @@ jobs:
           name: client build
           command: |
             cd client
-            npm install
+            npm install --legacy-peer-deps
             npm run build
       - run:
           name: server build
@@ -107,7 +110,7 @@ jobs:
           name: client build
           command: |
             cd client
-            npm install
+            npm install --legacy-peer-deps
             npm run build
       - run:
           name: server build
@@ -172,7 +175,7 @@ jobs:
           name: client build
           command: |
             cd client
-            npm install
+            npm install --legacy-peer-deps
             npm run build
       - run:
           name: server build
