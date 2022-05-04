@@ -327,12 +327,6 @@
           return true;
         });
       }
-
-      // hide the unsupported message initially
-      const messageStyle = document.createElement('style');
-      messageStyle.type = 'text/css';
-      messageStyle.innerHTML = '.unsupportedMessageContainer { display: none; }';
-      document.getElementsByTagName('head')[0].appendChild(messageStyle);
     </script>
     <!-- End Google Analytics-->
   </head>
@@ -516,11 +510,11 @@
                     >
                     <br />
                     Trade-off Tool for Sampling (TOTS) utilizes Esri's ArcGIS JavaScript API for advanced
-                    mapping features, which are not supported by Internet Explorer. For
+                    mapping features, which are not supported by this browser. For
                     more information visit the following links:
                     <a
                       href="https://developers.arcgis.com/javascript/latest/system-requirements/#:~:text=Supported%20browsers&text=Firefox%2093%20or%20later,Safari%2014%20or%20later"
-                      >ArcGIS System Requirements</a
+                      >ArcGIS API for JavaScript System Requirements</a
                     >
                     and
                     <a
@@ -738,6 +732,12 @@
       unsupportedMessage.style.display = 'none';
     }
 
+    // if fetch is supported, hide the unsupported browser message until
+    // we can get the supported browsers lookup file
+    if ('fetch' in window) {
+      unsupportedMessage.style.display = 'none';
+    }
+
     // parse the user agent string to determine which browser the user is using
     const { browserName, browserVersion } = (function () {
       const ua = navigator.userAgent;
@@ -759,7 +759,7 @@
         if (item != null) {
           item = item.slice(1);
           return {
-            browserName: item[0].replace('OPR', 'Opera').replace('Edg', 'Edge'),
+            browserName: item[0].replace('Edg', 'Edge'),
             browserVersion: parseInt(item[1]) || 0,
           };
         }
