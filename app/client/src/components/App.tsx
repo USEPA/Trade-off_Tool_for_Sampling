@@ -281,6 +281,15 @@ function App() {
 
   const { height, width } = useWindowSize();
 
+  // Remove any garbage from the url
+  useEffect(() => {
+    if (window.location.pathname.replace('/', '') !== '') {
+      window.location.replace(
+        `${window.location.origin}/${window.location.search}`,
+      );
+    }
+  }, []);
+
   // calculate height of div holding actions info
   const [contentHeight, setContentHeight] = useState(0);
   const [toolbarHeight, setToolbarHeight] = useState(0);
