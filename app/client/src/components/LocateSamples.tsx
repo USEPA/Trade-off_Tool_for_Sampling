@@ -18,6 +18,7 @@ import Select from 'components/Select';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import {
+  useLayerProps,
   useSampleTypesContext,
   useServicesContext,
 } from 'contexts/LookupFiles';
@@ -29,7 +30,6 @@ import { LayerType } from 'types/Layer';
 import { EditsType, ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultFields } from 'config/layerProps';
 import {
   AttributeItems,
   SampleSelectType,
@@ -444,6 +444,7 @@ function LocateSamples() {
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
+  const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
@@ -644,7 +645,7 @@ function LocateSamples() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultFields,
+          fields: layerProps.data.defaultFields,
           features: [
             {
               attributes: sampleAttributes[typeuuid as any],
@@ -1913,7 +1914,8 @@ function LocateSamples() {
                           'Add Multiple Random Samples',
                         )}
                       {services.status === 'success' &&
-                        sampleTypeContext.status === 'success' && (
+                        sampleTypeContext.status === 'success' &&
+                        layerProps.status === 'success' && (
                           <Fragment>
                             <p>
                               Select "Draw Sampling Mask" to draw a boundary on

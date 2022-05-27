@@ -11,10 +11,9 @@ import Select from 'components/Select';
 // types
 import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
+import { LookupFile } from 'types/Misc';
 // utils
 import { getSketchableLayers } from 'utils/sketchUtils';
-// config
-import { notesCharacterLimit } from 'config/layerProps';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -73,6 +72,7 @@ type Props = {
   edits: EditsType;
   layers: LayerType[];
   fieldInfos: FieldInfos;
+  layerProps: LookupFile;
   onClick: (
     ev: ReactMouseEvent<HTMLElement>,
     feature: any,
@@ -87,6 +87,7 @@ function MapPopup({
   edits,
   layers,
   fieldInfos,
+  layerProps,
   onClick,
 }: Props) {
   // initializes the note and graphicNote whenever the graphic selection changes
@@ -182,6 +183,14 @@ function MapPopup({
   const activeLayer = feature?.graphic?.layer;
   const activeLayerId = activeLayer?.id;
 
+  // get the notes character limit from the defaultFields
+  let notesCharacterLimit = 2000;
+  if (layerProps.status === 'success') {
+    layerProps.data.defaultFields.forEach((field: any) => {
+      if (field.name === 'Notes') notesCharacterLimit = field.length;
+    });
+  }
+
   return (
     <div css={containerStyles}>
       {selectedGraphicsIds.length === 1 && (
@@ -247,7 +256,9 @@ function MapPopup({
                   }}
                 />
                 <br />
-                <span>{note.length} / 2000 characters</span>
+                <span>
+                  {note.length} / {notesCharacterLimit} characters
+                </span>
               </div>
               <div css={saveButtonContainerStyles}>
                 <button

@@ -1,6 +1,8 @@
 // @flow
 
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+// types
+import { LookupFile } from 'types/Misc';
 // utilities
 import { lookupFetch } from 'utils/fetchUtils';
 // config
@@ -21,13 +23,9 @@ function getLookupFile(filename: string, setVariable: Function) {
     });
 }
 
-// --- components ---
-type LookupFile = {
-  status: 'fetching' | 'success' | 'failure';
-  data: any;
-};
-
 type LookupFiles = {
+  layerProps: LookupFile;
+  setLayerProps: Function;
   notifications: LookupFile;
   setNotifications: Function;
   sampleTypes: any;
@@ -37,6 +35,8 @@ type LookupFiles = {
 };
 
 const LookupFilesContext = createContext<LookupFiles>({
+  layerProps: { status: 'fetching', data: null },
+  setLayerProps: () => {},
   notifications: { status: 'fetching', data: null },
   setNotifications: () => {},
   sampleTypes: { status: 'fetching', data: null },
@@ -50,6 +50,10 @@ type Props = {
 };
 
 function LookupFilesProvider({ children }: Props) {
+  const [layerProps, setLayerProps] = React.useState<LookupFile>({
+    status: 'fetching',
+    data: [],
+  });
   const [notifications, setNotifications] = React.useState<LookupFile>({
     status: 'fetching',
     data: [],
@@ -66,6 +70,8 @@ function LookupFilesProvider({ children }: Props) {
   return (
     <LookupFilesContext.Provider
       value={{
+        layerProps,
+        setLayerProps,
         notifications,
         setNotifications,
         sampleTypes,
@@ -77,6 +83,20 @@ function LookupFilesProvider({ children }: Props) {
       {children}
     </LookupFilesContext.Provider>
   );
+}
+
+// Custom hook for the layerProps.json file.
+let layerPropsInitialized = false; // global var for ensuring fetch only happens once
+function useLayerProps() {
+  const { layerProps, setLayerProps } = React.useContext(LookupFilesContext);
+
+  // fetch the lookup file if necessary
+  if (!layerPropsInitialized) {
+    layerPropsInitialized = true;
+    getLookupFile('config/layerProps.json', setLayerProps);
+  }
+
+  return layerProps;
 }
 
 // Custom hook for the messages.json file.
@@ -182,6 +202,7 @@ function useSampleTypesContext() {
 export {
   LookupFilesContext,
   LookupFilesProvider,
+  useLayerProps,
   useNotificationsContext,
   useSampleTypesContext,
   useServicesContext,

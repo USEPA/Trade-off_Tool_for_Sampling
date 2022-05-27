@@ -26,6 +26,7 @@ import MessageBox from 'components/MessageBox';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import {
+  useLayerProps,
   useSampleTypesContext,
   useServicesContext,
 } from 'contexts/LookupFiles';
@@ -48,7 +49,6 @@ import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultFields } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
@@ -268,6 +268,7 @@ function FilePanel() {
 
   const getPopupTemplate = useDynamicPopup();
   const { createBuffer, sampleValidation } = useGeometryTools();
+  const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
@@ -476,7 +477,8 @@ function FilePanel() {
       !sharingUrl ||
       file.file.name === file.lastFileName ||
       !getGpMaxRecordCount ||
-      services.status !== 'success'
+      services.status !== 'success' ||
+      layerProps.status !== 'success'
     ) {
       return;
     }
@@ -596,7 +598,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultFields,
+          fields: layerProps.data.defaultFields,
           features: [
             {
               attributes: sampleAttributes[localSampleType.value as any],
@@ -737,6 +739,7 @@ function FilePanel() {
     services,
     sampleAttributes,
     userInfo,
+    layerProps,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
