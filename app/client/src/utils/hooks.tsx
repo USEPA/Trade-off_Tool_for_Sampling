@@ -38,7 +38,7 @@ import MapPopup from 'components/MapPopup';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
-import { useSampleTypesContext } from 'contexts/LookupFiles';
+import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
@@ -893,6 +893,7 @@ export function useCalculatePlan() {
 // This is primarily needed for sample popups.
 export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
+  const layerProps = useLayerProps();
 
   // Makes all sketch buttons no longer active by removing
   // the sketch-button-selected class.
@@ -1007,6 +1008,7 @@ export function useDynamicPopup() {
         edits={edits}
         layers={layers}
         fieldInfos={fieldInfos}
+        layerProps={layerProps}
         onClick={handleClick}
       />
     );

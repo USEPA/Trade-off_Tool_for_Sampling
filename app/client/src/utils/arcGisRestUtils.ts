@@ -6,14 +6,8 @@ import {
   TableType,
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
+import { LookupFile } from 'types/Misc';
 import { AttributesType } from 'types/Publish';
-// config
-import {
-  defaultFields,
-  defaultLayerProps,
-  defaultTableProps,
-  webMapFieldProps,
-} from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
@@ -25,7 +19,7 @@ import { chunkArray, escapeForLucene } from 'utils/utils';
  * @returns envString The environment string to avoid
  *          CORS errors
  */
-export function getEnvironmentString() {
+function getEnvironmentString() {
   const envStringMap: any = {
     localhost: 'onlocalhost',
     'tots-dev.app.cloud.gov': 'ondev',
@@ -41,7 +35,7 @@ export function getEnvironmentString() {
  * @returns A string to be used as a parameter to ESRI REST services
  *          to avoid CORS errors
  */
-export function getEnvironmentStringParam() {
+function getEnvironmentStringParam() {
   const environmentStr = getEnvironmentString();
   return environmentStr ? `&${environmentStr}=1` : '';
 }
@@ -54,7 +48,7 @@ export function getEnvironmentStringParam() {
  * @param params The web service parameters to append the environment
  *               variable to
  */
-export function appendEnvironmentObjectParam(params: any) {
+function appendEnvironmentObjectParam(params: any) {
   const environmentStr = getEnvironmentString();
   if (environmentStr) params[environmentStr] = 1;
 }
@@ -65,10 +59,7 @@ export function appendEnvironmentObjectParam(params: any) {
  * @param portal The portal object to check against.
  * @param serviceName The desired feature service name.
  */
-export function isServiceNameAvailable(
-  portal: __esri.Portal,
-  serviceName: string,
-) {
+function isServiceNameAvailable(portal: __esri.Portal, serviceName: string) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
@@ -106,7 +97,7 @@ export function isServiceNameAvailable(
  * @param isTable Determines what category to add.
  * @returns A promise that resolves to the hosted feature service object
  */
-export function getFeatureService(
+function getFeatureService(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
   isTable: boolean = false,
@@ -132,7 +123,7 @@ export function getFeatureService(
   });
 }
 
-export function getFeatureServiceRetry(
+function getFeatureServiceRetry(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
 ) {
@@ -239,7 +230,7 @@ function getFeatureServiceWrapped(
  * @param isTable Determines what category to add.
  * @returns A promise that resolves to the hosted feature service object
  */
-export function createFeatureService(
+function createFeatureService(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
   isTable: boolean = false,
@@ -324,7 +315,7 @@ export function createFeatureService(
  * @returns A promise that resolves to the layers on the hosted
  *  feature service
  */
-export function getFeatureLayers(serviceUrl: string, token: string) {
+function getFeatureLayers(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
     fetchCheck(
       `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
@@ -348,7 +339,7 @@ export function getFeatureLayers(serviceUrl: string, token: string) {
  * @returns A promise that resolves to the layers on the hosted
  *  feature service
  */
-export function getFeatureTables(serviceUrl: string, token: string) {
+function getFeatureTables(serviceUrl: string, token: string) {
   return new Promise((resolve, reject) => {
     fetchCheck(
       `${serviceUrl}?f=json&${getEnvironmentStringParam()}&token=${token}`,
@@ -369,7 +360,7 @@ export function getFeatureTables(serviceUrl: string, token: string) {
  * @param id ID of the layer to retreive
  * @returns A promise that resolves to the requested layer
  */
-export function getFeatureLayer(serviceUrl: string, token: string, id: number) {
+function getFeatureLayer(serviceUrl: string, token: string, id: number) {
   return new Promise((resolve, reject) => {
     fetchCheck(
       `${serviceUrl}/${id}?f=json&${getEnvironmentStringParam()}=1&token=${token}`,
@@ -497,12 +488,13 @@ function buildRendererParams(layer: LayerType) {
  * @param layerMetaData Array of service metadata to be added to the layers of a feature service.
  * @returns A promise that resolves to the layers that were saved
  */
-export function createFeatureLayers(
+function createFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
   layers: LayerType[],
   serviceMetaData: ServiceMetaDataType,
   attributesToInclude: AttributesType[] | null,
+  layerProps: LookupFile,
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -543,10 +535,10 @@ export function createFeatureLayers(
         });
       }
 
-      let fields = defaultFields;
+      let fields = layerProps.data.defaultFields;
       if (attributesToInclude) {
-        fields = defaultFields.filter(
-          (x) =>
+        fields = layerProps.data.defaultFields.filter(
+          (x: any) =>
             attributesToInclude.findIndex((y) => y.name === x.name) > -1 ||
             x.name === 'GLOBALID' ||
             x.name === 'OBJECTID',
@@ -554,7 +546,9 @@ export function createFeatureLayers(
       }
 
       attributesToInclude?.forEach((attribute) => {
-        const fieldIndex = fields.findIndex((x) => x.name === attribute.name);
+        const fieldIndex = fields.findIndex(
+          (x: any) => x.name === attribute.name,
+        );
 
         if (fieldIndex > -1) return;
 
@@ -624,7 +618,7 @@ export function createFeatureLayers(
 
       // add the polygon representation
       layersParams.push({
-        ...defaultLayerProps,
+        ...layerProps.data.defaultLayerProps,
         fields,
         name: serviceMetaData.label,
         description: serviceMetaData.description,
@@ -657,7 +651,7 @@ export function createFeatureLayers(
 
       // add the point representation
       layersParams.push({
-        ...defaultLayerProps,
+        ...layerProps.data.defaultLayerProps,
         fields,
         geometryType: 'esriGeometryPoint',
         name: serviceMetaData.label + '-points',
@@ -683,8 +677,8 @@ export function createFeatureLayers(
         layers: layersParams,
         tables: [
           {
-            ...defaultTableProps,
-            fields: defaultFields,
+            ...layerProps.data.defaultTableProps,
+            fields: layerProps.data.defaultFields,
             type: 'Table',
             name: `${serviceMetaData.label}-sample-types`,
             description: '',
@@ -726,17 +720,18 @@ export function createFeatureLayers(
  * @param serviceMetaData Array of service metadata to be added to the layers of a feature service.
  * @returns A promise that resolves to the layers that were saved
  */
-export function createFeatureTables(
+function createFeatureTables(
   portal: __esri.Portal,
   serviceUrl: string,
   serviceMetaData: ServiceMetaDataType,
+  layerProps: LookupFile,
 ) {
   return new Promise((resolve, reject) => {
     const tableParams: any[] = [];
 
     tableParams.push({
-      ...defaultTableProps,
-      fields: defaultFields,
+      ...layerProps.data.defaultTableProps,
+      fields: layerProps.data.defaultFields,
       type: 'Table',
       name: serviceMetaData.label,
       description: serviceMetaData.description,
@@ -773,7 +768,7 @@ export function createFeatureTables(
  * @param createResponse The response from creating layers
  * @returns A promise that resolves to the layers that were updated
  */
-export function updateFeatureLayers(
+function updateFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
   layers: LayerType[],
@@ -860,7 +855,7 @@ export function updateFeatureLayers(
  * @param id The ID of the layer to delete
  * @returns A promise that resolves to the layers that were deleted
  */
-export function deleteFeatureLayer(
+function deleteFeatureLayer(
   portal: __esri.Portal,
   servicUrl: string,
   id: number,
@@ -899,7 +894,7 @@ export function deleteFeatureLayer(
  * @returns A promise that resolves to all of the features on the hosted
  *  feature service
  */
-export function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
+function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
@@ -1040,7 +1035,7 @@ function addPointFeatures(
  * @param edits The edits to be saved to the hosted feature service
  * @returns A promise that resolves to the successfully saved objects
  */
-export function applyEdits({
+function applyEdits({
   portal,
   serviceUrl,
   layers,
@@ -1151,7 +1146,7 @@ export function applyEdits({
  * @param table any - The table object
  * @returns An object containing the edits arrays
  */
-export function buildTableEdits({
+function buildTableEdits({
   layers,
   table,
 }: {
@@ -1209,18 +1204,20 @@ export function buildTableEdits({
  * @param attributesToInclude The attributes to include with each graphic
  * @returns A promise that resolves to the successfully saved web map
  */
-export function addWebMap({
+function addWebMap({
   portal,
   service,
   layers,
   layersResponse,
   attributesToInclude,
+  layerProps,
 }: {
   portal: __esri.Portal;
   service: any;
   layers: LayerType[];
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
+  layerProps: LookupFile;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1232,8 +1229,10 @@ export function addWebMap({
 
     const fieldInfos: any[] = [];
     attributesToInclude?.forEach((attribute) => {
-      if (webMapFieldProps.hasOwnProperty(attribute.name)) {
-        fieldInfos.push((webMapFieldProps as any)[attribute.name]);
+      if (layerProps.data.webMapFieldProps.hasOwnProperty(attribute.name)) {
+        fieldInfos.push(
+          (layerProps.data.webMapFieldProps as any)[attribute.name],
+        );
       } else {
         let format: any = undefined;
         if (
@@ -1343,7 +1342,7 @@ export function addWebMap({
  * @param edits The edits to be saved to the hosted feature service
  * @returns A promise that resolves to the successfully saved objects
  */
-export function applyEditsTable({
+function applyEditsTable({
   portal,
   serviceUrl,
   changes,
@@ -1384,11 +1383,12 @@ export function applyEditsTable({
  * @param serviceMetaData The name and description of the service to be saved
  * @returns A promise that resolves to the successfully published data
  */
-export function publish({
+function publish({
   portal,
   layers,
   edits,
   serviceMetaData,
+  layerProps,
   createWebMap = false,
   attributesToInclude = null,
   table = null,
@@ -1397,6 +1397,7 @@ export function publish({
   layers: LayerType[];
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
+  layerProps: LookupFile;
   createWebMap?: boolean;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
@@ -1419,6 +1420,7 @@ export function publish({
           layers,
           serviceMetaData,
           attributesToInclude,
+          layerProps,
         )
           .then((layersRes: any) => {
             let tableParam = table;
@@ -1506,6 +1508,7 @@ export function publish({
                         layers,
                         layersResponse: layersRes,
                         attributesToInclude,
+                        layerProps,
                       })
                         .then(() => {
                           resolve({
@@ -1552,14 +1555,16 @@ export function publish({
  * @param serviceMetaData The name and description of the service to be saved
  * @returns A promise that resolves to the successfully published data
  */
-export function publishTable({
+function publishTable({
   portal,
   changes,
   serviceMetaData,
+  layerProps,
 }: {
   portal: __esri.Portal;
   changes: any;
   serviceMetaData: ServiceMetaDataType;
+  layerProps: any;
 }) {
   return new Promise((resolve, reject) => {
     if (
@@ -1600,7 +1605,7 @@ export function publishTable({
         }
 
         // create the layers
-        createFeatureTables(portal, serviceUrl, serviceMetaData)
+        createFeatureTables(portal, serviceUrl, serviceMetaData, layerProps)
           .then((res: any) => {
             // update the layer ids in edits
             changes.id = res.layers[0].id;
@@ -1612,3 +1617,17 @@ export function publishTable({
       .catch((err) => reject(err));
   });
 }
+
+export {
+  appendEnvironmentObjectParam,
+  deleteFeatureLayer,
+  getAllFeatures,
+  getEnvironmentString,
+  getEnvironmentStringParam,
+  getFeatureLayer,
+  getFeatureLayers,
+  getFeatureTables,
+  isServiceNameAvailable,
+  publish,
+  publishTable,
+};
