@@ -477,8 +477,7 @@ function FilePanel() {
       !sharingUrl ||
       file.file.name === file.lastFileName ||
       !getGpMaxRecordCount ||
-      services.status !== 'success' ||
-      layerProps.status !== 'success'
+      services.status !== 'success'
     ) {
       return;
     }
@@ -1355,25 +1354,30 @@ function FilePanel() {
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
             (services.status === 'fetching' ||
-              sampleTypeContext.status === 'fetching') && <LoadingSpinner />}
+              sampleTypeContext.status === 'fetching' ||
+              layerProps.status === 'fetching') && <LoadingSpinner />}
           {layerType.value === 'Samples' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('Samples Import')}
           {layerType.value === 'VSP' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('VSP Import')}
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
             (layerType.value === 'Samples' &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success') ||
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success')) && (
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success')) && (
             <Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (

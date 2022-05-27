@@ -6,14 +6,8 @@ import {
   TableType,
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
+import { LookupFile } from 'types/Misc';
 import { AttributesType } from 'types/Publish';
-// config
-import {
-  defaultFields,
-  defaultLayerProps,
-  defaultTableProps,
-  webMapFieldProps,
-} from 'config/layerProps';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
@@ -500,6 +494,7 @@ function createFeatureLayers(
   layers: LayerType[],
   serviceMetaData: ServiceMetaDataType,
   attributesToInclude: AttributesType[] | null,
+  layerProps: LookupFile,
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -540,10 +535,10 @@ function createFeatureLayers(
         });
       }
 
-      let fields = defaultFields;
+      let fields = layerProps.data.defaultFields;
       if (attributesToInclude) {
-        fields = defaultFields.filter(
-          (x) =>
+        fields = layerProps.data.defaultFields.filter(
+          (x: any) =>
             attributesToInclude.findIndex((y) => y.name === x.name) > -1 ||
             x.name === 'GLOBALID' ||
             x.name === 'OBJECTID',
@@ -551,7 +546,9 @@ function createFeatureLayers(
       }
 
       attributesToInclude?.forEach((attribute) => {
-        const fieldIndex = fields.findIndex((x) => x.name === attribute.name);
+        const fieldIndex = fields.findIndex(
+          (x: any) => x.name === attribute.name,
+        );
 
         if (fieldIndex > -1) return;
 
@@ -621,7 +618,7 @@ function createFeatureLayers(
 
       // add the polygon representation
       layersParams.push({
-        ...defaultLayerProps,
+        ...layerProps.data.defaultLayerProps,
         fields,
         name: serviceMetaData.label,
         description: serviceMetaData.description,
@@ -654,7 +651,7 @@ function createFeatureLayers(
 
       // add the point representation
       layersParams.push({
-        ...defaultLayerProps,
+        ...layerProps.data.defaultLayerProps,
         fields,
         geometryType: 'esriGeometryPoint',
         name: serviceMetaData.label + '-points',
@@ -680,8 +677,8 @@ function createFeatureLayers(
         layers: layersParams,
         tables: [
           {
-            ...defaultTableProps,
-            fields: defaultFields,
+            ...layerProps.data.defaultTableProps,
+            fields: layerProps.data.defaultFields,
             type: 'Table',
             name: `${serviceMetaData.label}-sample-types`,
             description: '',
@@ -727,13 +724,14 @@ function createFeatureTables(
   portal: __esri.Portal,
   serviceUrl: string,
   serviceMetaData: ServiceMetaDataType,
+  layerProps: LookupFile,
 ) {
   return new Promise((resolve, reject) => {
     const tableParams: any[] = [];
 
     tableParams.push({
-      ...defaultTableProps,
-      fields: defaultFields,
+      ...layerProps.data.defaultTableProps,
+      fields: layerProps.data.defaultFields,
       type: 'Table',
       name: serviceMetaData.label,
       description: serviceMetaData.description,
@@ -1212,12 +1210,14 @@ function addWebMap({
   layers,
   layersResponse,
   attributesToInclude,
+  layerProps,
 }: {
   portal: __esri.Portal;
   service: any;
   layers: LayerType[];
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
+  layerProps: LookupFile;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1229,8 +1229,10 @@ function addWebMap({
 
     const fieldInfos: any[] = [];
     attributesToInclude?.forEach((attribute) => {
-      if (webMapFieldProps.hasOwnProperty(attribute.name)) {
-        fieldInfos.push((webMapFieldProps as any)[attribute.name]);
+      if (layerProps.data.webMapFieldProps.hasOwnProperty(attribute.name)) {
+        fieldInfos.push(
+          (layerProps.data.webMapFieldProps as any)[attribute.name],
+        );
       } else {
         let format: any = undefined;
         if (
@@ -1386,6 +1388,7 @@ function publish({
   layers,
   edits,
   serviceMetaData,
+  layerProps,
   createWebMap = false,
   attributesToInclude = null,
   table = null,
@@ -1394,6 +1397,7 @@ function publish({
   layers: LayerType[];
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
+  layerProps: LookupFile;
   createWebMap?: boolean;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
@@ -1416,6 +1420,7 @@ function publish({
           layers,
           serviceMetaData,
           attributesToInclude,
+          layerProps,
         )
           .then((layersRes: any) => {
             let tableParam = table;
@@ -1503,6 +1508,7 @@ function publish({
                         layers,
                         layersResponse: layersRes,
                         attributesToInclude,
+                        layerProps,
                       })
                         .then(() => {
                           resolve({
@@ -1553,10 +1559,12 @@ function publishTable({
   portal,
   changes,
   serviceMetaData,
+  layerProps,
 }: {
   portal: __esri.Portal;
   changes: any;
   serviceMetaData: ServiceMetaDataType;
+  layerProps: any;
 }) {
   return new Promise((resolve, reject) => {
     if (
@@ -1597,7 +1605,7 @@ function publishTable({
         }
 
         // create the layers
-        createFeatureTables(portal, serviceUrl, serviceMetaData)
+        createFeatureTables(portal, serviceUrl, serviceMetaData, layerProps)
           .then((res: any) => {
             // update the layer ids in edits
             changes.id = res.layers[0].id;

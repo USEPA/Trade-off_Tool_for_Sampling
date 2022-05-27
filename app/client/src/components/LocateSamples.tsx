@@ -1905,11 +1905,11 @@ function LocateSamples() {
                   {sketchLayer?.layerType !== 'VSP' && (
                     <Fragment>
                       {(services.status === 'fetching' ||
-                        sampleTypeContext.status === 'fetching') && (
-                        <LoadingSpinner />
-                      )}
+                        sampleTypeContext.status === 'fetching' ||
+                        layerProps.status === 'fetching') && <LoadingSpinner />}
                       {(services.status === 'failure' ||
-                        sampleTypeContext.status === 'failure') &&
+                        sampleTypeContext.status === 'failure' ||
+                        layerProps.status === 'failure') &&
                         featureNotAvailableMessage(
                           'Add Multiple Random Samples',
                         )}
