@@ -21,12 +21,11 @@
   },
   "scripts": {
     "client": "cd client && npm start",
-    "client:coverage": "cd client && npm run coverage",
     "server": "cd server && npm start",
     "start": "concurrently --kc \"blue.dim,green.dim\" \"npm:server\" \"npm run client\"",
     "setup": "echo \"Installing project dependencies...\" && npm ci && echo \"Installing client dependencies...\" && cd client && npm ci && echo \"Installing server dependencies...\" && cd .. && cd server && npm ci",
-    "cypress": "concurrently --kc \"blue.dim,green.dim\" \"npm:server\" \"npm run client\" \"cypress open\"",
-    "coverage": "concurrently --kc \"blue.dim,green.dim\" \"npm:server\" \"npm:client:coverage\" \"cypress open\""
+    "cypress": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"cypress open --env coverage=false\"",
+    "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"cypress run --browser edge\""
   },
   "devDependencies": {
     "@cypress/code-coverage": "3.10.0",
