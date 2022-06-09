@@ -23,7 +23,7 @@
     "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
-    "@arcgis/core": "4.22.2",
+    "@arcgis/core": "4.23.7",
     "@emotion/react": "11.9.0",
     "@emotion/styled": "11.8.1",
     "@reach/dialog": "0.17.0",
@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@cypress/instrument-cra": "1.4.0",
-    "@types/arcgis-js-api": "4.22.0",
+    "@types/arcgis-js-api": "4.23.1",
     "@types/file-saver": "2.0.5",
     "@types/jest": "28.1.1",
     "@types/mocha": "9.1.1",
@@ -80,7 +80,9 @@
     "production": [
       ">0.2%",
       "not dead",
-      "not op_mini all"
+      "not op_mini all",
+      "not ie > 0",
+      "not android < 5"
     ],
     "development": [
       "last 1 chrome version",
