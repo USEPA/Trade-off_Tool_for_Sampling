@@ -442,7 +442,7 @@ function ConfigureOutput() {
                       setIsSampleTypesOpen(!includeCustomSampleTypes);
                       setIncludeCustomSampleTypes(!includeCustomSampleTypes);
                     }}
-                    ariaLabel="Watershed Health Scores"
+                    ariaLabel="Include Custom Sample Types"
                   />
                 </div>
               </label>
