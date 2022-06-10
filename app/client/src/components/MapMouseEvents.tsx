@@ -31,7 +31,7 @@ function MapMouseEvents({ mapView }: Props) {
     useContext(SketchContext);
 
   const handleMapClick = useCallback(
-    (event, mapView) => {
+    (event: any, mapView: __esri.MapView) => {
       // perform a hittest on the click location
       mapView
         .hitTest(event)

@@ -20,12 +20,9 @@ import {
   Row,
   HeaderGroup,
 } from 'react-table';
-import {
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-  List,
-} from 'react-virtualized';
+import { VariableSizeList } from 'react-window';
+// utils
+import { useWindowResize } from 'utils/hooks';
 
 const inputStyles = css`
   width: 100%;
@@ -252,7 +249,7 @@ export function ReactTable({
   ) as any;
 
   // measures the table width
-  const measuredTableRef = useCallback((node) => {
+  const measuredTableRef = useCallback((node: HTMLDivElement) => {
     if (!node) return;
     setTableWidth(node.getBoundingClientRect().width);
   }, []);
@@ -278,83 +275,83 @@ export function ReactTable({
     setScrollToRow(index);
   }, [initialSelectedRowIds, data, id, rows]);
 
-  function rowRenderer({
+  function RowVirtualized({
     index,
-    isScrolling,
-    key,
-    parent,
-    style,
+    setSize,
+    windowWidth,
   }: {
-    index: any;
-    isScrolling: any;
-    key: any;
-    parent: any;
-    style: any;
+    index: number;
+    setSize: (index: number, size: number) => void;
+    windowWidth: number;
   }) {
     // cast as any to workaround toggleRowSelected not being on the type
     const row = rows[index] as any;
+
+    const rowRef = useRef();
 
     const selected = Object.keys(selectedRowIds).includes(
       row.original.PERMANENT_IDENTIFIER,
     );
     const isEven = index % 2 === 0;
+
+    // keep track of the height of the rows to autosize rows
+    useEffect(() => {
+      if (!rowRef?.current) return;
+
+      setSize(
+        index,
+        (rowRef.current as HTMLDivElement).getBoundingClientRect().height,
+      );
+    }, [setSize, index, windowWidth]);
+
     prepareRow(row);
     return (
-      <CellMeasurer
-        cache={cache}
-        columnIndex={0}
-        rowCount={rows.length}
-        parent={parent}
-        key={key}
-        rowIndex={index}
+      <div
+        id={row.original[idColumn]}
+        className={`rt-tr ${striped ? 'rt-striped' : ''} ${
+          isEven ? '-odd' : '-even'
+        } ${selected ? 'rt-selected' : ''}`}
+        role="row"
+        {...row.getRowProps()}
+        onClick={() => {
+          row.toggleRowSelected(!selected);
+
+          if (!onSelectionChange) return;
+
+          onSelectionChange(row);
+        }}
+        ref={rowRef}
       >
-        <div
-          id={row.original[idColumn]}
-          className={`rt-tr ${striped ? 'rt-striped' : ''} ${
-            isEven ? '-odd' : '-even'
-          } ${selected ? 'rt-selected' : ''}`}
-          role="row"
-          {...row.getRowProps()}
-          onClick={() => {
-            row.toggleRowSelected(!selected);
-
-            if (!onSelectionChange) return;
-
-            onSelectionChange(row);
-          }}
-          style={style}
-        >
-          {row.cells.map((cell: any) => {
-            const column: any = cell.column;
-            if (typeof column.show === 'boolean' && !column.show) {
-              return null;
-            }
-            return (
-              <div className="rt-td" role="gridcell" {...cell.getCellProps()}>
-                {cell.render('Cell')}
-              </div>
-            );
-          })}
-        </div>
-      </CellMeasurer>
+        {row.cells.map((cell: any) => {
+          const column: any = cell.column;
+          if (typeof column.show === 'boolean' && !column.show) {
+            return null;
+          }
+          return (
+            <div className="rt-td" role="gridcell" {...cell.getCellProps()}>
+              {cell.render('Cell')}
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
-  const [cache] = useState(
-    new CellMeasurerCache({
-      defaultHeight: 36,
-      fixedWidth: true,
-    }),
-  );
   const listRef = useRef<any>(null);
+  const sizeMap = useRef({});
+  const setSize = useCallback((index: number, size: number) => {
+    sizeMap.current = { ...sizeMap.current, [index]: size };
+    listRef.current.resetAfterIndex(index);
+  }, []);
+  const getSize = (index: number) =>
+    ((sizeMap as any).current[index] as any) || 50;
+  const [windowWidth] = useWindowResize();
 
-  // Resizes the rows (accordion items) of the react-virtualized list.
-  // This is done anytime an accordion item is expanded/collapsed
+  // scroll to a specific row
   useEffect(() => {
-    cache.clearAll();
-    const tempListRef = listRef as any;
-    if (listRef?.current) tempListRef.current.recomputeRowHeights();
-  }, [cache, listRef, data]);
+    if (!listRef?.current) return;
+    listRef.current.scrollToItem(scrollToRow, 'center');
+  }, [scrollToRow]);
 
   return (
     <div
@@ -421,22 +418,28 @@ export function ReactTable({
           ))}
         </div>
         <div className="rt-tbody" {...getTableBodyProps()}>
-          <AutoSizer disableHeight>
-            {({ width }) => (
-              <List
-                ref={listRef}
-                // autoHeight
-                deferredMeasurementCache={cache}
-                height={(height ?? 400) - 97}
-                width={width}
-                rowCount={rows.length}
-                rowHeight={cache.rowHeight}
-                rowRenderer={rowRenderer}
-                overscanRowCount={20}
-                scrollToIndex={scrollToRow}
-              />
+          <VariableSizeList
+            height={(height ?? 400) - 97}
+            itemCount={rows.length}
+            itemSize={getSize} // TODO
+            width="100%"
+            ref={listRef}
+          >
+            {({ index, style }) => (
+              <div
+                style={{
+                  ...style,
+                  overflowX: 'hidden',
+                }}
+              >
+                <RowVirtualized
+                  index={index}
+                  setSize={setSize}
+                  windowWidth={windowWidth}
+                />
+              </div>
             )}
-          </AutoSizer>
+          </VariableSizeList>
         </div>
       </div>
     </div>
@@ -514,7 +517,7 @@ export function ReactTableEditable({
   ) as any;
 
   // measures the table width
-  const measuredTableRef = useCallback((node) => {
+  const measuredTableRef = useCallback((node: HTMLDivElement) => {
     if (!node) return;
     setTableWidth(node.getBoundingClientRect().width);
   }, []);

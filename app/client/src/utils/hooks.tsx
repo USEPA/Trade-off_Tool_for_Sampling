@@ -7,9 +7,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
 } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import Collection from '@arcgis/core/core/Collection';
 import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
@@ -1015,7 +1016,7 @@ export function useDynamicPopup() {
 
     // wrap the content for esri
     const contentContainer = document.createElement('div');
-    ReactDOM.render(content, contentContainer);
+    createRoot(contentContainer).render(content);
 
     return contentContainer;
   };
@@ -1149,6 +1150,24 @@ export function useDynamicPopup() {
 
     return {};
   };
+}
+
+// Keeps track of the window size.
+export function useWindowResize() {
+  const [size, setSize] = useState([0, 0]);
+
+  useLayoutEffect(() => {
+    function updateSize() {
+      setSize([window.innerWidth, window.innerHeight]);
+    }
+
+    window.addEventListener('resize', updateSize);
+    updateSize();
+
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  return size;
 }
 
 ///////////////////////////////////////////////////////////////////

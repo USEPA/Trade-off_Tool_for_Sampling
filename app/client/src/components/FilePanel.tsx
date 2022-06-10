@@ -302,7 +302,7 @@ function FilePanel() {
 
   // Handles the user uploading a file
   const [file, setFile] = useState<any>(null);
-  const onDrop = useCallback((acceptedFiles) => {
+  const onDrop = useCallback((acceptedFiles: any) => {
     // Do something with the files
     if (
       !acceptedFiles ||
