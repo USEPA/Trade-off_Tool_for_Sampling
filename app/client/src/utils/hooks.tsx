@@ -7,7 +7,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useState,
 } from 'react';
 import { createRoot } from 'react-dom/client';
