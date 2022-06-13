@@ -420,7 +420,7 @@ export function ReactTable({
           <VariableSizeList
             height={(height ?? 400) - 97}
             itemCount={rows.length}
-            itemSize={getSize} // TODO
+            itemSize={getSize}
             width="100%"
             ref={listRef}
           >
