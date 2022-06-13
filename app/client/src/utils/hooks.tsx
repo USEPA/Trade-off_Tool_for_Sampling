@@ -1152,24 +1152,6 @@ export function useDynamicPopup() {
   };
 }
 
-// Keeps track of the window size.
-export function useWindowResize() {
-  const [size, setSize] = useState([0, 0]);
-
-  useLayoutEffect(() => {
-    function updateSize() {
-      setSize([window.innerWidth, window.innerHeight]);
-    }
-
-    window.addEventListener('resize', updateSize);
-    updateSize();
-
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  return size;
-}
-
 ///////////////////////////////////////////////////////////////////
 ////////////////// Browser storage related hooks //////////////////
 ///////////////////////////////////////////////////////////////////

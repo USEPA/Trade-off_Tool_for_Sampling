@@ -21,8 +21,7 @@ import {
   HeaderGroup,
 } from 'react-table';
 import { VariableSizeList } from 'react-window';
-// utils
-import { useWindowResize } from 'utils/hooks';
+import { useWindowSize } from '@reach/window-size';
 
 const inputStyles = css`
   width: 100%;
@@ -345,7 +344,7 @@ export function ReactTable({
   }, []);
   const getSize = (index: number) =>
     ((sizeMap as any).current[index] as any) || 50;
-  const [windowWidth] = useWindowResize();
+  const { width } = useWindowSize();
 
   // scroll to a specific row
   useEffect(() => {
@@ -435,7 +434,7 @@ export function ReactTable({
                 <RowVirtualized
                   index={index}
                   setSize={setSize}
-                  windowWidth={windowWidth}
+                  windowWidth={width}
                 />
               </div>
             )}
