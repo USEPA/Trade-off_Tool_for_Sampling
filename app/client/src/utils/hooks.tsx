@@ -9,7 +9,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import Collection from '@arcgis/core/core/Collection';
 import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
@@ -1015,7 +1015,7 @@ export function useDynamicPopup() {
 
     // wrap the content for esri
     const contentContainer = document.createElement('div');
-    ReactDOM.render(content, contentContainer);
+    createRoot(contentContainer).render(content);
 
     return contentContainer;
   };

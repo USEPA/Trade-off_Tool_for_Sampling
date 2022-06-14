@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 
 import React, { useContext, useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
 import Collection from '@arcgis/core/core/Collection';
@@ -412,7 +412,7 @@ function Toolbar() {
         if (item.parent) {
           if (item.layer.type === 'graphics') {
             const legendContainer = document.createElement('div');
-            ReactDOM.render(content, legendContainer);
+            createRoot(legendContainer).render(content);
             container.append(legendContainer);
 
             item.panel = {
@@ -432,7 +432,7 @@ function Toolbar() {
         // create a custom legend item for graphics layers
         if (item.layer.type === 'graphics') {
           const legendContainer = document.createElement('div');
-          ReactDOM.render(content, legendContainer);
+          createRoot(legendContainer).render(content);
           container.append(legendContainer);
 
           item.panel = {
