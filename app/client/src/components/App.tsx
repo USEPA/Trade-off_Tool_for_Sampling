@@ -281,6 +281,21 @@ function App() {
 
   const { height, width } = useWindowSize();
 
+  useEffect(() => {
+    const location = window.location;
+    if (location.pathname.replace('/', '') === '') return;
+
+    let url = `${location.origin}/404.html`;
+    if (location.hostname === 'localhost') {
+      url = `${location.protocol}//${location.hostname}:9090/404.html`;
+    }
+
+    // append the original url for tracking purposes
+    url += `?src=${location.href}`;
+
+    window.location.assign(url);
+  }, []);
+
   // calculate height of div holding actions info
   const [contentHeight, setContentHeight] = useState(0);
   const [toolbarHeight, setToolbarHeight] = useState(0);
