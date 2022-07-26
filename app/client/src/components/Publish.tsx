@@ -21,6 +21,7 @@ import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
@@ -157,6 +158,8 @@ function Publish() {
     userDefinedAttributes,
     setUserDefinedAttributes,
   } = useContext(SketchContext);
+
+  const layerProps = useLayerProps();
 
   // Checks browser storage to determine if the user clicked publish and logged in.
   const [publishButtonClicked, setPublishButtonClicked] = useState(false);
@@ -478,6 +481,7 @@ function Publish() {
       edits: [layerEdits],
       createWebMap: includeFullPlanWebMap,
       table: editsScenario.table,
+      layerProps,
       serviceMetaData: {
         value: '',
         label: scenarioName,
@@ -810,6 +814,7 @@ function Publish() {
     setLayers,
     portal,
     layers,
+    layerProps,
     selectedScenario,
     setSelectedScenario,
   ]);
@@ -1012,6 +1017,7 @@ function Publish() {
       createWebMap: includePartialPlanWebMap,
       table: editsScenario.table,
       attributesToInclude: partialPlanAttributes,
+      layerProps,
       serviceMetaData: {
         value: '',
         label: editsScenario.scenarioName,
@@ -1349,6 +1355,7 @@ function Publish() {
     partialPlanAttributes,
     portal,
     layers,
+    layerProps,
     sampleAttributes,
     selectedScenario,
     setSelectedScenario,
@@ -1407,6 +1414,7 @@ function Publish() {
         portal,
         changes,
         serviceMetaData: publishSampleTableMetaData,
+        layerProps,
       })
         .then((res: any) => {
           // get totals
@@ -1617,6 +1625,7 @@ function Publish() {
         });
       });
   }, [
+    layerProps,
     portal,
     publishSampleTableMetaData,
     userDefinedAttributes,
@@ -1633,6 +1642,7 @@ function Publish() {
   useEffect(() => {
     if (!oAuthInfo || !portal || !signedIn) return;
     if (!publishButtonClicked || !hasNameBeenChecked) return;
+    if (layerProps.status !== 'success') return;
     if (
       includeFullPlan &&
       (!layers || layers.length === 0 || !selectedScenario)
@@ -1667,6 +1677,7 @@ function Publish() {
     includeFullPlan,
     includePartialPlan,
     layers,
+    layerProps,
     oAuthInfo,
     portal,
     publishButtonClicked,
@@ -1874,7 +1885,8 @@ function Publish() {
       {publishPartialResponse.status === 'fetch-failure' &&
         webServiceErrorMessage(publishPartialResponse.error)}
       {publishSamplesResponse.status === 'fetch-failure' &&
-        webServiceErrorMessage}
+        webServiceErrorMessage()}
+      {layerProps.status === 'failure' && webServiceErrorMessage()}
       {publishResponse.status === 'success' &&
         publishResponse.summary.failed && (
           <MessageBox

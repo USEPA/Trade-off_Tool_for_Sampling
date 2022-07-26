@@ -26,6 +26,7 @@ import MessageBox from 'components/MessageBox';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import {
+  useLayerProps,
   useSampleTypesContext,
   useServicesContext,
 } from 'contexts/LookupFiles';
@@ -48,7 +49,6 @@ import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultFields } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
@@ -268,6 +268,7 @@ function FilePanel() {
 
   const getPopupTemplate = useDynamicPopup();
   const { createBuffer, sampleValidation } = useGeometryTools();
+  const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
@@ -301,7 +302,7 @@ function FilePanel() {
 
   // Handles the user uploading a file
   const [file, setFile] = useState<any>(null);
-  const onDrop = useCallback((acceptedFiles) => {
+  const onDrop = useCallback((acceptedFiles: any) => {
     // Do something with the files
     if (
       !acceptedFiles ||
@@ -596,7 +597,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultFields,
+          fields: layerProps.data.defaultFields,
           features: [
             {
               attributes: sampleAttributes[localSampleType.value as any],
@@ -737,6 +738,7 @@ function FilePanel() {
     services,
     sampleAttributes,
     userInfo,
+    layerProps,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
@@ -1352,25 +1354,30 @@ function FilePanel() {
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
             (services.status === 'fetching' ||
-              sampleTypeContext.status === 'fetching') && <LoadingSpinner />}
+              sampleTypeContext.status === 'fetching' ||
+              layerProps.status === 'fetching') && <LoadingSpinner />}
           {layerType.value === 'Samples' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('Samples Import')}
           {layerType.value === 'VSP' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('VSP Import')}
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
             (layerType.value === 'Samples' &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success') ||
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success')) && (
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success')) && (
             <Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (

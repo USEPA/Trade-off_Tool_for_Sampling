@@ -9,7 +9,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import Collection from '@arcgis/core/core/Collection';
 import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
@@ -38,7 +38,7 @@ import MapPopup from 'components/MapPopup';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
-import { useSampleTypesContext } from 'contexts/LookupFiles';
+import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
@@ -893,6 +893,7 @@ export function useCalculatePlan() {
 // This is primarily needed for sample popups.
 export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
+  const layerProps = useLayerProps();
 
   // Makes all sketch buttons no longer active by removing
   // the sketch-button-selected class.
@@ -1007,13 +1008,14 @@ export function useDynamicPopup() {
         edits={edits}
         layers={layers}
         fieldInfos={fieldInfos}
+        layerProps={layerProps}
         onClick={handleClick}
       />
     );
 
     // wrap the content for esri
     const contentContainer = document.createElement('div');
-    ReactDOM.render(content, contentContainer);
+    createRoot(contentContainer).render(content);
 
     return contentContainer;
   };
