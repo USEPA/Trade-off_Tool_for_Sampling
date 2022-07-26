@@ -1,5 +1,5 @@
 import { escapeRegex } from 'utils/utils';
-import Geoprocessor from '@arcgis/core/tasks/Geoprocessor';
+import * as geoprocessor from '@arcgis/core/rest/geoprocessor';
 
 /**
  * Performs a fetch and validates the http status.
@@ -197,17 +197,11 @@ export function geoprocessorFetch({
   return new Promise<any>((resolve, reject) => {
     const startTime = performance.now();
 
-    const geoprocessor = new Geoprocessor({
-      url,
-      outSpatialReference,
-      requestOptions: {
+    geoprocessor
+      .execute(url, inputParameters, { outSpatialReference } as any, {
         timeout: 120000,
         cacheBust: true,
-      },
-    });
-
-    geoprocessor
-      .execute(inputParameters)
+      })
       .then((res) => {
         logCallToGoogleAnalytics(url, res.status, startTime);
         resolve(res);
