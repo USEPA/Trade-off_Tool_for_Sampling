@@ -300,6 +300,7 @@ export function useGeometryTools() {
       // accessing the centroid.
       const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
         graphic.geometry,
+        false,
       ) as __esri.Polygon;
 
       if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
@@ -338,6 +339,7 @@ export function useGeometryTools() {
       // accessing the centroid.
       const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
         graphic.geometry,
+        false,
       );
 
       if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
