@@ -132,6 +132,38 @@
           display: block;
         }
       }
+
+      .usa-tag:only-of-type, .new:only-of-type::before {
+        margin-right: 0;
+      }
+
+      .usa-tag, .new::before {
+          font-family: Source Sans Pro Web, "Noto Sans Arabic", "Noto Sans BN homepage", "Noto Sans GU homepage", "Noto Sans KR homepage", "Noto Sans SC homepage", "Noto Sans BN", "Noto Sans GU", "Noto Sans KR", "Noto Sans SC", "Noto Sans TC", "Helvetica Neue", Helvetica, Arial, sans;
+          font-size: .93rem;
+          color: #fff;
+          text-transform: uppercase;
+          background-color: #565c65;
+          border-radius: 2px;
+          margin-right: 0.25rem;
+          padding: 1px 0.5rem;
+      }
+
+      .external-link__tag {
+        display: inline-block;
+        font-size: 0.675rem;
+        margin-left: 0.25em;
+        padding: 0 0.5em;
+        text-decoration: none;
+      }
+
+      .u-visually-hidden {
+          clip: rect(1px, 1px, 1px, 1px) !important;
+          height: 1px !important;
+          overflow: hidden !important;
+          position: absolute !important;
+          width: 1px !important;
+          word-wrap: normal !important;
+      }
     </style>
     <!-- IE9 and below styles -->
     <!--[if IE]>
@@ -583,7 +615,7 @@
                     <a href="https://www.epa.gov/contracts" class="menu__link">Contracting</a>
                   </li>
                   <li class="menu__item">
-                    <a href="https://www.epa.gov/home/wwwepagov-snapshots" class="menu__link">
+                    <a href="https://www.epa.gov/utilities/wwwepagov-snapshots" class="menu__link">
                       EPA www Web Snapshots
                     </a>
                   </li>
@@ -592,12 +624,13 @@
                   </li>
                   <li class="menu__item">
                     <a
-                      href="https://www.epa.gov/ocr/whistleblower-protections-epa-and-how-they-relate-non-disclosure-agreements-signed-epa-employees"
+                      href="https://www.epa.gov/ocr/whistleblower-protections-epa-and-how-they-relate-non-disclosure-agreements-signed-epa"
                       class="menu__link"
                     >
                       No FEAR Act Data
                     </a>
                   </li class="menu__item">
+                  <li class="menu__item"><a href="https://www.epa.gov/web-policies-and-procedures/plain-writing" class="menu__link">Plain Writing</a></li>
                   <li class="menu__item"><a href="https://www.epa.gov/privacy" class="menu__link">Privacy</a></li>
                   <li class="menu__item">
                     <a
@@ -612,7 +645,13 @@
                 <div class="col__title">Connect.</div>
                 <ul class="menu">
                   <li class="menu__item">
-                    <a href="https://www.data.gov/" class="menu__link">Data.gov</a>
+                    <a href="https://www.data.gov/" class="menu__link">
+                      Data.gov
+                      <span class="usa-tag external-link__tag" title="Exit EPA Website">
+                        <span aria-hidden="true">Exit</span>
+                        <span class="u-visually-hidden"> Exit EPA Website</span>
+                      </span>
+                    </a>
                   </li>
                   <li class="menu__item">
                     <a
@@ -632,7 +671,13 @@
                     <a href="https://www.epa.gov/data" class="menu__link">Open Government</a>
                   </li>
                   <li class="menu__item">
-                    <a href="https://www.regulations.gov/" class="menu__link">Regulations.gov</a>
+                    <a href="https://www.regulations.gov/" class="menu__link">
+                      Regulations.gov
+                      <span class="usa-tag external-link__tag" title="Exit EPA Website">
+                        <span aria-hidden="true">Exit</span>
+                        <span class="u-visually-hidden"> Exit EPA Website</span>
+                      </span>
+                    </a>
                   </li>
                   <li class="menu__item">
                     <a href="https://www.epa.gov/newsroom/email-subscriptions-epa-news-releases" class="menu__link">
@@ -640,10 +685,22 @@
                     </a>
                   </li>
                   <li class="menu__item">
-                    <a href="https://www.usa.gov/" class="menu__link">USA.gov</a>
+                    <a href="https://www.usa.gov/" class="menu__link">
+                      USA.gov
+                      <span class="usa-tag external-link__tag" title="Exit EPA Website">
+                        <span aria-hidden="true">Exit</span>
+                        <span class="u-visually-hidden"> Exit EPA Website</span>
+                      </span>
+                    </a>
                   </li>
                   <li class="menu__item">
-                    <a href="https://www.whitehouse.gov/" class="menu__link">White House</a>
+                    <a href="https://www.whitehouse.gov/" class="menu__link">
+                      White House
+                      <span class="usa-tag external-link__tag" title="Exit EPA Website">
+                        <span aria-hidden="true">Exit</span>
+                        <span class="u-visually-hidden"> Exit EPA Website</span>
+                      </span>
+                    </a>
                   </li>
                 </ul>
               </div>
@@ -664,7 +721,7 @@
                     </a>
                   </li>
                   <li class="menu__item">
-                    <a href="https://www.epa.gov/home/epa-hotlines" class="menu__link">Hotlines</a>
+                    <a href="https://www.epa.gov/aboutepa/epa-hotlines" class="menu__link">Hotlines</a>
                   </li>
                   <li class="menu__item">
                     <a href="https://www.epa.gov/foia" class="menu__link">FOIA Requests</a>
@@ -721,7 +778,6 @@
                     </a>
                   </li>
                 </ul>
-                <p class="last-updated">Last updated on August 20, 2021</p>
               </div>
             </div>
           </div>
