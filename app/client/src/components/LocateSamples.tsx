@@ -2143,6 +2143,7 @@ function LocateSamples() {
                                 css={iconButtonStyles}
                                 title="Delete Sample Type"
                                 onClick={() => {
+                                  setValidationMessage('');
                                   const sampleTypeUuid =
                                     userDefinedSampleType.value;
 
@@ -2251,13 +2252,23 @@ function LocateSamples() {
                                 : 'Clone Sample Type'
                             }
                             onClick={(ev) => {
+                              setValidationMessage('');
                               if (editingStatus === 'clone') {
                                 setEditingStatus(null);
-                                if (userDefinedSampleType) {
+                                if (
+                                  userDefinedSampleType &&
+                                  defaultSymbols.symbols.hasOwnProperty(
+                                    userDefinedSampleType.value,
+                                  )
+                                ) {
                                   setUdtSymbol(
                                     defaultSymbols.symbols[
                                       userDefinedSampleType.value
                                     ],
+                                  );
+                                } else {
+                                  setUdtSymbol(
+                                    defaultSymbols.symbols['Samples'],
                                   );
                                 }
                                 return;
@@ -2288,6 +2299,7 @@ function LocateSamples() {
                                   : 'View Sample Type'
                               }
                               onClick={(ev) => {
+                                setValidationMessage('');
                                 if (editingStatus === 'view') {
                                   setEditingStatus(null);
                                   return;
@@ -2318,6 +2330,7 @@ function LocateSamples() {
                                   : 'Edit Sample Type'
                               }
                               onClick={(ev) => {
+                                setValidationMessage('');
                                 if (editingStatus === 'edit') {
                                   setEditingStatus(null);
                                   return;
@@ -2350,6 +2363,7 @@ function LocateSamples() {
                             : 'Create Sample Type'
                         }
                         onClick={(ev) => {
+                          setValidationMessage('');
                           if (editingStatus === 'create') {
                             setEditingStatus(null);
                             return;
@@ -2575,6 +2589,7 @@ function LocateSamples() {
                           css={addButtonStyles}
                           onClick={(ev) => {
                             setEditingStatus(null);
+                            setValidationMessage('');
                           }}
                         >
                           {editingStatus === 'view' ? 'Hide' : 'Cancel'}
@@ -2602,6 +2617,7 @@ function LocateSamples() {
                           <button
                             css={addButtonStyles}
                             onClick={(ev) => {
+                              setValidationMessage('');
                               const typeUuid =
                                 (editingStatus === 'edit' ||
                                   editingStatus === 'view') &&
