@@ -37,6 +37,212 @@ import { LayerType } from 'types/Layer';
 
 const toolBarHeight = '40px';
 
+// Builds the legend item for a layer
+function buildLegendListItem(event: any) {
+  const item = event.item;
+  const mapView = event.view;
+
+  // create the slider
+  const sliderContainer = document.createElement('div');
+  const slider: any = new Slider({
+    container: sliderContainer,
+    min: 0,
+    max: 100,
+    values: [100],
+  });
+
+  // create the slider events, which change the layer's opacity
+  function sliderChange(
+    event: __esri.SliderThumbChangeEvent | __esri.SliderThumbDragEvent,
+  ) {
+    item.layer.opacity = event.value / 100;
+  }
+  slider.on('thumb-change', sliderChange);
+  slider.on('thumb-drag', sliderChange);
+
+  // find the layer type (i.e., Samples, VSP, AOI, etc.)
+  let subtitle = '';
+  const legendItems: LegendRowType[] = [];
+  const layer = (window as any).totsLayers?.find(
+    (layer: LayerType) =>
+      layer.layerId === item?.layer?.id ||
+      layer.pointsLayer?.id === item?.layer?.id,
+  );
+
+  const isPoints = item.layer.id?.includes('-points');
+
+  const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
+
+  // build the data for building the legend
+  if (
+    layer?.layerType === 'Area of Interest' ||
+    layer?.layerType === 'Sampling Mask'
+  ) {
+    legendItems.push({
+      value: 'Area of Interest',
+      title: 'Area of Interest',
+      symbol: defaultSymbols.symbols['Area of Interest'],
+      style: null,
+    });
+  }
+  if (layer?.layerType === 'Contamination Map') {
+    legendItems.push({
+      value: 'Contamination Map',
+      title: 'Contamination Map',
+      symbol: defaultSymbols.symbols['Contamination Map'],
+      style: null,
+    });
+  }
+  if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
+    subtitle = 'Sample Type';
+
+    (window as any).totsAllSampleOptions?.forEach(
+      (option: SampleSelectType) => {
+        const style = isPoints
+          ? (window as any).totsSampleAttributes[option.value]?.POINT_STYLE ||
+            null
+          : null;
+        if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
+          legendItems.push({
+            value: option.value,
+            title: option.label,
+            symbol: defaultSymbols.symbols[option.value],
+            style,
+          });
+        } else {
+          legendItems.push({
+            value: 'Samples',
+            title: option.label,
+            symbol: defaultSymbols.symbols['Samples'],
+            style,
+          });
+        }
+      },
+    );
+  }
+
+  // sort the legend items
+  legendItems.sort((a, b) => a.title.localeCompare(b.title));
+
+  const container = document.createElement('div');
+  container.append(slider.domNode);
+  const content = (
+    <div className="esri-legend esri-widget--panel esri-widget">
+      <div className="esri-legend__layer">
+        <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+          {subtitle && (
+            <div className="esri-legend__layer-caption">{subtitle}</div>
+          )}
+          <div className="esri-legend__layer-body">
+            {legendItems.map((row: LegendRowType, index) => {
+              return (
+                <div key={index} className="esri-legend__layer-row">
+                  <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
+                    <div className="esri-legend__symbol">
+                      <div
+                        css={css`
+                          opacity: 1;
+                        `}
+                      >
+                        <ShapeStyle
+                          color={row.symbol.color}
+                          outline={row.symbol.outline}
+                          style={row.style}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
+                    {row.title}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // item is a sub layer, just add the legend
+  if (item.parent) {
+    if (item.layer.type === 'graphics') {
+      const legendContainer = document.createElement('div');
+      createRoot(legendContainer).render(content);
+      container.append(legendContainer);
+
+      item.panel = {
+        content: container,
+        className: 'esri-icon-layer-list',
+        open: true,
+      };
+    } else {
+      item.panel = {
+        content: 'legend',
+        open: true,
+      };
+    }
+    return;
+  }
+
+  // create a custom legend item for graphics layers
+  if (item.layer.type === 'graphics') {
+    const legendContainer = document.createElement('div');
+    createRoot(legendContainer).render(content);
+    container.append(legendContainer);
+
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  } else if (item.layer.type === 'group') {
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  } else {
+    const legendContainer = document.createElement('div');
+    const legend: any = new Legend({
+      container: legendContainer,
+      view: mapView,
+      layerInfos: [
+        {
+          layer: item.layer,
+          title: item.layer.title,
+          hideLayers: [],
+        } as any,
+      ],
+    });
+    container.append(legend.domNode);
+
+    // don't show legend twice
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  }
+
+  // add a delete button for each layer, but don't add it to sublayers
+  item.actionsOpen = true;
+  item.actionsSections = [
+    [
+      {
+        title: 'Zoom to Layer',
+        className: 'esri-icon-zoom-in-magnifying-glass',
+        id: 'zoom-layer',
+      },
+      {
+        title: 'Delete Layer',
+        className: 'esri-icon-trash',
+        id: 'delete-layer',
+      },
+    ],
+  ];
+}
+
 const basemapNames = [
   'Streets',
   'Imagery',
@@ -172,10 +378,6 @@ const legendStyles = (legendVisible: boolean) => {
   `;
 };
 
-const graphicsIconStyles = css`
-  opacity: 1;
-`;
-
 // --- components (Toolbar) ---
 function Toolbar() {
   const { setContaminationMap } = useContext(CalculateContext);
@@ -201,6 +403,7 @@ function Toolbar() {
     setSketchLayer,
     showAsPoints,
     setShowAsPoints,
+    userDefinedAttributes,
   } = useContext(SketchContext);
   const {
     signedIn,
@@ -268,13 +471,13 @@ function Toolbar() {
 
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = useState(false);
-  const [legendInitialized, setLegendInitialized] = useState(false);
+  const [layerList, setLayerList] = useState<__esri.LayerList | null>(null);
   const [
     layerToRemove,
     setLayerToRemove, //
   ] = useState<__esri.Layer | null>(null);
   useEffect(() => {
-    if (!mapView || layers.length === 0 || legendInitialized) return;
+    if (!mapView || layers.length === 0 || layerList) return;
 
     // clear out the legend container
     const legendContainer: HTMLElement | null =
@@ -283,213 +486,16 @@ function Toolbar() {
 
     // create the layer list using the same styles and structure as the
     // esri version.
-    const layerList = new LayerList({
+    const newLayerList = new LayerList({
       view: mapView,
       container: 'legend-container',
-      listItemCreatedFunction: function (event) {
-        const item = event.item;
-
-        // create the slider
-        const sliderContainer = document.createElement('div');
-        const slider: any = new Slider({
-          container: sliderContainer,
-          min: 0,
-          max: 100,
-          values: [100],
-        });
-
-        // create the slider events, which change the layer's opacity
-        function sliderChange(
-          event: __esri.SliderThumbChangeEvent | __esri.SliderThumbDragEvent,
-        ) {
-          item.layer.opacity = event.value / 100;
-        }
-        slider.on('thumb-change', sliderChange);
-        slider.on('thumb-drag', sliderChange);
-
-        // find the layer type (i.e., Samples, VSP, AOI, etc.)
-        let subtitle = '';
-        const legendItems: LegendRowType[] = [];
-        const layer = (window as any).totsLayers?.find(
-          (layer: LayerType) =>
-            layer.layerId === item?.layer?.id ||
-            layer.pointsLayer?.id === item?.layer?.id,
-        );
-
-        const isPoints = item.layer.id?.includes('-points');
-
-        const defaultSymbols: DefaultSymbolsType = (window as any)
-          .totsDefaultSymbols;
-
-        // build the data for building the legend
-        if (
-          layer?.layerType === 'Area of Interest' ||
-          layer?.layerType === 'Sampling Mask'
-        ) {
-          legendItems.push({
-            value: 'Area of Interest',
-            title: 'Area of Interest',
-            symbol: defaultSymbols.symbols['Area of Interest'],
-            style: null,
-          });
-        }
-        if (layer?.layerType === 'Contamination Map') {
-          legendItems.push({
-            value: 'Contamination Map',
-            title: 'Contamination Map',
-            symbol: defaultSymbols.symbols['Contamination Map'],
-            style: null,
-          });
-        }
-        if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
-          subtitle = 'Sample Type';
-
-          (window as any).totsAllSampleOptions?.forEach(
-            (option: SampleSelectType) => {
-              const style = isPoints
-                ? (window as any).totsSampleAttributes[option.value]
-                    .POINT_STYLE || null
-                : null;
-              if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
-                legendItems.push({
-                  value: option.value,
-                  title: option.label,
-                  symbol: defaultSymbols.symbols[option.value],
-                  style,
-                });
-              } else {
-                legendItems.push({
-                  value: 'Samples',
-                  title: option.label,
-                  symbol: defaultSymbols.symbols['Samples'],
-                  style,
-                });
-              }
-            },
-          );
-        }
-
-        // sort the legend items
-        legendItems.sort((a, b) => a.title.localeCompare(b.title));
-
-        const container = document.createElement('div');
-        container.append(slider.domNode);
-        const content = (
-          <div className="esri-legend esri-widget--panel esri-widget">
-            <div className="esri-legend__layer">
-              <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
-                {subtitle && (
-                  <div className="esri-legend__layer-caption">{subtitle}</div>
-                )}
-                <div className="esri-legend__layer-body">
-                  {legendItems.map((row: LegendRowType, index) => {
-                    return (
-                      <div key={index} className="esri-legend__layer-row">
-                        <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
-                          <div className="esri-legend__symbol">
-                            <div css={graphicsIconStyles}>
-                              <ShapeStyle
-                                color={row.symbol.color}
-                                outline={row.symbol.outline}
-                                style={row.style}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
-                          {row.title}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-        // item is a sub layer, just add the legend
-        if (item.parent) {
-          if (item.layer.type === 'graphics') {
-            const legendContainer = document.createElement('div');
-            createRoot(legendContainer).render(content);
-            container.append(legendContainer);
-
-            item.panel = {
-              content: container,
-              className: 'esri-icon-layer-list',
-              open: true,
-            };
-          } else {
-            item.panel = {
-              content: 'legend',
-              open: true,
-            };
-          }
-          return;
-        }
-
-        // create a custom legend item for graphics layers
-        if (item.layer.type === 'graphics') {
-          const legendContainer = document.createElement('div');
-          createRoot(legendContainer).render(content);
-          container.append(legendContainer);
-
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        } else if (item.layer.type === 'group') {
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        } else {
-          const legendContainer = document.createElement('div');
-          const legend: any = new Legend({
-            container: legendContainer,
-            view: mapView,
-            layerInfos: [
-              {
-                layer: item.layer,
-                title: item.layer.title,
-                hideLayers: [],
-              } as any,
-            ],
-          });
-          container.append(legend.domNode);
-
-          // don't show legend twice
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        }
-
-        // add a delete button for each layer, but don't add it to sublayers
-        item.actionsOpen = true;
-        item.actionsSections = [
-          [
-            {
-              title: 'Zoom to Layer',
-              className: 'esri-icon-zoom-in-magnifying-glass',
-              id: 'zoom-layer',
-            },
-            {
-              title: 'Delete Layer',
-              className: 'esri-icon-trash',
-              id: 'delete-layer',
-            },
-          ],
-        ];
+      listItemCreatedFunction: (event) => {
+        buildLegendListItem(event);
       },
     });
 
     // add the delete layer button action
-    layerList.on('trigger-action', (event) => {
+    newLayerList.on('trigger-action', (event) => {
       const id = event.action.id;
       const tempLayer = event.item.layer as any;
 
@@ -533,8 +539,17 @@ function Toolbar() {
       }
     });
 
-    setLegendInitialized(true);
-  }, [mapView, defaultSymbols, layers, legendInitialized]);
+    setLayerList(newLayerList);
+  }, [defaultSymbols, layerList, layers, mapView]);
+
+  // Rebuild the legend if the sample type definitions are changed
+  useEffect(() => {
+    if (!layerList) return;
+
+    layerList.listItemCreatedFunction = (event) => {
+      buildLegendListItem(event);
+    };
+  }, [defaultSymbols, layerList, userDefinedAttributes]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   useEffect(() => {
