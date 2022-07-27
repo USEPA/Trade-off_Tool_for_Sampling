@@ -201,6 +201,7 @@ function Toolbar() {
     setSketchLayer,
     showAsPoints,
     setShowAsPoints,
+    userDefinedAttributes,
   } = useContext(SketchContext);
   const {
     signedIn,
@@ -348,7 +349,7 @@ function Toolbar() {
             (option: SampleSelectType) => {
               const style = isPoints
                 ? (window as any).totsSampleAttributes[option.value]
-                    .POINT_STYLE || null
+                    ?.POINT_STYLE || null
                 : null;
               if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
                 legendItems.push({
@@ -535,6 +536,11 @@ function Toolbar() {
 
     setLegendInitialized(true);
   }, [mapView, defaultSymbols, layers, legendInitialized]);
+
+  // Rebuild the legend if the sample type definitions are changed
+  useEffect(() => {
+    setLegendInitialized(false);
+  }, [defaultSymbols, userDefinedAttributes]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   useEffect(() => {

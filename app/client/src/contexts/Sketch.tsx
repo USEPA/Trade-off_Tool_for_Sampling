@@ -209,12 +209,6 @@ export function SketchProvider({ children }: Props) {
   );
   const [showAsPoints, setShowAsPoints] = useState<boolean>(true);
 
-  // Update totsSampleAttributes variable on the window object. This is a workaround
-  // to an issue where the sampleAttributes state variable is not available within esri
-  // event handlers.
-  useEffect(() => {
-    (window as any).totsSampleAttributes = sampleAttributes;
-  }, [sampleAttributes]);
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
