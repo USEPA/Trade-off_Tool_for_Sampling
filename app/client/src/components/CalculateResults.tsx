@@ -330,7 +330,7 @@ function CalculateResults() {
       summarySheet.getCell(1, 1).value =
         'Trade-off Tool for Sampling (TOTS) Summary';
       summarySheet.getCell(2, 1).font = defaultFont;
-      summarySheet.getCell(2, 1).value = 'Version: 1.0';
+      summarySheet.getCell(2, 1).value = 'Version: 2.0.0';
       summarySheet.getCell(4, 1).font = underlinedLabelFont;
       summarySheet.getCell(4, 1).value = 'Plan Name';
       summarySheet.getCell(4, 2).font = defaultFont;
