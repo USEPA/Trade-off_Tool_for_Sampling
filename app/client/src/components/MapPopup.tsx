@@ -36,7 +36,7 @@ const containerStyles = css`
 
 const noteStyles = css`
   resize: vertical;
-  min-height: 75px;
+  min-height: 40px;
   width: 100%;
 `;
 
