@@ -96,20 +96,27 @@ function GettingStarted({ isOpen, children }: Props) {
                 Contamination Map: When in training mode, adds a layer that
                 includes the area and concentrations of contamination.
               </li>
+              <li>
+                TOTS Sample Plans: Retrieve a previously saved sampling plan.
+              </li>
+              <li>
+                TOTS Custom Sample Type: Add previously saved custom sample
+                types for use in creating a sampling plan.
+              </li>
             </ul>
           </li>
           <li>
-            <strong>Create Plan</strong> – Select the layer on which to base the
-            plan, give it a name and description and add targeted samples or use
-            the “Add Multiple Random Samples” to draw multiple samples of the
-            same type in a specified area of interest. A Resource Tally will
+            <strong>Create Plan</strong> – Give a plan a name and description,
+            select the layer on which to base the plan, and add targeted samples
+            or use the “Add Multiple Random Samples” to draw multiple samples of
+            the same type in a specified area of interest. A Resource Tally will
             update as the plan is built. A companion summary table is also
             available detailing the attributes of any samples that are added to
             the plan. Create custom sample types or clone existing sample types
             to support conducting “what-if” scenarios.
           </li>
           <li>
-            <strong>Calculate Resources</strong> — Review the default resource
+            <strong>Calculate Resources</strong> – Review the default resource
             constraints that are provided to estimate the cost and time required
             to implement the designed plan. Change the default parameters to
             reflect scenario-specific constraints and to support conducting
@@ -117,9 +124,15 @@ function GettingStarted({ isOpen, children }: Props) {
             Microsoft Excel spreadsheet.
           </li>
           <li>
-            <strong>Publish Plan</strong> – Save and/or share the plan to ArcGIS
-            Online as a hosted feature layer. Log into the ArcGIS Online account
-            to use this feature.
+            <strong>Configure Output</strong> – Log into the ArcGIS Online
+            account to use this feature. Configure what TOTS output is published
+            to your ArcGIS Online account. Options include adding a web map,
+            incorporating user-defined attributes, and/or publishing custom
+            sample types.
+          </li>
+          <li>
+            <strong>Publish Output</strong> – Save and/or share TOTS output to
+            your ArcGIS Online account.
           </li>
         </ul>
 

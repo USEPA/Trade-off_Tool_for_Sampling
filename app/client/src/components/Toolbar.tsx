@@ -69,7 +69,7 @@ function buildLegendListItem(event: any) {
       layer.pointsLayer?.id === item?.layer?.id,
   );
 
-  const isPoints = item.layer.id?.includes('-points');
+  const isPoints = item.layer.id?.toString().includes('-points');
 
   const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
 
@@ -477,7 +477,7 @@ function Toolbar() {
     setLayerToRemove, //
   ] = useState<__esri.Layer | null>(null);
   useEffect(() => {
-    if (!mapView || layers.length === 0 || layerList) return;
+    if (!mapView || layerList) return;
 
     // clear out the legend container
     const legendContainer: HTMLElement | null =
@@ -540,7 +540,7 @@ function Toolbar() {
     });
 
     setLayerList(newLayerList);
-  }, [defaultSymbols, layerList, layers, mapView]);
+  }, [defaultSymbols, layerList, mapView]);
 
   // Rebuild the legend if the sample type definitions are changed
   useEffect(() => {
