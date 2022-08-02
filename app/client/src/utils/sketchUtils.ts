@@ -708,12 +708,12 @@ export function getSampleTableColumns({
       width: largeColumnWidth,
     },
     {
-      Header: 'Analysis Labor Cost',
+      Header: 'Analysis Labor Cost ($)',
       accessor: 'ALC',
       width: baseColumnWidth,
     },
     {
-      Header: 'Analysis Material Cost',
+      Header: 'Analysis Material Cost ($)',
       accessor: 'AMC',
       width: baseColumnWidth,
     },
