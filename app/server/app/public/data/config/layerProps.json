@@ -467,7 +467,7 @@
         "places": 2
       },
       "isEditable": false,
-      "label": "Analysis Labor Cost",
+      "label": "Analysis Labor Cost ($)",
       "visible": true
     },
     "AMC": {
@@ -477,7 +477,7 @@
         "places": 2
       },
       "isEditable": false,
-      "label": "Analysis Material Cost",
+      "label": "Analysis Material Cost ($)",
       "visible": true
     },
     "CONTAMTYPE": {

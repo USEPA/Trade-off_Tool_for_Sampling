@@ -1096,8 +1096,8 @@ export function useDynamicPopup() {
         //   label: 'Total Cost Per Sample (Labor + Material + Waste)',
         // },
         { fieldName: 'Notes', label: 'Notes' },
-        { fieldName: 'ALC', label: 'Analysis Labor Cost' },
-        { fieldName: 'AMC', label: 'Analysis Material Cost' },
+        { fieldName: 'ALC', label: 'Analysis Labor Cost ($)' },
+        { fieldName: 'AMC', label: 'Analysis Material Cost ($)' },
         { fieldName: 'MCPS', label: 'Sampling Material Cost ($/sample)' },
         {
           fieldName: 'TTPK',
