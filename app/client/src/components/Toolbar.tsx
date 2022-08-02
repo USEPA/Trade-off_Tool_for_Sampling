@@ -69,7 +69,7 @@ function buildLegendListItem(event: any) {
       layer.pointsLayer?.id === item?.layer?.id,
   );
 
-  const isPoints = item.layer.id?.includes('-points');
+  const isPoints = item.layer.id?.toString().includes('-points');
 
   const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
 
