@@ -477,7 +477,7 @@ function Toolbar() {
     setLayerToRemove, //
   ] = useState<__esri.Layer | null>(null);
   useEffect(() => {
-    if (!mapView || layers.length === 0 || layerList) return;
+    if (!mapView || layerList) return;
 
     // clear out the legend container
     const legendContainer: HTMLElement | null =
@@ -540,7 +540,7 @@ function Toolbar() {
     });
 
     setLayerList(newLayerList);
-  }, [defaultSymbols, layerList, layers, mapView]);
+  }, [defaultSymbols, layerList, mapView]);
 
   // Rebuild the legend if the sample type definitions are changed
   useEffect(() => {
