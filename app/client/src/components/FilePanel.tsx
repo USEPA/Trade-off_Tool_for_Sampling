@@ -852,11 +852,15 @@ function FilePanel() {
       listMode: 'hide',
     });
 
-    const groupLayer = selectedScenario
-      ? (map.layers.find(
-          (layer) => layer.id === selectedScenario?.layerId,
-        ) as __esri.GroupLayer)
-      : null;
+    const isSamplesOrVsp =
+      layerType.value === 'Samples' || layerType.value === 'VSP';
+
+    const groupLayer =
+      isSamplesOrVsp && selectedScenario
+        ? (map.layers.find(
+            (layer) => layer.id === selectedScenario?.layerId,
+          ) as __esri.GroupLayer)
+        : null;
 
     // create the graphics layer
     const layerToAdd: LayerType = {
@@ -877,10 +881,7 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
-      pointsLayer:
-        layerType.value === 'Samples' || layerType.value === 'VSP'
-          ? pointsLayer
-          : null,
+      pointsLayer: isSamplesOrVsp ? pointsLayer : null,
       parentLayer: groupLayer ? groupLayer : null,
     };
 
@@ -1025,7 +1026,7 @@ function FilePanel() {
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
       edits,
-      scenario: selectedScenario,
+      scenario: isSamplesOrVsp ? selectedScenario : null,
       layer: layerToAdd,
       type: 'add',
       changes: graphicsLayer.graphics,
@@ -1035,35 +1036,37 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
 
-    setSelectedScenario((selectedScenario) => {
-      if (!selectedScenario) return selectedScenario;
-
-      const scenario = editsCopy.edits.find(
-        (edit) =>
-          edit.type === 'scenario' && edit.layerId === selectedScenario.layerId,
-      ) as ScenarioEditsType;
-      const newLayer = scenario.layers.find(
-        (layer) => layer.layerId === layerToAdd.layerId,
-      );
-
-      if (!newLayer) return selectedScenario;
-
-      return {
-        ...selectedScenario,
-        layers: [...selectedScenario.layers, newLayer],
-      };
-    });
-
-    setSketchLayer(layerToAdd);
-
     map.add(graphicsLayer);
-    if (layerType.value === 'Samples' || layerType.value === 'VSP') {
+
+    if (isSamplesOrVsp) {
       map.add(pointsLayer);
+
+      setSelectedScenario((selectedScenario) => {
+        if (!selectedScenario) return selectedScenario;
+
+        const scenario = editsCopy.edits.find(
+          (edit) =>
+            edit.type === 'scenario' &&
+            edit.layerId === selectedScenario.layerId,
+        ) as ScenarioEditsType;
+        const newLayer = scenario.layers.find(
+          (layer) => layer.layerId === layerToAdd.layerId,
+        );
+
+        if (!newLayer) return selectedScenario;
+
+        return {
+          ...selectedScenario,
+          layers: [...selectedScenario.layers, newLayer],
+        };
+      });
+
+      setSketchLayer(layerToAdd);
     }
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
-      if (selectedScenario && groupLayer) {
+      if (selectedScenario && groupLayer && isSamplesOrVsp) {
         groupLayer.add(layerToAdd.sketchLayer);
         if (layerToAdd.pointsLayer) {
           groupLayer.add(layerToAdd.pointsLayer);
