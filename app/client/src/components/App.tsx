@@ -1,35 +1,44 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Global, css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
+import esriConfig from '@arcgis/core/config';
+import * as urlUtils from '@arcgis/core/core/urlUtils';
 // components
 import AlertDialog from 'components/AlertDialog';
+import AlertMessage from 'components/AlertMessage';
 import ErrorBoundary from 'components/ErrorBoundary';
 import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
 import SplashScreen from 'components/SplashScreen';
 import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
-import ReactTable from 'components/ReactTable';
+import { ReactTable } from 'components/ReactTable';
 // contexts
 import { AuthenticationProvider } from 'contexts/Authentication';
 import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
 import { DialogProvider, DialogContext } from 'contexts/Dialog';
-import { LookupFilesProvider } from 'contexts/LookupFiles';
+import { LookupFilesProvider, useServicesContext } from 'contexts/LookupFiles';
 import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
 import { PublishProvider } from 'contexts/Publish';
 import { SketchProvider, SketchContext } from 'contexts/Sketch';
-import { EsriModulesProvider } from 'contexts/EsriModules';
 // utilities
+import { getEnvironmentString } from 'utils/arcGisRestUtils';
+import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
 import { useSessionStorage } from 'utils/hooks';
 import { getSampleTableColumns } from 'utils/sketchUtils';
-import { isIE } from 'utils/utils';
 // config
 import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
-import { unsupportedBrowserMessage } from 'config/errorMessages';
 // styles
 import '@reach/dialog/styles.css';
+import '@arcgis/core/assets/esri/themes/light/main.css';
 
 const resizerHeight = 10;
 const esrifooterheight = 16;
@@ -95,10 +104,6 @@ const gloablStyles = css`
   .esri-popup__action-text {
     display: none;
   }
-`;
-
-const errorContainerStyles = css`
-  margin: 10px;
 `;
 
 const appStyles = (offset: number) => css`
@@ -252,7 +257,7 @@ const zoomButtonStyles = css`
 `;
 
 function App() {
-  const { calculateResults } = React.useContext(CalculateContext);
+  const { calculateResults } = useContext(CalculateContext);
   const {
     currentPanel,
     panelExpanded,
@@ -262,24 +267,25 @@ function App() {
     tablePanelHeight,
     setTablePanelHeight,
     trainingMode,
-  } = React.useContext(NavigationContext);
+  } = useContext(NavigationContext);
   const {
     mapView,
     layers,
     selectedSampleIds,
     setSelectedSampleIds,
     selectedScenario,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
+  const services = useServicesContext();
   useSessionStorage();
 
   const { height, width } = useWindowSize();
 
   // calculate height of div holding actions info
-  const [contentHeight, setContentHeight] = React.useState(0);
-  const [toolbarHeight, setToolbarHeight] = React.useState(0);
-  const mapRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const [contentHeight, setContentHeight] = useState(0);
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  const mapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!mapRef?.current) return;
 
     const mapHeight = mapRef.current.getBoundingClientRect().height;
@@ -302,8 +308,8 @@ function App() {
   ]);
 
   // calculate height of div holding actions info
-  const toolbarRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!toolbarRef?.current) return;
 
     const barHeight = toolbarRef.current.getBoundingClientRect().height;
@@ -313,9 +319,9 @@ function App() {
   const [
     sizeCheckInitialized,
     setSizeCheckInitialized, //
-  ] = React.useState(false);
-  const { setOptions } = React.useContext(DialogContext);
-  React.useEffect(() => {
+  ] = useState(false);
+  const { setOptions } = useContext(DialogContext);
+  useEffect(() => {
     if (sizeCheckInitialized) return;
 
     if (width < 1024 || height < 600) {
@@ -330,9 +336,9 @@ function App() {
     setSizeCheckInitialized(true);
   }, [width, height, sizeCheckInitialized, setOptions]);
 
-  const totsRef = React.useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = React.useState(0);
-  React.useEffect(() => {
+  const totsRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
     if (!totsRef?.current) return;
 
     setOffset(totsRef.current.offsetTop);
@@ -390,312 +396,379 @@ function App() {
     ids,
   };
 
+  // setup esri interceptors for logging to google analytics
+  const [interceptorsInitialized, setInterceptorsInitialized] = useState(false);
+  useEffect(() => {
+    if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
+
+    var callId = 0;
+    var callDurations: any = {};
+
+    if (services.status === 'success') {
+      // Have ESRI use the proxy for communicating with the TOTS GP Server
+      urlUtils.addProxyRule({
+        proxyUrl: services.data.proxyUrl,
+        urlPrefix: 'https://ags.erg.com',
+      });
+      urlUtils.addProxyRule({
+        proxyUrl: services.data.proxyUrl,
+        urlPrefix: 'http://ags.erg.com',
+      });
+    }
+
+    if (!esriConfig?.request?.interceptors) return;
+
+    // intercept esri calls to gispub
+    const urls: string[] = ['https://www.arcgis.com/sharing/rest/'];
+    esriConfig.request.interceptors.push({
+      urls,
+
+      // Workaround for ESRI CORS cacheing issue, when switching between
+      // environments.
+      before: function (params) {
+        // if this environment has a phony variable use it
+        const envString = getEnvironmentString();
+        if (envString) {
+          params.requestOptions.query[envString] = 1;
+        }
+
+        // add the callId to the query so we can tie the response back
+        params.requestOptions.query['callId'] = callId;
+
+        // add the call's start time to the dictionary
+        callDurations[callId] = performance.now();
+
+        // increment the callId
+        callId = callId + 1;
+      },
+
+      // Log esri api calls to Google Analytics
+      after: function (response: any) {
+        // get the execution time for the call
+        const callId = response.requestOptions.query.callId;
+        const startTime = callDurations[callId];
+
+        logCallToGoogleAnalytics(response.url, 200, startTime);
+
+        // delete the execution time from the dictionary
+        delete callDurations[callId];
+      },
+
+      error: function (error) {
+        // get the execution time for the call
+        const details = error.details;
+        const callId = details.requestOptions.query.callId;
+        const startTime = callDurations[callId];
+
+        logCallToGoogleAnalytics(
+          details.url,
+          details.httpStatus ? details.httpStatus : error.message,
+          startTime,
+        );
+
+        // delete the execution time from the dictionary
+        delete callDurations[callId];
+      },
+    });
+
+    setInterceptorsInitialized(true);
+  }, [interceptorsInitialized, services]);
+
   return (
-    <React.Fragment>
+    <Fragment>
       <Global styles={gloablStyles} />
 
       <div className="tots" ref={totsRef}>
         <ErrorBoundary>
-          {isIE() ? (
-            <div css={errorContainerStyles}>{unsupportedBrowserMessage}</div>
-          ) : (
-            <React.Fragment>
-              <SplashScreen />
-              <AlertDialog />
-              {window.location.search.includes('devMode=true') && (
-                <TestingToolbar />
-              )}
-              <div css={appStyles(offset)}>
-                <div css={containerStyles}>
-                  <div ref={toolbarRef}>
-                    <Toolbar />
+          <Fragment>
+            <SplashScreen />
+            <AlertDialog />
+            <AlertMessage />
+            {window.location.search.includes('devMode=true') && (
+              <TestingToolbar />
+            )}
+            <div css={appStyles(offset)}>
+              <div css={containerStyles}>
+                <div ref={toolbarRef}>
+                  <Toolbar />
+                </div>
+                <NavBar height={contentHeight - toolbarHeight} />
+                <div css={mapPanelStyles} ref={mapRef}>
+                  <div
+                    id="tots-map-div"
+                    css={mapHeightStyles(
+                      tablePanelExpanded ? tablePanelHeight : 0,
+                    )}
+                  >
+                    {toolbarHeight && <Map height={toolbarHeight} />}
                   </div>
-                  <NavBar height={contentHeight - toolbarHeight} />
-                  <div css={mapPanelStyles} ref={mapRef}>
-                    <div
-                      id="tots-map-div"
-                      css={mapHeightStyles(
-                        tablePanelExpanded ? tablePanelHeight : 0,
-                      )}
+                </div>
+                {sampleData.length > 0 && (
+                  <div
+                    id="tots-table-button-div"
+                    css={floatButtonPanelStyles({
+                      width: tablePanelWidth,
+                      height: tablePanelHeight,
+                      left: `${tablePanelWidth}px`,
+                      expanded: tablePanelExpanded,
+                      zIndex: 1,
+                    })}
+                  >
+                    <button
+                      css={collapsePanelButton}
+                      aria-label={`${
+                        tablePanelExpanded ? 'Collapse' : 'Expand'
+                      } Table Panel`}
+                      onClick={() => setTablePanelExpanded(!tablePanelExpanded)}
                     >
-                      {toolbarHeight && <Map height={toolbarHeight} />}
-                    </div>
-                  </div>
-                  {sampleData.length > 0 && (
-                    <div
-                      id="tots-table-button-div"
-                      css={floatButtonPanelStyles({
-                        width: tablePanelWidth,
-                        height: tablePanelHeight,
-                        left: `${tablePanelWidth}px`,
-                        expanded: tablePanelExpanded,
-                        zIndex: 1,
-                      })}
-                    >
-                      <button
-                        css={collapsePanelButton}
-                        aria-label={`${
-                          tablePanelExpanded ? 'Collapse' : 'Expand'
-                        } Table Panel`}
-                        onClick={() =>
-                          setTablePanelExpanded(!tablePanelExpanded)
+                      <i
+                        className={
+                          tablePanelExpanded
+                            ? 'fas fa-chevron-down'
+                            : 'fas fa-chevron-up'
                         }
-                      >
-                        <i
-                          className={
-                            tablePanelExpanded
-                              ? 'fas fa-chevron-down'
-                              : 'fas fa-chevron-up'
-                          }
-                        />
-                      </button>
-                    </div>
-                  )}
-                  {tablePanelExpanded && (
-                    <div
-                      id="tots-table-div"
-                      css={floatPanelStyles({
-                        width: tablePanelWidth,
-                        height: tablePanelHeight,
-                        left: `${tablePanelWidth}px`,
-                        expanded: true,
-                        zIndex: 2,
-                      })}
-                    >
-                      <div css={floatPanelContentStyles(false)}>
-                        <div
-                          css={resizerContainerStyles}
-                          onMouseDown={(e) => {
+                      />
+                    </button>
+                  </div>
+                )}
+                {tablePanelExpanded && (
+                  <div
+                    id="tots-table-div"
+                    css={floatPanelStyles({
+                      width: tablePanelWidth,
+                      height: tablePanelHeight,
+                      left: `${tablePanelWidth}px`,
+                      expanded: true,
+                      zIndex: 2,
+                    })}
+                  >
+                    <div css={floatPanelContentStyles(false)}>
+                      <div
+                        css={resizerContainerStyles}
+                        onMouseDown={(e) => {
+                          e = e || window.event;
+                          e.preventDefault();
+                          startY = e.clientY;
+
+                          const mapDiv =
+                            document.getElementById('tots-map-div'); // adjust height
+                          const tableDiv =
+                            document.getElementById('tots-table-div'); // adjust height
+                          const reactTableElm =
+                            document.getElementById('tots-samples-table');
+                          const buttonDiv = document.getElementById(
+                            'tots-table-button-div',
+                          ); // move top
+
+                          let mapHeight = 0;
+                          let tableHeight = 0;
+                          if (!mapDiv || !tableDiv || !buttonDiv) return;
+
+                          mapHeight = mapDiv.clientHeight;
+                          tableHeight = tableDiv.clientHeight;
+
+                          document.onmouseup = () => {
+                            /* stop moving when mouse button is released:*/
+                            document.onmouseup = null;
+                            document.onmousemove = null;
+
+                            // set the table panel height
+                            setTablePanelHeight(tableDiv.clientHeight);
+
+                            // clear the styles set
+                            tableDiv.style.height = '';
+                            mapDiv.style.height = '';
+                            buttonDiv.style.bottom = '';
+                          };
+                          // call a function whenever the cursor moves:
+                          document.onmousemove = (e: MouseEvent) => {
                             e = e || window.event;
                             e.preventDefault();
-                            startY = e.clientY;
 
-                            const mapDiv = document.getElementById(
-                              'tots-map-div',
-                            ); // adjust height
-                            const tableDiv = document.getElementById(
-                              'tots-table-div',
-                            ); // adjust height
-                            const reactTableElm = document.getElementById(
-                              'tots-samples-table',
-                            );
-                            const buttonDiv = document.getElementById(
-                              'tots-table-button-div',
-                            ); // move top
-
-                            let mapHeight = 0;
-                            let tableHeight = 0;
                             if (!mapDiv || !tableDiv || !buttonDiv) return;
 
-                            mapHeight = mapDiv.clientHeight;
-                            tableHeight = tableDiv.clientHeight;
+                            // get size info
+                            const panelHeight = contentHeight - toolbarHeight;
+                            const mouseOffset = startY - e.clientY;
+                            let newMapHeight = mapHeight - mouseOffset;
+                            let newTableHeight = tableHeight + mouseOffset;
+                            const maxTableHeight = panelHeight - minMapHeight;
 
-                            document.onmouseup = () => {
-                              /* stop moving when mouse button is released:*/
-                              document.onmouseup = null;
-                              document.onmousemove = null;
+                            // prevent map being taller then content box
+                            if (newMapHeight + resizerHeight >= contentHeight) {
+                              newMapHeight = contentHeight - resizerHeight;
+                              newTableHeight = resizerHeight;
+                            }
 
-                              // set the table panel height
-                              setTablePanelHeight(tableDiv.clientHeight);
+                            // prevent table being taller then content box
+                            if (newTableHeight >= maxTableHeight) {
+                              newMapHeight = contentHeight - maxTableHeight;
+                              newTableHeight = maxTableHeight;
+                            }
 
-                              // clear the styles set
-                              tableDiv.style.height = '';
-                              mapDiv.style.height = '';
-                              buttonDiv.style.bottom = '';
-                            };
-                            // call a function whenever the cursor moves:
-                            document.onmousemove = (e: MouseEvent) => {
-                              e = e || window.event;
-                              e.preventDefault();
+                            // set the height directly for faster performance
+                            mapDiv.style.height = `${newMapHeight}px`;
+                            tableDiv.style.height = `${newTableHeight}px`;
+                            buttonDiv.style.bottom = `${
+                              newTableHeight + esrifooterheight
+                            }px`;
 
-                              if (!mapDiv || !tableDiv || !buttonDiv) return;
-
-                              // get size info
-                              const panelHeight = contentHeight - toolbarHeight;
-                              const mouseOffset = startY - e.clientY;
-                              let newMapHeight = mapHeight - mouseOffset;
-                              let newTableHeight = tableHeight + mouseOffset;
-                              const maxTableHeight = panelHeight - minMapHeight;
-
-                              // prevent map being taller then content box
-                              if (
-                                newMapHeight + resizerHeight >=
-                                contentHeight
-                              ) {
-                                newMapHeight = contentHeight - resizerHeight;
-                                newTableHeight = resizerHeight;
-                              }
-
-                              // prevent table being taller then content box
-                              if (newTableHeight >= maxTableHeight) {
-                                newMapHeight = contentHeight - maxTableHeight;
-                                newTableHeight = maxTableHeight;
-                              }
-
-                              // set the height directly for faster performance
-                              mapDiv.style.height = `${newMapHeight}px`;
-                              tableDiv.style.height = `${newTableHeight}px`;
-                              buttonDiv.style.bottom = `${
-                                newTableHeight + esrifooterheight
+                            if (reactTableElm) {
+                              reactTableElm.style.height = `${
+                                newTableHeight - resizerHeight - 30
                               }px`;
-
-                              if (reactTableElm) {
-                                reactTableElm.style.height = `${
-                                  newTableHeight - resizerHeight - 30
-                                }px`;
-                              }
-                            };
-                          }}
-                        >
-                          <div css={resizerButtonStyles}></div>
+                            }
+                          };
+                        }}
+                      >
+                        <div css={resizerButtonStyles}></div>
+                      </div>
+                      <div
+                        id="tots-attributes-panel-scroll-container"
+                        css={floatPanelScrollContainerStyles}
+                      >
+                        <div css={tablePanelHeaderStyles}>
+                          <span css={sampleTableHeaderStyles}>
+                            Samples (Count: {sampleData.length})
+                          </span>
                         </div>
-                        <div
-                          id="tots-attributes-panel-scroll-container"
-                          css={floatPanelScrollContainerStyles}
-                        >
-                          <div css={tablePanelHeaderStyles}>
-                            <span css={sampleTableHeaderStyles}>
-                              Samples (Count: {sampleData.length})
-                            </span>
-                          </div>
-                          <div>
-                            <ReactTable
-                              id="tots-samples-table"
-                              data={sampleData}
-                              idColumn={'PERMANENT_IDENTIFIER'}
-                              striped={true}
-                              height={tablePanelHeight - resizerHeight - 30}
-                              initialSelectedRowIds={initialSelectedRowIds}
-                              onSelectionChange={(row: any) => {
-                                const PERMANENT_IDENTIFIER =
-                                  row.original.PERMANENT_IDENTIFIER;
-                                const DECISIONUNITUUID =
-                                  row.original.DECISIONUNITUUID;
-                                setSelectedSampleIds((selectedSampleIds) => {
-                                  if (
-                                    selectedSampleIds.findIndex(
-                                      (item) =>
-                                        item.PERMANENT_IDENTIFIER ===
-                                        PERMANENT_IDENTIFIER,
-                                    ) !== -1
-                                  ) {
-                                    const samples = selectedSampleIds.filter(
-                                      (item) =>
-                                        item.PERMANENT_IDENTIFIER !==
-                                        PERMANENT_IDENTIFIER,
-                                    );
+                        <div>
+                          <ReactTable
+                            id="tots-samples-table"
+                            data={sampleData}
+                            idColumn={'PERMANENT_IDENTIFIER'}
+                            striped={true}
+                            height={tablePanelHeight - resizerHeight - 30}
+                            initialSelectedRowIds={initialSelectedRowIds}
+                            onSelectionChange={(row: any) => {
+                              const PERMANENT_IDENTIFIER =
+                                row.original.PERMANENT_IDENTIFIER;
+                              const DECISIONUNITUUID =
+                                row.original.DECISIONUNITUUID;
+                              setSelectedSampleIds((selectedSampleIds) => {
+                                if (
+                                  selectedSampleIds.findIndex(
+                                    (item) =>
+                                      item.PERMANENT_IDENTIFIER ===
+                                      PERMANENT_IDENTIFIER,
+                                  ) !== -1
+                                ) {
+                                  const samples = selectedSampleIds.filter(
+                                    (item) =>
+                                      item.PERMANENT_IDENTIFIER !==
+                                      PERMANENT_IDENTIFIER,
+                                  );
 
-                                    return samples.map((sample) => {
-                                      return {
-                                        PERMANENT_IDENTIFIER,
-                                        DECISIONUNITUUID,
-                                        selection_method: 'row-click',
-                                      };
-                                    });
-                                  }
-
-                                  return [
-                                    // ...selectedSampleIds, // Uncomment this line to allow multiple selections
-                                    {
+                                  return samples.map((sample) => {
+                                    return {
                                       PERMANENT_IDENTIFIER,
                                       DECISIONUNITUUID,
                                       selection_method: 'row-click',
-                                    },
-                                  ];
-                                });
-                              }}
-                              sortBy={[
-                                {
-                                  id: 'DECISIONUNIT',
-                                  desc: false,
-                                },
-                                {
-                                  id: 'TYPE',
-                                  desc: false,
-                                },
-                                {
-                                  id: 'PERMANENT_IDENTIFIER',
-                                  desc: false,
-                                },
-                              ]}
-                              getColumns={(tableWidth: any) => {
+                                    };
+                                  });
+                                }
+
                                 return [
+                                  // ...selectedSampleIds, // Uncomment this line to allow multiple selections
                                   {
-                                    Header: () => null,
-                                    id: 'zoom-button',
-                                    renderCell: true,
-                                    width: 30,
-                                    Cell: ({ row }: { row: any }) => (
-                                      <div css={zoomButtonContainerStyles}>
-                                        <button
-                                          css={zoomButtonStyles}
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-
-                                            // select the sample
-                                            setSelectedSampleIds([
-                                              {
-                                                PERMANENT_IDENTIFIER:
-                                                  row.original
-                                                    .PERMANENT_IDENTIFIER,
-                                                DECISIONUNITUUID:
-                                                  row.original.DECISIONUNITUUID,
-                                                selection_method: 'row-click',
-                                              },
-                                            ]);
-
-                                            // zoom to the graphic
-                                            if (!mapView) return;
-                                            mapView.goTo(row.original.graphic);
-                                            mapView.zoom = mapView.zoom - 1;
-                                          }}
-                                        >
-                                          <i className="fas fa-search-plus" />
-                                          <span className="sr-only">Zoom to sample</span>
-                                        </button>
-                                      </div>
-                                    ),
+                                    PERMANENT_IDENTIFIER,
+                                    DECISIONUNITUUID,
+                                    selection_method: 'row-click',
                                   },
-                                  ...getSampleTableColumns({
-                                    tableWidth,
-                                    includeContaminationFields: trainingMode,
-                                  }),
                                 ];
-                              }}
-                            />
-                          </div>
+                              });
+                            }}
+                            sortBy={[
+                              {
+                                id: 'DECISIONUNIT',
+                                desc: false,
+                              },
+                              {
+                                id: 'TYPE',
+                                desc: false,
+                              },
+                              {
+                                id: 'PERMANENT_IDENTIFIER',
+                                desc: false,
+                              },
+                            ]}
+                            getColumns={(tableWidth: any) => {
+                              return [
+                                {
+                                  Header: () => null,
+                                  id: 'zoom-button',
+                                  renderCell: true,
+                                  width: 30,
+                                  Cell: ({ row }: { row: any }) => (
+                                    <div css={zoomButtonContainerStyles}>
+                                      <button
+                                        css={zoomButtonStyles}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+
+                                          // select the sample
+                                          setSelectedSampleIds([
+                                            {
+                                              PERMANENT_IDENTIFIER:
+                                                row.original
+                                                  .PERMANENT_IDENTIFIER,
+                                              DECISIONUNITUUID:
+                                                row.original.DECISIONUNITUUID,
+                                              selection_method: 'row-click',
+                                            },
+                                          ]);
+
+                                          // zoom to the graphic
+                                          if (!mapView) return;
+                                          mapView.goTo(row.original.graphic);
+                                          mapView.zoom = mapView.zoom - 1;
+                                        }}
+                                      >
+                                        <i className="fas fa-search-plus" />
+                                        <span className="sr-only">
+                                          Zoom to sample
+                                        </span>
+                                      </button>
+                                    </div>
+                                  ),
+                                },
+                                ...getSampleTableColumns({
+                                  tableWidth,
+                                  includeContaminationFields: trainingMode,
+                                }),
+                              ];
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-            </React.Fragment>
-          )}
+            </div>
+          </Fragment>
         </ErrorBoundary>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }
 
 export default function AppContainer() {
   return (
     <LookupFilesProvider>
-      <EsriModulesProvider>
-        <DialogProvider>
-          <AuthenticationProvider>
-            <CalculateProvider>
-              <NavigationProvider>
-                <PublishProvider>
-                  <SketchProvider>
-                    <App />
-                  </SketchProvider>
-                </PublishProvider>
-              </NavigationProvider>
-            </CalculateProvider>
-          </AuthenticationProvider>
-        </DialogProvider>
-      </EsriModulesProvider>
+      <DialogProvider>
+        <AuthenticationProvider>
+          <CalculateProvider>
+            <NavigationProvider>
+              <PublishProvider>
+                <SketchProvider>
+                  <App />
+                </SketchProvider>
+              </PublishProvider>
+            </NavigationProvider>
+          </CalculateProvider>
+        </AuthenticationProvider>
+      </DialogProvider>
     </LookupFilesProvider>
   );
 }

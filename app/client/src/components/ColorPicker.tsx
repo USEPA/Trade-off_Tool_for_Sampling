@@ -1,6 +1,10 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  MouseEvent as ReactMouseEvent,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import { SketchPicker, RGBColor } from 'react-color';
 // config
@@ -18,7 +22,6 @@ function convertArrayToRgbColor(color: number[]) {
   } as RGBColor;
 }
 
-// --- styled components ---
 const colorStyles = (color: RGBColor) => {
   return css`
     width: 36px;
@@ -64,16 +67,16 @@ function SingleColorPicker({
   color,
   onChange = () => {},
 }: SingleColorPickerProps) {
-  const [colorPickerVisible, setColorPickerVisible] = React.useState(false);
-  const [colorState, setColorState] = React.useState<RGBColor>(color);
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [colorState, setColorState] = useState<RGBColor>(color);
 
   // Generate a random number for making a unique connection between the
   // color picker button and container
-  const [uid] = React.useState(Date.now() + Math.random());
+  const [uid] = useState(Date.now() + Math.random());
 
   // Used to make the color picker visible and position it
-  const [top, setTop] = React.useState(250);
-  function toggleColorPicker(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+  const [top, setTop] = useState(250);
+  function toggleColorPicker(e: ReactMouseEvent<HTMLDivElement, MouseEvent>) {
     if (colorPickerVisible) {
       setColorPickerVisible(false);
       return;
@@ -114,7 +117,7 @@ function SingleColorPicker({
     setTop(top);
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (colorPickerVisible || !onChange) return;
     if (JSON.stringify(color) === JSON.stringify(colorState)) return;
 
@@ -144,7 +147,6 @@ function SingleColorPicker({
   );
 }
 
-// --- styled components ---
 const colorSettingContainerStyles = css`
   margin-bottom: 15px;
 `;

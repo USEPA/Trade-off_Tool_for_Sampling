@@ -1,4 +1,5 @@
 import { escapeRegex } from 'utils/utils';
+import * as geoprocessor from '@arcgis/core/rest/geoprocessor';
 
 /**
  * Performs a fetch and validates the http status.
@@ -179,20 +180,16 @@ export function checkResponse(response: any) {
  * Makes a request to a GP Server using the esri Geoprocessor. Only returns a single
  * output parameter that corresponds to the provided outputParameter.
  *
- * @param Geoprocessor The esri Geoprocessor constructor
  * @param url The url of GP Server Task
  * @param inputParameters The input parameters for the task
- * @param outputParameter The output parameter for the task to return
  * @param outSpatialReference The spatial reference for the output data (default: { wkid: 3857 })
  * @returns A promise the resolves to the geoprocessor response.
  */
 export function geoprocessorFetch({
-  Geoprocessor,
   url,
   inputParameters,
   outSpatialReference = { wkid: 3857 },
 }: {
-  Geoprocessor: __esri.GeoprocessorConstructor;
   url: string;
   inputParameters: any;
   outSpatialReference?: any;
@@ -200,17 +197,11 @@ export function geoprocessorFetch({
   return new Promise<any>((resolve, reject) => {
     const startTime = performance.now();
 
-    const geoprocessor = new Geoprocessor({
-      url,
-      outSpatialReference,
-      requestOptions: {
+    geoprocessor
+      .execute(url, inputParameters, { outSpatialReference } as any, {
         timeout: 120000,
         cacheBust: true,
-      },
-    });
-
-    geoprocessor
-      .execute(inputParameters)
+      })
       .then((res) => {
         logCallToGoogleAnalytics(url, res.status, startTime);
         resolve(res);

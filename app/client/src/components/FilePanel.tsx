@@ -1,10 +1,24 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import { useDropzone } from 'react-dropzone';
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
+import Field from '@arcgis/core/layers/support/Field';
+import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
+import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
 // components
 import ColorPicker from 'components/ColorPicker';
 import MessageBox from 'components/MessageBox';
@@ -12,10 +26,10 @@ import MessageBox from 'components/MessageBox';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
 import {
+  useLayerProps,
   useSampleTypesContext,
   useServicesContext,
 } from 'contexts/LookupFiles';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
@@ -26,6 +40,7 @@ import {
   convertToPoint,
   generateUUID,
   getCurrentDateTime,
+  getPointSymbol,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject } from 'utils/utils';
@@ -34,7 +49,6 @@ import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 // config
-import { defaultLayerProps } from 'config/layerProps';
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
   featureNotAvailableMessage,
@@ -229,11 +243,10 @@ type UploadStatusType =
   | 'file-read-error';
 
 function FilePanel() {
-  const { portal, userInfo } = React.useContext(AuthenticationContext);
-  const { setOptions } = React.useContext(DialogContext);
-  const { goToOptions, setGoToOptions, trainingMode } = React.useContext(
-    NavigationContext,
-  );
+  const { portal, userInfo } = useContext(AuthenticationContext);
+  const { setOptions } = useContext(DialogContext);
+  const { goToOptions, setGoToOptions, trainingMode } =
+    useContext(NavigationContext);
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
@@ -251,45 +264,31 @@ function FilePanel() {
     selectedScenario,
     setSelectedScenario,
     setSketchLayer,
-  } = React.useContext(SketchContext);
-  const {
-    GraphicsLayer,
-    FeatureLayer,
-    FeatureSet,
-    Field,
-    geometryJsonUtils,
-    Graphic,
-    Geoprocessor,
-    KMLLayer,
-    PopupTemplate,
-    rendererJsonUtils,
-    SpatialReference,
-  } = useEsriModulesContext();
+  } = useContext(SketchContext);
 
   const getPopupTemplate = useDynamicPopup();
-  const { sampleValidation } = useGeometryTools();
+  const { createBuffer, sampleValidation } = useGeometryTools();
+  const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
 
-  const [generalizeFeatures, setGeneralizeFeatures] = React.useState(false);
-  const [analyzeResponse, setAnalyzeResponse] = React.useState<any>(null);
-  const [generateResponse, setGenerateResponse] = React.useState<any>(null);
-  const [featuresAdded, setFeaturesAdded] = React.useState(false);
-  const [fileValidationStarted, setFileValidationStarted] = React.useState(
-    false,
-  );
-  const [fileValidated, setFileValidated] = React.useState(false);
-  const [uploadStatus, setUploadStatus] = React.useState<UploadStatusType>('');
-  const [error, setError] = React.useState<ErrorType | null>(null);
-  const [missingAttributes, setMissingAttributes] = React.useState('');
+  const [generalizeFeatures, setGeneralizeFeatures] = useState(false);
+  const [analyzeResponse, setAnalyzeResponse] = useState<any>(null);
+  const [generateResponse, setGenerateResponse] = useState<any>(null);
+  const [featuresAdded, setFeaturesAdded] = useState(false);
+  const [fileValidationStarted, setFileValidationStarted] = useState(false);
+  const [fileValidated, setFileValidated] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatusType>('');
+  const [error, setError] = useState<ErrorType | null>(null);
+  const [missingAttributes, setMissingAttributes] = useState('');
 
   const [
     layerType,
     setLayerType, //
-  ] = React.useState<LayerSelectType | null>(null);
+  ] = useState<LayerSelectType | null>(null);
 
   // Handle navigation options
-  React.useEffect(() => {
+  useEffect(() => {
     if (goToOptions?.from !== 'file') return;
 
     let optionValue: LayerSelectType | null = null;
@@ -302,8 +301,8 @@ function FilePanel() {
   }, [goToOptions, setGoToOptions]);
 
   // Handles the user uploading a file
-  const [file, setFile] = React.useState<any>(null);
-  const onDrop = React.useCallback((acceptedFiles) => {
+  const [file, setFile] = useState<any>(null);
+  const onDrop = useCallback((acceptedFiles: any) => {
     // Do something with the files
     if (
       !acceptedFiles ||
@@ -359,20 +358,22 @@ function FilePanel() {
   const [
     batchGeocodeServices,
     setBatchGeocodeServices, //
-  ] = React.useState<any>(null);
+  ] = useState<any>(null);
   const [
     firstGeocodeService,
     setFirstGeocodeService, //
-  ] = React.useState<any>(null);
+  ] = useState<any>(null);
   const [
     sharingUrl,
     setSharingUrl, //
-  ] = React.useState('https://www.arcgis.com/sharing/rest');
-  React.useEffect(() => {
+  ] = useState('https://www.arcgis.com/sharing/rest');
+  useEffect(() => {
     if (!portal || batchGeocodeServices) return;
 
-    const worldExp = /(arcgis.com\/arcgis\/rest\/services\/world\/geocodeserver).*/gi;
-    const worldProxyExp = /(\/servers\/[\da-z.-]+\/rest\/services\/world\/geocodeserver).*/gi;
+    const worldExp =
+      /(arcgis.com\/arcgis\/rest\/services\/world\/geocodeserver).*/gi;
+    const worldProxyExp =
+      /(\/servers\/[\da-z.-]+\/rest\/services\/world\/geocodeserver).*/gi;
 
     // get batch geocode services
     const newBatchGeocodeServices: any[] = [];
@@ -413,7 +414,7 @@ function FilePanel() {
   }, [portal, batchGeocodeServices]);
 
   // analyze csv files
-  React.useEffect(() => {
+  useEffect(() => {
     if (!file?.file?.esriFileType || !sharingUrl || file.analyzeCalled) return;
     if (
       file.file.name === file.lastFileName ||
@@ -467,8 +468,8 @@ function FilePanel() {
   const [
     sampleType,
     setSampleType, //
-  ] = React.useState<SampleSelectType | null>(null);
-  React.useEffect(() => {
+  ] = useState<SampleSelectType | null>(null);
+  useEffect(() => {
     if (
       !mapView ||
       !layerType ||
@@ -596,7 +597,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: defaultLayerProps.fields,
+          fields: layerProps.data.defaultFields,
           features: [
             {
               attributes: sampleAttributes[localSampleType.value as any],
@@ -637,7 +638,6 @@ function FilePanel() {
               appendEnvironmentObjectParam(params);
 
               const request = geoprocessorFetch({
-                Geoprocessor,
                 url: `${services.data.totsGPServer}/VSP%20Import`,
                 inputParameters: params,
               });
@@ -725,15 +725,6 @@ function FilePanel() {
         window.logErrorToGa(err);
       });
   }, [
-    // esri modules
-    FeatureSet,
-    Field,
-    geometryJsonUtils,
-    Geoprocessor,
-    Graphic,
-    SpatialReference,
-
-    // app
     generalizeFeatures,
     analyzeResponse,
     file,
@@ -747,11 +738,12 @@ function FilePanel() {
     services,
     sampleAttributes,
     userInfo,
+    layerProps,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
   // issue, display a popup asking the user if they would like the samples to be updated.
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -816,8 +808,8 @@ function FilePanel() {
 
   // add features to the map as graphics layers. This is for every layer type
   // except for reference layers. This is so users can edit the features.
-  const [newLayerName, setNewLayerName] = React.useState('');
-  React.useEffect(() => {
+  const [newLayerName, setNewLayerName] = useState('');
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -860,9 +852,15 @@ function FilePanel() {
       listMode: 'hide',
     });
 
-    const groupLayer = selectedScenario ? map.layers.find(
-      (layer) => layer.id === selectedScenario?.layerId,
-    ) as __esri.GroupLayer : null;
+    const isSamplesOrVsp =
+      layerType.value === 'Samples' || layerType.value === 'VSP';
+
+    const groupLayer =
+      isSamplesOrVsp && selectedScenario
+        ? (map.layers.find(
+            (layer) => layer.id === selectedScenario?.layerId,
+          ) as __esri.GroupLayer)
+        : null;
 
     // create the graphics layer
     const layerToAdd: LayerType = {
@@ -883,10 +881,7 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
-      pointsLayer:
-        layerType.value === 'Samples' || layerType.value === 'VSP'
-          ? pointsLayer
-          : null,
+      pointsLayer: isSamplesOrVsp ? pointsLayer : null,
       parentLayer: groupLayer ? groupLayer : null,
     };
 
@@ -973,9 +968,10 @@ function FilePanel() {
         }
 
         // set the symbol styles based on the sample/layer type
-        if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-          graphic.symbol =
-            defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+        if (
+          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+        ) {
+          graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
         } else {
           graphic.symbol =
             defaultSymbols.symbols[
@@ -986,8 +982,24 @@ function FilePanel() {
         // add the popup template
         graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
-        graphics.push(graphic);
-        points.push(convertToPoint(Graphic, graphic));
+        // Add graphics to the layers based on what the original geometry type is
+        if (graphic.geometry.type === 'point') {
+          points.push(
+            new Graphic({
+              attributes: graphic.attributes,
+              geometry: graphic.geometry,
+              popupTemplate: graphic.popupTemplate,
+              symbol: getPointSymbol(graphic),
+            }),
+          );
+
+          const polyGraphic = graphic.clone();
+          createBuffer(polyGraphic);
+          graphics.push(polyGraphic);
+        } else {
+          graphics.push(graphic);
+          points.push(convertToPoint(graphic));
+        }
       });
     });
 
@@ -1014,7 +1026,7 @@ function FilePanel() {
     // make a copy of the edits context variable
     const editsCopy = updateLayerEdits({
       edits,
-      scenario: selectedScenario,
+      scenario: isSamplesOrVsp ? selectedScenario : null,
       layer: layerToAdd,
       type: 'add',
       changes: graphicsLayer.graphics,
@@ -1024,38 +1036,39 @@ function FilePanel() {
 
     setLayers([...layers, layerToAdd]);
 
-    setSelectedScenario((selectedScenario) => {
-      if (!selectedScenario) return selectedScenario;
-
-      const scenario = editsCopy.edits.find(
-        (edit) =>
-          edit.type === 'scenario' &&
-          edit.layerId === selectedScenario.layerId,
-      ) as ScenarioEditsType;
-      const newLayer = scenario.layers.find(
-        (layer) => layer.layerId === layerToAdd.layerId,
-      );
-
-      if (!newLayer) return selectedScenario;
-
-      return {
-        ...selectedScenario,
-        layers: [...selectedScenario.layers, newLayer],
-      };
-    });
-
-    setSketchLayer(layerToAdd);
-
     map.add(graphicsLayer);
-    if (layerType.value === 'Samples' || layerType.value === 'VSP') {
+
+    if (isSamplesOrVsp) {
       map.add(pointsLayer);
+
+      setSelectedScenario((selectedScenario) => {
+        if (!selectedScenario) return selectedScenario;
+
+        const scenario = editsCopy.edits.find(
+          (edit) =>
+            edit.type === 'scenario' &&
+            edit.layerId === selectedScenario.layerId,
+        ) as ScenarioEditsType;
+        const newLayer = scenario.layers.find(
+          (layer) => layer.layerId === layerToAdd.layerId,
+        );
+
+        if (!newLayer) return selectedScenario;
+
+        return {
+          ...selectedScenario,
+          layers: [...selectedScenario.layers, newLayer],
+        };
+      });
+
+      setSketchLayer(layerToAdd);
     }
 
     // zoom to the layer unless it is a contamination map
     if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
-      if (selectedScenario && groupLayer) {
+      if (selectedScenario && groupLayer && isSamplesOrVsp) {
         groupLayer.add(layerToAdd.sketchLayer);
-        if(layerToAdd.pointsLayer) {
+        if (layerToAdd.pointsLayer) {
           groupLayer.add(layerToAdd.pointsLayer);
         }
       } else {
@@ -1065,12 +1078,7 @@ function FilePanel() {
 
     setUploadStatus('success');
   }, [
-    // esri modules
-    Graphic,
-    GraphicsLayer,
-    PopupTemplate,
-
-    // app
+    createBuffer,
     defaultSymbols,
     edits,
     setEdits,
@@ -1093,7 +1101,7 @@ function FilePanel() {
 
   // add features to the map as feature layers. This is only for reference layer
   // types. This is so users can view popups but not edit the features.
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !map ||
       !mapView ||
@@ -1191,14 +1199,6 @@ function FilePanel() {
 
     setUploadStatus('success');
   }, [
-    // esri modules
-    FeatureLayer,
-    Field,
-    geometryJsonUtils,
-    Graphic,
-    rendererJsonUtils,
-
-    // app
     layerType,
     generateResponse,
     featuresAdded,
@@ -1212,7 +1212,7 @@ function FilePanel() {
   ]);
 
   // handle loading of the KMLLayer
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !file?.file?.esriFileType ||
       !mapView ||
@@ -1271,7 +1271,7 @@ function FilePanel() {
 
       window.logErrorToGa(ex);
     }
-  }, [KMLLayer, mapView, file]);
+  }, [mapView, file]);
 
   const filename = file?.file?.name ? file.file.name : '';
 
@@ -1297,14 +1297,14 @@ function FilePanel() {
         }
       />
       {!layerType ? (
-        <React.Fragment>
+        <Fragment>
           <p css={sectionParagraph}>Locate the file you want to import.</p>
           <div css={sectionParagraph}>
             <MessageBox
               severity="warning"
               title="Requirements for uploading files:"
               message={
-                <React.Fragment>
+                <Fragment>
                   <p css={layerInfo}>
                     <strong>Shapefile</strong> - ZIP archive containing all
                     required shapefile files
@@ -1321,17 +1321,17 @@ function FilePanel() {
                     <strong>GeoJSON</strong> - open standard format for simple
                     geographical
                   </p>
-                </React.Fragment>
+                </Fragment>
               }
             />
           </div>
-        </React.Fragment>
+        </Fragment>
       ) : (
-        <React.Fragment>
+        <Fragment>
           {layerType.value === 'VSP' &&
             services.status === 'success' &&
             sampleTypeContext.status === 'success' && (
-              <React.Fragment>
+              <Fragment>
                 <label htmlFor="sample-type-select-input">Sample Type</label>
                 <Select
                   id="sample-type-select"
@@ -1353,35 +1353,40 @@ function FilePanel() {
                     Sampling Plan.
                   </p>
                 )}
-              </React.Fragment>
+              </Fragment>
             )}
           {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
             (services.status === 'fetching' ||
-              sampleTypeContext.status === 'fetching') && <LoadingSpinner />}
+              sampleTypeContext.status === 'fetching' ||
+              layerProps.status === 'fetching') && <LoadingSpinner />}
           {layerType.value === 'Samples' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('Samples Import')}
           {layerType.value === 'VSP' &&
             (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure') &&
+              sampleTypeContext.status === 'failure' ||
+              layerProps.status === 'failure') &&
             featureNotAvailableMessage('VSP Import')}
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
             (layerType.value === 'Samples' &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success') ||
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success') ||
             (layerType.value === 'VSP' &&
               sampleType &&
               services.status === 'success' &&
-              sampleTypeContext.status === 'success')) && (
-            <React.Fragment>
+              sampleTypeContext.status === 'success' &&
+              layerProps.status === 'success')) && (
+            <Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
-                <React.Fragment>
+                <Fragment>
                   {layerType.value === 'Contamination Map' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Polygon layer containing the area of contamination as
                         well as the concentration of the contamination. This
@@ -1396,7 +1401,7 @@ function FilePanel() {
                           severity="warning"
                           title="The Contamination Map layer must include the following attributes to be uploaded:"
                           message={
-                            <React.Fragment>
+                            <Fragment>
                               <p css={layerInfo}>
                                 <strong>CONTAMTYPE</strong> (domain values:
                                 chemical, radiological, biological)
@@ -1408,14 +1413,14 @@ function FilePanel() {
                                 <strong>CONTAMUNIT</strong> (domain values: cfu,
                                 others TBD)
                               </p>
-                            </React.Fragment>
+                            </Fragment>
                           }
                         />
                       </div>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Samples' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Layer containing pre-existing samples to use as a
                         starting point in the next step,{' '}
@@ -1424,10 +1429,10 @@ function FilePanel() {
                         Wet Vac, Robot, Aggressive Air, or Swab) attribute to be
                         uploaded.
                       </p>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Reference Layer' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         Additional contextual reference layers to include in
                         your analysis (e.g., building footprints, landmarks,
@@ -1450,10 +1455,10 @@ function FilePanel() {
                           }
                         />
                       </div>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'Area of Interest' && (
-                    <React.Fragment>
+                    <Fragment>
                       <p css={sectionParagraph}>
                         A polygon file that bounds the extent of your project
                         area. This layer is used to bound where samples are
@@ -1461,7 +1466,7 @@ function FilePanel() {
                         <strong>Add Multiple Random Samples</strong> feature in
                         the next step, <strong>Create Plan</strong>.
                       </p>
-                    </React.Fragment>
+                    </Fragment>
                   )}
                   {layerType.value === 'VSP' && (
                     <p>
@@ -1542,11 +1547,11 @@ function FilePanel() {
                       </div>
                     )}
                   </div>
-                </React.Fragment>
+                </Fragment>
               )}
-            </React.Fragment>
+            </Fragment>
           )}
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

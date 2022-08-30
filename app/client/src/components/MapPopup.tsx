@@ -1,15 +1,19 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, {
+  Fragment,
+  MouseEvent as ReactMouseEvent,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
 import Select from 'components/Select';
 // types
 import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
+import { LookupFile } from 'types/Misc';
 // utils
 import { getSketchableLayers } from 'utils/sketchUtils';
-// config
-import { notesCharacterLimit } from 'config/layerProps';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -32,7 +36,7 @@ const containerStyles = css`
 
 const noteStyles = css`
   resize: vertical;
-  min-height: 75px;
+  min-height: 40px;
   width: 100%;
 `;
 
@@ -68,8 +72,9 @@ type Props = {
   edits: EditsType;
   layers: LayerType[];
   fieldInfos: FieldInfos;
+  layerProps: LookupFile;
   onClick: (
-    ev: React.MouseEvent<HTMLElement>,
+    ev: ReactMouseEvent<HTMLElement>,
     feature: any,
     type: string,
     newLayer?: LayerType | null,
@@ -82,13 +87,14 @@ function MapPopup({
   edits,
   layers,
   fieldInfos,
+  layerProps,
   onClick,
 }: Props) {
   // initializes the note and graphicNote whenever the graphic selection changes
-  const [graphicNote, setGraphicNote] = React.useState('');
-  const [note, setNote] = React.useState('');
-  const [saveStatus, setSaveStatus] = React.useState<SaveStatusType>('none');
-  React.useEffect(() => {
+  const [graphicNote, setGraphicNote] = useState('');
+  const [note, setNote] = useState('');
+  const [saveStatus, setSaveStatus] = useState<SaveStatusType>('none');
+  useEffect(() => {
     // Reset the note if either no graphics are selected or multiple graphics
     // are selected. The note field only works if one graphic is selected.
     if (selectedGraphicsIds.length !== 1) {
@@ -111,21 +117,19 @@ function MapPopup({
   }, [graphicNote, note, saveStatus, feature, selectedGraphicsIds]);
 
   // Reset the note, in the textbox, when the user selects a different sample.
-  React.useEffect(() => {
+  useEffect(() => {
     setNote(graphicNote);
   }, [selectedGraphicsIds, graphicNote]);
 
   // Resets the layerInitialized state when the graphic selection changes
-  const [layerInitialized, setLayerInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [layerInitialized, setLayerInitialized] = useState(false);
+  useEffect(() => {
     setLayerInitialized(false);
   }, [selectedGraphicsIds]);
 
   // Initializes the selected layer
-  const [selectedLayer, setSelectedLayer] = React.useState<LayerType | null>(
-    null,
-  );
-  React.useEffect(() => {
+  const [selectedLayer, setSelectedLayer] = useState<LayerType | null>(null);
+  useEffect(() => {
     if (layerInitialized) return;
 
     if (feature?.graphic?.layer) {
@@ -150,11 +154,11 @@ function MapPopup({
   }, [layerInitialized, feature, selectedLayer, layers]);
 
   // Resets the save status if the user changes the note
-  React.useEffect(() => {
+  useEffect(() => {
     if (graphicNote !== note && saveStatus === 'success') setSaveStatus('none');
   }, [graphicNote, note, saveStatus]);
 
-  const [showMore, setShowMore] = React.useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   if (!feature || selectedGraphicsIds.length === 0) return null;
 
@@ -179,10 +183,18 @@ function MapPopup({
   const activeLayer = feature?.graphic?.layer;
   const activeLayerId = activeLayer?.id;
 
+  // get the notes character limit from the defaultFields
+  let notesCharacterLimit = 2000;
+  if (layerProps.status === 'success') {
+    layerProps.data.defaultFields.forEach((field: any) => {
+      if (field.name === 'Notes') notesCharacterLimit = field.length;
+    });
+  }
+
   return (
     <div css={containerStyles}>
       {selectedGraphicsIds.length === 1 && (
-        <React.Fragment>
+        <Fragment>
           <div css={inputContainerStyles}>
             {fieldInfos.length > 0 && (
               <table className="esri-widget__table">
@@ -216,7 +228,7 @@ function MapPopup({
             </button>
           </div>
           {activeLayer?.title !== 'Sketched Sampling Mask' && (
-            <React.Fragment>
+            <Fragment>
               <div css={inputContainerStyles}>
                 <label htmlFor="layer-change-select-input">Layer:</label>
                 <Select
@@ -244,7 +256,9 @@ function MapPopup({
                   }}
                 />
                 <br />
-                <span>{note.length} / 2000 characters</span>
+                <span>
+                  {note.length} / {notesCharacterLimit} characters
+                </span>
               </div>
               <div css={saveButtonContainerStyles}>
                 <button
@@ -260,7 +274,10 @@ function MapPopup({
                       setGraphicNote(note);
 
                       // move the graphic if it is on a different layer
-                      if (activeLayerId.replace('-points', '') !== selectedLayer?.layerId.replace('-points', '')) {
+                      if (
+                        activeLayerId.replace('-points', '') !==
+                        selectedLayer?.layerId.replace('-points', '')
+                      ) {
                         onClick(ev, feature, 'Move', selectedLayer);
                       } else {
                         onClick(ev, feature, 'Save');
@@ -272,17 +289,18 @@ function MapPopup({
                     }
                   }}
                 >
-                  {(saveStatus === 'none' || saveStatus === 'success') && 'Save'}
+                  {(saveStatus === 'none' || saveStatus === 'success') &&
+                    'Save'}
                   {saveStatus === 'failure' && (
-                    <React.Fragment>
+                    <Fragment>
                       <i className="fas fa-exclamation-triangle" /> Error
-                    </React.Fragment>
+                    </Fragment>
                   )}
                 </button>
               </div>
-            </React.Fragment>
+            </Fragment>
           )}
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

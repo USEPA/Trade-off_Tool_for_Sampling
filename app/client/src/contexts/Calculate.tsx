@@ -1,55 +1,60 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from 'react';
 // types
 import { CalculateResultsType } from 'types/CalculateResults';
 import { LayerType } from 'types/Layer';
 
 type CalculateType = {
   calculateResults: CalculateResultsType;
-  setCalculateResults: React.Dispatch<
-    React.SetStateAction<CalculateResultsType>
-  >;
+  setCalculateResults: Dispatch<SetStateAction<CalculateResultsType>>;
   contaminationMap: LayerType | null;
-  setContaminationMap: React.Dispatch<React.SetStateAction<LayerType | null>>;
+  setContaminationMap: Dispatch<SetStateAction<LayerType | null>>;
   numLabs: number;
-  setNumLabs: React.Dispatch<React.SetStateAction<number>>;
+  setNumLabs: Dispatch<SetStateAction<number>>;
   numLabHours: number;
-  setNumLabHours: React.Dispatch<React.SetStateAction<number>>;
+  setNumLabHours: Dispatch<SetStateAction<number>>;
   numSamplingHours: number;
-  setNumSamplingHours: React.Dispatch<React.SetStateAction<number>>;
+  setNumSamplingHours: Dispatch<SetStateAction<number>>;
   numSamplingPersonnel: number;
-  setNumSamplingPersonnel: React.Dispatch<React.SetStateAction<number>>;
+  setNumSamplingPersonnel: Dispatch<SetStateAction<number>>;
   numSamplingShifts: number;
-  setNumSamplingShifts: React.Dispatch<React.SetStateAction<number>>;
+  setNumSamplingShifts: Dispatch<SetStateAction<number>>;
   numSamplingTeams: number;
-  setNumSamplingTeams: React.Dispatch<React.SetStateAction<number>>;
+  setNumSamplingTeams: Dispatch<SetStateAction<number>>;
   samplingLaborCost: number;
-  setSamplingLaborCost: React.Dispatch<React.SetStateAction<number>>;
+  setSamplingLaborCost: Dispatch<SetStateAction<number>>;
   surfaceArea: number;
-  setSurfaceArea: React.Dispatch<React.SetStateAction<number>>;
+  setSurfaceArea: Dispatch<SetStateAction<number>>;
   inputNumLabs: number;
-  setInputNumLabs: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumLabs: Dispatch<SetStateAction<number>>;
   inputNumLabHours: number;
-  setInputNumLabHours: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumLabHours: Dispatch<SetStateAction<number>>;
   inputNumSamplingHours: number;
-  setInputNumSamplingHours: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumSamplingHours: Dispatch<SetStateAction<number>>;
   inputNumSamplingPersonnel: number;
-  setInputNumSamplingPersonnel: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumSamplingPersonnel: Dispatch<SetStateAction<number>>;
   inputNumSamplingShifts: number;
-  setInputNumSamplingShifts: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumSamplingShifts: Dispatch<SetStateAction<number>>;
   inputNumSamplingTeams: number;
-  setInputNumSamplingTeams: React.Dispatch<React.SetStateAction<number>>;
+  setInputNumSamplingTeams: Dispatch<SetStateAction<number>>;
   inputSamplingLaborCost: number;
-  setInputSamplingLaborCost: React.Dispatch<React.SetStateAction<number>>;
+  setInputSamplingLaborCost: Dispatch<SetStateAction<number>>;
   inputSurfaceArea: number;
-  setInputSurfaceArea: React.Dispatch<React.SetStateAction<number>>;
+  setInputSurfaceArea: Dispatch<SetStateAction<number>>;
   updateContextValues: boolean;
-  setUpdateContextValues: React.Dispatch<React.SetStateAction<boolean>>;
+  setUpdateContextValues: Dispatch<SetStateAction<boolean>>;
   resetCalculateContext: Function;
 };
 
-export const CalculateContext = React.createContext<CalculateType>({
+export const CalculateContext = createContext<CalculateType>({
   calculateResults: { status: 'none', panelOpen: false, data: null },
   setCalculateResults: () => {},
   contaminationMap: null,
@@ -97,7 +102,7 @@ export function CalculateProvider({ children }: Props) {
   const [
     calculateResults,
     setCalculateResults, //
-  ] = React.useState<CalculateResultsType>({
+  ] = useState<CalculateResultsType>({
     status: 'none',
     panelOpen: false,
     data: null,
@@ -105,47 +110,45 @@ export function CalculateProvider({ children }: Props) {
   const [
     contaminationMap,
     setContaminationMap, //
-  ] = React.useState<LayerType | null>(null);
-  const [numLabs, setNumLabs] = React.useState(1);
-  const [numLabHours, setNumLabHours] = React.useState(24);
-  const [numSamplingHours, setNumSamplingHours] = React.useState(5);
-  const [numSamplingPersonnel, setNumSamplingPersonnel] = React.useState(3);
-  const [numSamplingShifts, setNumSamplingShifts] = React.useState(1);
-  const [numSamplingTeams, setNumSamplingTeams] = React.useState(1);
-  const [samplingLaborCost, setSamplingLaborCost] = React.useState(420);
-  const [surfaceArea, setSurfaceArea] = React.useState(0);
+  ] = useState<LayerType | null>(null);
+  const [numLabs, setNumLabs] = useState(1);
+  const [numLabHours, setNumLabHours] = useState(24);
+  const [numSamplingHours, setNumSamplingHours] = useState(5);
+  const [numSamplingPersonnel, setNumSamplingPersonnel] = useState(3);
+  const [numSamplingShifts, setNumSamplingShifts] = useState(1);
+  const [numSamplingTeams, setNumSamplingTeams] = useState(1);
+  const [samplingLaborCost, setSamplingLaborCost] = useState(420);
+  const [surfaceArea, setSurfaceArea] = useState(0);
 
   // input states
-  const [inputNumLabs, setInputNumLabs] = React.useState(numLabs);
-  const [inputNumLabHours, setInputNumLabHours] = React.useState(numLabHours);
-  const [inputSurfaceArea, setInputSurfaceArea] = React.useState(surfaceArea);
+  const [inputNumLabs, setInputNumLabs] = useState(numLabs);
+  const [inputNumLabHours, setInputNumLabHours] = useState(numLabHours);
+  const [inputSurfaceArea, setInputSurfaceArea] = useState(surfaceArea);
   const [
     inputNumSamplingHours,
     setInputNumSamplingHours, //
-  ] = React.useState(numSamplingHours);
-  const [
-    inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
-  ] = React.useState(numSamplingPersonnel);
+  ] = useState(numSamplingHours);
+  const [inputNumSamplingPersonnel, setInputNumSamplingPersonnel] =
+    useState(numSamplingPersonnel);
   const [
     inputNumSamplingShifts,
     setInputNumSamplingShifts, //
-  ] = React.useState(numSamplingShifts);
+  ] = useState(numSamplingShifts);
   const [
     inputNumSamplingTeams,
     setInputNumSamplingTeams, //
-  ] = React.useState(numSamplingTeams);
+  ] = useState(numSamplingTeams);
   const [
     inputSamplingLaborCost,
     setInputSamplingLaborCost, //
-  ] = React.useState(samplingLaborCost);
+  ] = useState(samplingLaborCost);
 
-  const [updateContextValues, setUpdateContextValues] = React.useState(false);
+  const [updateContextValues, setUpdateContextValues] = useState(false);
 
   // Updates the calculation context values with the inputs.
   // The intention is to update these values whenever the user navigates away from
   // the calculate resources tab or when they click the View Detailed Results button.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!updateContextValues) return;
 
     setUpdateContextValues(false);

@@ -1,13 +1,21 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React, { useContext, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
+import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
+import Collection from '@arcgis/core/core/Collection';
+import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import LayerList from '@arcgis/core/widgets/LayerList';
+import Legend from '@arcgis/core/widgets/Legend';
+import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
+import Portal from '@arcgis/core/portal/Portal';
+import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
 import Switch from 'components/Switch';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
@@ -28,6 +36,212 @@ import {
 import { LayerType } from 'types/Layer';
 
 const toolBarHeight = '40px';
+
+// Builds the legend item for a layer
+function buildLegendListItem(event: any) {
+  const item = event.item;
+  const mapView = event.view;
+
+  // create the slider
+  const sliderContainer = document.createElement('div');
+  const slider: any = new Slider({
+    container: sliderContainer,
+    min: 0,
+    max: 100,
+    values: [100],
+  });
+
+  // create the slider events, which change the layer's opacity
+  function sliderChange(
+    event: __esri.SliderThumbChangeEvent | __esri.SliderThumbDragEvent,
+  ) {
+    item.layer.opacity = event.value / 100;
+  }
+  slider.on('thumb-change', sliderChange);
+  slider.on('thumb-drag', sliderChange);
+
+  // find the layer type (i.e., Samples, VSP, AOI, etc.)
+  let subtitle = '';
+  const legendItems: LegendRowType[] = [];
+  const layer = (window as any).totsLayers?.find(
+    (layer: LayerType) =>
+      layer.layerId === item?.layer?.id ||
+      layer.pointsLayer?.id === item?.layer?.id,
+  );
+
+  const isPoints = item.layer.id?.toString().includes('-points');
+
+  const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
+
+  // build the data for building the legend
+  if (
+    layer?.layerType === 'Area of Interest' ||
+    layer?.layerType === 'Sampling Mask'
+  ) {
+    legendItems.push({
+      value: 'Area of Interest',
+      title: 'Area of Interest',
+      symbol: defaultSymbols.symbols['Area of Interest'],
+      style: null,
+    });
+  }
+  if (layer?.layerType === 'Contamination Map') {
+    legendItems.push({
+      value: 'Contamination Map',
+      title: 'Contamination Map',
+      symbol: defaultSymbols.symbols['Contamination Map'],
+      style: null,
+    });
+  }
+  if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
+    subtitle = 'Sample Type';
+
+    (window as any).totsAllSampleOptions?.forEach(
+      (option: SampleSelectType) => {
+        const style = isPoints
+          ? (window as any).totsSampleAttributes[option.value]?.POINT_STYLE ||
+            null
+          : null;
+        if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
+          legendItems.push({
+            value: option.value,
+            title: option.label,
+            symbol: defaultSymbols.symbols[option.value],
+            style,
+          });
+        } else {
+          legendItems.push({
+            value: 'Samples',
+            title: option.label,
+            symbol: defaultSymbols.symbols['Samples'],
+            style,
+          });
+        }
+      },
+    );
+  }
+
+  // sort the legend items
+  legendItems.sort((a, b) => a.title.localeCompare(b.title));
+
+  const container = document.createElement('div');
+  container.append(slider.domNode);
+  const content = (
+    <div className="esri-legend esri-widget--panel esri-widget">
+      <div className="esri-legend__layer">
+        <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
+          {subtitle && (
+            <div className="esri-legend__layer-caption">{subtitle}</div>
+          )}
+          <div className="esri-legend__layer-body">
+            {legendItems.map((row: LegendRowType, index) => {
+              return (
+                <div key={index} className="esri-legend__layer-row">
+                  <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
+                    <div className="esri-legend__symbol">
+                      <div
+                        css={css`
+                          opacity: 1;
+                        `}
+                      >
+                        <ShapeStyle
+                          color={row.symbol.color}
+                          outline={row.symbol.outline}
+                          style={row.style}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
+                    {row.title}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // item is a sub layer, just add the legend
+  if (item.parent) {
+    if (item.layer.type === 'graphics') {
+      const legendContainer = document.createElement('div');
+      createRoot(legendContainer).render(content);
+      container.append(legendContainer);
+
+      item.panel = {
+        content: container,
+        className: 'esri-icon-layer-list',
+        open: true,
+      };
+    } else {
+      item.panel = {
+        content: 'legend',
+        open: true,
+      };
+    }
+    return;
+  }
+
+  // create a custom legend item for graphics layers
+  if (item.layer.type === 'graphics') {
+    const legendContainer = document.createElement('div');
+    createRoot(legendContainer).render(content);
+    container.append(legendContainer);
+
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  } else if (item.layer.type === 'group') {
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  } else {
+    const legendContainer = document.createElement('div');
+    const legend: any = new Legend({
+      container: legendContainer,
+      view: mapView,
+      layerInfos: [
+        {
+          layer: item.layer,
+          title: item.layer.title,
+          hideLayers: [],
+        } as any,
+      ],
+    });
+    container.append(legend.domNode);
+
+    // don't show legend twice
+    item.panel = {
+      content: container,
+      className: 'esri-icon-layer-list',
+      open: true,
+    };
+  }
+
+  // add a delete button for each layer, but don't add it to sublayers
+  item.actionsOpen = true;
+  item.actionsSections = [
+    [
+      {
+        title: 'Zoom to Layer',
+        className: 'esri-icon-zoom-in-magnifying-glass',
+        id: 'zoom-layer',
+      },
+      {
+        title: 'Delete Layer',
+        className: 'esri-icon-trash',
+        id: 'delete-layer',
+      },
+    ],
+  ];
+}
 
 const basemapNames = [
   'Streets',
@@ -164,25 +378,10 @@ const legendStyles = (legendVisible: boolean) => {
   `;
 };
 
-const graphicsIconStyles = css`
-  opacity: 1;
-`;
-
 // --- components (Toolbar) ---
 function Toolbar() {
-  const {
-    BasemapGallery,
-    Collection,
-    IdentityManager,
-    LayerList,
-    Legend,
-    OAuthInfo,
-    Portal,
-    PortalBasemapsSource,
-    Slider,
-  } = useEsriModulesContext();
-  const { setContaminationMap } = React.useContext(CalculateContext);
-  const { trainingMode } = React.useContext(NavigationContext);
+  const { setContaminationMap } = useContext(CalculateContext);
+  const { trainingMode } = useContext(NavigationContext);
   const {
     setBasemapWidget,
     defaultSymbols,
@@ -204,7 +403,8 @@ function Toolbar() {
     setSketchLayer,
     showAsPoints,
     setShowAsPoints,
-  } = React.useContext(SketchContext);
+    userDefinedAttributes,
+  } = useContext(SketchContext);
   const {
     signedIn,
     setSignedIn,
@@ -214,10 +414,10 @@ function Toolbar() {
     setPortal,
     userInfo,
     setUserInfo,
-  } = React.useContext(AuthenticationContext);
+  } = useContext(AuthenticationContext);
 
   // Initialize the OAuth
-  React.useEffect(() => {
+  useEffect(() => {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
@@ -227,14 +427,14 @@ function Toolbar() {
     IdentityManager.registerOAuthInfos([info]);
 
     setOAuthInfo(info);
-  }, [IdentityManager, OAuthInfo, setOAuthInfo, oAuthInfo]);
+  }, [setOAuthInfo, oAuthInfo]);
 
   // Check the user's sign in status
   const [
     hasCheckedSignInStatus,
     setHasCheckedSignInStatus, //
-  ] = React.useState(false);
-  React.useEffect(() => {
+  ] = useState(false);
+  useEffect(() => {
     if (!oAuthInfo || hasCheckedSignInStatus) return;
 
     setHasCheckedSignInStatus(true);
@@ -251,17 +451,10 @@ function Toolbar() {
       .catch(() => {
         setSignedIn(false);
       });
-  }, [
-    IdentityManager,
-    oAuthInfo,
-    Portal,
-    setSignedIn,
-    setPortal,
-    hasCheckedSignInStatus,
-  ]);
+  }, [oAuthInfo, setSignedIn, setPortal, hasCheckedSignInStatus]);
 
   // Get the user information
-  React.useEffect(() => {
+  useEffect(() => {
     if (!portal || userInfo) return;
 
     const tempPortal: any = portal;
@@ -277,230 +470,32 @@ function Toolbar() {
   }, [portal, userInfo, setUserInfo]);
 
   // Create the layer list toolbar widget
-  const [legendVisible, setLegendVisible] = React.useState(false);
-  const [legendInitialized, setLegendInitialized] = React.useState(false);
+  const [legendVisible, setLegendVisible] = useState(false);
+  const [layerList, setLayerList] = useState<__esri.LayerList | null>(null);
   const [
     layerToRemove,
     setLayerToRemove, //
-  ] = React.useState<__esri.Layer | null>(null);
-  React.useEffect(() => {
-    if (!mapView || layers.length === 0 || legendInitialized) return;
+  ] = useState<__esri.Layer | null>(null);
+  useEffect(() => {
+    if (!mapView || layerList) return;
 
     // clear out the legend container
-    const legendContainer: HTMLElement | null = document.getElementById(
-      'legend-container',
-    );
+    const legendContainer: HTMLElement | null =
+      document.getElementById('legend-container');
     if (legendContainer) legendContainer.innerHTML = '';
 
     // create the layer list using the same styles and structure as the
     // esri version.
-    const layerList = new LayerList({
+    const newLayerList = new LayerList({
       view: mapView,
       container: 'legend-container',
-      listItemCreatedFunction: function (event) {
-        const item = event.item;
-
-        // create the slider
-        const sliderContainer = document.createElement('div');
-        const slider: any = new Slider({
-          container: sliderContainer,
-          min: 0,
-          max: 100,
-          values: [100],
-        });
-
-        // create the slider events, which change the layer's opacity
-        function sliderChange(
-          event: __esri.SliderThumbChangeEvent | __esri.SliderThumbDragEvent,
-        ) {
-          item.layer.opacity = event.value / 100;
-        }
-        slider.on('thumb-change', sliderChange);
-        slider.on('thumb-drag', sliderChange);
-
-        // find the layer type (i.e., Samples, VSP, AOI, etc.)
-        let subtitle = '';
-        const legendItems: LegendRowType[] = [];
-        const layer = (window as any).totsLayers?.find(
-          (layer: LayerType) =>
-            layer.layerId === item?.layer?.id ||
-            layer.pointsLayer?.id === item?.layer?.id,
-        );
-
-        const isPoints = item.layer.id.includes('-points');
-
-        const defaultSymbols: DefaultSymbolsType = (window as any)
-          .totsDefaultSymbols;
-
-        // build the data for building the legend
-        if (
-          layer?.layerType === 'Area of Interest' ||
-          layer?.layerType === 'Sampling Mask'
-        ) {
-          legendItems.push({
-            value: 'Area of Interest',
-            title: 'Area of Interest',
-            symbol: defaultSymbols.symbols['Area of Interest'],
-            style: null,
-          });
-        }
-        if (layer?.layerType === 'Contamination Map') {
-          legendItems.push({
-            value: 'Contamination Map',
-            title: 'Contamination Map',
-            symbol: defaultSymbols.symbols['Contamination Map'],
-            style: null,
-          });
-        }
-        if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
-          subtitle = 'Sample Type';
-
-          (window as any).totsAllSampleOptions?.forEach(
-            (option: SampleSelectType) => {
-              const style = isPoints
-                ? (window as any).totsSampleAttributes[option.value]
-                    .POINT_STYLE || null
-                : null;
-              if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
-                legendItems.push({
-                  value: option.value,
-                  title: option.label,
-                  symbol: defaultSymbols.symbols[option.value],
-                  style,
-                });
-              } else {
-                legendItems.push({
-                  value: 'Samples',
-                  title: option.label,
-                  symbol: defaultSymbols.symbols['Samples'],
-                  style,
-                });
-              }
-            },
-          );
-        }
-
-        // sort the legend items
-        legendItems.sort((a, b) => a.title.localeCompare(b.title));
-
-        const container = document.createElement('div');
-        container.append(slider.domNode);
-        const content = (
-          <div className="esri-legend esri-widget--panel esri-widget">
-            <div className="esri-legend__layer">
-              <div className="esri-legend__layer-table esri-legend__layer-table--size-ramp">
-                {subtitle && (
-                  <div className="esri-legend__layer-caption">{subtitle}</div>
-                )}
-                <div className="esri-legend__layer-body">
-                  {legendItems.map((row: LegendRowType, index) => {
-                    return (
-                      <div key={index} className="esri-legend__layer-row">
-                        <div className="esri-legend__layer-cell esri-legend__layer-cell--symbols">
-                          <div className="esri-legend__symbol">
-                            <div css={graphicsIconStyles}>
-                              <ShapeStyle
-                                color={row.symbol.color}
-                                outline={row.symbol.outline}
-                                style={row.style}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="esri-legend__layer-cell esri-legend__layer-cell--info">
-                          {row.title}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-        // item is a sub layer, just add the legend
-        if (item.parent) {
-          if (item.layer.type === 'graphics') {
-            const legendContainer = document.createElement('div');
-            ReactDOM.render(content, legendContainer);
-            container.append(legendContainer);
-
-            item.panel = {
-              content: container,
-              className: 'esri-icon-layer-list',
-              open: true,
-            };
-          } else {
-            item.panel = {
-              content: 'legend',
-              open: true,
-            };
-          }
-          return;
-        }
-
-        // create a custom legend item for graphics layers
-        if (item.layer.type === 'graphics') {
-          const legendContainer = document.createElement('div');
-          ReactDOM.render(content, legendContainer);
-          container.append(legendContainer);
-
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        } else if (item.layer.type === 'group') {
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        } else {
-          const legendContainer = document.createElement('div');
-          const legend: any = new Legend({
-            container: legendContainer,
-            view: mapView,
-            layerInfos: [
-              {
-                layer: item.layer,
-                title: item.layer.title,
-                hideLayers: [],
-              },
-            ],
-          });
-          container.append(legend.domNode);
-
-          // don't show legend twice
-          item.panel = {
-            content: container,
-            className: 'esri-icon-layer-list',
-            open: true,
-          };
-        }
-
-        // add a delete button for each layer, but don't add it to sublayers
-        item.actionsOpen = true;
-        item.actionsSections = [
-          [
-            {
-              title: 'Zoom to Layer',
-              className: 'esri-icon-zoom-in-magnifying-glass',
-              id: 'zoom-layer',
-            },
-            {
-              title: 'Delete Layer',
-              className: 'esri-icon-trash',
-              id: 'delete-layer',
-            },
-          ],
-        ];
+      listItemCreatedFunction: (event) => {
+        buildLegendListItem(event);
       },
     });
 
     // add the delete layer button action
-    layerList.on('trigger-action', (event) => {
+    newLayerList.on('trigger-action', (event) => {
       const id = event.action.id;
       const tempLayer = event.item.layer as any;
 
@@ -544,11 +539,20 @@ function Toolbar() {
       }
     });
 
-    setLegendInitialized(true);
-  }, [Collection, LayerList, Legend, Slider, mapView, defaultSymbols, layers, legendInitialized]);
+    setLayerList(newLayerList);
+  }, [defaultSymbols, layerList, mapView]);
+
+  // Rebuild the legend if the sample type definitions are changed
+  useEffect(() => {
+    if (!layerList) return;
+
+    layerList.listItemCreatedFunction = (event) => {
+      buildLegendListItem(event);
+    };
+  }, [defaultSymbols, layerList, userDefinedAttributes]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !layerToRemove) return;
 
     setLayerToRemove(null);
@@ -666,9 +670,9 @@ function Toolbar() {
   ]);
 
   // Create the basemap toolbar widget
-  const [basemapVisible, setBasemapVisible] = React.useState(false);
-  const [basemapInitialized, setBasemapInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [basemapVisible, setBasemapVisible] = useState(false);
+  const [basemapInitialized, setBasemapInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || basemapInitialized) return;
 
     const basemapsSource = new PortalBasemapsSource({
@@ -694,16 +698,10 @@ function Toolbar() {
       }),
     );
     setBasemapInitialized(true);
-  }, [
-    BasemapGallery,
-    PortalBasemapsSource,
-    mapView,
-    basemapInitialized,
-    setBasemapWidget,
-  ]);
+  }, [mapView, basemapInitialized, setBasemapWidget]);
 
   // Switches between point and polygon representations
-  React.useEffect(() => {
+  useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
       if (
@@ -741,11 +739,15 @@ function Toolbar() {
           checked={showAsPoints}
           onChange={(checked) => setShowAsPoints(checked)}
           ariaLabel="Points or Polygons"
+          offColor="#90ee90"
+          offHandleColor="#129c12"
         />
         <span css={switchLabel}>Points</span>
-        <InfoIcon 
+        <InfoIcon
           id="poly-points-switch"
-          tooltip={'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'}
+          tooltip={
+            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+          }
           place="bottom"
           type="info"
         />

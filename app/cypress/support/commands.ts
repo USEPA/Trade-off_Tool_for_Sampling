@@ -1,3 +1,17 @@
+import "@testing-library/cypress/add-commands";
+
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      /**
+       * Custom command to select DOM element by data-cy attribute.
+       * @example cy.dataCy('greeting')
+       */
+      upload(file: any, fileName: string): Chainable<Element>;
+    }
+  }
+}
+
 /**
  * This enables uploading files with Cypress and the react-dropzone node module.
  *
@@ -10,7 +24,7 @@ Cypress.Commands.add(
   {
     prevSubject: "element",
   },
-  (subject, file, fileName) => {
+  (subject, file: any, fileName: string) => {
     // we need access window to create a file below
     cy.window().then((window) => {
       // Convert the file to a blob and upload
@@ -22,7 +36,7 @@ Cypress.Commands.add(
       const dataTransfer = new DataTransfer();
 
       dataTransfer.items.add(testFile);
-      const el = subject[0];
+      const el = subject[0] as any;
       el.files = dataTransfer.files;
 
       // trigger the drop event on the file input component
