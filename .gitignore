@@ -13,6 +13,8 @@ yarn-error.log*
 # testing
 coverage/
 .nyc_output
+app/cypress/screenshots/
+app/cypress/videos/
 
 # production
 /build

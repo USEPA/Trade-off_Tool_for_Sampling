@@ -1,4 +1,5 @@
 import { css } from '@emotion/react';
+import { CSSProperties } from 'react';
 
 const colors = {
   black: (alpha: number = 1) => `rgba(0, 0, 0, ${alpha})`, // #000,
@@ -17,7 +18,7 @@ const colors = {
 };
 
 const reactSelectStyles = {
-  placeholder: (defaultStyles: React.CSSProperties) => {
+  placeholder: (defaultStyles: CSSProperties) => {
     return {
       ...defaultStyles,
       color: '#495057',
