@@ -1,13 +1,16 @@
 // @flow
 
-import React from 'react';
 import ReactSwitch from 'react-switch';
 
 type Props = {
-  checked: boolean,
-  onChange: (checked: boolean) => void,
-  disabled: boolean,
-  ariaLabel: string,
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled: boolean;
+  ariaLabel: string;
+  onColor?: string;
+  onHandleColor?: string;
+  offColor?: string;
+  offHandleColor?: string;
 };
 
 function Switch({
@@ -15,15 +18,19 @@ function Switch({
   onChange = () => {},
   disabled = false,
   ariaLabel = '',
+  onColor = '#38a6ee',
+  onHandleColor = '#0071bb',
+  offColor = '#888',
+  offHandleColor = '#fff',
 }: Props) {
   return (
     <ReactSwitch
       checked={checked}
       onChange={onChange}
-      onColor="#38a6ee"
-      onHandleColor="#0071bb"
-      offColor="#90ee90"
-      offHandleColor="#129c12"
+      onColor={onColor}
+      onHandleColor={onHandleColor}
+      offColor={offColor}
+      offHandleColor={offHandleColor}
       handleDiameter={18}
       uncheckedIcon={false}
       checkedIcon={false}

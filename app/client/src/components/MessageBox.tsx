@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, ReactNode } from 'react';
 import { css } from '@emotion/react';
 
 // --- components (MessageBox) ---
@@ -47,7 +47,7 @@ const messageTextStyles = css`
 // --- components (MessageBox) ---
 type Props = {
   title: string;
-  message: string | React.ReactNode;
+  message: string | ReactNode;
   severity: 'error' | 'warning' | 'info';
 };
 
@@ -74,10 +74,10 @@ function MessageBox({ title, message, severity }: Props) {
       </div>
       <div css={textContainerStyles}>
         {title && (
-          <React.Fragment>
+          <Fragment>
             <strong>{title}</strong>
             <br />
-          </React.Fragment>
+          </Fragment>
         )}
         <span css={messageTextStyles}>{message}</span>
       </div>

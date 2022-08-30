@@ -1,6 +1,8 @@
 /** @jsxImportSource @emotion/react */
 
 import { v4 as uuidv4 } from 'uuid';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 // types
 import {
   EditsType,
@@ -170,8 +172,10 @@ export function updateLayerEdits({
   );
   if (scenario) {
     // find the provided scenario
-    editsScenario = findLayerInEdits(editsCopy.edits, scenario.layerId)
-      .editsScenario;
+    editsScenario = findLayerInEdits(
+      editsCopy.edits,
+      scenario.layerId,
+    ).editsScenario;
   }
 
   // if it was not found create the edit template for this layer and
@@ -189,8 +193,20 @@ export function updateLayerEdits({
     }
   } else if (scenario && editsScenario && type === 'move') {
     editsLayer.visible = true;
-    if (editsScenario.status === 'published') editsScenario.status = 'edited';
+    editsLayer.adds = [...editsLayer.adds, ...editsLayer.updates];
+    editsLayer.updates = [];
+    editsLayer.published.forEach((edit) => {
+      const indx = editsLayer.adds.findIndex(
+        (x) =>
+          x.attributes.PERMANENT_IDENTIFIER ===
+          edit.attributes.PERMANENT_IDENTIFIER,
+      );
+      if (indx === -1) editsLayer.adds.push(edit);
+    });
+    editsLayer.published = [];
+    editsLayer.deletes = [];
     editsScenario.layers.push(editsLayer);
+    if (editsScenario.status === 'published') editsScenario.status = 'edited';
     editsCopy.edits = editsCopy.edits.filter(
       (edit) => edit.layerId !== editsLayer.layerId,
     );
@@ -394,13 +410,11 @@ export function getCurrentDateTime() {
 /**
  * Builds the default sample layer.
  *
- * @param GraphicsLayer The esri graphics layer constructor object
  * @param name The name of the new layer
  * @param parentLayer (optional) The parent layer of the new layer
  * @returns LayerType The default sample layer
  */
 export function createSampleLayer(
-  GraphicsLayer: __esri.GraphicsLayerConstructor,
   name: string = 'Default Sample Layer',
   parentLayer: __esri.GroupLayer | null = null,
 ) {
@@ -439,12 +453,9 @@ export function createSampleLayer(
 /**
  * Builds the default sampling mask layer.
  *
- * @param GraphicsLayer The esri graphics layer constructor object
  * @returns LayerType The default sampling mask layer
  */
-export function getDefaultSamplingMaskLayer(
-  GraphicsLayer: __esri.GraphicsLayerConstructor,
-) {
+export function getDefaultSamplingMaskLayer() {
   const layerUuid = generateUUID();
   const graphicsLayer = new GraphicsLayer({
     id: layerUuid,
@@ -534,9 +545,7 @@ export function updatePointSymbol(
       let udtSymbol: PolygonSymbol | null = null;
       udtSymbol = defaultSymbols.symbols[layerType] as any;
       if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-        udtSymbol = defaultSymbols.symbols[
-          graphic.attributes.TYPEUUID
-        ] as any;
+        udtSymbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID] as any;
       }
 
       graphic.symbol = getPointSymbol(graphic, udtSymbol);
@@ -699,12 +708,12 @@ export function getSampleTableColumns({
       width: largeColumnWidth,
     },
     {
-      Header: 'Analysis Labor Cost',
+      Header: 'Analysis Labor Cost ($)',
       accessor: 'ALC',
       width: baseColumnWidth,
     },
     {
-      Header: 'Analysis Material Cost',
+      Header: 'Analysis Material Cost ($)',
       accessor: 'AMC',
       width: baseColumnWidth,
     },
@@ -834,14 +843,10 @@ export function getPointSymbol(
 /**
  * Converts a polygon graphic to a point graphic.
  *
- * @param Graphic The esri graphic constructor
  * @param polygon The polygon to be converted
  * @returns A point graphic representation of the provided polygon
  */
-export function convertToPoint(
-  Graphic: __esri.GraphicConstructor,
-  polygon: __esri.Graphic,
-) {
+export function convertToPoint(polygon: __esri.Graphic) {
   const symbol = getPointSymbol(polygon);
 
   // build the graphic

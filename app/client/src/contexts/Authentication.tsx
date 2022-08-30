@@ -1,19 +1,25 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useState,
+} from 'react';
 
 type AuthenticationType = {
   signedIn: boolean;
-  setSignedIn: React.Dispatch<React.SetStateAction<boolean>>;
+  setSignedIn: Dispatch<SetStateAction<boolean>>;
   oAuthInfo: __esri.OAuthInfo | null;
-  setOAuthInfo: React.Dispatch<React.SetStateAction<__esri.OAuthInfo | null>>;
+  setOAuthInfo: Dispatch<SetStateAction<__esri.OAuthInfo | null>>;
   portal: __esri.Portal | null;
-  setPortal: React.Dispatch<React.SetStateAction<__esri.Portal | null>>;
+  setPortal: Dispatch<SetStateAction<__esri.Portal | null>>;
   userInfo: any;
-  setUserInfo: React.Dispatch<React.SetStateAction<any>>;
+  setUserInfo: Dispatch<SetStateAction<any>>;
 };
 
-export const AuthenticationContext = React.createContext<AuthenticationType>({
+export const AuthenticationContext = createContext<AuthenticationType>({
   signedIn: false,
   setSignedIn: () => {},
   oAuthInfo: null,
@@ -27,13 +33,13 @@ export const AuthenticationContext = React.createContext<AuthenticationType>({
 type Props = { children: ReactNode };
 
 export function AuthenticationProvider({ children }: Props) {
-  const [signedIn, setSignedIn] = React.useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [
     oAuthInfo,
     setOAuthInfo, //
-  ] = React.useState<__esri.OAuthInfo | null>(null);
-  const [portal, setPortal] = React.useState<__esri.Portal | null>(null);
-  const [userInfo, setUserInfo] = React.useState<any>(null);
+  ] = useState<__esri.OAuthInfo | null>(null);
+  const [portal, setPortal] = useState<__esri.Portal | null>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   return (
     <AuthenticationContext.Provider

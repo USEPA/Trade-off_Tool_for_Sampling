@@ -1,14 +1,24 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
+import Collection from '@arcgis/core/core/Collection';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import Field from '@arcgis/core/layers/support/Field';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
+import Layer from '@arcgis/core/layers/Layer';
+import Portal from '@arcgis/core/portal/Portal';
+import PortalItem from '@arcgis/core/portal/PortalItem';
+import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
+import * as watchUtils from '@arcgis/core/core/watchUtils';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
@@ -180,9 +190,9 @@ type LocationType =
   | { value: 'My Groups'; label: 'My Groups' };
 
 type LayerTypeFilter =
-  | { value: 'All', label: 'All' }
-  | { value: 'Sampling Plans', label: 'TOTS Sampling Plans' }
-  | { value: 'Custom Sample Types', label: 'TOTS Custom Sample Types' };
+  | { value: 'All'; label: 'All' }
+  | { value: 'Sampling Plans'; label: 'TOTS Sampling Plans' }
+  | { value: 'Custom Sample Types'; label: 'TOTS Custom Sample Types' };
 
 type GroupType = {
   value: string;
@@ -202,54 +212,52 @@ type SearchResultsType = {
 };
 
 function SearchPanel() {
-  const { portal, userInfo } = React.useContext(AuthenticationContext);
-  const { mapView } = React.useContext(SketchContext);
-  const { Portal, watchUtils } = useEsriModulesContext();
+  const { portal, userInfo } = useContext(AuthenticationContext);
+  const { mapView } = useContext(SketchContext);
 
   // filters
   const [
     location,
     setLocation, //
-  ] = React.useState<LocationType>({
+  ] = useState<LocationType>({
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
   });
   const [
     layerTypeFilter,
     setLayerTypeFilter, //
-  ] = React.useState<LayerTypeFilter>({
+  ] = useState<LayerTypeFilter>({
     value: 'All',
     label: 'All',
   });
-  const [group, setGroup] = React.useState<GroupType | null>(null);
-  const [search, setSearch] = React.useState('');
-  const [searchText, setSearchText] = React.useState('');
-  const [withinMap, setWithinMap] = React.useState(false);
-  const [mapService, setMapService] = React.useState(false);
-  const [featureService, setFeatureService] = React.useState(false);
-  const [imageService, setImageService] = React.useState(false);
-  const [vectorTileService, setVectorTileService] = React.useState(false);
-  const [kml, setKml] = React.useState(false);
-  const [wms, setWms] = React.useState(false);
+  const [group, setGroup] = useState<GroupType | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [withinMap, setWithinMap] = useState(false);
+  const [mapService, setMapService] = useState(false);
+  const [featureService, setFeatureService] = useState(false);
+  const [imageService, setImageService] = useState(false);
+  const [vectorTileService, setVectorTileService] = useState(false);
+  const [kml, setKml] = useState(false);
+  const [wms, setWms] = useState(false);
 
   const [
     searchResults,
     setSearchResults, //
-  ] = React.useState<SearchResultsType>({ status: 'none', data: null });
-  const [
-    currentExtent,
-    setCurrentExtent,
-  ] = React.useState<__esri.Extent | null>(null);
-  const [pageNumber, setPageNumber] = React.useState(1);
-  const [sortBy, setSortBy] = React.useState<SortByType>({
+  ] = useState<SearchResultsType>({ status: 'none', data: null });
+  const [currentExtent, setCurrentExtent] = useState<__esri.Extent | null>(
+    null,
+  );
+  const [pageNumber, setPageNumber] = useState(1);
+  const [sortBy, setSortBy] = useState<SortByType>({
     value: 'none',
     label: 'Relevance',
     defaultSort: 'desc',
   });
-  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Initializes the group selection
-  React.useEffect(() => {
+  useEffect(() => {
     if (group || !userInfo?.groups || userInfo.groups.length === 0) return;
 
     const firstGroup = userInfo.groups.sort((a: any, b: any) =>
@@ -263,7 +271,7 @@ function SearchPanel() {
   }, [group, userInfo]);
 
   // Builds and executes the search query on search button click
-  React.useEffect(() => {
+  useEffect(() => {
     setSearchResults({ status: 'fetching', data: null });
 
     const tmpPortal = portal ? portal : new Portal();
@@ -346,11 +354,11 @@ function SearchPanel() {
     else query = appendToQuery(query, defaultTypePart);
 
     const categories: string[] = [];
-    if(layerTypeFilter.value === 'Custom Sample Types'){
+    if (layerTypeFilter.value === 'Custom Sample Types') {
       categories.push('contains-epa-tots-user-defined-sample-types');
     }
-    if(layerTypeFilter.value === 'Sampling Plans') {
-      categories.push('contains-epa-tots-sample-layer')
+    if (layerTypeFilter.value === 'Sampling Plans') {
+      categories.push('contains-epa-tots-sample-layer');
     }
 
     // build the query parameters
@@ -399,7 +407,6 @@ function SearchPanel() {
   }, [
     currentExtent,
     group,
-    Portal,
     portal,
     layerTypeFilter,
     location,
@@ -418,8 +425,8 @@ function SearchPanel() {
   ]);
 
   // Runs the query for changing pages of the result set
-  const [lastPageNumber, setLastPageNumber] = React.useState(1);
-  React.useEffect(() => {
+  const [lastPageNumber, setLastPageNumber] = useState(1);
+  useEffect(() => {
     if (!searchResults.data || pageNumber === lastPageNumber) return;
 
     // prevent running the same query multiple times
@@ -460,11 +467,11 @@ function SearchPanel() {
 
         window.logErrorToGa(err);
       });
-  }, [Portal, pageNumber, lastPageNumber, portal, searchResults]);
+  }, [pageNumber, lastPageNumber, portal, searchResults]);
 
   // Defines a watch event for filtering results based on the map extent
-  const [watchViewInitialized, setWatchViewInitialized] = React.useState(false);
-  React.useEffect(() => {
+  const [watchViewInitialized, setWatchViewInitialized] = useState(false);
+  useEffect(() => {
     if (!mapView || watchViewInitialized) return;
 
     const watchEvent = watchUtils.whenTrue(mapView, 'stationary', () => {
@@ -477,12 +484,12 @@ function SearchPanel() {
     return function cleanup() {
       watchEvent.remove();
     };
-  }, [mapView, watchUtils, watchViewInitialized]);
+  }, [mapView, watchViewInitialized]);
 
-  const [showFilterOptions, setShowFilterOptions] = React.useState(false);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
 
   return (
-    <React.Fragment>
+    <Fragment>
       <label htmlFor="locations-select">Data Location</label>
       <Select
         inputId="locations-select"
@@ -496,7 +503,7 @@ function SearchPanel() {
         ]}
       />
       {location.value === 'My Groups' && (
-        <React.Fragment>
+        <Fragment>
           <label htmlFor="group-select">Group</label>
           <Select
             inputId="group-select"
@@ -515,7 +522,7 @@ function SearchPanel() {
                 : []
             }
           />
-        </React.Fragment>
+        </Fragment>
       )}
       <label htmlFor="layer-type-select">Type</label>
       <Select
@@ -549,7 +556,9 @@ function SearchPanel() {
           onClick={(ev) => setSearch(searchText)}
         >
           <i className="fas fa-search"></i>
-          <span className="sr-only" css={highContrastSpan}>Search</span>
+          <span className="sr-only" css={highContrastSpan}>
+            Search
+          </span>
         </button>
       </form>
       <div css={filterContainerStyles}>
@@ -695,14 +704,14 @@ function SearchPanel() {
         {searchResults.status === 'failure' &&
           webServiceErrorMessage(searchResults.error)}
         {searchResults.status === 'success' && (
-          <React.Fragment>
+          <Fragment>
             <div>
               {searchResults.data?.results.map((result, index) => {
                 return (
-                  <React.Fragment key={index}>
+                  <Fragment key={index}>
                     <ResultCard result={result} />
                     <hr />
-                  </React.Fragment>
+                  </Fragment>
                 );
               })}
             </div>
@@ -743,10 +752,10 @@ function SearchPanel() {
                 </div>
               </div>
             )}
-          </React.Fragment>
+          </Fragment>
         )}
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }
 
@@ -805,24 +814,11 @@ type ResultCardProps = {
 };
 
 function ResultCard({ result }: ResultCardProps) {
-  const { portal } = React.useContext(AuthenticationContext);
-  const { setOptions } = React.useContext(DialogContext);
-  const { trainingMode } = React.useContext(NavigationContext);
-  const { setSampleTypeSelections } = React.useContext(PublishContext);
+  const { portal } = useContext(AuthenticationContext);
+  const { setOptions } = useContext(DialogContext);
+  const { trainingMode } = useContext(NavigationContext);
+  const { setSampleTypeSelections } = useContext(PublishContext);
   const sampleTypeContext = useSampleTypesContext();
-  const {
-    Collection,
-    FeatureLayer,
-    Field,
-    Graphic,
-    GraphicsLayer,
-    GroupLayer,
-    Layer,
-    PopupTemplate,
-    PortalItem,
-    rendererJsonUtils,
-    watchUtils,
-  } = useEsriModulesContext();
   const {
     defaultSymbols,
     setDefaultSymbols,
@@ -842,29 +838,30 @@ function ResultCard({ result }: ResultCardProps) {
     setUserDefinedOptions,
     userDefinedAttributes,
     setUserDefinedAttributes,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
   const { sampleValidation } = useGeometryTools();
 
   // Used to determine if the layer for this card has been added or not
-  const [added, setAdded] = React.useState(false);
-  React.useEffect(() => {
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
     let added =
       portalLayers.findIndex((portalLayer) => portalLayer.id === result.id) !==
       -1;
 
     // check if result was added as a user defined sample type
     Object.values(userDefinedAttributes.sampleTypes).forEach((sample) => {
-      if (sample.serviceId === result.id && sample.status === 'published-ago') added = true;
+      if (sample.serviceId === result.id && sample.status === 'published-ago')
+        added = true;
     });
 
     setAdded(added);
   }, [portalLayers, result, userDefinedAttributes]);
 
   // removes the esri watch handle when the card is removed from the DOM.
-  const [status, setStatus] = React.useState('');
-  const [watcher, setWatcher] = React.useState<__esri.WatchHandle | null>(null);
-  React.useEffect(() => {
+  const [status, setStatus] = useState('');
+  const [watcher, setWatcher] = useState<__esri.WatchHandle | null>(null);
+  useEffect(() => {
     return function cleanup() {
       if (watcher) watcher.remove();
     };
@@ -886,6 +883,11 @@ function ResultCard({ result }: ResultCardProps) {
 
     const tempPortal = portal as any;
     const token = tempPortal.credential.token;
+    let addedSampleTypesViaTable = false;
+
+    function getAddedSampleTypesViaTable() {
+      return addedSampleTypesViaTable;
+    }
 
     // get the list of feature layers in this feature server
     getFeatureLayers(result.url, token)
@@ -896,7 +898,7 @@ function ResultCard({ result }: ResultCardProps) {
         // ensure -points layer calls are done last
         const resPolys: any[] = [];
         const resPoints: any[] = [];
-        res.forEach((layer: any) => {
+        res.layers.forEach((layer: any) => {
           if (layer.geometryType === 'esriGeometryPoint') {
             resPoints.push(layer);
           } else {
@@ -904,8 +906,15 @@ function ResultCard({ result }: ResultCardProps) {
           }
         });
 
+        const resSampleTypes: any[] = [];
+        res.tables.forEach((table: any) => {
+          if (table.name.endsWith('-sample-types')) {
+            resSampleTypes.push(table);
+          }
+        });
+
         // fire off the calls with the points layers last
-        const resCombined = [...resPolys, ...resPoints];
+        const resCombined = [...resSampleTypes, ...resPolys, ...resPoints];
         resCombined.forEach((layer: any) => {
           const id = layer.id;
 
@@ -922,11 +931,6 @@ function ResultCard({ result }: ResultCardProps) {
         // promises are ordered as: [{layer1 details}, {layer1 features}, ..., {layerX details}, {layerx features}]
         Promise.all(layerPromises)
           .then((responses) => {
-            // get the popup template
-            const popupTemplate = new PopupTemplate(
-              getPopupTemplate('Samples', trainingMode),
-            );
-
             // define items used for updating states
             let editsCopy: EditsType = deepCopyObject(edits);
             const mapLayersToAdd: __esri.Layer[] = [];
@@ -935,6 +939,7 @@ function ResultCard({ result }: ResultCardProps) {
             const layersToAdd: LayerType[] = [];
             const refLayersToAdd: any[] = [];
             const zoomToGraphics: __esri.Graphic[] = [];
+            let table: any = {};
 
             // function used for finalizing the adding of layers. This function is needed
             // for displaying a popup mesage if there is an issue with any of the samples
@@ -979,9 +984,8 @@ function ResultCard({ result }: ResultCardProps) {
                     const attributes = newAttributes[key];
                     sampleAttributes[attributes.attributes.TYPEUUID as any] =
                       attributes.attributes;
-                    item.sampleTypes[
-                      attributes.attributes.TYPEUUID as any
-                    ] = attributes;
+                    item.sampleTypes[attributes.attributes.TYPEUUID as any] =
+                      attributes;
                   });
 
                   return {
@@ -1054,6 +1058,113 @@ function ResultCard({ result }: ResultCardProps) {
               });
             }
 
+            function addUserDefinedType(graphic: any) {
+              // get the type uuid or generate it if necessary
+              const attributes = graphic.attributes;
+              let typeUuid = attributes.TYPEUUID;
+              if (!typeUuid) {
+                const keysToCheck = [
+                  'TYPE',
+                  'ShapeType',
+                  'TTPK',
+                  'TTC',
+                  'TTA',
+                  'TTPS',
+                  'LOD_P',
+                  'LOD_NON',
+                  'MCPS',
+                  'TCPS',
+                  'WVPS',
+                  'WWPS',
+                  'SA',
+                  'ALC',
+                  'AMC',
+                ];
+                // check if the udt has already been added
+                Object.values(userDefinedAttributes.sampleTypes).forEach(
+                  (udt: any) => {
+                    const tempUdt: any = {};
+                    const tempAtt: any = {};
+                    keysToCheck.forEach((key) => {
+                      tempUdt[key] = udt[key];
+                      tempAtt[key] = attributes[key];
+                    });
+
+                    if (JSON.stringify(tempUdt) === JSON.stringify(tempAtt)) {
+                      typeUuid = udt.TYPEUUID;
+                    }
+                  },
+                );
+
+                if (!typeUuid) {
+                  if (
+                    sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+                      attributes.TYPE,
+                    )
+                  ) {
+                    typeUuid = attributes.TYPE;
+                  } else {
+                    typeUuid = generateUUID();
+                  }
+                }
+
+                graphic.attributes['TYPEUUID'] = typeUuid;
+              }
+
+              if (
+                !sampleAttributes.hasOwnProperty(attributes.TYPEUUID) &&
+                !newAttributes.hasOwnProperty(attributes.TYPEUUID)
+              ) {
+                newUserSampleTypes.push({
+                  value: attributes.TYPEUUID,
+                  label: attributes.TYPE,
+                  isPredefined: false,
+                });
+                newAttributes[attributes.TYPEUUID] = {
+                  status: newAttributes[attributes.TYPEUUID]?.status
+                    ? newAttributes[attributes.TYPEUUID].status
+                    : 'add',
+                  serviceId: '',
+                  attributes: {
+                    OBJECTID: '-1',
+                    PERMANENT_IDENTIFIER: null,
+                    GLOBALID: null,
+                    TYPEUUID: attributes.TYPEUUID,
+                    TYPE: attributes.TYPE,
+                    ShapeType: attributes.ShapeType,
+                    POINT_STYLE: attributes.POINT_STYLE || 'circle',
+                    TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
+                    TTC: attributes.TTC ? Number(attributes.TTC) : null,
+                    TTA: attributes.TTA ? Number(attributes.TTA) : null,
+                    TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
+                    LOD_P: attributes.LOD_P ? Number(attributes.LOD_P) : null,
+                    LOD_NON: attributes.LOD_NON
+                      ? Number(attributes.LOD_NON)
+                      : null,
+                    MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
+                    TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
+                    WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
+                    WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
+                    SA: attributes.SA ? Number(attributes.SA) : null,
+                    AA: null,
+                    ALC: attributes.ALC ? Number(attributes.ALC) : null,
+                    AMC: attributes.AMC ? Number(attributes.AMC) : null,
+                    Notes: '',
+                    CONTAMTYPE: null,
+                    CONTAMVAL: null,
+                    CONTAMUNIT: null,
+                    CREATEDDATE: null,
+                    UPDATEDDATE: null,
+                    USERNAME: null,
+                    ORGANIZATION: null,
+                    DECISIONUNITUUID: null,
+                    DECISIONUNIT: null,
+                    DECISIONUNITSORT: 0,
+                  },
+                };
+              }
+            }
+
             let isSampleLayer = false;
             let isVspLayer = false;
             let isPointsSampleLayer = false;
@@ -1072,6 +1183,9 @@ function ResultCard({ result }: ResultCardProps) {
               fields.push(Field.fromJSON(field));
             };
 
+            // get the popup template
+            const popupTemplate = getPopupTemplate('Samples', trainingMode);
+
             // create the layers to be added to the map
             for (let i = 0; i < responses.length; ) {
               const layerDetails = responses[i];
@@ -1086,7 +1200,18 @@ function ResultCard({ result }: ResultCardProps) {
               }
 
               // add sample layers as graphics layers
-              if (isPointsSampleLayer || isVspPointsSampleLayer) {
+              if (layerDetails.type === 'Table') {
+                table.id = layerDetails.id;
+                table.sampleTypes = {};
+
+                layerFeatures.features.forEach((feature: any) => {
+                  addUserDefinedType(feature);
+                  table.sampleTypes[feature.attributes.TYPEUUID] =
+                    feature.attributes;
+                });
+
+                addedSampleTypesViaTable = true;
+              } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
                 if (layerFeatures.features?.length > 0) {
                   updatePointIds(layerFeatures, layerDetails);
                 }
@@ -1115,14 +1240,14 @@ function ResultCard({ result }: ResultCardProps) {
                         value.symbol.color[0],
                         value.symbol.color[1],
                         value.symbol.color[2],
-                        (value.symbol.color[3] / 255),
+                        value.symbol.color[3] / 255,
                       ],
                       outline: {
                         color: [
                           value.symbol.outline.color[0],
                           value.symbol.outline.color[1],
                           value.symbol.outline.color[2],
-                          (value.symbol.outline.color[3] / 255),
+                          value.symbol.outline.color[3] / 255,
                         ],
                         width: value.symbol.outline.width,
                       },
@@ -1141,119 +1266,33 @@ function ResultCard({ result }: ResultCardProps) {
                   };
                   graphic.popupTemplate = popupTemplate;
 
-                  // get the type uuid or generate it if necessary
-                  const attributes = graphic.attributes;
-                  let typeUuid = attributes.TYPEUUID;
-                  if (!typeUuid) {
-                    const keysToCheck = [
-                      'TYPE',
-                      'ShapeType',
-                      'TTPK',
-                      'TTC',
-                      'TTA',
-                      'TTPS',
-                      'LOD_P',
-                      'LOD_NON',
-                      'MCPS',
-                      'TCPS',
-                      'WVPS',
-                      'WWPS',
-                      'SA',
-                      'ALC',
-                      'AMC',
-                    ];
-                    // check if the udt has already been added
-                    Object.values(userDefinedAttributes.sampleTypes).forEach(
-                      (udt: any) => {
-                        const tempUdt: any = {};
-                        const tempAtt: any = {};
-                        keysToCheck.forEach((key) => {
-                          tempUdt[key] = udt[key];
-                          tempAtt[key] = attributes[key];
-                        });
-
-                        if (
-                          JSON.stringify(tempUdt) === JSON.stringify(tempAtt)
-                        ) {
-                          typeUuid = udt.TYPEUUID;
-                        }
-                      },
-                    );
-
-                    if (!typeUuid) {
-                      if (
-                        sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-                          attributes.TYPE,
-                        )
-                      ) {
-                        typeUuid = attributes.TYPE;
-                      } else {
-                        typeUuid = generateUUID();
-                      }
-                    }
-
-                    graphic.attributes['TYPEUUID'] = typeUuid;
-                  }
+                  const newGraphic: any = {
+                    // attributes: { ...graphic.attributes },
+                    geometry: graphic.geometry,
+                    symbol: graphic.symbol,
+                    popupTemplate: graphic.popupTemplate,
+                  };
 
                   // Add the user defined type if it does not exist
-                  if (
-                    !sampleAttributes.hasOwnProperty(
-                      graphic.attributes.TYPEUUID,
-                    ) &&
-                    !newAttributes.hasOwnProperty(graphic.attributes.TYPEUUID)
-                  ) {
-                    newUserSampleTypes.push({
-                      value: typeUuid,
-                      label: attributes.TYPE,
-                      isPredefined: false,
-                    });
-                    newAttributes[attributes.TYPEUUID] = {
-                      status: newAttributes[attributes.TYPEUUID]?.status
-                        ? newAttributes[attributes.TYPEUUID].status
-                        : 'add',
-                      serviceId: '',
-                      attributes: {
-                        OBJECTID: '-1',
-                        PERMANENT_IDENTIFIER: null,
-                        GLOBALID: null,
-                        TYPEUUID: attributes.TYPEUUID,
-                        TYPE: attributes.TYPE,
-                        ShapeType: attributes.ShapeType,
-                        POINT_STYLE: attributes.POINT_STYLE || 'circle',
-                        TTPK: attributes.TTPK ? Number(attributes.TTPK) : null,
-                        TTC: attributes.TTC ? Number(attributes.TTC) : null,
-                        TTA: attributes.TTA ? Number(attributes.TTA) : null,
-                        TTPS: attributes.TTPS ? Number(attributes.TTPS) : null,
-                        LOD_P: attributes.LOD_P
-                          ? Number(attributes.LOD_P)
-                          : null,
-                        LOD_NON: attributes.LOD_NON
-                          ? Number(attributes.LOD_NON)
-                          : null,
-                        MCPS: attributes.MCPS ? Number(attributes.MCPS) : null,
-                        TCPS: attributes.TCPS ? Number(attributes.TCPS) : null,
-                        WVPS: attributes.WVPS ? Number(attributes.WVPS) : null,
-                        WWPS: attributes.WWPS ? Number(attributes.WWPS) : null,
-                        SA: attributes.SA ? Number(attributes.SA) : null,
-                        AA: null,
-                        ALC: attributes.ALC ? Number(attributes.ALC) : null,
-                        AMC: attributes.AMC ? Number(attributes.AMC) : null,
-                        Notes: '',
-                        CONTAMTYPE: null,
-                        CONTAMVAL: null,
-                        CONTAMUNIT: null,
-                        CREATEDDATE: null,
-                        UPDATEDDATE: null,
-                        USERNAME: null,
-                        ORGANIZATION: null,
-                        DECISIONUNITUUID: null,
-                        DECISIONUNIT: null,
-                        DECISIONUNITSORT: 0,
-                      },
+                  if (!getAddedSampleTypesViaTable()) {
+                    newGraphic.attributes = { ...graphic.attributes };
+                    addUserDefinedType(graphic);
+                  } else {
+                    const typeUuid = graphic.attributes.TYPEUUID;
+                    let customAttributes = {};
+                    if (newAttributes.hasOwnProperty(typeUuid)) {
+                      customAttributes = newAttributes[typeUuid].attributes;
+                    } else if (sampleAttributes.hasOwnProperty(typeUuid)) {
+                      customAttributes = sampleAttributes[typeUuid];
+                    }
+
+                    newGraphic.attributes = {
+                      ...customAttributes,
+                      ...graphic.attributes,
                     };
                   }
 
-                  graphic.symbol = newDefaultSymbols.symbols['Samples'];
+                  newGraphic.symbol = newDefaultSymbols.symbols['Samples'];
                   if (
                     newDefaultSymbols.symbols.hasOwnProperty(
                       feature.attributes.TYPEUUID,
@@ -1266,11 +1305,11 @@ function ResultCard({ result }: ResultCardProps) {
                   zoomToGraphics.push(graphic);
 
                   // add the graphic to the correct layer uuid
-                  const decisionUuid = graphic.attributes.DECISIONUNITUUID;
+                  const decisionUuid = newGraphic.attributes.DECISIONUNITUUID;
                   if (graphics.hasOwnProperty(decisionUuid)) {
-                    graphics[decisionUuid].push(graphic);
+                    graphics[decisionUuid].push(newGraphic);
                   } else {
-                    graphics[decisionUuid] = [graphic];
+                    graphics[decisionUuid] = [newGraphic];
                   }
                 });
 
@@ -1298,6 +1337,7 @@ function ResultCard({ result }: ResultCardProps) {
                   scenarioName: scenarioName,
                   scenarioDescription: layerDetails.description,
                   layers: [],
+                  table,
                 };
 
                 // make a copy of the edits context variable
@@ -1327,7 +1367,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // convert the polygon graphics into points
                   let pointGraphics: __esri.Graphic[] = [];
                   graphicsList.forEach((graphic) => {
-                    pointGraphics.push(convertToPoint(Graphic, graphic));
+                    pointGraphics.push(convertToPoint(graphic));
                   });
 
                   const pointsLayer = new GraphicsLayer({
@@ -1638,9 +1678,8 @@ function ResultCard({ result }: ResultCardProps) {
                   attributes.status = 'published-ago';
                   sampleAttributes[attributes.attributes.TYPEUUID as any] =
                     attributes.attributes;
-                  item.sampleTypes[
-                    attributes.attributes.TYPEUUID as any
-                  ] = attributes;
+                  item.sampleTypes[attributes.attributes.TYPEUUID as any] =
+                    attributes;
                 });
 
                 return {
@@ -1910,7 +1949,8 @@ function ResultCard({ result }: ResultCardProps) {
         removalObject.forEach((object) => {
           if (object.layer.sketchLayer.type === 'graphics') {
             object.layer.sketchLayer.removeMany(object.graphics);
-            if(object.layer.pointsLayer) object.layer.pointsLayer.removeMany(object.pointsGraphics);
+            if (object.layer.pointsLayer)
+              object.layer.pointsLayer.removeMany(object.pointsGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);
@@ -1981,7 +2021,7 @@ function ResultCard({ result }: ResultCardProps) {
           {status === 'no-data' && 'No Data'}
         </span>
         {map && (
-          <React.Fragment>
+          <Fragment>
             {!added && (
               <button
                 css={cardButtonStyles}
@@ -1990,9 +2030,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  if (
-                    categories?.includes('contains-epa-tots-sample-layer')
-                  ) {
+                  if (categories?.includes('contains-epa-tots-sample-layer')) {
                     addTotsLayer();
                   } else if (
                     categories?.includes(
@@ -2015,9 +2053,7 @@ function ResultCard({ result }: ResultCardProps) {
                   // determine whether the layer has a tots sample layer or not
                   // and add the layer accordingly
                   const categories = result?.categories;
-                  if (
-                    categories?.includes('contains-epa-tots-sample-layer')
-                  ) {
+                  if (categories?.includes('contains-epa-tots-sample-layer')) {
                     removeTotsLayer();
                   } else if (
                     categories?.includes(
@@ -2033,7 +2069,7 @@ function ResultCard({ result }: ResultCardProps) {
                 Remove
               </button>
             )}
-          </React.Fragment>
+          </Fragment>
         )}
         <a
           css={cardButtonStyles}

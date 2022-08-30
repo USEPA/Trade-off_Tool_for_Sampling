@@ -1,13 +1,16 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
+import Portal from '@arcgis/core/portal/Portal';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
+import Select from 'components/Select';
 // contexts
-import { useEsriModulesContext } from 'contexts/EsriModules';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import { isServiceNameAvailable } from 'utils/arcGisRestUtils';
@@ -43,6 +46,18 @@ export type SaveResultsType = {
   error?: ErrorType;
 };
 
+type SelectedService = {
+  url: string;
+  description: string;
+  label: string;
+  value: string;
+};
+
+type FeatureServices = {
+  status: 'fetching' | 'failure' | 'success';
+  data: SelectedService[];
+};
+
 // --- styles (EditScenario) ---
 const inputStyles = css`
   width: 100%;
@@ -63,13 +78,18 @@ const saveButtonStyles = (status: string) => {
   if (status === 'success') {
     backgroundColor = `background-color: ${colors.green()};`;
   }
-  if (status === 'failure') {
+  if (status === 'failure' || status === 'name-not-available') {
     backgroundColor = `background-color: ${colors.red()};`;
   }
 
   return css`
     margin: 5px 0;
     ${backgroundColor}
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.65;
+    }
   `;
 };
 
@@ -79,7 +99,7 @@ type Props = {
   buttonText?: string;
   initialStatus?: SaveStatusType;
   addDefaultSampleLayer?: boolean;
-  onSave?: (selectedScenario?: ScenarioEditsType) => void;
+  onSave?: (saveResults?: SaveResultsType) => void;
 };
 
 function EditScenario({
@@ -92,8 +112,7 @@ function EditScenario({
   const {
     portal,
     signedIn, //
-  } = React.useContext(AuthenticationContext);
-  const { GraphicsLayer, GroupLayer } = useEsriModulesContext();
+  } = useContext(AuthenticationContext);
   const {
     edits,
     setEdits,
@@ -102,22 +121,22 @@ function EditScenario({
     setLayers,
     setSelectedScenario,
     setSketchLayer,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   // focus on the first input
-  React.useEffect(() => {
+  useEffect(() => {
     document.getElementById('scenario-name-input')?.focus();
   }, []);
 
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveResultsType>({ status: initialStatus });
+  ] = useState<SaveResultsType>({ status: initialStatus });
 
-  const [scenarioName, setScenarioName] = React.useState(
+  const [scenarioName, setScenarioName] = useState(
     initialScenario ? initialScenario.scenarioName : '',
   );
-  const [scenarioDescription, setScenarioDescription] = React.useState(
+  const [scenarioDescription, setScenarioDescription] = useState(
     initialScenario ? initialScenario.scenarioDescription : '',
   );
 
@@ -188,10 +207,7 @@ function EditScenario({
           return;
         }
 
-        if (
-          layer.layerType === 'Samples' ||
-          layer.layerType === 'VSP'
-        ) {
+        if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
           layer.sketchLayer.visible = false;
         }
       });
@@ -200,22 +216,36 @@ function EditScenario({
       let tempSketchLayer: LayerType | null = null;
       if (addDefaultSampleLayer) {
         edits.edits.forEach((edit) => {
-          if(
-            edit.type === 'layer' && 
-              (edit.layerType === 'Samples' || edit.layerType === 'VSP')
+          if (
+            edit.type === 'layer' &&
+            (edit.layerType === 'Samples' || edit.layerType === 'VSP')
           ) {
             newLayers.push(edit);
           }
         });
 
-        if(newLayers.length === 0) {
+        if (newLayers.length === 0) {
           // no sketchable layers were available, create one
-          tempSketchLayer = createSampleLayer(
-            GraphicsLayer,
-            undefined,
-            groupLayer,
-          );
+          tempSketchLayer = createSampleLayer(undefined, groupLayer);
           newLayers.push(createLayerEditTemplate(tempSketchLayer, 'add'));
+        } else {
+          // update the parentLayer of layers being added to the group layer
+          setLayers((layers) => {
+            newLayers.forEach((newLayer) => {
+              const layer = layers.find((l) => l.layerId === newLayer.layerId);
+              if (!layer) return;
+
+              layer.parentLayer = groupLayer;
+              groupLayer.add(layer.sketchLayer);
+              map.layers.remove(layer.sketchLayer);
+              if (layer.pointsLayer) {
+                groupLayer.add(layer.pointsLayer);
+                map.layers.remove(layer.pointsLayer);
+              }
+            });
+
+            return layers;
+          });
         }
       }
 
@@ -239,14 +269,13 @@ function EditScenario({
         scenarioName: scenarioName,
         scenarioDescription: scenarioDescription,
         layers: newLayers,
+        table: null,
       };
 
       // make a copy of the edits context variable
       setEdits((edits) => {
         const newEdits = edits.edits.filter((edit) => {
-          const idx = newLayers.findIndex((l) => 
-            l.layerId === edit.layerId
-          );
+          const idx = newLayers.findIndex((l) => l.layerId === edit.layerId);
 
           return idx === -1;
         });
@@ -255,14 +284,10 @@ function EditScenario({
           let visible = edit.visible;
 
           if (edit.type === 'scenario') {
-            visible =
-              edit.layerId === newScenario.layerId ? true : false;
+            visible = edit.layerId === newScenario.layerId ? true : false;
           }
           if (edit.type === 'layer') {
-            if (
-              edit.layerType === 'Samples' ||
-              edit.layerType === 'VSP'
-            ) {
+            if (edit.layerType === 'Samples' || edit.layerType === 'VSP') {
               visible = false;
             }
           }
@@ -299,9 +324,9 @@ function EditScenario({
       map.add(groupLayer);
     }
 
-    setSaveStatus({ status: 'success' });
-
-    if (onSave) onSave();
+    const saveStatus: SaveResultsType = { status: 'success' };
+    setSaveStatus(saveStatus);
+    if (onSave) onSave(saveStatus);
   }
 
   // Handles saving of the layer's scenario name and description fields.
@@ -321,18 +346,22 @@ function EditScenario({
     isServiceNameAvailable(portal, scenarioName)
       .then((res: any) => {
         if (res.error) {
-          setSaveStatus({
+          const saveStatus: SaveResultsType = {
             status: 'failure',
             error: {
               error: createErrorObject(res),
               message: res.error.message,
             },
-          });
+          };
+          setSaveStatus(saveStatus);
+          if (onSave) onSave(saveStatus);
           return;
         }
 
         if (!res.available) {
-          setSaveStatus({ status: 'name-not-available' });
+          const saveStatus: SaveResultsType = { status: 'name-not-available' };
+          setSaveStatus(saveStatus);
+          if (onSave) onSave(saveStatus);
           return;
         }
 
@@ -408,16 +437,16 @@ function EditScenario({
               saveStatus.status === 'fetching') &&
               buttonText}
             {saveStatus.status === 'success' && (
-              <React.Fragment>
+              <Fragment>
                 <i className="fas fa-check" /> Saved
-              </React.Fragment>
+              </Fragment>
             )}
             {(saveStatus.status === 'failure' ||
               saveStatus.status === 'fetch-failure' ||
               saveStatus.status === 'name-not-available') && (
-              <React.Fragment>
+              <Fragment>
                 <i className="fas fa-exclamation-triangle" /> Error
-              </React.Fragment>
+              </Fragment>
             )}
           </button>
         </div>
@@ -445,8 +474,7 @@ function EditLayer({
   initialStatus = 'none',
   onSave,
 }: EditLayerProps) {
-  const { GraphicsLayer } = useEsriModulesContext();
-  const { setGoTo, setGoToOptions } = React.useContext(NavigationContext);
+  const { setGoTo, setGoToOptions } = useContext(NavigationContext);
   const {
     edits,
     setEdits,
@@ -456,19 +484,19 @@ function EditLayer({
     setSelectedScenario,
     setSketchLayer,
     map,
-  } = React.useContext(SketchContext);
+  } = useContext(SketchContext);
 
   const [
     saveStatus,
     setSaveStatus, //
-  ] = React.useState<SaveStatusType>(initialStatus);
+  ] = useState<SaveStatusType>(initialStatus);
 
-  const [layerName, setLayerName] = React.useState(
+  const [layerName, setLayerName] = useState(
     initialLayer ? initialLayer.label : '',
   );
 
   // focus on the first input
-  React.useEffect(() => {
+  useEffect(() => {
     document.getElementById('layer-name-input')?.focus();
   }, []);
 
@@ -526,7 +554,8 @@ function EditLayer({
       });
 
       // update the layer in edits and the decisionunit attribute for each graphic
-      const sketchLayerGraphics = initialLayer.sketchLayer as __esri.GraphicsLayer;
+      const sketchLayerGraphics =
+        initialLayer.sketchLayer as __esri.GraphicsLayer;
       const graphics = sketchLayerGraphics.graphics;
       graphics.forEach((graphic) => {
         graphic.attributes.DECISIONUNIT = layerName;
@@ -541,11 +570,7 @@ function EditLayer({
       setEdits(editsCopy);
     } else {
       // create the layer
-      const tempLayer = createSampleLayer(
-        GraphicsLayer,
-        layerName,
-        parentLayer,
-      );
+      const tempLayer = createSampleLayer(layerName, parentLayer);
 
       // add the new layer to layers
       setLayers((layers) => {
@@ -647,9 +672,9 @@ function EditLayer({
         >
           {(saveStatus === 'none' || saveStatus === 'changes') && buttonText}
           {saveStatus === 'success' && (
-            <React.Fragment>
+            <Fragment>
               <i className="fas fa-check" /> Saved
-            </React.Fragment>
+            </Fragment>
           )}
         </button>
       </div>
@@ -657,4 +682,234 @@ function EditLayer({
   );
 }
 
-export { EditLayer, EditScenario };
+// --- components (EditCustomSampleTypesTable) ---
+type EditCustomSampleTypesTableProps = {
+  initialStatus?: SaveStatusType;
+  onSave?: (saveResults?: SaveResultsType) => void;
+};
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
+function EditCustomSampleTypesTable({
+  initialStatus = 'none',
+  onSave,
+}: EditCustomSampleTypesTableProps) {
+  const {
+    portal,
+    signedIn, //
+  } = useContext(AuthenticationContext);
+  const {
+    publishSampleTableMetaData,
+    setPublishSampleTableMetaData,
+    publishSamplesMode,
+    sampleTableDescription,
+    setSampleTableDescription,
+    sampleTableName,
+    setSampleTableName,
+    selectedService,
+    setSelectedService,
+  } = useContext(PublishContext);
+
+  const [
+    saveStatus,
+    setSaveStatus, //
+  ] = useState<SaveResultsType>({ status: initialStatus });
+
+  const [queryInitialized, setQueryInitialized] = useState(false);
+  const [featureServices, setFeatureServices] = useState<FeatureServices>({
+    status: 'fetching',
+    data: [],
+  });
+  useEffect(() => {
+    if (queryInitialized) return;
+
+    setQueryInitialized(true);
+
+    const tmpPortal = portal ? portal : new Portal();
+    tmpPortal
+      .queryItems({
+        categories: ['contains-epa-tots-user-defined-sample-types'],
+        sortField: 'title',
+        sortOrder: 'asc',
+      })
+      .then((res: __esri.PortalQueryResult) => {
+        const data = res.results.map((item) => {
+          return {
+            url: item.url,
+            description: item.description,
+            label: item.title,
+            value: item.id,
+          };
+        });
+        setFeatureServices({ status: 'success', data });
+      })
+      .catch((err) => {
+        console.error(err);
+        setFeatureServices({ status: 'failure', data: [] });
+      });
+  }, [portal, queryInitialized]);
+
+  const handleSave = () => {
+    setPublishSampleTableMetaData({
+      value: '',
+      label: sampleTableName,
+      description: sampleTableDescription,
+      url: '',
+    });
+    const saveStatus: SaveResultsType = { status: 'success' };
+    setSaveStatus(saveStatus);
+    if (onSave) onSave(saveStatus);
+  };
+
+  return (
+    <Fragment>
+      {publishSamplesMode === 'new' && (
+        <Fragment>
+          <label htmlFor="sample-table-name-input">
+            Custom Sample Type Table Name
+          </label>
+          <input
+            id="sample-table-name-input"
+            css={inputStyles}
+            maxLength={250}
+            placeholder="Enter Custom Sample Type Table Name"
+            value={sampleTableName}
+            onChange={(ev) => setSampleTableName(ev.target.value)}
+          />
+          <label htmlFor="scenario-description-input">
+            Custom Sample Type Table Description
+          </label>
+          <input
+            id="scenario-description-input"
+            css={inputStyles}
+            maxLength={2048}
+            placeholder="Enter Custom Sample Type Table Description (2048 characters)"
+            value={sampleTableDescription}
+            onChange={(ev) => setSampleTableDescription(ev.target.value)}
+          />
+        </Fragment>
+      )}
+      {publishSamplesMode === 'existing' && (
+        <div>
+          {featureServices.status === 'fetching' && <LoadingSpinner />}
+          {featureServices.status === 'failure' && <p>Error!</p>}
+          {featureServices.status === 'success' && (
+            <Fragment>
+              <label htmlFor="feature-service-select">
+                Feature Service Select
+              </label>
+              <Select
+                inputId="feature-service-select"
+                css={fullWidthSelectStyles}
+                value={selectedService}
+                onChange={(ev) => setSelectedService(ev as SelectedService)}
+                options={featureServices.data}
+              />
+            </Fragment>
+          )}
+        </div>
+      )}
+
+      {saveStatus.status === 'fetching' && <LoadingSpinner />}
+      {saveStatus.status === 'failure' &&
+        webServiceErrorMessage(saveStatus.error)}
+      {saveStatus.status === 'name-not-available' &&
+        scenarioNameTakenMessage(sampleTableName ? sampleTableName : '')}
+      <div css={saveButtonContainerStyles}>
+        <button
+          css={saveButtonStyles(saveStatus.status)}
+          onClick={() => {
+            if (publishSamplesMode === 'existing' && selectedService) {
+              setPublishSampleTableMetaData(selectedService);
+            } else if (publishSamplesMode === 'new') {
+              if (!portal || !signedIn) {
+                handleSave();
+                return;
+              }
+
+              setSaveStatus({ status: 'fetching' });
+
+              // if the user is signed in, go ahead and check if the
+              // service (scenario) name is availble before continuing
+              isServiceNameAvailable(portal, sampleTableName)
+                .then((res: any) => {
+                  if (res.error) {
+                    const saveStatus: SaveResultsType = {
+                      status: 'failure',
+                      error: {
+                        error: createErrorObject(res),
+                        message: res.error.message,
+                      },
+                    };
+                    setSaveStatus(saveStatus);
+                    if (onSave) onSave(saveStatus);
+                    return;
+                  }
+
+                  if (!res.available) {
+                    const saveStatus: SaveResultsType = {
+                      status: 'name-not-available',
+                    };
+                    setSaveStatus(saveStatus);
+                    if (onSave) onSave(saveStatus);
+                    return;
+                  }
+
+                  handleSave();
+                })
+                .catch((err: any) => {
+                  console.error('isServiceNameAvailable error', err);
+                  const saveStatus: SaveResultsType = {
+                    status: 'failure',
+                    error: {
+                      error: createErrorObject(err),
+                      message: err.message,
+                    },
+                  };
+                  setSaveStatus(saveStatus);
+                  if (onSave) onSave(saveStatus);
+
+                  window.logErrorToGa(err);
+                });
+            }
+          }}
+          disabled={
+            (publishSamplesMode === 'new' &&
+              JSON.stringify(publishSampleTableMetaData) ===
+                JSON.stringify({
+                  value: '',
+                  label: sampleTableName,
+                  description: sampleTableDescription,
+                  url: '',
+                })) ||
+            (publishSamplesMode === 'existing' &&
+              JSON.stringify(publishSampleTableMetaData) ===
+                JSON.stringify(selectedService))
+          }
+        >
+          {(saveStatus.status === 'none' ||
+            saveStatus.status === 'changes' ||
+            saveStatus.status === 'fetching') &&
+            'Save'}
+          {saveStatus.status === 'success' && (
+            <Fragment>
+              <i className="fas fa-check" /> Saved
+            </Fragment>
+          )}
+          {(saveStatus.status === 'failure' ||
+            saveStatus.status === 'fetch-failure' ||
+            saveStatus.status === 'name-not-available') && (
+            <Fragment>
+              <i className="fas fa-exclamation-triangle" /> Error
+            </Fragment>
+          )}
+        </button>
+      </div>
+    </Fragment>
+  );
+}
+
+export { EditLayer, EditCustomSampleTypesTable, EditScenario };

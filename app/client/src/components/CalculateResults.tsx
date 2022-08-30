@@ -1,8 +1,14 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { ReactNode } from 'react';
+import React, {
+  Fragment,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { css } from '@emotion/react';
-import xl from 'excel4node';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 // components
 import ShowLessMore from 'components/ShowLessMore';
@@ -86,30 +92,25 @@ function CalculateResults() {
   const {
     calculateResults,
     contaminationMap, //
-  } = React.useContext(CalculateContext);
-  const {
-    aoiSketchLayer,
-    layers,
-    map,
-    mapView,
-    selectedScenario,
-  } = React.useContext(SketchContext);
+  } = useContext(CalculateContext);
+  const { aoiSketchLayer, layers, map, mapView, selectedScenario } =
+    useContext(SketchContext);
 
   const [
     downloadStatus,
     setDownloadStatus, //
-  ] = React.useState<DownloadStatus>('none');
+  ] = useState<DownloadStatus>('none');
 
   // take the screenshot
   const [
     screenshotInitialized,
     setScreenshotInitialized, //
-  ] = React.useState(false);
+  ] = useState(false);
   const [
     screenshot,
     setScreenshot, //
-  ] = React.useState<__esri.Screenshot | null>(null);
-  React.useEffect(() => {
+  ] = useState<__esri.Screenshot | null>(null);
+  useEffect(() => {
     if (screenshotInitialized) return;
     if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
       return;
@@ -204,9 +205,13 @@ function CalculateResults() {
   ]);
 
   // convert the screenshot to base64
-  const [base64Initialized, setBase64Initialized] = React.useState(false);
-  const [base64Screenshot, setBase64Screenshot] = React.useState('');
-  React.useEffect(() => {
+  const [base64Initialized, setBase64Initialized] = useState(false);
+  const [base64Screenshot, setBase64Screenshot] = useState({
+    image: '',
+    height: 0,
+    width: 0,
+  });
+  useEffect(() => {
     if (base64Initialized) return;
     if (downloadStatus !== 'fetching' || !screenshot) return;
 
@@ -228,7 +233,13 @@ function CalculateResults() {
 
       // get the data url
       const url = canvas.toDataURL('image/jpeg');
-      url ? setBase64Screenshot(url) : setDownloadStatus('base64-failure');
+      url
+        ? setBase64Screenshot({
+            image: url,
+            height: img.height,
+            width: img.width,
+          })
+        : setDownloadStatus('base64-failure');
 
       // Clean up
       canvas = null;
@@ -239,40 +250,38 @@ function CalculateResults() {
   }, [screenshot, downloadStatus, base64Initialized]);
 
   // export the excel doc
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       !selectedScenario ||
       downloadStatus !== 'fetching' ||
-      !base64Screenshot ||
+      !base64Screenshot.image ||
       calculateResults.status !== 'success' ||
       !calculateResults.data
     ) {
       return;
     }
 
-    const workbook = new xl.Workbook({
-      defaultFont: {
-        size: 12,
-        name: 'Calibri',
-      },
-    });
+    const workbook = new ExcelJS.Workbook();
 
     // create the styles
-    const valueColumnWidth = 19.29;
-    const sheetTitleStyle = workbook.createStyle({
-      font: { bold: true, size: 18 },
-    });
-    const columnTitleStyle = workbook.createStyle({
-      alignment: { horizontal: 'center' },
-      font: { bold: true, underline: true },
-    });
-    const labelStyle = workbook.createStyle({ font: { bold: true } });
-    const underlinedLabelStyle = workbook.createStyle({
-      font: { bold: true, underline: true },
-    });
-    const currencyStyle = workbook.createStyle({
-      numberFormat: '$#,##0.00; ($#,##.00); -',
-    });
+    const valueColumnWidth = 21.29;
+    const defaultFont = { name: 'Calibri', size: 12 };
+    const sheetTitleFont = { name: 'Calibri', bold: true, size: 18 };
+    const columnTitleAlignment: any = { horizontal: 'center' };
+    const columnTitleFont = {
+      name: 'Calibri',
+      bold: true,
+      underline: true,
+      size: 12,
+    };
+    const labelFont = { name: 'Calibri', bold: true, size: 12 };
+    const underlinedLabelFont = {
+      name: 'Calibri',
+      bold: true,
+      underline: true,
+      size: 12,
+    };
+    const currencyNumberFormat = '$#,##0.00; ($#,##.00); -';
 
     // create the sheets
     addSummarySheet();
@@ -281,8 +290,8 @@ function CalculateResults() {
     addSampleSheet();
 
     // download the file
-    workbook
-      .writeToBuffer()
+    workbook.xlsx
+      .writeBuffer()
       .then((buffer: any) => {
         saveAs(
           new Blob([buffer]),
@@ -307,156 +316,139 @@ function CalculateResults() {
       const summarySheet = workbook.addWorksheet('Summary');
 
       // setup column widths
-      summarySheet.column(1).setWidth(34.5);
-      summarySheet.column(2).setWidth(valueColumnWidth);
-      summarySheet.column(3).setWidth(35.88);
-      summarySheet.column(4).setWidth(valueColumnWidth);
-      summarySheet.column(5).setWidth(33.13);
-      summarySheet.column(6).setWidth(valueColumnWidth);
+      summarySheet.columns = [
+        { width: 39.14 },
+        { width: valueColumnWidth },
+        { width: 41.14 },
+        { width: valueColumnWidth },
+        { width: 38 },
+        { width: valueColumnWidth },
+      ];
 
       // add the header
-      summarySheet
-        .cell(1, 1)
-        .string('Trade-off Tool for Sampling (TOTS) Summary')
-        .style(sheetTitleStyle);
-      summarySheet.cell(2, 1).string('Version: 1.0');
-      summarySheet.cell(4, 1).string('Plan Name').style(underlinedLabelStyle);
-      summarySheet.cell(4, 2).string(selectedScenario.scenarioName);
-      summarySheet
-        .cell(5, 1)
-        .string('Plan Description')
-        .style(underlinedLabelStyle);
-      summarySheet.cell(5, 2).string(selectedScenario.scenarioDescription);
+      summarySheet.getCell(1, 1).font = sheetTitleFont;
+      summarySheet.getCell(1, 1).value =
+        'Trade-off Tool for Sampling (TOTS) Summary';
+      summarySheet.getCell(2, 1).font = defaultFont;
+      summarySheet.getCell(2, 1).value = 'Version: 2.0.0';
+      summarySheet.getCell(4, 1).font = underlinedLabelFont;
+      summarySheet.getCell(4, 1).value = 'Plan Name';
+      summarySheet.getCell(4, 2).font = defaultFont;
+      summarySheet.getCell(4, 2).value = selectedScenario.scenarioName;
+      summarySheet.getCell(5, 1).font = underlinedLabelFont;
+      summarySheet.getCell(5, 1).value = 'Plan Description';
+      summarySheet.getCell(5, 2).font = defaultFont;
+      summarySheet.getCell(5, 2).value = selectedScenario.scenarioDescription;
 
       // col 1 & 2
-      summarySheet
-        .cell(7, 1, 7, 2, true)
-        .string('Sampling Plan')
-        .style(columnTitleStyle);
+      summarySheet.mergeCells(7, 1, 7, 2);
+      summarySheet.getCell(7, 1).alignment = columnTitleAlignment;
+      summarySheet.getCell(7, 1).font = columnTitleFont;
+      summarySheet.getCell(7, 1).value = 'Sampling Plan';
 
-      summarySheet
-        .cell(8, 1)
-        .string('Total Number of User-Defined Samples')
-        .style(labelStyle);
-      summarySheet
-        .cell(8, 2)
-        .number(calculateResults.data['Total Number of User-Defined Samples']);
+      summarySheet.getCell(8, 1).font = labelFont;
+      summarySheet.getCell(8, 1).value = 'Total Number of User-Defined Samples';
+      summarySheet.getCell(8, 2).font = defaultFont;
+      summarySheet.getCell(8, 2).value =
+        calculateResults.data['Total Number of User-Defined Samples'];
 
-      summarySheet
-        .cell(9, 1)
-        .string('Total Number of Samples')
-        .style(labelStyle);
-      summarySheet
-        .cell(9, 2)
-        .number(calculateResults.data['Total Number of Samples']);
+      summarySheet.getCell(9, 1).font = labelFont;
+      summarySheet.getCell(9, 1).value = 'Total Number of Samples';
+      summarySheet.getCell(9, 2).font = defaultFont;
+      summarySheet.getCell(9, 2).value =
+        calculateResults.data['Total Number of Samples'];
 
-      summarySheet.cell(10, 1).string('Total Cost').style(labelStyle);
-      summarySheet
-        .cell(10, 2)
-        .number(calculateResults.data['Total Cost'])
-        .style(currencyStyle);
+      summarySheet.getCell(10, 1).font = labelFont;
+      summarySheet.getCell(10, 1).value = 'Total Cost';
+      summarySheet.getCell(10, 2).font = defaultFont;
+      summarySheet.getCell(10, 2).numFmt = currencyNumberFormat;
+      summarySheet.getCell(10, 2).value = calculateResults.data['Total Cost'];
 
-      summarySheet.cell(11, 1).string('Total Time (days)').style(labelStyle);
-      summarySheet.cell(11, 2).number(calculateResults.data['Total Time']);
+      summarySheet.getCell(11, 1).font = labelFont;
+      summarySheet.getCell(11, 1).value = 'Total Time (days)';
+      summarySheet.getCell(11, 2).font = defaultFont;
+      summarySheet.getCell(11, 2).value = calculateResults.data['Total Time'];
 
-      summarySheet.cell(12, 1).string('Limiting Time Factor').style(labelStyle);
-      summarySheet
-        .cell(12, 2)
-        .string(calculateResults.data['Limiting Time Factor']);
+      summarySheet.getCell(12, 1).font = labelFont;
+      summarySheet.getCell(12, 1).value = 'Limiting Time Factor';
+      summarySheet.getCell(12, 2).font = defaultFont;
+      summarySheet.getCell(12, 2).value =
+        calculateResults.data['Limiting Time Factor'];
 
       // col 3 & 4
-      summarySheet
-        .cell(7, 3, 7, 4, true)
-        .string('Sampling Operation')
-        .style(columnTitleStyle);
+      summarySheet.mergeCells(7, 3, 7, 4);
+      summarySheet.getCell(7, 3).alignment = columnTitleAlignment;
+      summarySheet.getCell(7, 3).font = columnTitleFont;
+      summarySheet.getCell(7, 3).value = 'Sampling Operation';
 
-      summarySheet
-        .cell(8, 3)
-        .string('Total Required Sampling Time (team hrs)')
-        .style(labelStyle);
-      summarySheet
-        .cell(8, 4)
-        .number(calculateResults.data['Total Required Sampling Time']);
+      summarySheet.getCell(8, 3).font = labelFont;
+      summarySheet.getCell(8, 3).value =
+        'Total Required Sampling Time (team hrs)';
+      summarySheet.getCell(8, 4).font = defaultFont;
+      summarySheet.getCell(8, 4).value =
+        calculateResults.data['Total Required Sampling Time'];
 
-      summarySheet
-        .cell(9, 3)
-        .string('Time to Complete Sampling (days)')
-        .style(labelStyle);
-      summarySheet
-        .cell(9, 4)
-        .number(calculateResults.data['Time to Complete Sampling']);
+      summarySheet.getCell(9, 3).font = labelFont;
+      summarySheet.getCell(9, 3).value = 'Time to Complete Sampling (days)';
+      summarySheet.getCell(9, 4).font = defaultFont;
+      summarySheet.getCell(9, 4).value =
+        calculateResults.data['Time to Complete Sampling'];
 
-      summarySheet
-        .cell(10, 3)
-        .string('Total Sampling Labor Cost')
-        .style(labelStyle);
-      summarySheet
-        .cell(10, 4)
-        .number(calculateResults.data['Total Sampling Labor Cost'])
-        .style(currencyStyle);
+      summarySheet.getCell(10, 3).font = labelFont;
+      summarySheet.getCell(10, 3).value = 'Total Sampling Labor Cost';
+      summarySheet.getCell(10, 4).font = defaultFont;
+      summarySheet.getCell(10, 4).numFmt = currencyNumberFormat;
+      summarySheet.getCell(10, 4).value =
+        calculateResults.data['Total Sampling Labor Cost'];
 
-      summarySheet
-        .cell(11, 3)
-        .string('Total Sampling Material Cost')
-        .style(labelStyle);
-      summarySheet
-        .cell(11, 4)
-        .number(calculateResults.data['Sampling Material Cost'])
-        .style(currencyStyle);
+      summarySheet.getCell(11, 3).font = labelFont;
+      summarySheet.getCell(11, 3).value = 'Total Sampling Material Cost';
+      summarySheet.getCell(11, 4).font = defaultFont;
+      summarySheet.getCell(11, 4).numFmt = currencyNumberFormat;
+      summarySheet.getCell(11, 4).value =
+        calculateResults.data['Sampling Material Cost'];
 
       // col 5 & 6
-      summarySheet
-        .cell(7, 5, 7, 6, true)
-        .string('Analysis Operation')
-        .style(columnTitleStyle);
+      summarySheet.mergeCells(7, 5, 7, 6);
+      summarySheet.getCell(7, 5).alignment = columnTitleAlignment;
+      summarySheet.getCell(7, 5).font = columnTitleFont;
+      summarySheet.getCell(7, 5).value = 'Analysis Operation';
 
-      summarySheet
-        .cell(8, 5)
-        .string('Total Required Analysis Time (lab hrs)')
-        .style(labelStyle);
-      summarySheet.cell(8, 6).number(calculateResults.data['Time to Analyze']);
+      summarySheet.getCell(8, 5).font = labelFont;
+      summarySheet.getCell(8, 5).value =
+        'Total Required Analysis Time (lab hrs)';
+      summarySheet.getCell(8, 6).font = defaultFont;
+      summarySheet.getCell(8, 6).value =
+        calculateResults.data['Time to Analyze'];
 
-      summarySheet
-        .cell(9, 5)
-        .string('Time to Complete Analyses (days)')
-        .style(labelStyle);
-      summarySheet
-        .cell(9, 6)
-        .number(calculateResults.data['Time to Complete Analyses']);
+      summarySheet.getCell(9, 5).font = labelFont;
+      summarySheet.getCell(9, 5).value = 'Time to Complete Analyses (days)';
+      summarySheet.getCell(9, 6).font = defaultFont;
+      summarySheet.getCell(9, 6).value =
+        calculateResults.data['Time to Complete Analyses'];
 
-      summarySheet
-        .cell(10, 5)
-        .string('Total Analysis Labor Cost')
-        .style(labelStyle);
-      summarySheet
-        .cell(10, 6)
-        .number(calculateResults.data['Analysis Labor Cost'])
-        .style(currencyStyle);
+      summarySheet.getCell(10, 5).font = labelFont;
+      summarySheet.getCell(10, 5).value = 'Total Analysis Labor Cost';
+      summarySheet.getCell(10, 6).font = defaultFont;
+      summarySheet.getCell(10, 6).numFmt = currencyNumberFormat;
+      summarySheet.getCell(10, 6).value =
+        calculateResults.data['Analysis Labor Cost'];
 
-      summarySheet
-        .cell(11, 5)
-        .string('Total Analysis Material Cost')
-        .style(labelStyle);
-      summarySheet
-        .cell(11, 6)
-        .number(calculateResults.data['Analysis Material Cost'])
-        .style(currencyStyle);
+      summarySheet.getCell(11, 5).font = labelFont;
+      summarySheet.getCell(11, 5).value = 'Total Analysis Material Cost';
+      summarySheet.getCell(11, 6).font = defaultFont;
+      summarySheet.getCell(11, 6).numFmt = currencyNumberFormat;
+      summarySheet.getCell(11, 6).value =
+        calculateResults.data['Analysis Material Cost'];
 
       // add the map screenshot
-      const base64 = base64Screenshot.replace(/^data:image\/jpeg;base64,/, '');
-      summarySheet.addImage({
-        image: Buffer.from(base64, 'base64'),
-        name: 'logo', // name is not required param
-        type: 'picture',
-        position: {
-          type: 'oneCellAnchor',
-          from: {
-            col: 2,
-            colOff: 0,
-            row: 15,
-            rowOff: 0,
-          },
-        },
+      const screenshotImageId = workbook.addImage({
+        base64: base64Screenshot.image,
+        extension: 'jpeg',
+      });
+      summarySheet.addImage(screenshotImageId, {
+        tl: { col: 1, row: 14 },
+        ext: { width: base64Screenshot.width, height: base64Screenshot.height },
       });
     }
 
@@ -468,102 +460,72 @@ function CalculateResults() {
       const parameterSheet = workbook.addWorksheet('Parameters');
 
       // setup column widths
-      parameterSheet.column(1).setWidth(35.88);
-      parameterSheet.column(2).setWidth(valueColumnWidth);
+      parameterSheet.columns = [{ width: 41.14 }, { width: valueColumnWidth }];
 
       // add the header
-      parameterSheet.cell(1, 1).string('Parameters').style(sheetTitleStyle);
+      parameterSheet.getCell(1, 1).font = sheetTitleFont;
+      parameterSheet.getCell(1, 1).value = 'Parameters';
 
       // col 1 & 2
-      parameterSheet
-        .cell(3, 1)
-        .string('Number of Available Teams for Sampling')
-        .style(labelStyle);
-      parameterSheet
-        .cell(3, 2)
-        .number(
-          calculateResults.data[
-            'User Specified Number of Available Teams for Sampling'
-          ],
-        );
+      parameterSheet.getCell(3, 1).font = labelFont;
+      parameterSheet.getCell(3, 1).value =
+        'Number of Available Teams for Sampling';
+      parameterSheet.getCell(3, 2).font = defaultFont;
+      parameterSheet.getCell(3, 2).value =
+        calculateResults.data[
+          'User Specified Number of Available Teams for Sampling'
+        ];
 
-      parameterSheet
-        .cell(4, 1)
-        .string('Personnel per Sampling Team')
-        .style(labelStyle);
-      parameterSheet
-        .cell(4, 2)
-        .number(
-          calculateResults.data['User Specified Personnel per Sampling Team'],
-        );
+      parameterSheet.getCell(4, 1).font = labelFont;
+      parameterSheet.getCell(4, 1).value = 'Personnel per Sampling Team';
+      parameterSheet.getCell(4, 2).font = defaultFont;
+      parameterSheet.getCell(4, 2).value =
+        calculateResults.data['User Specified Personnel per Sampling Team'];
 
-      parameterSheet
-        .cell(5, 1)
-        .string('Sampling Team Hours per Shift')
-        .style(labelStyle);
-      parameterSheet
-        .cell(5, 2)
-        .number(
-          calculateResults.data['User Specified Sampling Team Hours per Shift'],
-        );
+      parameterSheet.getCell(5, 1).font = labelFont;
+      parameterSheet.getCell(5, 1).value = 'Sampling Team Hours per Shift';
+      parameterSheet.getCell(5, 2).font = defaultFont;
+      parameterSheet.getCell(5, 2).value =
+        calculateResults.data['User Specified Sampling Team Hours per Shift'];
 
-      parameterSheet
-        .cell(6, 1)
-        .string('Sampling Team Shifts per Day')
-        .style(labelStyle);
-      parameterSheet
-        .cell(6, 2)
-        .number(
-          calculateResults.data['User Specified Sampling Team Shifts per Day'],
-        );
+      parameterSheet.getCell(6, 1).font = labelFont;
+      parameterSheet.getCell(6, 1).value = 'Sampling Team Shifts per Day';
+      parameterSheet.getCell(6, 2).font = defaultFont;
+      parameterSheet.getCell(6, 2).value =
+        calculateResults.data['User Specified Sampling Team Shifts per Day'];
 
-      parameterSheet
-        .cell(7, 1)
-        .string('Sampling Team Labor Cost')
-        .style(labelStyle);
-      parameterSheet
-        .cell(7, 2)
-        .number(
-          calculateResults.data['User Specified Sampling Team Labor Cost'],
-        )
-        .style(currencyStyle);
+      parameterSheet.getCell(7, 1).font = labelFont;
+      parameterSheet.getCell(7, 1).value = 'Sampling Team Labor Cost';
+      parameterSheet.getCell(7, 2).font = defaultFont;
+      parameterSheet.getCell(7, 2).numFmt = currencyNumberFormat;
+      parameterSheet.getCell(7, 2).value =
+        calculateResults.data['User Specified Sampling Team Labor Cost'];
 
-      parameterSheet
-        .cell(8, 1)
-        .string('Number of Available Labs for Analysis')
-        .style(labelStyle);
-      parameterSheet
-        .cell(8, 2)
-        .number(
-          calculateResults.data[
-            'User Specified Number of Available Labs for Analysis'
-          ],
-        );
+      parameterSheet.getCell(8, 1).font = labelFont;
+      parameterSheet.getCell(8, 1).value =
+        'Number of Available Labs for Analysis';
+      parameterSheet.getCell(8, 2).font = defaultFont;
+      parameterSheet.getCell(8, 2).value =
+        calculateResults.data[
+          'User Specified Number of Available Labs for Analysis'
+        ];
 
-      parameterSheet
-        .cell(9, 1)
-        .string('Analysis Lab Hours per Day')
-        .style(labelStyle);
-      parameterSheet
-        .cell(9, 2)
-        .number(
-          calculateResults.data['User Specified Analysis Lab Hours per Day'],
-        );
+      parameterSheet.getCell(9, 1).font = labelFont;
+      parameterSheet.getCell(9, 1).value = 'Analysis Lab Hours per Day';
+      parameterSheet.getCell(9, 2).font = defaultFont;
+      parameterSheet.getCell(9, 2).value =
+        calculateResults.data['User Specified Analysis Lab Hours per Day'];
 
-      //parameterSheet.cell(10, 1).string('Surface Area (ft2)').style(labelStyle);
-      parameterSheet
-        .cell(10, 1)
-        .string([
-          { bold: true },
-          'Surface Area (ft',
-          { bold: true, vertAlign: 'superscript' },
-          '2',
-          { bold: true, vertAlign: 'baseline' },
-          ')',
-        ]);
-      parameterSheet
-        .cell(10, 2)
-        .number(calculateResults.data['User Specified Surface Area']);
+      parameterSheet.getCell(10, 1).value = {
+        richText: [
+          { font: labelFont, text: 'Surface Area (ft' },
+          { font: { ...labelFont, vertAlign: 'superscript' }, text: '2' },
+          { font: labelFont, text: ')' },
+        ],
+      };
+      parameterSheet.getCell(10, 2).font = defaultFont;
+      parameterSheet.getCell(10, 2).value =
+        calculateResults.data['User Specified Surface Area'];
     }
 
     function addResultsSheet() {
@@ -574,182 +536,166 @@ function CalculateResults() {
       const resultsSheet = workbook.addWorksheet('Detailed Results');
 
       // setup column widths
-      resultsSheet.column(1).setWidth(35.63);
-      resultsSheet.column(2).setWidth(valueColumnWidth);
-      resultsSheet.column(3).setWidth(36);
-      resultsSheet.column(4).setWidth(valueColumnWidth);
-      resultsSheet.column(5).setWidth(29.5);
-      resultsSheet.column(6).setWidth(valueColumnWidth);
+      resultsSheet.columns = [
+        { width: 40.86 },
+        { width: valueColumnWidth },
+        { width: 41.43 },
+        { width: valueColumnWidth },
+        { width: 33.86 },
+        { width: valueColumnWidth },
+      ];
 
       // add the header
-      resultsSheet.cell(1, 1).string('Detailed Results').style(sheetTitleStyle);
+      resultsSheet.getCell(1, 1).font = sheetTitleFont;
+      resultsSheet.getCell(1, 1).value = 'Detailed Results';
 
       // col 1 & 2
-      resultsSheet
-        .cell(3, 1, 3, 2, true)
-        .string('Spatial Information')
-        .style(columnTitleStyle);
+      resultsSheet.mergeCells(3, 1, 3, 2);
+      resultsSheet.getCell(3, 1).alignment = columnTitleAlignment;
+      resultsSheet.getCell(3, 1).font = columnTitleFont;
+      resultsSheet.getCell(3, 1).value = 'Spatial Information';
 
-      resultsSheet
-        .cell(4, 1)
-        .string([
-          { bold: true },
-          'Total Sampled Area (ft',
-          { bold: true, vertAlign: 'superscript' },
-          '2',
-          { bold: true, vertAlign: 'baseline' },
-          ')',
-        ]);
-      resultsSheet
-        .cell(4, 2)
-        .number(calculateResults.data['Total Sampled Area']);
+      resultsSheet.getCell(4, 1).value = {
+        richText: [
+          { font: labelFont, text: 'Total Sampled Area (ft' },
+          { font: { ...labelFont, vertAlign: 'superscript' }, text: '2' },
+          { font: labelFont, text: ')' },
+        ],
+      };
+      resultsSheet.getCell(4, 2).font = defaultFont;
+      resultsSheet.getCell(4, 2).value =
+        calculateResults.data['Total Sampled Area'];
 
-      resultsSheet
-        .cell(5, 1)
-        .string([
-          { bold: true },
-          'User Specified Total Area of Interest (ft',
-          { bold: true, vertAlign: 'superscript' },
-          '2',
-          { bold: true, vertAlign: 'baseline' },
-          ')',
-        ]);
+      resultsSheet.getCell(5, 1).value = {
+        richText: [
+          {
+            font: labelFont,
+            text: 'User Specified Total Area of Interest (ft',
+          },
+          { font: { ...labelFont, vertAlign: 'superscript' }, text: '2' },
+          { font: labelFont, text: ')' },
+        ],
+      };
       const userAoi = calculateResults.data['User Specified Total AOI'];
       if (userAoi) {
-        resultsSheet.cell(5, 2).number(userAoi);
+        resultsSheet.getCell(5, 2).font = defaultFont;
+        resultsSheet.getCell(5, 2).value = userAoi;
       }
 
-      resultsSheet
-        .cell(6, 1)
-        .string('Percent of Area Sampled')
-        .style(labelStyle);
+      resultsSheet.getCell(6, 1).font = labelFont;
+      resultsSheet.getCell(6, 1).value = 'Percent of Area Sampled';
       const percentAreaSampled =
         calculateResults.data['Percent of Area Sampled'];
       if (percentAreaSampled) {
-        resultsSheet.cell(6, 2).number(percentAreaSampled);
+        resultsSheet.getCell(6, 2).font = defaultFont;
+        resultsSheet.getCell(6, 2).value = percentAreaSampled;
       }
 
       // col 3 & 4
-      resultsSheet
-        .cell(3, 3, 3, 4, true)
-        .string('Sampling')
-        .style(columnTitleStyle);
+      resultsSheet.mergeCells(3, 3, 3, 4);
+      resultsSheet.getCell(3, 3).alignment = columnTitleAlignment;
+      resultsSheet.getCell(3, 3).font = columnTitleFont;
+      resultsSheet.getCell(3, 3).value = 'Sampling';
 
-      resultsSheet
-        .cell(4, 3)
-        .string('Sampling Hours per Day')
-        .style(labelStyle);
-      resultsSheet
-        .cell(4, 4)
-        .number(calculateResults.data['Sampling Hours per Day']);
+      resultsSheet.getCell(4, 3).font = labelFont;
+      resultsSheet.getCell(4, 3).value = 'Sampling Hours per Day';
+      resultsSheet.getCell(4, 4).font = defaultFont;
+      resultsSheet.getCell(4, 4).value =
+        calculateResults.data['Sampling Hours per Day'];
 
-      resultsSheet
-        .cell(5, 3)
-        .string('Sampling Personnel Hours per Day')
-        .style(labelStyle);
-      resultsSheet
-        .cell(5, 4)
-        .number(calculateResults.data['Sampling Personnel hours per Day']);
+      resultsSheet.getCell(5, 3).font = labelFont;
+      resultsSheet.getCell(5, 3).value = 'Sampling Personnel Hours per Day';
+      resultsSheet.getCell(5, 4).font = defaultFont;
+      resultsSheet.getCell(5, 4).value =
+        calculateResults.data['Sampling Personnel hours per Day'];
 
-      resultsSheet
-        .cell(6, 3)
-        .string('User Specified Sampling Team Labor Cost')
-        .style(labelStyle);
-      resultsSheet
-        .cell(6, 4)
-        .number(
-          calculateResults.data['User Specified Sampling Team Labor Cost'],
-        );
+      resultsSheet.getCell(6, 3).font = labelFont;
+      resultsSheet.getCell(6, 3).value =
+        'User Specified Sampling Team Labor Cost';
+      resultsSheet.getCell(6, 4).font = defaultFont;
+      resultsSheet.getCell(6, 4).value =
+        calculateResults.data['User Specified Sampling Team Labor Cost'];
 
-      resultsSheet
-        .cell(7, 3)
-        .string('Time to Prepare Kits (person hours)')
-        .style(labelStyle);
-      resultsSheet
-        .cell(7, 4)
-        .number(calculateResults.data['Time to Prepare Kits']);
+      resultsSheet.getCell(7, 3).font = labelFont;
+      resultsSheet.getCell(7, 3).value = 'Time to Prepare Kits (person hours)';
+      resultsSheet.getCell(7, 4).font = defaultFont;
+      resultsSheet.getCell(7, 4).value =
+        calculateResults.data['Time to Prepare Kits'];
 
-      resultsSheet
-        .cell(8, 3)
-        .string('Time to Collect (person hours)')
-        .style(labelStyle);
-      resultsSheet.cell(8, 4).number(calculateResults.data['Time to Collect']);
+      resultsSheet.getCell(8, 3).font = labelFont;
+      resultsSheet.getCell(8, 3).value = 'Time to Collect (person hours)';
+      resultsSheet.getCell(8, 4).font = defaultFont;
+      resultsSheet.getCell(8, 4).value =
+        calculateResults.data['Time to Collect'];
 
-      resultsSheet
-        .cell(9, 3)
-        .string('Sampling Material Cost')
-        .style(labelStyle);
-      resultsSheet
-        .cell(9, 4)
-        .number(calculateResults.data['Sampling Material Cost'])
-        .style(currencyStyle);
+      resultsSheet.getCell(9, 3).font = labelFont;
+      resultsSheet.getCell(9, 3).value = 'Sampling Material Cost';
+      resultsSheet.getCell(9, 4).font = defaultFont;
+      resultsSheet.getCell(9, 4).numFmt = currencyNumberFormat;
+      resultsSheet.getCell(9, 4).value =
+        calculateResults.data['Sampling Material Cost'];
 
-      resultsSheet
-        .cell(10, 3)
-        .string('Sampling Personnel Labor Cost')
-        .style(labelStyle);
-      resultsSheet
-        .cell(10, 4)
-        .number(calculateResults.data['Sampling Personnel Labor Cost'])
-        .style(currencyStyle);
+      resultsSheet.getCell(10, 3).font = labelFont;
+      resultsSheet.getCell(10, 3).value = 'Sampling Personnel Labor Cost';
+      resultsSheet.getCell(10, 4).font = defaultFont;
+      resultsSheet.getCell(10, 4).numFmt = currencyNumberFormat;
+      resultsSheet.getCell(10, 4).value =
+        calculateResults.data['Sampling Personnel Labor Cost'];
 
-      resultsSheet
-        .cell(11, 3)
-        .string('Time to Complete Sampling (days)')
-        .style(labelStyle);
-      resultsSheet
-        .cell(11, 4)
-        .number(calculateResults.data['Time to Complete Sampling']);
+      resultsSheet.getCell(11, 3).font = labelFont;
+      resultsSheet.getCell(11, 3).value = 'Time to Complete Sampling (days)';
+      resultsSheet.getCell(11, 4).font = defaultFont;
+      resultsSheet.getCell(11, 4).value =
+        calculateResults.data['Time to Complete Sampling'];
 
-      resultsSheet
-        .cell(12, 3)
-        .string('Total Sampling Labor Cost')
-        .style(labelStyle);
-      resultsSheet
-        .cell(12, 4)
-        .number(calculateResults.data['Total Sampling Labor Cost'])
-        .style(currencyStyle);
+      resultsSheet.getCell(12, 3).font = labelFont;
+      resultsSheet.getCell(12, 3).value = 'Total Sampling Labor Cost';
+      resultsSheet.getCell(12, 4).font = defaultFont;
+      resultsSheet.getCell(12, 4).numFmt = currencyNumberFormat;
+      resultsSheet.getCell(12, 4).value =
+        calculateResults.data['Total Sampling Labor Cost'];
 
       // col 5 & 6
-      resultsSheet
-        .cell(3, 5, 3, 6, true)
-        .string('Analysis')
-        .style(columnTitleStyle);
+      resultsSheet.mergeCells(3, 5, 3, 6);
+      resultsSheet.getCell(3, 5).alignment = columnTitleAlignment;
+      resultsSheet.getCell(3, 5).font = columnTitleFont;
+      resultsSheet.getCell(3, 5).value = 'Analysis';
 
-      resultsSheet
-        .cell(4, 5)
-        .string('Time to Complete Analyses (days)')
-        .style(labelStyle);
-      resultsSheet
-        .cell(4, 6)
-        .number(calculateResults.data['Time to Complete Analyses']);
+      resultsSheet.getCell(4, 5).font = labelFont;
+      resultsSheet.getCell(4, 5).value = 'Time to Complete Analyses (days)';
+      resultsSheet.getCell(4, 6).font = defaultFont;
+      resultsSheet.getCell(4, 6).value =
+        calculateResults.data['Time to Complete Analyses'];
 
-      resultsSheet
-        .cell(5, 5)
-        .string('Time to Analyze (person hours)')
-        .style(labelStyle);
-      resultsSheet.cell(5, 6).number(calculateResults.data['Time to Analyze']);
+      resultsSheet.getCell(5, 5).font = labelFont;
+      resultsSheet.getCell(5, 5).value = 'Time to Analyze (person hours)';
+      resultsSheet.getCell(5, 6).font = defaultFont;
+      resultsSheet.getCell(5, 6).value =
+        calculateResults.data['Time to Analyze'];
 
-      resultsSheet.cell(6, 5).string('Analysis Labor Cost').style(labelStyle);
-      resultsSheet
-        .cell(6, 6)
-        .number(calculateResults.data['Analysis Labor Cost'])
-        .style(currencyStyle);
+      resultsSheet.getCell(6, 5).font = labelFont;
+      resultsSheet.getCell(6, 5).value = 'Analysis Labor Cost';
+      resultsSheet.getCell(6, 6).font = defaultFont;
+      resultsSheet.getCell(6, 6).numFmt = currencyNumberFormat;
+      resultsSheet.getCell(6, 6).value =
+        calculateResults.data['Analysis Labor Cost'];
 
-      resultsSheet
-        .cell(7, 5)
-        .string('Analysis Material Cost')
-        .style(labelStyle);
-      resultsSheet
-        .cell(7, 6)
-        .number(calculateResults.data['Analysis Material Cost'])
-        .style(currencyStyle);
+      resultsSheet.getCell(7, 5).font = labelFont;
+      resultsSheet.getCell(7, 5).value = 'Analysis Material Cost';
+      resultsSheet.getCell(7, 6).font = defaultFont;
+      resultsSheet.getCell(7, 6).numFmt = currencyNumberFormat;
+      resultsSheet.getCell(7, 6).value =
+        calculateResults.data['Analysis Material Cost'];
 
-      resultsSheet.cell(8, 5).string('Total Waste Volume (L)').style(labelStyle);
-      resultsSheet.cell(8, 6).number(calculateResults.data['Waste Volume']);
+      resultsSheet.getCell(8, 5).font = labelFont;
+      resultsSheet.getCell(8, 5).value = 'Total Waste Volume (L)';
+      resultsSheet.getCell(8, 6).font = defaultFont;
+      resultsSheet.getCell(8, 6).value = calculateResults.data['Waste Volume'];
 
-      resultsSheet.cell(9, 5).string('Total Waste Weight (lbs)').style(labelStyle);
-      resultsSheet.cell(9, 6).number(calculateResults.data['Waste Weight']);
+      resultsSheet.getCell(9, 5).font = labelFont;
+      resultsSheet.getCell(9, 5).value = 'Total Waste Weight (lbs)';
+      resultsSheet.getCell(9, 6).font = defaultFont;
+      resultsSheet.getCell(9, 6).value = calculateResults.data['Waste Weight'];
     }
 
     function addSampleSheet() {
@@ -769,24 +715,29 @@ function CalculateResults() {
       const samplesSheet = workbook.addWorksheet('Sample Details');
 
       // setup column widths
-      samplesSheet.column(1).setWidth(42);
-      samplesSheet.column(2).setWidth(14);
-      samplesSheet.column(3).setWidth(24);
-      samplesSheet.column(4).setWidth(10);
-      samplesSheet.column(5).setWidth(30);
+      samplesSheet.columns = [
+        { width: 47.71 },
+        { width: 15.43 },
+        { width: 26.71 },
+        { width: 10.86 },
+        { width: 33.57 },
+      ];
 
       // add the header
-      samplesSheet.cell(1, 1).string('Sample Details').style(sheetTitleStyle);
+      samplesSheet.getCell(1, 1).font = sheetTitleFont;
+      samplesSheet.getCell(1, 1).value = 'Sample Details';
 
       // add in column headers
-      samplesSheet.cell(3, 1).string('Sample ID').style(labelStyle);
-      samplesSheet.cell(3, 2).string('Sample Type').style(labelStyle);
-      samplesSheet
-        .cell(3, 3)
-        .string('Measured Contamination')
-        .style(labelStyle);
-      samplesSheet.cell(3, 4).string('Units').style(labelStyle);
-      samplesSheet.cell(3, 5).string('Notes').style(labelStyle);
+      samplesSheet.getCell(3, 1).font = labelFont;
+      samplesSheet.getCell(3, 1).value = 'Sample ID';
+      samplesSheet.getCell(3, 2).font = labelFont;
+      samplesSheet.getCell(3, 2).value = 'Sample Type';
+      samplesSheet.getCell(3, 3).font = labelFont;
+      samplesSheet.getCell(3, 3).value = 'Measured Contamination';
+      samplesSheet.getCell(3, 4).font = labelFont;
+      samplesSheet.getCell(3, 4).value = 'Units';
+      samplesSheet.getCell(3, 5).font = labelFont;
+      samplesSheet.getCell(3, 5).value = 'Notes';
 
       // add in the rows
       let currentRow = 4;
@@ -795,28 +746,28 @@ function CalculateResults() {
 
         const graphicsLayer = layer as __esri.GraphicsLayer;
         graphicsLayer.graphics.forEach((graphic) => {
-          const {
-            PERMANENT_IDENTIFIER,
-            TYPE,
-            CONTAMVAL,
-            CONTAMUNIT,
-            Notes,
-          } = graphic.attributes;
+          const { PERMANENT_IDENTIFIER, TYPE, CONTAMVAL, CONTAMUNIT, Notes } =
+            graphic.attributes;
 
           if (PERMANENT_IDENTIFIER) {
-            samplesSheet.cell(currentRow, 1).string(PERMANENT_IDENTIFIER);
+            samplesSheet.getCell(currentRow, 1).font = defaultFont;
+            samplesSheet.getCell(currentRow, 1).value = PERMANENT_IDENTIFIER;
           }
           if (TYPE) {
-            samplesSheet.cell(currentRow, 2).string(TYPE);
+            samplesSheet.getCell(currentRow, 2).font = defaultFont;
+            samplesSheet.getCell(currentRow, 2).value = TYPE;
           }
           if (CONTAMVAL) {
-            samplesSheet.cell(currentRow, 3).number(CONTAMVAL);
+            samplesSheet.getCell(currentRow, 3).font = defaultFont;
+            samplesSheet.getCell(currentRow, 3).value = CONTAMVAL;
           }
           if (CONTAMUNIT) {
-            samplesSheet.cell(currentRow, 4).string(CONTAMUNIT);
+            samplesSheet.getCell(currentRow, 4).font = defaultFont;
+            samplesSheet.getCell(currentRow, 4).value = CONTAMUNIT;
           }
           if (Notes) {
-            samplesSheet.cell(currentRow, 5).string(Notes);
+            samplesSheet.getCell(currentRow, 5).font = defaultFont;
+            samplesSheet.getCell(currentRow, 5).value = Notes;
           }
 
           currentRow += 1;
@@ -856,7 +807,7 @@ function CalculateResults() {
         </p>
       )}
       {calculateResults.status === 'success' && calculateResults.data && (
-        <React.Fragment>
+        <Fragment>
           <div>
             <h3>Summary</h3>
             <LabelValue
@@ -941,17 +892,17 @@ function CalculateResults() {
             <h4>Spatial Information</h4>
             <LabelValue
               label={
-                <React.Fragment>
+                <Fragment>
                   Total Sampled Area (ft<sup>2</sup>)
-                </React.Fragment>
+                </Fragment>
               }
               value={calculateResults.data['Total Sampled Area']}
             />
             <LabelValue
               label={
-                <React.Fragment>
+                <Fragment>
                   User Specified Total Area of Interest (ft<sup>2</sup>)
-                </React.Fragment>
+                </Fragment>
               }
               value={calculateResults.data['User Specified Total AOI']}
             />
@@ -1049,14 +1000,18 @@ function CalculateResults() {
                   setScreenshotInitialized(false);
                   setScreenshot(null);
                   setBase64Initialized(false);
-                  setBase64Screenshot('');
+                  setBase64Screenshot({
+                    image: '',
+                    height: 0,
+                    width: 0,
+                  });
                 }}
               >
                 Download
               </button>
             </div>
           </div>
-        </React.Fragment>
+        </Fragment>
       )}
     </div>
   );

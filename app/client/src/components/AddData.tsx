@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 
 import { css } from '@emotion/react';
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 // components
 import FilePanel from 'components/FilePanel';
 import SearchPanel from 'components/SearchPanel';
@@ -37,16 +37,16 @@ const panelContainer = css`
 
 // --- components (AddData) ---
 function AddData() {
-  const { goToOptions } = React.useContext(NavigationContext);
+  const { goToOptions } = useContext(NavigationContext);
 
   // filters
   const [
     location,
     setLocation, //
-  ] = React.useState<LocationType>(addFromOptions[0]);
+  ] = useState<LocationType>(addFromOptions[0]);
 
   // Handle navigation options
-  React.useEffect(() => {
+  useEffect(() => {
     if (!goToOptions?.from) return;
 
     let optionValue: LocationType | null = null;

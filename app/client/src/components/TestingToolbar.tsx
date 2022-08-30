@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { css } from '@emotion/react';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
@@ -24,7 +24,7 @@ const buttonStyles = css`
 `;
 
 function TestingToolbar() {
-  const { layers, map, mapView, sketchVM } = React.useContext(SketchContext);
+  const { layers, map, mapView, sketchVM } = useContext(SketchContext);
 
   return (
     <div css={toolbarStyles}>

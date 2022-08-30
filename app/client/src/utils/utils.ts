@@ -30,17 +30,6 @@ export function escapeForLucene(value: string) {
 }
 
 /**
- * Checks if the user is using Internet Explorer.
- *
- * @returns True if Internet Explorer and false for all other browsers
- */
-export function isIE() {
-  const ua = navigator.userAgent;
-  /* MSIE used to detect old browsers and Trident used to newer ones*/
-  return ua.indexOf('MSIE ') > -1 || ua.indexOf('Trident/') > -1;
-}
-
-/**
  * Utility function to split up an array into chunks of a designated length.
  *
  * @param array The original array
