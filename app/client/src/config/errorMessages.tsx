@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
@@ -14,14 +14,6 @@ const textAreaStyles = css`
   height: 200px;
   width: 100%;
 `;
-
-export const unsupportedBrowserMessage = (
-  <MessageBox
-    severity="error"
-    title="Unsupported Browser"
-    message="Chrome and Edge are the preferred browsers when working in Trade-off Tool for Sampling (TOTS). TOTS does not support Internet Explorer."
-  />
-);
 
 export const webServiceErrorMessage = (
   error: ErrorType = {
@@ -37,7 +29,7 @@ export const webServiceErrorMessage = (
       severity="error"
       title={title}
       message={
-        <React.Fragment>
+        <Fragment>
           <span>{error.message}</span>
           <br />
           <ShowLessMore
@@ -66,7 +58,7 @@ export const webServiceErrorMessage = (
           >
             Copy Detailed Error
           </button>
-        </React.Fragment>
+        </Fragment>
       }
     />
   );
@@ -77,12 +69,12 @@ export const errorBoundaryMessage = (
     severity="error"
     title="Error"
     message={
-      <React.Fragment>
+      <Fragment>
         Something went wrong. Please contact the application owner, Timothy Boe,
         at <a href="mailto:boe.timothy@epa.gov.">boe.timothy@epa.gov.</a>.
         Please include as much detail related to the sequence of interactions
         that triggered the error with your message.
-      </React.Fragment>
+      </Fragment>
     }
   />
 );
@@ -333,24 +325,36 @@ export const noSamplesPublishMessage = (
   />
 );
 
+export const noSampleTypesPublishMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Custom Sample Types Exist"
+    message="There are no custom sample types created and/or loaded. Please add custom sample types to the plan and try again."
+  />
+);
+
+export const noServiceSelectedMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Service Selected"
+    message="There is no feature service selected to publish the custom sample types to. Please select a feature service and try again."
+  />
+);
+
+export const noServiceNameMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Service Name Provided"
+    message="No feature service name provided for publishing the custom sample types. Please provide a feature service name and try again."
+  />
+);
+
 export const publishSuccessMessage = (
   <MessageBox
     severity="info"
     title="Publish Succeeded"
     message={
-      'To view or share your plan with others, go to the ' +
-      'My Content menu in the Content section of your ArcGIS ' +
-      'Online organization.'
-    }
-  />
-);
-
-export const pulblishSamplesSuccessMessage = (
-  <MessageBox
-    severity="info"
-    title="Publish Succeeded"
-    message={
-      'To view or share your sample types with others, go to the ' +
+      'To view or share your TOTS content with others, go to the ' +
       'My Content menu in the Content section of your ArcGIS ' +
       'Online organization.'
     }
@@ -362,7 +366,7 @@ export const scenarioNameTakenMessage = (scenarioName: string) => (
   <MessageBox
     severity="warning"
     title="Plan Name Not Available"
-    message={`The "${scenarioName}" name is already in use. Please rename the plan and try again.`}
+    message={`The "${scenarioName}" name is already in use within your organization. Please rename the plan and try again.`}
   />
 );
 

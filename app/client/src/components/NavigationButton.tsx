@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { css } from '@emotion/react';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
@@ -23,7 +23,7 @@ type Props = {
 };
 
 function NavigationButton({ goToPanel }: Props) {
-  const { setGoTo } = React.useContext(NavigationContext);
+  const { setGoTo } = useContext(NavigationContext);
 
   return (
     <div css={containerStyles}>

@@ -1,6 +1,6 @@
 {
   "name": "epa-hsrp-tots",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.",
   "keywords": [
@@ -17,25 +17,30 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "14.x"
+    "node": "16.x"
   },
   "scripts": {
     "client": "cd client && npm start",
-    "coverage_client": "cd client && npm run coverage",
     "server": "cd server && npm start",
-    "start": "concurrently --kill-others \"npm run server\" \"npm run client\"",
+    "start": "concurrently --kc \"blue.dim,green.dim\" \"npm:server\" \"npm run client\"",
     "setup": "echo \"Installing project dependencies...\" && npm ci && echo \"Installing client dependencies...\" && cd client && npm ci && echo \"Installing server dependencies...\" && cd .. && cd server && npm ci",
-    "cypress": "concurrently --kill-others \"npm run server\" \"npm run client\" \"cypress open\"",
-    "coverage": "concurrently --kill-others \"npm run server\" \"npm run coverage_client\" \"cypress open\""
+    "cypress": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"cypress open --env coverage=false\"",
+    "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"npx rimraf .nyc_output/out.json && cypress run --browser edge\""
   },
   "devDependencies": {
-    "@cypress/code-coverage": "3.9.10",
-    "@testing-library/cypress": "8.0.0",
-    "concurrently": "6.2.1",
-    "cypress": "8.3.0",
-    "eslint-plugin-cypress": "2.11.3",
-    "istanbul-lib-coverage": "3.0.0",
-    "nyc": "15.1.0"
+    "@cypress/code-coverage": "3.10.0",
+    "@testing-library/cypress": "8.0.3",
+    "@types/jest": "28.1.6",
+    "@types/mocha": "9.1.1",
+    "@types/node": "18.6.1",
+    "@types/testing-library__cypress": "5.0.9",
+    "concurrently": "7.3.0",
+    "cypress": "10.3.1",
+    "eslint-plugin-cypress": "2.12.1",
+    "istanbul-lib-coverage": "3.2.0",
+    "nyc": "15.1.0",
+    "prettier": "2.7.1",
+    "typescript": "4.7.4"
   },
   "eslintConfig": {
     "extends": [

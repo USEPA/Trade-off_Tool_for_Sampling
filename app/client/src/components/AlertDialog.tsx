@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import * as React from 'react';
+import React, { useContext } from 'react';
 import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // contexts
@@ -18,6 +18,8 @@ const overlayStyles = css`
 const dialogStyles = css`
   color: ${colors.white()};
   background-color: ${colors.epaBlue};
+  max-height: 80vh;
+  overflow: auto;
 
   &[data-reach-dialog-content] {
     position: relative;
@@ -64,7 +66,7 @@ const buttonStyles = css`
 `;
 
 function AlertDialog() {
-  const { options, setOptions } = React.useContext(DialogContext);
+  const { options, setOptions } = useContext(DialogContext);
 
   const close = () => {
     if (!options) return;
