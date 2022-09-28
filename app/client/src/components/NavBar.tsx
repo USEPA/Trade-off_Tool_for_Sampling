@@ -161,6 +161,8 @@ const navPanelContainerStyles = css`
   justify-content: space-between;
   height: 100%;
   padding: 15px 0;
+  overflow: hidden auto;
+  gap: 10px;
 `;
 
 const resourceTallyStyles = css`
