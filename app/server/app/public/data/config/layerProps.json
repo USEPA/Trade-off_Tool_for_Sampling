@@ -372,6 +372,44 @@
       "defaultValue": 0
     }
   ],
+  "additionalTableFields": [
+    {
+      "name": "SYMBOLCOLOR",
+      "type": "esriFieldTypeString",
+      "actualType": "nvarchar",
+      "alias": "COLOR",
+      "sqlType": "sqlTypeNVarchar",
+      "length": 255,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "SYMBOLOUTLINE",
+      "type": "esriFieldTypeString",
+      "actualType": "nvarchar",
+      "alias": "SYMBOLOUTLINE",
+      "sqlType": "sqlTypeNVarchar",
+      "length": 255,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "SYMBOLTYPE",
+      "type": "esriFieldTypeString",
+      "actualType": "nvarchar",
+      "alias": "SYMBOLTYPE",
+      "sqlType": "sqlTypeNVarchar",
+      "length": 255,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    }
+  ],
   "defaultLayerProps": {
     "type": "Feature Layer",
     "editFieldsInfo": {

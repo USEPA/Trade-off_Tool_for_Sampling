@@ -1556,6 +1556,10 @@ function ResultCard({ result }: ResultCardProps) {
             // define items used for updating states
             const newAttributes: Attributes = {};
             const newUserSampleTypes: SampleSelectType[] = [];
+            const newDefaultSymbols: DefaultSymbolsType = {
+              editCount: defaultSymbols.editCount + 1,
+              symbols: { ...defaultSymbols.symbols },
+            };
 
             // create the user defined sample types to be added to TOTS
             responses.forEach((layerFeatures) => {
@@ -1667,6 +1671,19 @@ function ResultCard({ result }: ResultCardProps) {
                     },
                   };
                 }
+
+                // Add the symbol symbology
+                if (
+                  attributes.SYMBOLTYPE &&
+                  attributes.SYMBOLCOLOR &&
+                  attributes.SYMBOLOUTLINE
+                ) {
+                  newDefaultSymbols.symbols[attributes.TYPEUUID] = {
+                    type: attributes.SYMBOLTYPE,
+                    color: JSON.parse(attributes.SYMBOLCOLOR),
+                    outline: JSON.parse(attributes.SYMBOLOUTLINE),
+                  };
+                }
               });
             });
 
@@ -1706,6 +1723,8 @@ function ResultCard({ result }: ResultCardProps) {
                 };
               });
             }
+
+            setDefaultSymbols(newDefaultSymbols);
 
             // reset the status
             setStatus('');
