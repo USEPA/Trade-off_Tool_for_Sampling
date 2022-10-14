@@ -1267,7 +1267,6 @@ function ResultCard({ result }: ResultCardProps) {
                   graphic.popupTemplate = popupTemplate;
 
                   const newGraphic: any = {
-                    // attributes: { ...graphic.attributes },
                     geometry: graphic.geometry,
                     symbol: graphic.symbol,
                     popupTemplate: graphic.popupTemplate,
@@ -1292,14 +1291,15 @@ function ResultCard({ result }: ResultCardProps) {
                     };
                   }
 
-                  newGraphic.symbol = newDefaultSymbols.symbols['Samples'];
-                  if (
-                    newDefaultSymbols.symbols.hasOwnProperty(
-                      feature.attributes.TYPEUUID,
-                    )
-                  ) {
-                    graphic.symbol =
-                      newDefaultSymbols.symbols[feature.attributes.TYPEUUID];
+                  const typeUuid = feature.attributes.TYPEUUID;
+                  newGraphic.symbol =
+                    newDefaultSymbols.symbols[
+                      newDefaultSymbols.symbols.hasOwnProperty(typeUuid)
+                        ? typeUuid
+                        : 'Samples'
+                    ];
+                  if (newDefaultSymbols.symbols.hasOwnProperty(typeUuid)) {
+                    graphic.symbol = newDefaultSymbols.symbols[typeUuid];
                   }
 
                   zoomToGraphics.push(graphic);
@@ -1556,6 +1556,10 @@ function ResultCard({ result }: ResultCardProps) {
             // define items used for updating states
             const newAttributes: Attributes = {};
             const newUserSampleTypes: SampleSelectType[] = [];
+            const newDefaultSymbols: DefaultSymbolsType = {
+              editCount: defaultSymbols.editCount + 1,
+              symbols: { ...defaultSymbols.symbols },
+            };
 
             // create the user defined sample types to be added to TOTS
             responses.forEach((layerFeatures) => {
@@ -1667,6 +1671,19 @@ function ResultCard({ result }: ResultCardProps) {
                     },
                   };
                 }
+
+                // Add the symbol symbology
+                if (
+                  attributes.SYMBOLTYPE &&
+                  attributes.SYMBOLCOLOR &&
+                  attributes.SYMBOLOUTLINE
+                ) {
+                  newDefaultSymbols.symbols[attributes.TYPEUUID] = {
+                    type: attributes.SYMBOLTYPE,
+                    color: JSON.parse(attributes.SYMBOLCOLOR),
+                    outline: JSON.parse(attributes.SYMBOLOUTLINE),
+                  };
+                }
               });
             });
 
@@ -1706,6 +1723,8 @@ function ResultCard({ result }: ResultCardProps) {
                 };
               });
             }
+
+            setDefaultSymbols(newDefaultSymbols);
 
             // reset the status
             setStatus('');
