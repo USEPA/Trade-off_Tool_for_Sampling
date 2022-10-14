@@ -1267,7 +1267,6 @@ function ResultCard({ result }: ResultCardProps) {
                   graphic.popupTemplate = popupTemplate;
 
                   const newGraphic: any = {
-                    // attributes: { ...graphic.attributes },
                     geometry: graphic.geometry,
                     symbol: graphic.symbol,
                     popupTemplate: graphic.popupTemplate,
@@ -1292,14 +1291,15 @@ function ResultCard({ result }: ResultCardProps) {
                     };
                   }
 
-                  newGraphic.symbol = newDefaultSymbols.symbols['Samples'];
-                  if (
-                    newDefaultSymbols.symbols.hasOwnProperty(
-                      feature.attributes.TYPEUUID,
-                    )
-                  ) {
-                    graphic.symbol =
-                      newDefaultSymbols.symbols[feature.attributes.TYPEUUID];
+                  const typeUuid = feature.attributes.TYPEUUID;
+                  newGraphic.symbol =
+                    newDefaultSymbols.symbols[
+                      newDefaultSymbols.symbols.hasOwnProperty(typeUuid)
+                        ? typeUuid
+                        : 'Samples'
+                    ];
+                  if (newDefaultSymbols.symbols.hasOwnProperty(typeUuid)) {
+                    graphic.symbol = newDefaultSymbols.symbols[typeUuid];
                   }
 
                   zoomToGraphics.push(graphic);
