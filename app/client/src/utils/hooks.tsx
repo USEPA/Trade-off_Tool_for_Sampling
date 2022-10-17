@@ -910,11 +910,11 @@ export function useDynamicPopup() {
   // handles the sketch button clicks
   const handleClick = (
     ev: ReactMouseEvent<HTMLElement>,
-    feature: any,
+    features: any[],
     type: string,
     newLayer: LayerType | null = null,
   ) => {
-    if (!feature?.graphic) return;
+    if (features?.length > 0 && !features[0].graphic) return;
 
     // set the clicked button as active until the drawing is complete
     deactivateButtons();
@@ -922,6 +922,7 @@ export function useDynamicPopup() {
     const changes = new Collection<__esri.Graphic>();
 
     // find the layer
+    const feature = features[0];
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
@@ -1005,8 +1006,7 @@ export function useDynamicPopup() {
   const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
     const content = (
       <MapPopup
-        feature={feature}
-        selectedGraphicsIds={[feature.graphic.attributes.PERMANENT_IDENTIFIER]}
+        features={[feature]}
         edits={edits}
         layers={layers}
         fieldInfos={fieldInfos}

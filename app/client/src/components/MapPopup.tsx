@@ -67,23 +67,21 @@ const saveButtonStyles = (status: SaveStatusType) => css`
 
 // --- components (FeatureTool) ---
 type Props = {
-  feature: any;
-  selectedGraphicsIds: Array<string>;
+  features: any[];
   edits: EditsType;
   layers: LayerType[];
   fieldInfos: FieldInfos;
   layerProps: LookupFile;
   onClick: (
     ev: ReactMouseEvent<HTMLElement>,
-    feature: any,
+    features: any[],
     type: string,
     newLayer?: LayerType | null,
   ) => void;
 };
 
 function MapPopup({
-  feature,
-  selectedGraphicsIds,
+  features,
   edits,
   layers,
   fieldInfos,
@@ -95,45 +93,40 @@ function MapPopup({
   const [note, setNote] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatusType>('none');
   useEffect(() => {
-    // Reset the note if either no graphics are selected or multiple graphics
-    // are selected. The note field only works if one graphic is selected.
-    if (selectedGraphicsIds.length !== 1) {
-      if (graphicNote) setGraphicNote('');
-      if (note) setNote('');
-      if (saveStatus !== 'none') setSaveStatus('none');
-      return;
-    }
-
     // Get the note from the graphics attributes
-    if (feature?.graphic?.attributes) {
-      let newNote = feature.graphic.attributes.Notes;
-      newNote = newNote ? newNote : '';
-      if (graphicNote !== newNote) {
-        setGraphicNote(newNote);
-        setNote(newNote);
-        setSaveStatus('none');
-      }
+    let allNotesSame = true;
+    let firstNote = features?.[0]?.graphic?.attributes?.Notes;
+    features.forEach((feature) => {
+      const tempNote = feature?.graphic?.attributes?.Notes;
+      if (firstNote !== tempNote) allNotesSame = false;
+    });
+
+    firstNote = firstNote ? firstNote : '';
+    if (allNotesSame && graphicNote !== firstNote) {
+      setGraphicNote(firstNote);
+      setNote(firstNote);
+      setSaveStatus('none');
     }
-  }, [graphicNote, note, saveStatus, feature, selectedGraphicsIds]);
+  }, [graphicNote, features]);
 
   // Reset the note, in the textbox, when the user selects a different sample.
   useEffect(() => {
     setNote(graphicNote);
-  }, [selectedGraphicsIds, graphicNote]);
+  }, [features, graphicNote]);
 
   // Resets the layerInitialized state when the graphic selection changes
   const [layerInitialized, setLayerInitialized] = useState(false);
   useEffect(() => {
     setLayerInitialized(false);
-  }, [selectedGraphicsIds]);
+  }, [features]);
 
   // Initializes the selected layer
   const [selectedLayer, setSelectedLayer] = useState<LayerType | null>(null);
   useEffect(() => {
     if (layerInitialized) return;
 
-    if (feature?.graphic?.layer) {
-      const activeLayerId = feature.graphic.layer.id.replace('-points', '');
+    if (features.length === 1 && features[0].graphic?.layer) {
+      const activeLayerId = features[0].graphic.layer.id.replace('-points', '');
       // find the layer
       const sketchLayer = layers.find(
         (layer) => layer.layerId === activeLayerId,
@@ -148,10 +141,35 @@ function MapPopup({
       }
 
       setLayerInitialized(true);
+    } else if (features.length > 1) {
+      let allSameLayer = true;
+      let firstLayerId = features[0].graphic.layer.id.replace('-points', '');
+      features.forEach((feature) => {
+        const layerId = feature.graphic.layer.id.replace('-points', '');
+        if (firstLayerId !== layerId) allSameLayer = false;
+      });
+
+      // find the layer
+      const sketchLayer = layers.find(
+        (layer) => layer.layerId === firstLayerId,
+      );
+
+      // set the selectedLayer if different
+      if (
+        allSameLayer &&
+        sketchLayer &&
+        sketchLayer.layerId !== selectedLayer?.layerId
+      ) {
+        setSelectedLayer(sketchLayer);
+      } else {
+        setSelectedLayer(null);
+      }
+
+      setLayerInitialized(true);
     } else {
       if (selectedLayer) setSelectedLayer(null);
     }
-  }, [layerInitialized, feature, selectedLayer, layers]);
+  }, [layerInitialized, features, selectedLayer, layers]);
 
   // Resets the save status if the user changes the note
   useEffect(() => {
@@ -160,7 +178,7 @@ function MapPopup({
 
   const [showMore, setShowMore] = useState(false);
 
-  if (!feature || selectedGraphicsIds.length === 0) return null;
+  if (features?.length === 0) return null;
 
   // get the layers the graphic can be moved to
   const layerOptions: { label: string; options: LayerType[] }[] = [];
@@ -180,7 +198,7 @@ function MapPopup({
   });
 
   // get the sketch layer id
-  const activeLayer = feature?.graphic?.layer;
+  const activeLayer = features?.[0].graphic?.layer;
   const activeLayerId = activeLayer?.id;
 
   // get the notes character limit from the defaultFields
@@ -193,113 +211,106 @@ function MapPopup({
 
   return (
     <div css={containerStyles}>
-      {selectedGraphicsIds.length === 1 && (
+      {fieldInfos.length > 0 && (
+        <div css={inputContainerStyles}>
+          <table className="esri-widget__table">
+            <tbody>
+              {fieldInfos.map((fieldInfo, index) => {
+                if (!showMore && index > 4) return null;
+
+                return (
+                  <tr key={index}>
+                    <th className="esri-feature__field-header">
+                      {fieldInfo.label}
+                    </th>
+                    <td className="esri-feature__field-data">
+                      {features[0].graphic.attributes[fieldInfo.fieldName]}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <button css={linkButtonStyles} onClick={() => setShowMore(!showMore)}>
+            <i
+              css={iconStyles}
+              className={`fas fa-arrow-${showMore ? 'up' : 'down'}`}
+            />
+            Show {showMore ? 'Less' : 'More'}
+          </button>
+        </div>
+      )}
+      {activeLayer?.title !== 'Sketched Sampling Mask' && (
         <Fragment>
           <div css={inputContainerStyles}>
-            {fieldInfos.length > 0 && (
-              <table className="esri-widget__table">
-                <tbody>
-                  {fieldInfos.map((fieldInfo, index) => {
-                    if (!showMore && index > 4) return null;
-
-                    return (
-                      <tr key={index}>
-                        <th className="esri-feature__field-header">
-                          {fieldInfo.label}
-                        </th>
-                        <td className="esri-feature__field-data">
-                          {feature.graphic.attributes[fieldInfo.fieldName]}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+            <label htmlFor="layer-change-select-input">Layer:</label>
+            <Select
+              id="layer-change-select"
+              inputId="layer-change-select-input"
+              value={selectedLayer}
+              onChange={(ev) => {
+                setSaveStatus('none');
+                setSelectedLayer(ev as LayerType);
+              }}
+              options={layerOptions}
+            />
+          </div>
+          <div>
+            <label htmlFor="graphic-note">Note: </label>
+            <br />
+            <textarea
+              id="graphic-note"
+              css={noteStyles}
+              value={note}
+              maxLength={notesCharacterLimit}
+              onChange={(ev) => {
+                setSaveStatus('none');
+                setNote(ev.target.value);
+              }}
+            />
+            <br />
+            <span>
+              {note.length} / {notesCharacterLimit} characters
+            </span>
+          </div>
+          <div css={saveButtonContainerStyles}>
             <button
-              css={linkButtonStyles}
-              onClick={() => setShowMore(!showMore)}
+              css={saveButtonStyles(saveStatus)}
+              disabled={
+                graphicNote === note && activeLayerId === selectedLayer?.layerId
+              }
+              onClick={(ev) => {
+                // set the notes
+                try {
+                  features.forEach((feature) => {
+                    feature.graphic.attributes['Notes'] = note;
+                  });
+                  setGraphicNote(note);
+
+                  // move the graphic if it is on a different layer
+                  if (
+                    activeLayerId.replace('-points', '') !==
+                    selectedLayer?.layerId.replace('-points', '')
+                  ) {
+                    onClick(ev, features, 'Move', selectedLayer);
+                  } else {
+                    onClick(ev, features, 'Save');
+                  }
+
+                  setSaveStatus('success');
+                } catch (ex) {
+                  setSaveStatus('failure');
+                }
+              }}
             >
-              <i
-                css={iconStyles}
-                className={`fas fa-arrow-${showMore ? 'up' : 'down'}`}
-              />
-              Show {showMore ? 'Less' : 'More'}
+              {(saveStatus === 'none' || saveStatus === 'success') && 'Save'}
+              {saveStatus === 'failure' && (
+                <Fragment>
+                  <i className="fas fa-exclamation-triangle" /> Error
+                </Fragment>
+              )}
             </button>
           </div>
-          {activeLayer?.title !== 'Sketched Sampling Mask' && (
-            <Fragment>
-              <div css={inputContainerStyles}>
-                <label htmlFor="layer-change-select-input">Layer:</label>
-                <Select
-                  id="layer-change-select"
-                  inputId="layer-change-select-input"
-                  value={selectedLayer}
-                  onChange={(ev) => {
-                    setSaveStatus('none');
-                    setSelectedLayer(ev as LayerType);
-                  }}
-                  options={layerOptions}
-                />
-              </div>
-              <div>
-                <label htmlFor="graphic-note">Note: </label>
-                <br />
-                <textarea
-                  id="graphic-note"
-                  css={noteStyles}
-                  value={note}
-                  maxLength={notesCharacterLimit}
-                  onChange={(ev) => {
-                    setSaveStatus('none');
-                    setNote(ev.target.value);
-                  }}
-                />
-                <br />
-                <span>
-                  {note.length} / {notesCharacterLimit} characters
-                </span>
-              </div>
-              <div css={saveButtonContainerStyles}>
-                <button
-                  css={saveButtonStyles(saveStatus)}
-                  disabled={
-                    graphicNote === note &&
-                    activeLayerId === selectedLayer?.layerId
-                  }
-                  onClick={(ev) => {
-                    // set the notes
-                    if (feature?.graphic) {
-                      feature.graphic.attributes['Notes'] = note;
-                      setGraphicNote(note);
-
-                      // move the graphic if it is on a different layer
-                      if (
-                        activeLayerId.replace('-points', '') !==
-                        selectedLayer?.layerId.replace('-points', '')
-                      ) {
-                        onClick(ev, feature, 'Move', selectedLayer);
-                      } else {
-                        onClick(ev, feature, 'Save');
-                      }
-
-                      setSaveStatus('success');
-                    } else {
-                      setSaveStatus('failure');
-                    }
-                  }}
-                >
-                  {(saveStatus === 'none' || saveStatus === 'success') &&
-                    'Save'}
-                  {saveStatus === 'failure' && (
-                    <Fragment>
-                      <i className="fas fa-exclamation-triangle" /> Error
-                    </Fragment>
-                  )}
-                </button>
-              </div>
-            </Fragment>
-          )}
         </Fragment>
       )}
     </div>
