@@ -171,6 +171,26 @@ function MapWidgets({ mapView }: Props) {
       },
     });
 
+    widget.viewModel.on('update', (event) => {
+      const isShapeChange =
+        event.toolEventInfo &&
+        (event.toolEventInfo.type.includes('reshape') ||
+          event.toolEventInfo.type.includes('scale'));
+
+      let hasPredefinedBoxes = false;
+      event.graphics.forEach((graphic) => {
+        if (graphic.attributes?.ShapeType === 'point') {
+          hasPredefinedBoxes = true;
+        }
+      });
+
+      // prevent scale and reshape changes on the predefined graphics
+      // allow moves and rotates
+      if (isShapeChange && hasPredefinedBoxes) {
+        widget.viewModel.cancel();
+      }
+    });
+
     reactiveUtils.watch(
       () => widget.updateGraphics.length,
       () => {
