@@ -159,36 +159,17 @@ function MapWidgets({ mapView }: Props) {
   const [sketchWidget, setSketchWidget] = useState<Sketch | null>(null);
   const [updateGraphics, setUpdateGraphics] = useState<__esri.Graphic[]>([]);
   useEffect(() => {
-    if (!mapView || !sketchLayer || sketchWidget) return;
+    if (!mapView || !sketchLayer || !sketchVM || sketchWidget) return;
 
     const widget = new Sketch({
       availableCreateTools: [],
       layer: sketchLayer.sketchLayer,
       view: mapView,
+      viewModel: sketchVM,
       visibleElements: {
         settingsMenu: false,
         undoRedoMenu: false,
       },
-    });
-
-    widget.viewModel.on('update', (event) => {
-      const isShapeChange =
-        event.toolEventInfo &&
-        (event.toolEventInfo.type.includes('reshape') ||
-          event.toolEventInfo.type.includes('scale'));
-
-      let hasPredefinedBoxes = false;
-      event.graphics.forEach((graphic) => {
-        if (graphic.attributes?.ShapeType === 'point') {
-          hasPredefinedBoxes = true;
-        }
-      });
-
-      // prevent scale and reshape changes on the predefined graphics
-      // allow moves and rotates
-      if (isShapeChange && hasPredefinedBoxes) {
-        widget.viewModel.cancel();
-      }
     });
 
     reactiveUtils.watch(
@@ -201,7 +182,7 @@ function MapWidgets({ mapView }: Props) {
     mapView.ui.add(widget, { position: 'top-right', index: 0 });
 
     setSketchWidget(widget);
-  }, [mapView, sketchLayer, sketchWidget]);
+  }, [mapView, sketchLayer, sketchVM, sketchWidget]);
 
   // Opens a popup for when multiple samples are selected at once
   useEffect(() => {
