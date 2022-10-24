@@ -212,9 +212,12 @@ function MapPopup({
   }
 
   let allNotesEmpty = true;
+  let allNotesSame = true;
+  let firstNote = features?.[0]?.graphic?.attributes?.Notes;
   features.forEach((feature) => {
     const tempNote = feature?.graphic?.attributes?.Notes;
     if (tempNote) allNotesEmpty = false;
+    if (firstNote !== tempNote) allNotesSame = false;
   });
 
   return (
@@ -271,6 +274,11 @@ function MapPopup({
               css={noteStyles}
               value={note}
               maxLength={notesCharacterLimit}
+              placeholder={
+                !allNotesEmpty && !allNotesSame && fieldInfos.length === 0
+                  ? 'Samples have different notes...'
+                  : ''
+              }
               onChange={(ev) => {
                 setSaveStatus('none');
                 setNote(ev.target.value);
