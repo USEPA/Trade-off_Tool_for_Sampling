@@ -281,7 +281,7 @@ function MapPopup({
               {note.length} / {notesCharacterLimit} characters
             </span>
           </div>
-          {!allNotesEmpty && graphicNote !== note && (
+          {!allNotesEmpty && graphicNote !== note && fieldInfos.length === 0 && (
             <div>
               <MessageBox
                 severity="warning"
@@ -299,10 +299,12 @@ function MapPopup({
               onClick={(ev) => {
                 // set the notes
                 try {
-                  features.forEach((feature) => {
-                    feature.graphic.attributes['Notes'] = note;
-                  });
-                  setGraphicNote(note);
+                  if (graphicNote !== note) {
+                    features.forEach((feature) => {
+                      feature.graphic.attributes['Notes'] = note;
+                    });
+                    setGraphicNote(note);
+                  }
 
                   // move the graphic if it is on a different layer
                   if (
