@@ -8,6 +8,8 @@ import React, {
 } from 'react';
 import { css } from '@emotion/react';
 import Select from 'components/Select';
+//components
+import MessageBox from 'components/MessageBox';
 // types
 import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
@@ -209,6 +211,12 @@ function MapPopup({
     });
   }
 
+  let allNotesEmpty = true;
+  features.forEach((feature) => {
+    const tempNote = feature?.graphic?.attributes?.Notes;
+    if (tempNote) allNotesEmpty = false;
+  });
+
   return (
     <div css={containerStyles}>
       {fieldInfos.length > 0 && (
@@ -273,6 +281,15 @@ function MapPopup({
               {note.length} / {notesCharacterLimit} characters
             </span>
           </div>
+          {!allNotesEmpty && graphicNote !== note && (
+            <div>
+              <MessageBox
+                severity="warning"
+                title="Notes will be overwritten"
+                message="Some selected samples already have notes. Saving will overwrite those existing notes."
+              />
+            </div>
+          )}
           <div css={saveButtonContainerStyles}>
             <button
               css={saveButtonStyles(saveStatus)}
