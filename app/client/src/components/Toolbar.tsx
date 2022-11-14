@@ -287,15 +287,20 @@ const toolBarTitle = css`
   line-height: 1.3;
 `;
 
-const switchLabelContainer = css`
-  display: flex;
-  align-items: center;
+const settingContainerStyles = css`
   margin: 0;
-  font-weight: bold;
+  margin-bottom: 10px;
 `;
 
 const switchLabel = css`
-  margin: 0 10px;
+  margin-right: 10px;
+`;
+
+const switchLabelContainer = css`
+  ${settingContainerStyles}
+  display: flex;
+  align-items: center;
+  font-weight: bold;
 `;
 
 const infoIconStyles = css`
@@ -404,8 +409,10 @@ const navIconStyles = css`
 // --- components (Toolbar) ---
 function Toolbar() {
   const { setContaminationMap } = useContext(CalculateContext);
-  const { trainingMode } = useContext(NavigationContext);
+  const { trainingMode, setTrainingMode } = useContext(NavigationContext);
   const {
+    autoZoom,
+    setAutoZoom,
     setBasemapWidget,
     defaultSymbols,
     edits,
@@ -800,7 +807,7 @@ function Toolbar() {
             Settings{' '}
           </button>
           <div css={floatContainerStyles(settingsVisible, '223px')}>
-            <fieldset>
+            <fieldset css={settingContainerStyles}>
               <legend>
                 Shape
                 <InfoIcon
@@ -835,7 +842,7 @@ function Toolbar() {
               <label htmlFor="shape-polygons">Polygons</label>
             </fieldset>
 
-            <fieldset>
+            <fieldset css={settingContainerStyles}>
               <legend>
                 Dimension
                 <InfoIcon
@@ -867,6 +874,32 @@ function Toolbar() {
               />
               <label htmlFor="dimension-3d">3D</label>
             </fieldset>
+
+            <div css={switchLabelContainer}>
+              <label htmlFor="training-mode-toggle" css={switchLabel}>
+                Training Mode
+              </label>
+              <Switch
+                checked={trainingMode}
+                onChange={(checked) => setTrainingMode(checked)}
+                ariaLabel="Training Mode"
+                onColor="#90ee90"
+                onHandleColor="#129c12"
+              />
+            </div>
+
+            <div css={switchLabelContainer}>
+              <label htmlFor="training-mode-toggle" css={switchLabel}>
+                Auto Zoom
+              </label>
+              <Switch
+                checked={autoZoom}
+                onChange={(checked) => setAutoZoom(checked)}
+                ariaLabel="Auto Zoom"
+                onColor="#90ee90"
+                onHandleColor="#129c12"
+              />
+            </div>
           </div>
         </div>
         <div>
