@@ -61,6 +61,8 @@ type SketchType = {
   setMap: Dispatch<SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
   setMapView: Dispatch<SetStateAction<__esri.MapView | null>>;
+  sceneView: __esri.SceneView | null;
+  setSceneView: Dispatch<SetStateAction<__esri.SceneView | null>>;
   selectedSampleIds: SelectedSampleType[];
   setSelectedSampleIds: Dispatch<SetStateAction<SelectedSampleType[]>>;
   selectedScenario: ScenarioEditsType | null;
@@ -80,6 +82,8 @@ type SketchType = {
   setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
   showAsPoints: boolean;
   setShowAsPoints: Dispatch<SetStateAction<boolean>>;
+  showAs2d: boolean;
+  setShowAs2d: Dispatch<SetStateAction<boolean>>;
 };
 
 export const SketchContext = createContext<SketchType>({
@@ -122,6 +126,8 @@ export const SketchContext = createContext<SketchType>({
   setMap: () => {},
   mapView: null,
   setMapView: () => {},
+  sceneView: null,
+  setSceneView: () => {},
   sketchVM: null,
   setSketchVM: () => {},
   aoiSketchVM: null,
@@ -137,6 +143,8 @@ export const SketchContext = createContext<SketchType>({
   setAllSampleOptions: () => {},
   showAsPoints: false,
   setShowAsPoints: () => {},
+  showAs2d: true,
+  setShowAs2d: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -183,6 +191,7 @@ export function SketchProvider({ children }: Props) {
   const [symbolsInitialized, setSymbolsInitialized] = useState(false);
   const [map, setMap] = useState<__esri.Map | null>(null);
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [sceneView, setSceneView] = useState<__esri.SceneView | null>(null);
   const [selectedSampleIds, setSelectedSampleIds] = useState<
     SelectedSampleType[]
   >([]);
@@ -208,7 +217,7 @@ export function SketchProvider({ children }: Props) {
     [],
   );
   const [showAsPoints, setShowAsPoints] = useState<boolean>(true);
-
+  const [showAs2d, setShowAs2d] = useState<boolean>(true);
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
@@ -349,6 +358,8 @@ export function SketchProvider({ children }: Props) {
         setMap,
         mapView,
         setMapView,
+        sceneView,
+        setSceneView,
         sketchVM,
         setSketchVM,
         aoiSketchVM,
@@ -364,6 +375,8 @@ export function SketchProvider({ children }: Props) {
         setAllSampleOptions,
         showAsPoints,
         setShowAsPoints,
+        showAs2d,
+        setShowAs2d,
       }}
     >
       {children}

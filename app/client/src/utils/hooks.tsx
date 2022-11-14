@@ -1623,7 +1623,7 @@ function useMapPositionStorage() {
   const key = 'tots_map_extent';
 
   const { setOptions } = useContext(DialogContext);
-  const { mapView } = useContext(SketchContext);
+  const { mapView, sceneView } = useContext(SketchContext);
 
   // Retreives the map position and zoom level from browser storage when the app loads
   const [localMapPositionInitialized, setLocalMapPositionInitialized] =
@@ -1648,15 +1648,26 @@ function useMapPositionStorage() {
     setWatchExtentInitialized, //
   ] = useState(false);
   useEffect(() => {
-    if (!mapView || watchExtentInitialized) return;
+    if (!mapView || !sceneView || watchExtentInitialized) return;
 
     watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
+      if (!newVal) return;
       writeToStorage(key, newVal.toJSON(), setOptions);
     });
+
+    watchUtils.watch(
+      sceneView,
+      'extent',
+      (newVal, oldVal, propName, target) => {
+        if (!newVal) return;
+        writeToStorage(key, newVal.toJSON(), setOptions);
+      },
+    );
 
     setWatchExtentInitialized(true);
   }, [
     mapView,
+    sceneView,
     watchExtentInitialized,
     localMapPositionInitialized,
     setOptions,

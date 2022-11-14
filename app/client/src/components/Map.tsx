@@ -10,6 +10,7 @@ import React, {
 import { css } from '@emotion/react';
 import EsriMap from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
+import SceneView from '@arcgis/core/views/SceneView';
 import Viewpoint from '@arcgis/core/Viewpoint';
 // components
 import MapMouseEvents from 'components/MapMouseEvents';
@@ -42,6 +43,7 @@ function Map({ height }: Props) {
     setMap,
     mapView,
     setMapView,
+    setSceneView,
     sketchLayer,
     aoiSketchLayer,
   } = useContext(SketchContext);
@@ -57,7 +59,7 @@ function Map({ height }: Props) {
     });
     setMap(newMap);
 
-    const view = new MapView({
+    const viewParams = {
       container: mapRef.current,
       map: newMap,
       center: [-95, 37],
@@ -70,10 +72,21 @@ function Map({ height }: Props) {
         color: '#32C5FD',
         fillOpacity: 1,
       },
-    });
+    };
+
+    const view = new MapView(viewParams);
 
     setMapView(view);
-  }, [mapView, setMap, setMapView]);
+
+    viewParams.map = undefined as any;
+    viewParams.container = undefined as any;
+    const scene = new SceneView({
+      ...viewParams,
+      qualityProfile: 'high',
+    });
+
+    setSceneView(scene);
+  }, [mapView, setMap, setMapView, setSceneView]);
 
   // Creates a watch event that is used for reordering the layers
   const [watchInitialized, setWatchInitialized] = useState(false);

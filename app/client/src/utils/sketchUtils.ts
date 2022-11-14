@@ -803,13 +803,7 @@ export function getSampleTableColumns({
   return columns;
 }
 
-/**
- * Gets a point symbol representation of the provided polygon.
- *
- * @param polygon The polygon to be converted
- * @returns A point symbol representation of the provided polygon
- */
-export function getPointSymbol(
+function getPointSymbol2d(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
 ) {
@@ -838,6 +832,95 @@ export function getPointSymbol(
   if (path) symbol.path = path;
 
   return symbol;
+}
+
+function getPointSymbol3d(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // mapping 2d builtin shapes to 3d builtin shapes
+  const shapeMapping: any = {
+    circle: 'circle',
+    cross: 'cross',
+    diamond: 'kite',
+    square: 'square',
+    triangle: 'triangle',
+    x: 'x',
+  };
+
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+
+      // TODO need to figure out how to handle this
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = shapeMapping[polygon.attributes.POINT_STYLE];
+    }
+  }
+
+  console.log(
+    '(polygon.symbol as any).symbolLayers: ',
+    (polygon.symbol as any).symbolLayers,
+  );
+  console.log(
+    '(polygon.symbol as any).symbolLayers.items[0]: ',
+    (polygon.symbol as any).symbolLayers.items[0],
+  );
+
+  // build the symbol
+  const symbol: any = {
+    type: 'point-3d',
+    symbolLayers: [
+      {
+        type: 'icon',
+        // size:
+        material: {
+          color: symbolColor
+            ? symbolColor.color
+            : (polygon.symbol as any).symbolLayers.items[0].material.color,
+        },
+        outline: symbolColor
+          ? {
+              ...symbolColor.outline,
+              size: symbolColor.outline.width,
+            }
+          : (polygon.symbol as any).symbolLayers.items[0].outline,
+      },
+    ],
+  };
+
+  if (path) symbol.path = path;
+  else symbol.symbolLayers[0].resource = { primitive: style };
+
+  return symbol;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+export function getPointSymbol(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  console.log('polygon: ', polygon);
+  console.log('symbolColor: ', symbolColor);
+  let point;
+  if (polygon.symbol.type.includes('-3d')) {
+    point = getPointSymbol3d(polygon, symbolColor);
+  } else {
+    point = getPointSymbol2d(polygon, symbolColor);
+  }
+
+  console.log('point: ', point);
+  return point;
 }
 
 /**

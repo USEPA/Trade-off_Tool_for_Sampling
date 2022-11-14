@@ -240,6 +240,7 @@ function SearchPanel() {
   const [vectorTileService, setVectorTileService] = useState(false);
   const [kml, setKml] = useState(false);
   const [wms, setWms] = useState(false);
+  const [sceneService, setSceneService] = useState(false);
 
   const [
     searchResults,
@@ -329,7 +330,7 @@ function SearchPanel() {
     let typePart = '';
     const defaultTypePart =
       'type:"Map Service" OR type:"Feature Service" OR type:"Image Service" ' +
-      'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS"';
+      'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS" OR type:"Scene Service"';
     if (mapService) {
       typePart = appendToQuery(typePart, 'type:"Map Service"', 'OR');
     }
@@ -347,6 +348,9 @@ function SearchPanel() {
     }
     if (wms) {
       typePart = appendToQuery(typePart, 'type:"WMS"', 'OR');
+    }
+    if (sceneService) {
+      typePart = appendToQuery(typePart, 'type:"Scene Service"', 'OR');
     }
 
     // add the type selection to the query, use all types if all types are set to false
@@ -419,6 +423,7 @@ function SearchPanel() {
     vectorTileService,
     kml,
     wms,
+    sceneService,
     sortBy,
     sortOrder,
     userInfo,
@@ -640,6 +645,16 @@ function SearchPanel() {
                     onChange={(ev) => setWms(!wms)}
                   />
                   <label htmlFor="wms_filter">WMS</label>
+                </li>
+
+                <li>
+                  <input
+                    id="scene_service_filter"
+                    type="checkbox"
+                    checked={sceneService}
+                    onChange={(ev) => setSceneService(!sceneService)}
+                  />
+                  <label htmlFor="scene_service_filter">Scene Service</label>
                 </li>
               </ul>
             </div>

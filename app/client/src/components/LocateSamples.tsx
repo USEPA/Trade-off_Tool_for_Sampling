@@ -440,6 +440,9 @@ function LocateSamples() {
     setUserDefinedAttributes,
     allSampleOptions,
     showAsPoints,
+    showAs2d,
+    sceneView,
+    mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
@@ -512,7 +515,7 @@ function LocateSamples() {
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
-    if (!sketchVM || !map || !sketchLayer) return;
+    if (!sketchVM || !map || !sketchLayer || !sceneView || !mapView) return;
 
     // put the sketch layer on the map, if it isn't there already and
     // is not part of a group layer
@@ -538,8 +541,46 @@ function LocateSamples() {
     // update the sketchVM symbol
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
-    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
-    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
+
+    if (showAs2d) {
+      sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+      sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
+      sketchVM.view = mapView;
+    } else {
+      sketchVM.layer.elevationInfo = { mode: 'relative-to-scene' };
+      sketchVM.snappingOptions = {
+        featureSources: [{ layer: sketchVM.layer }],
+      } as any;
+      sketchVM.view = sceneView;
+      sketchVM.polygonSymbol = {
+        type: 'polygon-3d',
+        symbolLayers: [
+          {
+            type: 'extrude',
+            material: defaultSymbols.symbols[symbolType].color,
+            outline: {
+              color: defaultSymbols.symbols[symbolType].outline.color,
+              size: defaultSymbols.symbols[symbolType].outline.width,
+            },
+          },
+        ],
+      } as any;
+      sketchVM.pointSymbol = {
+        type: 'point-3d',
+        symbolLayers: [
+          {
+            type: 'icon',
+            material: defaultSymbols.symbols[symbolType].color,
+            outline: {
+              color: defaultSymbols.symbols[symbolType].outline.color,
+              size: defaultSymbols.symbols[symbolType].outline.width,
+            },
+          },
+        ],
+      } as any;
+    }
+
+    console.log('sketchVM: ', sketchVM);
 
     if (wasSet) {
       // let the user draw/place the shape

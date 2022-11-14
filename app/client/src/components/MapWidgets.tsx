@@ -125,6 +125,8 @@ function MapWidgets({ mapView }: Props) {
     layers,
     setLayers,
     map,
+    sceneView,
+    showAs2d,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
@@ -231,6 +233,50 @@ function MapWidgets({ mapView }: Props) {
     }
   }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
 
+  // Updates the selected layer of the sketchViewModel
+  useEffect(() => {
+    if (!sketchVM || !mapView || !sceneView) return;
+
+    if (showAs2d) {
+      sketchVM.view = mapView;
+      sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
+    } else {
+      sketchVM.layer.elevationInfo = { mode: 'relative-to-scene' };
+      sketchVM.snappingOptions = {
+        featureSources: [{ layer: sketchVM.layer }],
+      } as any;
+      sketchVM.view = sceneView;
+      sketchVM.polygonSymbol = {
+        type: 'polygon-3d',
+        symbolLayers: [
+          {
+            type: 'extrude',
+            size: 1,
+            material: defaultSymbols.symbols['Samples'].color,
+            outline: {
+              color: defaultSymbols.symbols['Samples'].outline.color,
+              size: defaultSymbols.symbols['Samples'].outline.width,
+            },
+          },
+        ],
+      } as any;
+      sketchVM.pointSymbol = {
+        type: 'point-3d',
+        symbolLayers: [
+          {
+            type: 'icon',
+            material: defaultSymbols.symbols['Samples'].color,
+            outline: {
+              color: defaultSymbols.symbols['Samples'].outline.color,
+              size: defaultSymbols.symbols['Samples'].outline.width,
+            },
+          },
+        ],
+      } as any;
+    }
+  }, [defaultSymbols, mapView, sceneView, showAs2d, sketchVM]);
+
   // Updates the selected layer of the aoiSketchViewModel
   useEffect(() => {
     if (!aoiSketchVM) return;
@@ -265,6 +311,8 @@ function MapWidgets({ mapView }: Props) {
 
         // place the graphic on the map when the drawing is complete
         if (event.state === 'complete') {
+          console.log('event: ', event);
+          console.log('graphic: ', graphic.geometry);
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
@@ -316,6 +364,7 @@ function MapWidgets({ mapView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
+            console.log('create buffer...');
             createBuffer(graphic);
           }
 
@@ -326,6 +375,7 @@ function MapWidgets({ mapView }: Props) {
               (layer: any) => `${layerId}-points` === layer.id,
             );
             if (pointLayer) {
+              console.log('graphic: ', graphic.geometry);
               pointLayer.add(convertToPoint(graphic));
             }
           }
