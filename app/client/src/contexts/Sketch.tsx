@@ -80,10 +80,10 @@ type SketchType = {
   setSampleAttributes: Dispatch<SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
-  showAsPoints: boolean;
-  setShowAsPoints: Dispatch<SetStateAction<boolean>>;
-  showAs2d: boolean;
-  setShowAs2d: Dispatch<SetStateAction<boolean>>;
+  displayGeometryType: 'points' | 'polygons';
+  setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
+  displayDimensions: '2d' | '3d';
+  setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
 };
 
 export const SketchContext = createContext<SketchType>({
@@ -141,10 +141,10 @@ export const SketchContext = createContext<SketchType>({
   setSampleAttributes: () => {},
   allSampleOptions: [],
   setAllSampleOptions: () => {},
-  showAsPoints: false,
-  setShowAsPoints: () => {},
-  showAs2d: true,
-  setShowAs2d: () => {},
+  displayGeometryType: 'points',
+  setDisplayGeometryType: () => {},
+  displayDimensions: '2d',
+  setDisplayDimensions: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -216,8 +216,10 @@ export function SketchProvider({ children }: Props) {
   const [allSampleOptions, setAllSampleOptions] = useState<SampleSelectType[]>(
     [],
   );
-  const [showAsPoints, setShowAsPoints] = useState<boolean>(true);
-  const [showAs2d, setShowAs2d] = useState<boolean>(true);
+  const [displayGeometryType, setDisplayGeometryType] = useState<
+    'points' | 'polygons'
+  >('points');
+  const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
@@ -373,10 +375,10 @@ export function SketchProvider({ children }: Props) {
         setSampleAttributes,
         allSampleOptions,
         setAllSampleOptions,
-        showAsPoints,
-        setShowAsPoints,
-        showAs2d,
-        setShowAs2d,
+        displayGeometryType,
+        setDisplayGeometryType,
+        displayDimensions,
+        setDisplayDimensions,
       }}
     >
       {children}

@@ -121,12 +121,12 @@ function MapWidgets({ mapView }: Props) {
     setAoiSketchLayer,
     selectedScenario,
     setSelectedScenario,
-    showAsPoints,
+    displayGeometryType,
     layers,
     setLayers,
     map,
     sceneView,
-    showAs2d,
+    displayDimensions,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
@@ -237,7 +237,7 @@ function MapWidgets({ mapView }: Props) {
   useEffect(() => {
     if (!sketchVM || !mapView || !sceneView) return;
 
-    if (showAs2d) {
+    if (displayDimensions === '2d') {
       sketchVM.view = mapView;
       sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
       sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
@@ -275,7 +275,7 @@ function MapWidgets({ mapView }: Props) {
         ],
       } as any;
     }
-  }, [defaultSymbols, mapView, sceneView, showAs2d, sketchVM]);
+  }, [defaultSymbols, mapView, sceneView, displayDimensions, sketchVM]);
 
   // Updates the selected layer of the aoiSketchViewModel
   useEffect(() => {
@@ -821,7 +821,7 @@ function MapWidgets({ mapView }: Props) {
       highlightGraphics(layer.sketchLayer, sampleUuids);
       highlightGraphics(layer.pointsLayer, sampleUuids);
     });
-  }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
+  }, [map, handles, layers, mapView, selectedSampleIds, displayGeometryType]);
 
   return null;
 }

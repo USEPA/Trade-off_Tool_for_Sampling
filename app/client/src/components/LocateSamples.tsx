@@ -439,8 +439,8 @@ function LocateSamples() {
     userDefinedAttributes,
     setUserDefinedAttributes,
     allSampleOptions,
-    showAsPoints,
-    showAs2d,
+    displayGeometryType,
+    displayDimensions,
     sceneView,
     mapView,
   } = useContext(SketchContext);
@@ -542,7 +542,7 @@ function LocateSamples() {
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
 
-    if (showAs2d) {
+    if (displayDimensions === '2d') {
       sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
       sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
       sketchVM.view = mapView;
@@ -1713,7 +1713,10 @@ function LocateSamples() {
                             }
 
                             // show the newly added layer
-                            if (showAsPoints && sketchLayer.pointsLayer) {
+                            if (
+                              displayGeometryType === 'points' &&
+                              sketchLayer.pointsLayer
+                            ) {
                               sketchLayer.pointsLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;

@@ -290,13 +290,16 @@ const toolBarTitle = css`
 const switchLabelContainer = css`
   display: flex;
   align-items: center;
-  color: white;
   margin: 0;
   font-weight: bold;
 `;
 
 const switchLabel = css`
   margin: 0 10px;
+`;
+
+const infoIconStyles = css`
+  margin-left: 10px;
 `;
 
 const toolBarStyles = css`
@@ -313,32 +316,35 @@ const toolBarButtonsStyles = css`
   justify-content: flex-end;
 `;
 
-const toolBarButtonStyles = css`
-  height: ${toolBarHeight};
-  margin-bottom: 0;
-  padding: 0.75em 1em;
-  color: white;
-  background-color: ${colors.darkblue()};
-  border-radius: 0;
-  line-height: 16px;
-  text-decoration: none;
-  font-weight: bold;
-
-  &:hover {
-    background-color: ${colors.darkblue()};
-  }
-
-  &:visited {
+const toolBarButtonStyles = (width?: string) => {
+  return css`
+    height: ${toolBarHeight};
+    margin-bottom: 0;
+    padding: 0.75em 1em;
     color: white;
-  }
+    background-color: ${colors.darkblue()};
+    border-radius: 0;
+    line-height: 16px;
+    text-decoration: none;
+    font-weight: bold;
+    ${width ? `width: ${width};` : ''}
 
-  &.tots-button-selected {
-    background-color: #004f83;
-    border-top: 2px solid #8491a1;
-  }
-`;
+    &:hover {
+      background-color: ${colors.darkblue()};
+    }
 
-const floatContainerStyles = (containerVisible: boolean) => {
+    &:visited {
+      color: white;
+    }
+
+    &.tots-button-selected {
+      background-color: #004f83;
+      border-top: 2px solid #8491a1;
+    }
+  `;
+};
+
+const floatContainerStyles = (containerVisible: boolean, right: string) => {
   return css`
     display: ${containerVisible ? 'block' : 'none'} !important;
     width: 310px;
@@ -353,13 +359,23 @@ const floatContainerStyles = (containerVisible: boolean) => {
 
     /* Float the menu over the map */
     position: absolute;
-    right: 60px;
+    right: ${right};
+
+    input {
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+
+    h3 {
+      padding-top: 10px;
+      padding-bottom: 0;
+    }
   `;
 };
 
 const legendStyles = (legendVisible: boolean) => {
   return css`
-    ${floatContainerStyles(legendVisible)}
+    ${floatContainerStyles(legendVisible, '0')}
 
     /* Hide/show the actions panel */
     .esri-layer-list__item-actions[hidden] {
@@ -377,6 +393,13 @@ const legendStyles = (legendVisible: boolean) => {
     }
   `;
 };
+
+const navIconStyles = css`
+  color: white;
+  width: 10px;
+  margin-left: -2px;
+  margin-right: 10px;
+`;
 
 // --- components (Toolbar) ---
 function Toolbar() {
@@ -401,9 +424,12 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
-    showAsPoints,
-    setShowAsPoints,
+    displayGeometryType,
+    setDisplayGeometryType,
     userDefinedAttributes,
+    sceneView,
+    displayDimensions,
+    setDisplayDimensions,
   } = useContext(SketchContext);
   const {
     signedIn,
@@ -468,6 +494,8 @@ function Toolbar() {
       })
       .catch((err) => console.error(err));
   }, [portal, userInfo, setUserInfo]);
+
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = useState(false);
@@ -705,7 +733,7 @@ function Toolbar() {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
       if (
-        showAsPoints &&
+        displayGeometryType === 'points' &&
         layer.pointsLayer &&
         layer.sketchLayer.listMode === 'show'
       ) {
@@ -715,7 +743,7 @@ function Toolbar() {
         layer.sketchLayer.listMode = 'hide';
         layer.sketchLayer.visible = false;
       } else if (
-        !showAsPoints &&
+        displayGeometryType === 'polygons' &&
         layer.pointsLayer &&
         layer.pointsLayer.listMode === 'show'
       ) {
@@ -726,58 +754,150 @@ function Toolbar() {
         layer.pointsLayer.visible = false;
       }
     });
-  }, [showAsPoints, layers]);
+  }, [displayGeometryType, layers]);
+
+  // const [switchInit, setSwitchInit] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sceneView) return;
+
+    if (displayDimensions === '2d') {
+      if (!sceneView.viewpoint || !sceneView.container || !sceneView.map)
+        return;
+      mapView.viewpoint = sceneView.viewpoint.clone();
+      mapView.container = sceneView.container;
+      mapView.map = sceneView.map;
+
+      sceneView.container = null as any;
+      sceneView.map = null as any;
+    } else {
+      if (!mapView.viewpoint || !mapView.container || !mapView.map) return;
+      sceneView.viewpoint = mapView.viewpoint.clone();
+      sceneView.container = mapView.container;
+      sceneView.map = mapView.map;
+
+      mapView.container = null as any;
+      mapView.map = null as any;
+    }
+  }, [mapView, sceneView, displayDimensions]);
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
       <h2 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
       </h2>
-      <div css={switchLabelContainer}>
-        <span css={switchLabel}>Polygons</span>
-        <Switch
-          checked={showAsPoints}
-          onChange={(checked) => setShowAsPoints(checked)}
-          ariaLabel="Points or Polygons"
-          offColor="#90ee90"
-          offHandleColor="#129c12"
-        />
-        <span css={switchLabel}>Points</span>
-        <InfoIcon
-          id="poly-points-switch"
-          tooltip={
-            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
-          }
-          place="bottom"
-          type="info"
-        />
-      </div>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles()}
+            className={settingsVisible ? 'tots-button-selected' : ''}
+            onClick={(ev) => {
+              setSettingsVisible(!settingsVisible);
+              setBasemapVisible(false);
+              setLegendVisible(false);
+            }}
+          >
+            <i className="esri-icon-settings2" css={navIconStyles} />
+            Settings{' '}
+          </button>
+          <div css={floatContainerStyles(settingsVisible, '223px')}>
+            <fieldset>
+              <legend>
+                Shape
+                <InfoIcon
+                  cssStyles={infoIconStyles}
+                  id="poly-points-switch"
+                  tooltip={
+                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+                  }
+                  place="bottom"
+                  type="info"
+                />
+              </legend>
+              <input
+                id="shape-points"
+                type="radio"
+                name="shape"
+                value="points"
+                checked={displayGeometryType === 'points'}
+                onChange={(ev) => setDisplayGeometryType('points')}
+              />
+              <label htmlFor="shape-points">Points</label>
+              <br />
+
+              <input
+                id="shape-polygons"
+                type="radio"
+                name="shape"
+                value="polygons"
+                checked={displayGeometryType === 'polygons'}
+                onChange={(ev) => setDisplayGeometryType('polygons')}
+              />
+              <label htmlFor="shape-polygons">Polygons</label>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                Dimension
+                <InfoIcon
+                  cssStyles={infoIconStyles}
+                  id="3d-view-switch"
+                  tooltip={'3D view. Tooltip placeholder...'}
+                  place="bottom"
+                  type="info"
+                />
+              </legend>
+              <input
+                id="dimension-2d"
+                type="radio"
+                name="dimension"
+                value="2d"
+                checked={displayDimensions === '2d'}
+                onChange={(ev) => setDisplayDimensions('2d')}
+              />
+              <label htmlFor="dimension-2d">2D</label>
+              <br />
+
+              <input
+                id="dimension-3d"
+                type="radio"
+                name="dimension"
+                value="3d"
+                checked={displayDimensions === '3d'}
+                onChange={(ev) => setDisplayDimensions('3d')}
+              />
+              <label htmlFor="dimension-3d">3D</label>
+            </fieldset>
+          </div>
+        </div>
+        <div>
+          <button
+            css={toolBarButtonStyles()}
             className={basemapVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setBasemapVisible(!basemapVisible);
               setLegendVisible(false);
+              setSettingsVisible(false);
             }}
           >
+            <i className="esri-icon-basemap" css={navIconStyles} />
             Basemap{' '}
           </button>
           <div
-            css={floatContainerStyles(basemapVisible)}
+            css={floatContainerStyles(basemapVisible, '115px')}
             id="basemap-container"
           />
         </div>
         <div>
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles()}
             className={legendVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setLegendVisible(!legendVisible);
               setBasemapVisible(false);
+              setSettingsVisible(false);
             }}
           >
+            <i className="esri-icon-legend" css={navIconStyles} />
             Legend{' '}
           </button>
           <div css={legendStyles(legendVisible)} id="legend-container">
@@ -788,7 +908,7 @@ function Toolbar() {
         </div>
         {oAuthInfo && (
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles('100px')}
             onClick={(ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();
@@ -798,6 +918,10 @@ function Toolbar() {
               }
             }}
           >
+            <i
+              className={`fas fa-sign-${signedIn ? 'out' : 'in'}-alt`}
+              css={navIconStyles}
+            />
             {signedIn ? 'Logout' : 'Login'}
           </button>
         )}
@@ -807,7 +931,7 @@ function Toolbar() {
           }
           target="_blank"
           rel="noopener noreferrer"
-          css={toolBarButtonStyles}
+          css={toolBarButtonStyles()}
         >
           Contact Us
         </a>

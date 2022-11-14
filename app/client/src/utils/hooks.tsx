@@ -178,7 +178,7 @@ export function useStartOver() {
     setReferenceLayers,
     setPortalLayers,
     setSelectedScenario,
-    setShowAsPoints,
+    setDisplayGeometryType,
     setSketchLayer,
     setAoiSketchLayer,
     setUserDefinedAttributes,
@@ -215,7 +215,7 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
-    setShowAsPoints(true);
+    setDisplayGeometryType('points');
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -2438,7 +2438,8 @@ function useDisplayModeStorage() {
   const key = 'tots_display_mode';
 
   const { setOptions } = useContext(DialogContext);
-  const { showAsPoints, setShowAsPoints } = useContext(SketchContext);
+  const { displayGeometryType, setDisplayGeometryType } =
+    useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
   const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
@@ -2449,17 +2450,14 @@ function useDisplayModeStorage() {
     setLocalDisplayModeInitialized(true);
 
     const displayModeStr = readFromStorage(key);
-    if (!displayModeStr) return;
-
-    const trainingMode = JSON.parse(displayModeStr);
-    setShowAsPoints(trainingMode);
-  }, [localDisplayModeInitialized, setShowAsPoints]);
+    setDisplayGeometryType(displayModeStr as 'points' | 'polygons');
+  }, [localDisplayModeInitialized, setDisplayGeometryType]);
 
   useEffect(() => {
     if (!localDisplayModeInitialized) return;
 
-    writeToStorage(key, showAsPoints, setOptions);
-  }, [showAsPoints, localDisplayModeInitialized, setOptions]);
+    writeToStorage(key, displayGeometryType, setOptions);
+  }, [displayGeometryType, localDisplayModeInitialized, setOptions]);
 }
 
 // Saves/Retrieves data to browser storage
