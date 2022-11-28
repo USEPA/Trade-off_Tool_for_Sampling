@@ -1,10 +1,6 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
-import Collection from '@arcgis/core/core/Collection';
 // contexts
-import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
-// utils
-import { updateLayerEdits } from 'utils/sketchUtils';
 
 // Gets the graphic from the hittest
 function getGraphicFromResponse(res: any) {
@@ -26,9 +22,7 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView }: Props) {
-  const { setTablePanelExpanded } = useContext(NavigationContext);
-  const { edits, setEdits, layers, setSelectedSampleIds } =
-    useContext(SketchContext);
+  const { setSelectedSampleIds } = useContext(SketchContext);
 
   const handleMapClick = useCallback(
     (event: any, mapView: __esri.MapView) => {
@@ -133,84 +127,6 @@ function MapMouseEvents({ mapView }: Props) {
 
     setInitialized(true);
   }, [mapView, handleMapClick, initialized]);
-
-  const [sampleToDelete, setSampleToDelete] = useState<__esri.Graphic | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!sampleToDelete) return;
-
-    const changes = new Collection<__esri.Graphic>();
-    changes.add(sampleToDelete);
-
-    // find the layer
-    const layer = layers.find(
-      (layer) =>
-        layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
-    );
-    if (!layer || layer.sketchLayer.type !== 'graphics') return;
-
-    // make a copy of the edits context variable
-    const editsCopy = updateLayerEdits({
-      edits,
-      layer,
-      type: 'delete',
-      changes,
-    });
-
-    setEdits(editsCopy);
-
-    // Find the original point graphic and remove it
-    let graphicsToRemove: __esri.Graphic[] = [];
-    layer.sketchLayer.graphics.forEach((polygonVersion) => {
-      if (
-        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
-        polygonVersion.attributes.PERMANENT_IDENTIFIER
-      ) {
-        graphicsToRemove.push(polygonVersion);
-      }
-    });
-    layer.sketchLayer.removeMany(graphicsToRemove);
-
-    if (!layer.pointsLayer) return;
-
-    // Find the original point graphic and remove it
-    graphicsToRemove = [];
-    layer.pointsLayer.graphics.forEach((pointVersion) => {
-      if (
-        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
-        pointVersion.attributes.PERMANENT_IDENTIFIER
-      ) {
-        graphicsToRemove.push(pointVersion);
-      }
-    });
-    layer.pointsLayer.removeMany(graphicsToRemove);
-
-    // close the popup
-    mapView?.popup.close();
-
-    setSampleToDelete(null);
-  }, [edits, setEdits, layers, mapView, sampleToDelete]);
-
-  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
-  useEffect(() => {
-    if (!mapView || popupActionsInitialized) return;
-
-    setPopupActionsInitialized(true);
-
-    const tempMapView = mapView as any;
-    tempMapView.popup._displayActionTextLimit = 1;
-
-    mapView.popup.on('trigger-action', (event) => {
-      // Workaround for target not being on the PopupTriggerActionEvent
-      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
-        setSampleToDelete(mapView.popup.selectedFeature);
-      }
-      if (event.action.id === 'table') {
-        setTablePanelExpanded(true);
-      }
-    });
-  }, [popupActionsInitialized, mapView, setTablePanelExpanded]);
 
   return null;
 }

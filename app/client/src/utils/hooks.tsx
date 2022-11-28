@@ -27,10 +27,10 @@ import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import PortalItem from '@arcgis/core/portal/PortalItem';
 import * as projection from '@arcgis/core/geometry/projection';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import Viewpoint from '@arcgis/core/Viewpoint';
-import * as watchUtils from '@arcgis/core/core/watchUtils';
 import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
@@ -910,11 +910,11 @@ export function useDynamicPopup() {
   // handles the sketch button clicks
   const handleClick = (
     ev: ReactMouseEvent<HTMLElement>,
-    feature: any,
+    features: any[],
     type: string,
     newLayer: LayerType | null = null,
   ) => {
-    if (!feature?.graphic) return;
+    if (features?.length > 0 && !features[0].graphic) return;
 
     // set the clicked button as active until the drawing is complete
     deactivateButtons();
@@ -922,6 +922,7 @@ export function useDynamicPopup() {
     const changes = new Collection<__esri.Graphic>();
 
     // find the layer
+    const feature = features[0];
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
@@ -1005,8 +1006,7 @@ export function useDynamicPopup() {
   const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
     const content = (
       <MapPopup
-        feature={feature}
-        selectedGraphicsIds={[feature.graphic.attributes.PERMANENT_IDENTIFIER]}
+        features={[feature]}
         edits={edits}
         layers={layers}
         fieldInfos={fieldInfos}
@@ -1650,19 +1650,30 @@ function useMapPositionStorage() {
   useEffect(() => {
     if (!mapView || !sceneView || watchExtentInitialized) return;
 
-    watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
-      if (!newVal) return;
-      writeToStorage(key, newVal.toJSON(), setOptions);
-    });
-
-    watchUtils.watch(
-      sceneView,
-      'extent',
-      (newVal, oldVal, propName, target) => {
-        if (!newVal) return;
-        writeToStorage(key, newVal.toJSON(), setOptions);
+    reactiveUtils.when(
+      () => mapView.stationary,
+      () => {
+        if (mapView && mapView.extent && mapView.stationary) {
+          writeToStorage(key, mapView.extent.toJSON(), setOptions);
+        }
       },
     );
+    reactiveUtils.watch(
+      () => sceneView.stationary,
+      () => {
+        if (sceneView && sceneView.extent && sceneView.stationary) {
+          writeToStorage(key, sceneView.extent.toJSON(), setOptions);
+        }
+      },
+    );
+    // watchUtils.watch(
+    //   sceneView,
+    //   'extent',
+    //   (newVal, oldVal, propName, target) => {
+    //     if (!newVal) return;
+    //     writeToStorage(key, newVal.toJSON(), setOptions);
+    //   },
+    // );
 
     setWatchExtentInitialized(true);
   }, [
@@ -1705,10 +1716,9 @@ function useHomeWidgetStorage() {
   useEffect(() => {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
-    watchUtils.watch(
-      homeWidget,
-      'viewpoint',
-      (newVal, oldVal, propName, target) => {
+    reactiveUtils.watch(
+      () => homeWidget.viewpoint,
+      () => {
         writeToStorage(key, homeWidget.viewpoint.toJSON(), setOptions);
       },
     );
