@@ -11,8 +11,8 @@ import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Layer from '@arcgis/core/layers/Layer';
 import Portal from '@arcgis/core/portal/Portal';
 import PortalItem from '@arcgis/core/portal/PortalItem';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
-import * as watchUtils from '@arcgis/core/core/watchUtils';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
@@ -474,9 +474,12 @@ function SearchPanel() {
   useEffect(() => {
     if (!mapView || watchViewInitialized) return;
 
-    const watchEvent = watchUtils.whenTrue(mapView, 'stationary', () => {
-      setCurrentExtent(mapView.extent);
-    });
+    const watchEvent = reactiveUtils.when(
+      () => mapView.stationary,
+      () => {
+        if (mapView.stationary) setCurrentExtent(mapView.extent);
+      },
+    );
 
     setWatchViewInitialized(true);
 
@@ -860,7 +863,7 @@ function ResultCard({ result }: ResultCardProps) {
 
   // removes the esri watch handle when the card is removed from the DOM.
   const [status, setStatus] = useState('');
-  const [watcher, setWatcher] = useState<__esri.WatchHandle | null>(null);
+  const [watcher, setWatcher] = useState<IHandle | null>(null);
   useEffect(() => {
     return function cleanup() {
       if (watcher) watcher.remove();
@@ -1754,12 +1757,11 @@ function ResultCard({ result }: ResultCardProps) {
       }),
     }).then((layer) => {
       // setup the watch event to see when the layer finishes loading
-      const watcher = watchUtils.watch(
-        layer,
-        'loadStatus',
-        (loadStatus: string) => {
+      const watcher = reactiveUtils.watch(
+        () => layer.loadStatus,
+        () => {
           // set the status based on the load status
-          if (loadStatus === 'loaded') {
+          if (layer.loadStatus === 'loaded') {
             setPortalLayers((portalLayers) => [
               ...portalLayers,
               { id: result.id, type: 'arcgis' },
@@ -1781,7 +1783,7 @@ function ResultCard({ result }: ResultCardProps) {
                 mapView.goTo(layer.fullExtent);
               }
             }
-          } else if (loadStatus === 'failed') {
+          } else if (layer.loadStatus === 'failed') {
             setStatus('error');
           }
         },
