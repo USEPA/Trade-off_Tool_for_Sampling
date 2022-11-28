@@ -360,7 +360,30 @@ function MapWidgets({ mapView }: Props) {
               ? firstGeometry
               : firstGeometry.centroid,
           content: contentContainer,
+          title: 'Edit Multiple',
         });
+
+        const deleteMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'delete-multi',
+        );
+        if (!deleteMultiAction) {
+          mapView.popup.actions.add({
+            title: 'Delete Samples',
+            id: 'delete-multi',
+            className: 'esri-icon-trash',
+          } as __esri.ActionButton);
+        }
+
+        const tableMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'table-multi',
+        );
+        if (!tableMultiAction) {
+          mapView.popup.actions.add({
+            title: 'View In Table',
+            id: 'table-multi',
+            className: 'esri-icon-table',
+          } as __esri.ActionButton);
+        }
       }
     }
   }, [
@@ -602,7 +625,7 @@ function MapWidgets({ mapView }: Props) {
             const layerId = graphic.layer?.id;
             const pointLayer: __esri.GraphicsLayer = (
               graphic.layer as any
-            ).parent.layers.find(
+            )?.parent?.layers?.find(
               (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
             );
             if (!pointLayer) return;
@@ -1007,6 +1030,107 @@ function MapWidgets({ mapView }: Props) {
       highlightGraphics(layer.pointsLayer, sampleUuids);
     });
   }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
+
+  const { setTablePanelExpanded } = useContext(NavigationContext);
+
+  const [samplesToDelete, setSamplesToDelete] = useState<
+    __esri.Graphic[] | null
+  >(null);
+  useEffect(() => {
+    if (!samplesToDelete || samplesToDelete.length === 0) return;
+
+    const changes = new Collection<__esri.Graphic>();
+    changes.addMany(samplesToDelete);
+
+    // find the layer
+    const layer = layers.find(
+      (layer) =>
+        layer.layerId === samplesToDelete[0].layer.id.replace('-points', ''),
+    );
+    if (!layer || layer.sketchLayer.type !== 'graphics') return;
+
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer,
+      type: 'delete',
+      changes,
+    });
+
+    setEdits(editsCopy);
+
+    const idsToDelete = samplesToDelete.map(
+      (sample) => sample.attributes.PERMANENT_IDENTIFIER,
+    );
+
+    // Find the original point graphic and remove it
+    let graphicsToRemove: __esri.Graphic[] = [];
+    layer.sketchLayer.graphics.forEach((polygonVersion) => {
+      if (
+        // samplesToDelete.attributes.PERMANENT_IDENTIFIER ===
+        idsToDelete.includes(polygonVersion.attributes.PERMANENT_IDENTIFIER)
+      ) {
+        graphicsToRemove.push(polygonVersion);
+      }
+    });
+    layer.sketchLayer.removeMany(graphicsToRemove);
+
+    if (!layer.pointsLayer) return;
+
+    // Find the original point graphic and remove it
+    graphicsToRemove = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (
+        // sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        idsToDelete.includes(pointVersion.attributes.PERMANENT_IDENTIFIER)
+      ) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
+
+    // close the popup
+    mapView?.popup.close();
+
+    setSamplesToDelete(null);
+  }, [edits, setEdits, layers, mapView, samplesToDelete]);
+
+  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sketchVM || popupActionsInitialized) return;
+
+    setPopupActionsInitialized(true);
+
+    const tempMapView = mapView as any;
+    tempMapView.popup._displayActionTextLimit = 1;
+
+    mapView.popup.on('trigger-action', (event) => {
+      // Workaround for target not being on the PopupTriggerActionEvent
+      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
+        setSamplesToDelete([mapView.popup.selectedFeature]);
+      }
+      if (event.action.id === 'delete-multi') {
+        setSamplesToDelete(sketchVM.updateGraphics.toArray());
+      }
+      if (['table', 'table-multi'].includes(event.action.id)) {
+        setTablePanelExpanded(true);
+      }
+    });
+
+    mapView.popup.watch('selectedFeature', (graphic) => {
+      if (mapView.popup.title !== 'Edit Multiple') {
+        const deleteMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'delete-multi',
+        );
+        if (deleteMultiAction) mapView.popup.actions.remove(deleteMultiAction);
+
+        const tableMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'table-multi',
+        );
+        if (tableMultiAction) mapView.popup.actions.remove(tableMultiAction);
+      }
+    });
+  }, [mapView, popupActionsInitialized, setTablePanelExpanded, sketchVM]);
 
   return null;
 }
