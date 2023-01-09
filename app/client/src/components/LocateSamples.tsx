@@ -1736,9 +1736,7 @@ function LocateSamples() {
                       )}
                       <button
                         css={iconButtonStyles}
-                        title={
-                          editingStatus === 'clone' ? 'Cancel' : 'Clone Layer'
-                        }
+                        title="Clone Layer"
                         onClick={(ev) => {
                           // get the name for the new layer
                           const newLayerName = getLayerName(
@@ -1834,16 +1832,8 @@ function LocateSamples() {
                           });
                         }}
                       >
-                        <i
-                          className={
-                            editingStatus === 'clone'
-                              ? 'fas fa-times'
-                              : 'fas fa-clone'
-                          }
-                        />
-                        <span className="sr-only">
-                          {editingStatus === 'clone' ? 'Cancel' : 'Clone Layer'}
-                        </span>
+                        <i className="fas fa-clone" />
+                        <span className="sr-only">Clone Layer</span>
                       </button>
                       <br />
                       <div />
