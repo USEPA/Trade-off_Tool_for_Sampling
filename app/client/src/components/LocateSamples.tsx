@@ -48,6 +48,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   convertToPoint,
+  createSampleLayer,
   findLayerInEdits,
   generateUUID,
   getCurrentDateTime,
@@ -59,7 +60,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
-import { createErrorObject } from 'utils/utils';
+import { createErrorObject, getLayerName } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -398,6 +399,11 @@ const lineSeparatorStyles = css`
 
 const radioLabelStyles = css`
   padding-left: 0.375rem;
+`;
+
+const verticalCenterTextStyles = css`
+  display: flex;
+  align-items: center;
 `;
 
 // --- components (LocateSamples) ---
@@ -1257,7 +1263,9 @@ function LocateSamples() {
           ) : (
             <Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="scenario-select-input">Specify Plan</label>
+                <div css={verticalCenterTextStyles}>
+                  <label htmlFor="scenario-select-input">Specify Plan</label>
+                </div>
                 <div>
                   {selectedScenario && (
                     <Fragment>
@@ -1424,9 +1432,11 @@ function LocateSamples() {
           {selectedScenario && !addScenarioVisible && !editScenarioVisible && (
             <Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="sampling-layer-select-input">
-                  Active Sampling Layer
-                </label>
+                <div css={verticalCenterTextStyles}>
+                  <label htmlFor="sampling-layer-select-input">
+                    Active Sampling Layer
+                  </label>
+                </div>
                 <div>
                   {sketchLayer && (
                     <Fragment>
@@ -1724,6 +1734,119 @@ function LocateSamples() {
                           <span className="sr-only">Link Layer</span>
                         </button>
                       )}
+                      <button
+                        css={iconButtonStyles}
+                        title={
+                          editingStatus === 'clone' ? 'Cancel' : 'Clone Layer'
+                        }
+                        onClick={(ev) => {
+                          // get the name for the new layer
+                          const newLayerName = getLayerName(
+                            layers,
+                            sketchLayer.label,
+                          );
+
+                          // create the layer
+                          const tempLayer = createSampleLayer(
+                            newLayerName,
+                            sketchLayer.parentLayer,
+                          );
+                          if (
+                            !map ||
+                            sketchLayer.sketchLayer.type !== 'graphics' ||
+                            tempLayer.sketchLayer.type !== 'graphics' ||
+                            !tempLayer.pointsLayer ||
+                            tempLayer.pointsLayer.type !== 'graphics'
+                          )
+                            return;
+
+                          const clonedGraphics: __esri.Graphic[] = [];
+                          const clonedPointGraphics: __esri.Graphic[] = [];
+                          sketchLayer.sketchLayer.graphics.forEach(
+                            (graphic) => {
+                              const clonedGraphic = new Graphic({
+                                attributes: graphic.attributes,
+                                geometry: graphic.geometry,
+                                popupTemplate: graphic.popupTemplate,
+                                symbol: graphic.symbol,
+                              });
+                              clonedGraphics.push(clonedGraphic);
+
+                              clonedPointGraphics.push(
+                                convertToPoint(clonedGraphic),
+                              );
+                            },
+                          );
+
+                          tempLayer.sketchLayer.addMany(clonedGraphics);
+                          tempLayer.pointsLayer.addMany(clonedPointGraphics);
+
+                          // add the new layer to layers
+                          setLayers((layers) => {
+                            return [...layers, tempLayer];
+                          });
+
+                          // clone the active layer in edits
+                          // make a copy of the edits context variable
+                          let editsCopy = updateLayerEdits({
+                            changes: tempLayer.sketchLayer.graphics,
+                            edits,
+                            scenario: selectedScenario,
+                            layer: tempLayer,
+                            type: 'add',
+                          });
+                          setEdits(editsCopy);
+
+                          // add the layer to the scenario's group layer, a scenario is selected
+                          const groupLayer = map.layers.find(
+                            (layer) => layer.id === selectedScenario?.layerId,
+                          );
+                          if (groupLayer && groupLayer.type === 'group') {
+                            const tempGroupLayer =
+                              groupLayer as __esri.GroupLayer;
+                            tempGroupLayer.add(tempLayer.sketchLayer);
+                            if (tempLayer.pointsLayer) {
+                              tempGroupLayer.add(tempLayer.pointsLayer);
+                            }
+                          }
+
+                          // make the new layer the active sketch layer
+                          setSketchLayer(tempLayer);
+
+                          setSelectedScenario((selectedScenario) => {
+                            if (!selectedScenario) return selectedScenario;
+
+                            const scenario = editsCopy.edits.find(
+                              (edit) =>
+                                edit.type === 'scenario' &&
+                                edit.layerId === selectedScenario.layerId,
+                            ) as ScenarioEditsType;
+                            const newLayer = scenario.layers.find(
+                              (layer) => layer.layerId === tempLayer.layerId,
+                            );
+
+                            if (!newLayer) return selectedScenario;
+
+                            return {
+                              ...selectedScenario,
+                              layers: [...selectedScenario.layers, newLayer],
+                            };
+                          });
+                        }}
+                      >
+                        <i
+                          className={
+                            editingStatus === 'clone'
+                              ? 'fas fa-times'
+                              : 'fas fa-clone'
+                          }
+                        />
+                        <span className="sr-only">
+                          {editingStatus === 'clone' ? 'Cancel' : 'Clone Layer'}
+                        </span>
+                      </button>
+                      <br />
+                      <div />
                       <button
                         css={iconButtonStyles}
                         title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
