@@ -5,6 +5,7 @@ import { css } from '@emotion/react';
 import Collection from '@arcgis/core/core/Collection';
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import Graphic from '@arcgis/core/Graphic';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
@@ -48,6 +49,9 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   convertToPoint,
+  createLayer,
+  createSampleLayer,
+  deepCopyObject,
   findLayerInEdits,
   generateUUID,
   getCurrentDateTime,
@@ -59,7 +63,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
-import { createErrorObject } from 'utils/utils';
+import { createErrorObject, getLayerName, getScenarioName } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -398,6 +402,11 @@ const lineSeparatorStyles = css`
 
 const radioLabelStyles = css`
   padding-left: 0.375rem;
+`;
+
+const verticalCenterTextStyles = css`
+  display: flex;
+  align-items: center;
 `;
 
 // --- components (LocateSamples) ---
@@ -1257,7 +1266,9 @@ function LocateSamples() {
           ) : (
             <Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="scenario-select-input">Specify Plan</label>
+                <div css={verticalCenterTextStyles}>
+                  <label htmlFor="scenario-select-input">Specify Plan</label>
+                </div>
                 <div>
                   {selectedScenario && (
                     <Fragment>
@@ -1311,6 +1322,134 @@ function LocateSamples() {
                       >
                         <i className="fas fa-trash-alt" />
                         <span className="sr-only">Delete Plan</span>
+                      </button>
+                      <button
+                        css={iconButtonStyles}
+                        title="Clone Scenario"
+                        onClick={(ev) => {
+                          if (!map) return;
+
+                          // get the name for the new layer
+                          const newScenarioName = getScenarioName(
+                            edits,
+                            selectedScenario.label,
+                          );
+
+                          // get the edits from the selected scenario
+                          const selectedScenarioEdits = findLayerInEdits(
+                            edits.edits,
+                            selectedScenario.layerId,
+                          ).editsScenario;
+                          if (!selectedScenarioEdits) return;
+
+                          // copy the edits for that scenario
+                          const copiedScenario: ScenarioEditsType =
+                            deepCopyObject(selectedScenarioEdits);
+
+                          // find the selected group layer
+                          const selectedGroupLayer = map.layers.find(
+                            (layer) => layer.id === copiedScenario.layerId,
+                          );
+
+                          // create a new group layer for the cloned scenario
+                          const groupLayer = new GroupLayer({
+                            title: newScenarioName,
+                            visible: selectedGroupLayer.visible,
+                            listMode: selectedGroupLayer.listMode,
+                          });
+
+                          // update the name and id for the copied scenario
+                          copiedScenario.addedFrom = 'sketch';
+                          copiedScenario.editType = 'add';
+                          copiedScenario.hasContaminationRan = false;
+                          copiedScenario.id = -1;
+                          copiedScenario.label = newScenarioName;
+                          copiedScenario.layerId = groupLayer.id;
+                          copiedScenario.name = newScenarioName;
+                          copiedScenario.pointsId = -1;
+                          copiedScenario.portalId = '';
+                          copiedScenario.scenarioName = newScenarioName;
+                          copiedScenario.status = 'added';
+                          copiedScenario.value = groupLayer.id;
+
+                          // loop through and generate new uuids for layers/graphics
+                          const timestamp = getCurrentDateTime();
+                          copiedScenario.layers.forEach((layer) => {
+                            // update info for layer
+                            const layerUuid = generateUUID();
+                            layer.addedFrom = 'sketch';
+                            layer.editType = 'add';
+                            layer.hasContaminationRan = false;
+                            layer.id = -1;
+                            layer.layerId = layerUuid;
+                            layer.pointsId = -1;
+                            layer.portalId = '';
+                            layer.status = 'added';
+                            layer.uuid = layerUuid;
+
+                            // update info for combine adds, published, and updates
+                            const newAdds = [...layer.adds, ...layer.updates];
+                            layer.published.forEach((sample) => {
+                              const alreadyAdded =
+                                newAdds.findIndex(
+                                  (addedSample) =>
+                                    addedSample.attributes
+                                      .PERMANENT_IDENTIFIER ===
+                                    sample.attributes.PERMANENT_IDENTIFIER,
+                                ) > -1;
+                              if (!alreadyAdded) newAdds.push(sample);
+                            });
+                            layer.adds = newAdds;
+
+                            // update info for adds
+                            layer.adds.forEach((sample) => {
+                              const sampleUuid = generateUUID();
+                              sample.attributes.CREATEDDATE = timestamp;
+                              sample.attributes.DECISIONUNITUUID = layerUuid;
+                              sample.attributes.GLOBALID = sampleUuid;
+                              sample.attributes.OBJECTID = -1;
+                              sample.attributes.PERMANENT_IDENTIFIER =
+                                sampleUuid;
+                              sample.attributes.UPDATEDDATE = timestamp;
+                            });
+
+                            // clear out deletes, updates, and published
+                            layer.deletes = [];
+                            layer.updates = [];
+                            layer.published = [];
+                          });
+
+                          const newLayers: LayerType[] = [];
+                          const scenarioLayers: __esri.GraphicsLayer[] = [];
+                          copiedScenario.layers.forEach((layer) => {
+                            scenarioLayers.push(
+                              ...createLayer({
+                                defaultSymbols,
+                                editsLayer: layer,
+                                getPopupTemplate,
+                                newLayers,
+                                parentLayer: groupLayer,
+                              }),
+                            );
+                          });
+                          groupLayer.addMany(scenarioLayers);
+                          map.add(groupLayer);
+
+                          setLayers((layers) => {
+                            return [...layers, ...newLayers];
+                          });
+
+                          const fullCopyEdits: EditsType =
+                            deepCopyObject(edits);
+                          fullCopyEdits.edits.push(copiedScenario);
+
+                          setEdits(fullCopyEdits);
+
+                          setSelectedScenario(copiedScenario);
+                        }}
+                      >
+                        <i className="fas fa-clone" />
+                        <span className="sr-only">Clone Scenario</span>
                       </button>
                       {selectedScenario.status !== 'published' && (
                         <button
@@ -1424,9 +1563,11 @@ function LocateSamples() {
           {selectedScenario && !addScenarioVisible && !editScenarioVisible && (
             <Fragment>
               <div css={iconButtonContainerStyles}>
-                <label htmlFor="sampling-layer-select-input">
-                  Active Sampling Layer
-                </label>
+                <div css={verticalCenterTextStyles}>
+                  <label htmlFor="sampling-layer-select-input">
+                    Active Sampling Layer
+                  </label>
+                </div>
                 <div>
                   {sketchLayer && (
                     <Fragment>
@@ -1724,6 +1865,109 @@ function LocateSamples() {
                           <span className="sr-only">Link Layer</span>
                         </button>
                       )}
+                      <button
+                        css={iconButtonStyles}
+                        title="Clone Layer"
+                        onClick={(ev) => {
+                          // get the name for the new layer
+                          const newLayerName = getLayerName(
+                            layers,
+                            sketchLayer.label,
+                          );
+
+                          // create the layer
+                          const tempLayer = createSampleLayer(
+                            newLayerName,
+                            sketchLayer.parentLayer,
+                          );
+                          if (
+                            !map ||
+                            sketchLayer.sketchLayer.type !== 'graphics' ||
+                            tempLayer.sketchLayer.type !== 'graphics' ||
+                            !tempLayer.pointsLayer ||
+                            tempLayer.pointsLayer.type !== 'graphics'
+                          )
+                            return;
+
+                          const clonedGraphics: __esri.Graphic[] = [];
+                          const clonedPointGraphics: __esri.Graphic[] = [];
+                          sketchLayer.sketchLayer.graphics.forEach(
+                            (graphic) => {
+                              const clonedGraphic = new Graphic({
+                                attributes: graphic.attributes,
+                                geometry: graphic.geometry,
+                                popupTemplate: graphic.popupTemplate,
+                                symbol: graphic.symbol,
+                              });
+                              clonedGraphics.push(clonedGraphic);
+
+                              clonedPointGraphics.push(
+                                convertToPoint(clonedGraphic),
+                              );
+                            },
+                          );
+
+                          tempLayer.sketchLayer.addMany(clonedGraphics);
+                          tempLayer.pointsLayer.addMany(clonedPointGraphics);
+
+                          // add the new layer to layers
+                          setLayers((layers) => {
+                            return [...layers, tempLayer];
+                          });
+
+                          // clone the active layer in edits
+                          // make a copy of the edits context variable
+                          let editsCopy = updateLayerEdits({
+                            changes: tempLayer.sketchLayer.graphics,
+                            edits,
+                            scenario: selectedScenario,
+                            layer: tempLayer,
+                            type: 'add',
+                          });
+                          setEdits(editsCopy);
+
+                          // add the layer to the scenario's group layer, a scenario is selected
+                          const groupLayer = map.layers.find(
+                            (layer) => layer.id === selectedScenario?.layerId,
+                          );
+                          if (groupLayer && groupLayer.type === 'group') {
+                            const tempGroupLayer =
+                              groupLayer as __esri.GroupLayer;
+                            tempGroupLayer.add(tempLayer.sketchLayer);
+                            if (tempLayer.pointsLayer) {
+                              tempGroupLayer.add(tempLayer.pointsLayer);
+                            }
+                          }
+
+                          // make the new layer the active sketch layer
+                          setSketchLayer(tempLayer);
+
+                          setSelectedScenario((selectedScenario) => {
+                            if (!selectedScenario) return selectedScenario;
+
+                            const scenario = editsCopy.edits.find(
+                              (edit) =>
+                                edit.type === 'scenario' &&
+                                edit.layerId === selectedScenario.layerId,
+                            ) as ScenarioEditsType;
+                            const newLayer = scenario.layers.find(
+                              (layer) => layer.layerId === tempLayer.layerId,
+                            );
+
+                            if (!newLayer) return selectedScenario;
+
+                            return {
+                              ...selectedScenario,
+                              layers: [...selectedScenario.layers, newLayer],
+                            };
+                          });
+                        }}
+                      >
+                        <i className="fas fa-clone" />
+                        <span className="sr-only">Clone Layer</span>
+                      </button>
+                      <br />
+                      <div />
                       <button
                         css={iconButtonStyles}
                         title={editLayerVisible ? 'Cancel' : 'Edit Layer'}

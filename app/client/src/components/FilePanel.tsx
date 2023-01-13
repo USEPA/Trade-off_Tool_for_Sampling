@@ -43,7 +43,7 @@ import {
   getPointSymbol,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { chunkArray, createErrorObject } from 'utils/utils';
+import { chunkArray, createErrorObject, getLayerName } from 'utils/utils';
 // types
 import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
@@ -62,29 +62,6 @@ import {
   userCanceledMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
-
-/**
- * Determines if the desired name has already been used. If it has
- * it appends in index to the end (i.e. '<desiredName> (2)').
- */
-function getLayerName(layers: LayerType[], desiredName: string) {
-  // get a list of names in use
-  let usedNames: string[] = [];
-  layers.forEach((layer) => {
-    usedNames.push(layer.label);
-  });
-
-  // Find a name where there is not a collision.
-  // Most of the time this loop will be skipped.
-  let duplicateCount = 0;
-  let newName = desiredName;
-  while (usedNames.includes(newName)) {
-    duplicateCount += 1;
-    newName = `${desiredName} (${duplicateCount})`;
-  }
-
-  return newName;
-}
 
 const layerOptions: LayerSelectType[] = [
   { value: 'Contamination Map', label: 'Contamination Map' },
