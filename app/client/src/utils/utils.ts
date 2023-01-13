@@ -1,3 +1,4 @@
+import { EditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 
 /**
@@ -84,14 +85,37 @@ export function escapeRegex(str: string) {
 }
 
 /**
- * Determines if the desired name has already been used. If it has
- * it appends in index to the end (i.e. '<desiredName> (2)').
+ * Determines if the desired name has already been used as a layer name.
+ * If it has it appends in index to the end (i.e. '<desiredName> (2)').
  */
 export function getLayerName(layers: LayerType[], desiredName: string) {
   // get a list of names in use
   let usedNames: string[] = [];
   layers.forEach((layer) => {
     usedNames.push(layer.label);
+  });
+
+  // Find a name where there is not a collision.
+  // Most of the time this loop will be skipped.
+  let duplicateCount = 0;
+  let newName = desiredName;
+  while (usedNames.includes(newName)) {
+    duplicateCount += 1;
+    newName = `${desiredName} (${duplicateCount})`;
+  }
+
+  return newName;
+}
+
+/**
+ * Determines if the desired name has already been used as a scenario name.
+ * If it has it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+export function getScenarioName(edits: EditsType, desiredName: string) {
+  // get a list of names in use
+  let usedNames: string[] = [];
+  edits.edits.forEach((scenario) => {
+    usedNames.push(scenario.label);
   });
 
   // Find a name where there is not a collision.

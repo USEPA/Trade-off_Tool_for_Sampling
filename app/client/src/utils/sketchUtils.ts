@@ -3,10 +3,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import Polygon from '@arcgis/core/geometry/Polygon';
 // types
 import {
   EditsType,
   EditType,
+  FeatureEditsType,
   LayerEditsType,
   ScenarioEditsType,
 } from 'types/Edits';
@@ -856,4 +858,136 @@ export function convertToPoint(polygon: __esri.Graphic) {
     popupTemplate: polygon.popupTemplate,
     symbol,
   });
+}
+
+/**
+ * Creates GraphicsLayers from the provided editsLayer. Layers
+ * will be added to the newLayers. Layers will be added to the
+ * parentLayer, if a parentLayer is provided.
+ *
+ * @param defaultSymbols Symbols for each sample type
+ * @param editsLayer Edits Layer to create graphics layers from
+ * @param getPopupTemplate Function for building popup templates
+ * @param newLayers Array of layers to add the new layer to
+ * @param parentLayer (Optional) The parent layer of the new layers
+ * @returns
+ */
+export function createLayer({
+  defaultSymbols,
+  editsLayer,
+  getPopupTemplate,
+  newLayers,
+  parentLayer = null,
+}: {
+  defaultSymbols: DefaultSymbolsType;
+  editsLayer: LayerEditsType;
+  getPopupTemplate: Function;
+  newLayers: LayerType[];
+  parentLayer?: __esri.GroupLayer | null;
+}) {
+  const sketchLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid,
+    visible: editsLayer.visible,
+    listMode: editsLayer.listMode,
+  });
+  const pointsLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid + '-points',
+    visible: false,
+    listMode: 'hide',
+  });
+
+  const popupTemplate = getPopupTemplate(
+    editsLayer.layerType,
+    editsLayer.hasContaminationRan,
+  );
+  const polyFeatures: __esri.Graphic[] = [];
+  const pointFeatures: __esri.Graphic[] = [];
+  const idsUsed: string[] = [];
+  const displayedFeatures: FeatureEditsType[] = [];
+
+  // push the items from the adds array
+  editsLayer.adds.forEach((item) => {
+    displayedFeatures.push(item);
+    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+  });
+
+  // push the items from the updates array
+  editsLayer.updates.forEach((item) => {
+    displayedFeatures.push(item);
+    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+  });
+
+  // only push the ids of the deletes array to prevent drawing deleted items
+  editsLayer.deletes.forEach((item) => {
+    idsUsed.push(item.PERMANENT_IDENTIFIER);
+  });
+
+  // add graphics from AGOL that haven't been changed
+  editsLayer.published.forEach((item) => {
+    // don't re-add graphics that have already been added above
+    if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
+
+    displayedFeatures.push(item);
+  });
+
+  // add graphics to the map
+  displayedFeatures.forEach((graphic) => {
+    let layerType = editsLayer.layerType;
+    if (layerType === 'VSP') layerType = 'Samples';
+    if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+    // set the symbol styles based on sample/layer type
+    let symbol = defaultSymbols.symbols[layerType] as any;
+    if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+      symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+    }
+
+    const poly = new Graphic({
+      attributes: { ...graphic.attributes },
+      popupTemplate,
+      symbol,
+      geometry: new Polygon({
+        spatialReference: {
+          wkid: 3857,
+        },
+        rings: graphic.geometry.rings,
+      }),
+    });
+
+    polyFeatures.push(poly);
+    pointFeatures.push(convertToPoint(poly));
+  });
+  sketchLayer.addMany(polyFeatures);
+  if (editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP') {
+    pointsLayer.addMany(pointFeatures);
+  }
+
+  newLayers.push({
+    id: editsLayer.id,
+    pointsId: editsLayer.pointsId,
+    uuid: editsLayer.uuid,
+    layerId: editsLayer.layerId,
+    portalId: editsLayer.portalId,
+    value: editsLayer.label,
+    name: editsLayer.name,
+    label: editsLayer.label,
+    layerType: editsLayer.layerType,
+    editType: 'add',
+    addedFrom: editsLayer.addedFrom,
+    status: editsLayer.status,
+    visible: editsLayer.visible,
+    listMode: editsLayer.listMode,
+    sort: editsLayer.sort,
+    geometryType: 'esriGeometryPolygon',
+    sketchLayer,
+    pointsLayer:
+      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+        ? pointsLayer
+        : null,
+    parentLayer,
+  });
+
+  return [sketchLayer, pointsLayer];
 }

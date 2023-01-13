@@ -5,6 +5,7 @@ import { css } from '@emotion/react';
 import Collection from '@arcgis/core/core/Collection';
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import Graphic from '@arcgis/core/Graphic';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
@@ -48,7 +49,9 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   convertToPoint,
+  createLayer,
   createSampleLayer,
+  deepCopyObject,
   findLayerInEdits,
   generateUUID,
   getCurrentDateTime,
@@ -60,7 +63,7 @@ import {
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
-import { createErrorObject, getLayerName } from 'utils/utils';
+import { createErrorObject, getLayerName, getScenarioName } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
 
@@ -1319,6 +1322,134 @@ function LocateSamples() {
                       >
                         <i className="fas fa-trash-alt" />
                         <span className="sr-only">Delete Plan</span>
+                      </button>
+                      <button
+                        css={iconButtonStyles}
+                        title="Clone Scenario"
+                        onClick={(ev) => {
+                          if (!map) return;
+
+                          // get the name for the new layer
+                          const newScenarioName = getScenarioName(
+                            edits,
+                            selectedScenario.label,
+                          );
+
+                          // get the edits from the selected scenario
+                          const selectedScenarioEdits = findLayerInEdits(
+                            edits.edits,
+                            selectedScenario.layerId,
+                          ).editsScenario;
+                          if (!selectedScenarioEdits) return;
+
+                          // copy the edits for that scenario
+                          const copiedScenario: ScenarioEditsType =
+                            deepCopyObject(selectedScenarioEdits);
+
+                          // find the selected group layer
+                          const selectedGroupLayer = map.layers.find(
+                            (layer) => layer.id === copiedScenario.layerId,
+                          );
+
+                          // create a new group layer for the cloned scenario
+                          const groupLayer = new GroupLayer({
+                            title: newScenarioName,
+                            visible: selectedGroupLayer.visible,
+                            listMode: selectedGroupLayer.listMode,
+                          });
+
+                          // update the name and id for the copied scenario
+                          copiedScenario.addedFrom = 'sketch';
+                          copiedScenario.editType = 'add';
+                          copiedScenario.hasContaminationRan = false;
+                          copiedScenario.id = -1;
+                          copiedScenario.label = newScenarioName;
+                          copiedScenario.layerId = groupLayer.id;
+                          copiedScenario.name = newScenarioName;
+                          copiedScenario.pointsId = -1;
+                          copiedScenario.portalId = '';
+                          copiedScenario.scenarioName = newScenarioName;
+                          copiedScenario.status = 'added';
+                          copiedScenario.value = groupLayer.id;
+
+                          // loop through and generate new uuids for layers/graphics
+                          const timestamp = getCurrentDateTime();
+                          copiedScenario.layers.forEach((layer) => {
+                            // update info for layer
+                            const layerUuid = generateUUID();
+                            layer.addedFrom = 'sketch';
+                            layer.editType = 'add';
+                            layer.hasContaminationRan = false;
+                            layer.id = -1;
+                            layer.layerId = layerUuid;
+                            layer.pointsId = -1;
+                            layer.portalId = '';
+                            layer.status = 'added';
+                            layer.uuid = layerUuid;
+
+                            // update info for combine adds, published, and updates
+                            const newAdds = [...layer.adds, ...layer.updates];
+                            layer.published.forEach((sample) => {
+                              const alreadyAdded =
+                                newAdds.findIndex(
+                                  (addedSample) =>
+                                    addedSample.attributes
+                                      .PERMANENT_IDENTIFIER ===
+                                    sample.attributes.PERMANENT_IDENTIFIER,
+                                ) > -1;
+                              if (!alreadyAdded) newAdds.push(sample);
+                            });
+                            layer.adds = newAdds;
+
+                            // update info for adds
+                            layer.adds.forEach((sample) => {
+                              const sampleUuid = generateUUID();
+                              sample.attributes.CREATEDDATE = timestamp;
+                              sample.attributes.DECISIONUNITUUID = layerUuid;
+                              sample.attributes.GLOBALID = sampleUuid;
+                              sample.attributes.OBJECTID = -1;
+                              sample.attributes.PERMANENT_IDENTIFIER =
+                                sampleUuid;
+                              sample.attributes.UPDATEDDATE = timestamp;
+                            });
+
+                            // clear out deletes, updates, and published
+                            layer.deletes = [];
+                            layer.updates = [];
+                            layer.published = [];
+                          });
+
+                          const newLayers: LayerType[] = [];
+                          const scenarioLayers: __esri.GraphicsLayer[] = [];
+                          copiedScenario.layers.forEach((layer) => {
+                            scenarioLayers.push(
+                              ...createLayer({
+                                defaultSymbols,
+                                editsLayer: layer,
+                                getPopupTemplate,
+                                newLayers,
+                                parentLayer: groupLayer,
+                              }),
+                            );
+                          });
+                          groupLayer.addMany(scenarioLayers);
+                          map.add(groupLayer);
+
+                          setLayers((layers) => {
+                            return [...layers, ...newLayers];
+                          });
+
+                          const fullCopyEdits: EditsType =
+                            deepCopyObject(edits);
+                          fullCopyEdits.edits.push(copiedScenario);
+
+                          setEdits(fullCopyEdits);
+
+                          setSelectedScenario(copiedScenario);
+                        }}
+                      >
+                        <i className="fas fa-clone" />
+                        <span className="sr-only">Clone Scenario</span>
                       </button>
                       {selectedScenario.status !== 'published' && (
                         <button
