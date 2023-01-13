@@ -85,26 +85,47 @@ export function escapeRegex(str: string) {
 }
 
 /**
+ * Gets the number from the last parentheses. If the value
+ * is not a number NaN is returned.
+ *
+ * @param str String to get number in last parentheses
+ * @returns
+ */
+function getNumberFromParen(str: string) {
+  const splitLabel = str.split('(');
+  return parseInt(splitLabel[splitLabel.length - 1].replace(')', ''));
+}
+
+/**
  * Determines if the desired name has already been used as a layer name.
  * If it has it appends in index to the end (i.e. '<desiredName> (2)').
  */
 export function getLayerName(layers: LayerType[], desiredName: string) {
+  const numInDesiredName = getNumberFromParen(desiredName);
+  let newName =
+    numInDesiredName || numInDesiredName === 0
+      ? desiredName.replace(`(${numInDesiredName})`, '').trim()
+      : desiredName;
+
   // get a list of names in use
-  let usedNames: string[] = [];
+  let duplicateCount = 0;
   layers.forEach((layer) => {
-    usedNames.push(layer.label);
+    // remove any counts from the end of the name to ge an accurate count
+    // for the new name
+    const numInParen = getNumberFromParen(layer.label);
+    const possibleName =
+      numInParen || numInParen === 0
+        ? layer.label.replaceAll(`(${numInParen})`, '').trim()
+        : layer.label;
+
+    if (possibleName === newName) duplicateCount += 1;
   });
 
-  // Find a name where there is not a collision.
-  // Most of the time this loop will be skipped.
-  let duplicateCount = 0;
-  let newName = desiredName;
-  while (usedNames.includes(newName)) {
-    duplicateCount += 1;
-    newName = `${desiredName} (${duplicateCount})`;
-  }
-
-  return newName;
+  if (duplicateCount === 0) return newName;
+  else
+    return `${newName} (${
+      duplicateCount === numInDesiredName ? duplicateCount + 1 : duplicateCount
+    })`;
 }
 
 /**
@@ -112,20 +133,29 @@ export function getLayerName(layers: LayerType[], desiredName: string) {
  * If it has it appends in index to the end (i.e. '<desiredName> (2)').
  */
 export function getScenarioName(edits: EditsType, desiredName: string) {
+  const numInDesiredName = getNumberFromParen(desiredName);
+  let newName =
+    numInDesiredName || numInDesiredName === 0
+      ? desiredName.replace(`(${numInDesiredName})`, '').trim()
+      : desiredName;
+
   // get a list of names in use
-  let usedNames: string[] = [];
+  let duplicateCount = 0;
   edits.edits.forEach((scenario) => {
-    usedNames.push(scenario.label);
+    // remove any counts from the end of the name to ge an accurate count
+    // for the new name
+    const numInParen = getNumberFromParen(scenario.label);
+    const possibleName =
+      numInParen || numInParen === 0
+        ? scenario.label.replaceAll(`(${numInParen})`, '').trim()
+        : scenario.label;
+
+    if (possibleName === newName) duplicateCount += 1;
   });
 
-  // Find a name where there is not a collision.
-  // Most of the time this loop will be skipped.
-  let duplicateCount = 0;
-  let newName = desiredName;
-  while (usedNames.includes(newName)) {
-    duplicateCount += 1;
-    newName = `${desiredName} (${duplicateCount})`;
-  }
-
-  return newName;
+  if (duplicateCount === 0) return newName;
+  else
+    return `${newName} (${
+      duplicateCount === numInDesiredName ? duplicateCount + 1 : duplicateCount
+    })`;
 }
