@@ -54,13 +54,6 @@ jobs:
             cf auth "$CF_USER_DEV" "$CF_PASSWORD_DEV"
             cf target -o "$CF_ORG" -s "$CF_SPACE_DEV"
       - run:
-          name: Deploy application to Cloud.gov
-          command: |
-            cd server
-            cf push --no-start $APP_NAME-green -f ../manifest-dev.yml -p . -n $APP_NAME-green 
-            cf set-env $APP_NAME-green TOTS_BASIC_USER_NAME "$TOTS_BASIC_USER_NAME"
-            cf set-env $APP_NAME-green TOTS_BASIC_USER_PWD "$TOTS_BASIC_USER_PWD"
-      - run:
           name: Start application on Cloud.gov and clean routes
           command: |
             cf start $APP_NAME-green
@@ -76,13 +69,12 @@ jobs:
           from: server/app/public/data
           to: "s3://$CF_DEV_S3_BUCKET_ID/data"
       - run:
-          name: Re-route green to blue and then remove blue
+          name: Deploy application to Cloud.gov
           command: |
-            cf map-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME
-            cf unmap-route $APP_NAME $APP_DOMAIN -n $APP_NAME
-            cf stop $APP_NAME
-            cf delete $APP_NAME -f
-            cf rename $APP_NAME-green $APP_NAME
+            cd server
+            cf push $APP_NAME --strategy rolling -f ../manifest-dev.yml -p . -t 180
+            cf set-env $APP_NAME-green TOTS_BASIC_USER_NAME "$TOTS_BASIC_USER_NAME"
+            cf set-env $APP_NAME-green TOTS_BASIC_USER_PWD "$TOTS_BASIC_USER_PWD"
 
   deploy-staging:
     <<: *set-container
