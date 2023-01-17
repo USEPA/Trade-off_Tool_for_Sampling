@@ -53,12 +53,6 @@ jobs:
             cf api https://api.fr.cloud.gov  
             cf auth "$CF_USER_DEV" "$CF_PASSWORD_DEV"
             cf target -o "$CF_ORG" -s "$CF_SPACE_DEV"
-      - run:
-          name: Start application on Cloud.gov and clean routes
-          command: |
-            cf start $APP_NAME-green
-            cf unmap-route $APP_NAME-green $APP_DOMAIN -n $APP_NAME-green
-            cf delete-route app.cloud.gov -n $APP_NAME-green -f
       - aws-s3/sync:
           arguments: |
             --acl public-read \
