@@ -2,24 +2,34 @@
 
 import {
   Dispatch,
+  MouseEvent as ReactMouseEvent,
   SetStateAction,
   useCallback,
   useContext,
   useEffect,
   useState,
 } from 'react';
+import { render } from 'react-dom';
+import Collection from '@arcgis/core/core/Collection';
 import Handles from '@arcgis/core/core/Handles';
 import Home from '@arcgis/core/widgets/Home';
 import Locate from '@arcgis/core/widgets/Locate';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
+import Sketch from '@arcgis/core/widgets/Sketch';
 import SketchViewModel from '@arcgis/core/widgets/Sketch/SketchViewModel';
+// components
+import MapPopup from 'components/MapPopup';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
+import { EditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
+import { SelectedSampleType } from 'config/sampleAttributes';
 // utils
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -125,9 +135,11 @@ function MapWidgets({ mapView }: Props) {
     layers,
     setLayers,
     map,
+    setSelectedSampleIds,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
+  const layerProps = useLayerProps();
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
@@ -141,6 +153,250 @@ function MapWidgets({ mapView }: Props) {
 
     setHomeWidget(widget);
   }, [mapView, homeWidget, setHomeWidget]);
+
+  // Creates the sketch widget used for selecting/moving/deleting samples
+  // Also creates an event handler for keeping track of changes
+  const [sketchWidget, setSketchWidget] = useState<Sketch | null>(null);
+  const [updateGraphics, setUpdateGraphics] = useState<__esri.Graphic[]>([]);
+  useEffect(() => {
+    if (!mapView || !sketchLayer || !sketchVM || sketchWidget) return;
+
+    const widget = new Sketch({
+      availableCreateTools: [],
+      layer: sketchLayer.sketchLayer,
+      view: mapView,
+      viewModel: sketchVM,
+      visibleElements: {
+        settingsMenu: false,
+        undoRedoMenu: false,
+      },
+    });
+
+    reactiveUtils.watch(
+      () => widget.updateGraphics.length,
+      () => {
+        setUpdateGraphics(widget.updateGraphics.toArray());
+      },
+    );
+
+    mapView.ui.add(widget, { position: 'top-right', index: 0 });
+
+    setSketchWidget(widget);
+  }, [mapView, sketchLayer, sketchVM, sketchWidget]);
+
+  // Opens a popup for when multiple samples are selected at once
+  useEffect(() => {
+    if (!mapView || !sketchLayer || !sketchWidget) return;
+    if (layerProps.status !== 'success') return;
+
+    const handleClick = (
+      ev: ReactMouseEvent<HTMLElement>,
+      features: any[],
+      type: string,
+      newLayer: LayerType | null = null,
+    ) => {
+      if (features?.length > 0 && !features[0].graphic) return;
+
+      // set the clicked button as active until the drawing is complete
+      deactivateButtons();
+
+      let editsCopy: EditsType = edits;
+
+      // find the layer
+      features.forEach((feature) => {
+        const changes = new Collection<__esri.Graphic>();
+        const tempGraphic = feature.graphic;
+        const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
+        const tempSketchLayer = layers.find(
+          (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
+        );
+        if (
+          !tempSketchLayer ||
+          tempSketchLayer.sketchLayer.type !== 'graphics'
+        ) {
+          return;
+        }
+
+        // find the graphic
+        const graphic: __esri.Graphic =
+          tempSketchLayer.sketchLayer.graphics.find(
+            (item) =>
+              item.attributes.PERMANENT_IDENTIFIER ===
+              tempGraphic.attributes.PERMANENT_IDENTIFIER,
+          );
+        graphic.attributes = tempGraphic.attributes;
+
+        const pointGraphic: __esri.Graphic | undefined =
+          tempSketchLayer.pointsLayer?.graphics.find(
+            (item) =>
+              item.attributes.PERMANENT_IDENTIFIER ===
+              graphic.attributes.PERMANENT_IDENTIFIER,
+          );
+        if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+        if (type === 'Save') {
+          changes.add(graphic);
+
+          // make a copy of the edits context variable
+          editsCopy = updateLayerEdits({
+            edits: editsCopy,
+            layer: tempSketchLayer,
+            type: 'update',
+            changes,
+          });
+        }
+        if (type === 'Move' && newLayer) {
+          // get items from sketch view model
+          graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+          graphic.attributes.DECISIONUNIT = newLayer.label;
+          changes.add(graphic);
+
+          // add the graphics to move to the new layer
+          editsCopy = updateLayerEdits({
+            edits: editsCopy,
+            layer: newLayer,
+            type: 'add',
+            changes,
+          });
+
+          // remove the graphics from the old layer
+          editsCopy = updateLayerEdits({
+            edits: editsCopy,
+            layer: tempSketchLayer,
+            type: 'delete',
+            changes,
+          });
+
+          // move between layers on map
+          const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
+          tempNewLayer.addMany(changes.toArray());
+          tempSketchLayer.sketchLayer.remove(graphic);
+
+          feature.graphic.layer = newLayer.sketchLayer;
+
+          if (pointGraphic && tempSketchLayer.pointsLayer) {
+            pointGraphic.attributes.DECISIONUNIT = newLayer.label;
+            pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+            const tempNewPointsLayer =
+              newLayer.pointsLayer as __esri.GraphicsLayer;
+            tempNewPointsLayer.add(pointGraphic);
+            tempSketchLayer.pointsLayer.remove(pointGraphic);
+          }
+        }
+      });
+
+      setEdits(editsCopy);
+    };
+
+    const newSelectedSampleIds = updateGraphics.map((feature) => {
+      return {
+        PERMANENT_IDENTIFIER: feature.attributes.PERMANENT_IDENTIFIER,
+        DECISIONUNITUUID: feature.attributes.DECISIONUNITUUID,
+        selection_method: 'sample-click',
+      } as SelectedSampleType;
+    });
+    setSelectedSampleIds(newSelectedSampleIds);
+
+    // get all of the graphics within the click except for those associated
+    // with the sketch tools
+    const popupItems: __esri.Graphic[] = [];
+    const newIds: string[] = [];
+    sketchWidget.updateGraphics.forEach((graphic: any) => {
+      popupItems.push(graphic);
+
+      // get a list of graphic ids
+      if (graphic.attributes?.PERMANENT_IDENTIFIER) {
+        newIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    // get list of graphic ids currently in the popup
+    const curIds: string[] = [];
+    mapView.popup.features.forEach((feature: any) => {
+      if (feature.attributes?.PERMANENT_IDENTIFIER) {
+        curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    // sort the id arrays
+    newIds.sort();
+    curIds.sort();
+
+    // open the popup
+    if (popupItems.length > 0 && curIds.toString() !== newIds.toString()) {
+      const firstGeometry = popupItems[0].geometry as any;
+      if (popupItems.length === 1) {
+        mapView.popup.open({
+          location:
+            firstGeometry.type === 'point'
+              ? firstGeometry
+              : firstGeometry.centroid,
+          features: popupItems,
+        });
+      } else {
+        const content = (
+          <MapPopup
+            features={popupItems.map((item) => {
+              return {
+                graphic: item,
+              };
+            })}
+            edits={edits}
+            layers={layers}
+            fieldInfos={[]}
+            layerProps={layerProps}
+            onClick={handleClick}
+          />
+        );
+
+        // wrap the content for esri
+        const contentContainer = document.createElement('div');
+        render(content, contentContainer);
+
+        mapView.popup.open({
+          location:
+            firstGeometry.type === 'point'
+              ? firstGeometry
+              : firstGeometry.centroid,
+          content: contentContainer,
+          title: 'Edit Multiple',
+        });
+
+        const deleteMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'delete-multi',
+        );
+        if (!deleteMultiAction) {
+          mapView.popup.actions.add({
+            title: 'Delete Samples',
+            id: 'delete-multi',
+            className: 'esri-icon-trash',
+          } as __esri.ActionButton);
+        }
+
+        const tableMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'table-multi',
+        );
+        if (!tableMultiAction) {
+          mapView.popup.actions.add({
+            title: 'View In Table',
+            id: 'table-multi',
+            className: 'esri-icon-table',
+          } as __esri.ActionButton);
+        }
+      }
+    }
+  }, [
+    edits,
+    layerProps,
+    layers,
+    mapView,
+    setEdits,
+    setSelectedSampleIds,
+    sketchLayer,
+    sketchWidget,
+    updateGraphics,
+  ]);
 
   // Creates and adds the scale bar widget to the map
   const [scaleBar, setScaleBar] = useState<__esri.ScaleBar | null>(null);
@@ -225,11 +481,12 @@ function MapWidgets({ mapView }: Props) {
       sketchLayer?.sketchLayer?.type === 'graphics'
     ) {
       sketchVM.layer = sketchLayer.sketchLayer;
+      if (sketchWidget) sketchWidget.layer = sketchLayer.sketchLayer;
     } else {
       // disable the sketch vm for any panel other than locateSamples
       sketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
-  }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
+  }, [currentPanel, defaultSymbols, sketchWidget, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the aoiSketchViewModel
   useEffect(() => {
@@ -368,7 +625,7 @@ function MapWidgets({ mapView }: Props) {
             const layerId = graphic.layer?.id;
             const pointLayer: __esri.GraphicsLayer = (
               graphic.layer as any
-            ).parent.layers.find(
+            )?.parent?.layers?.find(
               (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
             );
             if (!pointLayer) return;
@@ -650,7 +907,8 @@ function MapWidgets({ mapView }: Props) {
     }
 
     sketchVM.layer = sketchLayer.sketchLayer;
-  }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer]);
+    if (sketchWidget) sketchWidget.layer = sketchLayer.sketchLayer;
+  }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer, sketchWidget]);
 
   // Updates the popupTemplates when trainingMode is toggled on/off
   useEffect(() => {
@@ -772,6 +1030,107 @@ function MapWidgets({ mapView }: Props) {
       highlightGraphics(layer.pointsLayer, sampleUuids);
     });
   }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
+
+  const { setTablePanelExpanded } = useContext(NavigationContext);
+
+  const [samplesToDelete, setSamplesToDelete] = useState<
+    __esri.Graphic[] | null
+  >(null);
+  useEffect(() => {
+    if (!samplesToDelete || samplesToDelete.length === 0) return;
+
+    const changes = new Collection<__esri.Graphic>();
+    changes.addMany(samplesToDelete);
+
+    // find the layer
+    const layer = layers.find(
+      (layer) =>
+        layer.layerId === samplesToDelete[0].layer.id.replace('-points', ''),
+    );
+    if (!layer || layer.sketchLayer.type !== 'graphics') return;
+
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer,
+      type: 'delete',
+      changes,
+    });
+
+    setEdits(editsCopy);
+
+    const idsToDelete = samplesToDelete.map(
+      (sample) => sample.attributes.PERMANENT_IDENTIFIER,
+    );
+
+    // Find the original point graphic and remove it
+    let graphicsToRemove: __esri.Graphic[] = [];
+    layer.sketchLayer.graphics.forEach((polygonVersion) => {
+      if (
+        // samplesToDelete.attributes.PERMANENT_IDENTIFIER ===
+        idsToDelete.includes(polygonVersion.attributes.PERMANENT_IDENTIFIER)
+      ) {
+        graphicsToRemove.push(polygonVersion);
+      }
+    });
+    layer.sketchLayer.removeMany(graphicsToRemove);
+
+    if (!layer.pointsLayer) return;
+
+    // Find the original point graphic and remove it
+    graphicsToRemove = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (
+        // sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
+        idsToDelete.includes(pointVersion.attributes.PERMANENT_IDENTIFIER)
+      ) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
+
+    // close the popup
+    mapView?.popup.close();
+
+    setSamplesToDelete(null);
+  }, [edits, setEdits, layers, mapView, samplesToDelete]);
+
+  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sketchVM || popupActionsInitialized) return;
+
+    setPopupActionsInitialized(true);
+
+    const tempMapView = mapView as any;
+    tempMapView.popup._displayActionTextLimit = 1;
+
+    mapView.popup.on('trigger-action', (event) => {
+      // Workaround for target not being on the PopupTriggerActionEvent
+      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
+        setSamplesToDelete([mapView.popup.selectedFeature]);
+      }
+      if (event.action.id === 'delete-multi') {
+        setSamplesToDelete(sketchVM.updateGraphics.toArray());
+      }
+      if (['table', 'table-multi'].includes(event.action.id)) {
+        setTablePanelExpanded(true);
+      }
+    });
+
+    mapView.popup.watch('selectedFeature', (graphic) => {
+      if (mapView.popup.title !== 'Edit Multiple') {
+        const deleteMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'delete-multi',
+        );
+        if (deleteMultiAction) mapView.popup.actions.remove(deleteMultiAction);
+
+        const tableMultiAction = mapView.popup.actions.find(
+          (action) => action.id === 'table-multi',
+        );
+        if (tableMultiAction) mapView.popup.actions.remove(tableMultiAction);
+      }
+    });
+  }, [mapView, popupActionsInitialized, setTablePanelExpanded, sketchVM]);
 
   return null;
 }

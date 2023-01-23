@@ -19,7 +19,6 @@ import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import Graphic from '@arcgis/core/Graphic';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
@@ -27,10 +26,10 @@ import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import PortalItem from '@arcgis/core/portal/PortalItem';
 import * as projection from '@arcgis/core/geometry/projection';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import Viewpoint from '@arcgis/core/Viewpoint';
-import * as watchUtils from '@arcgis/core/core/watchUtils';
 import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
@@ -47,13 +46,7 @@ import {
   CalculateResultsType,
   CalculateResultsDataType,
 } from 'types/CalculateResults';
-import {
-  EditsType,
-  FeatureEditsType,
-  LayerEditsType,
-  ScenarioEditsType,
-  ServiceMetaDataType,
-} from 'types/Edits';
+import { EditsType, ScenarioEditsType, ServiceMetaDataType } from 'types/Edits';
 import {
   FieldInfos,
   LayerType,
@@ -66,7 +59,7 @@ import { AttributesType, SampleTypeOptions } from 'types/Publish';
 import { PanelValueType } from 'config/navigation';
 // utils
 import {
-  convertToPoint,
+  createLayer,
   findLayerInEdits,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -910,11 +903,11 @@ export function useDynamicPopup() {
   // handles the sketch button clicks
   const handleClick = (
     ev: ReactMouseEvent<HTMLElement>,
-    feature: any,
+    features: any[],
     type: string,
     newLayer: LayerType | null = null,
   ) => {
-    if (!feature?.graphic) return;
+    if (features?.length > 0 && !features[0].graphic) return;
 
     // set the clicked button as active until the drawing is complete
     deactivateButtons();
@@ -922,6 +915,7 @@ export function useDynamicPopup() {
     const changes = new Collection<__esri.Graphic>();
 
     // find the layer
+    const feature = features[0];
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
@@ -1005,8 +999,7 @@ export function useDynamicPopup() {
   const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
     const content = (
       <MapPopup
-        feature={feature}
-        selectedGraphicsIds={[feature.graphic.attributes.PERMANENT_IDENTIFIER]}
+        features={[feature]}
         edits={edits}
         layers={layers}
         fieldInfos={fieldInfos}
@@ -1264,129 +1257,19 @@ function useEditsLayerStorage() {
     });
     setEdits(edits);
 
-    function createLayer(
-      editsLayer: LayerEditsType,
-      newLayers: LayerType[],
-      parentLayer: __esri.GroupLayer | null = null,
-    ) {
-      const sketchLayer = new GraphicsLayer({
-        title: editsLayer.label,
-        id: editsLayer.uuid,
-        visible: editsLayer.visible,
-        listMode: editsLayer.listMode,
-      });
-      const pointsLayer = new GraphicsLayer({
-        title: editsLayer.label,
-        id: editsLayer.uuid + '-points',
-        visible: false,
-        listMode: 'hide',
-      });
-
-      const popupTemplate = getPopupTemplate(
-        editsLayer.layerType,
-        editsLayer.hasContaminationRan,
-      );
-      const polyFeatures: __esri.Graphic[] = [];
-      const pointFeatures: __esri.Graphic[] = [];
-      const idsUsed: string[] = [];
-      const displayedFeatures: FeatureEditsType[] = [];
-
-      // push the items from the adds array
-      editsLayer.adds.forEach((item) => {
-        displayedFeatures.push(item);
-        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
-      });
-
-      // push the items from the updates array
-      editsLayer.updates.forEach((item) => {
-        displayedFeatures.push(item);
-        idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
-      });
-
-      // only push the ids of the deletes array to prevent drawing deleted items
-      editsLayer.deletes.forEach((item) => {
-        idsUsed.push(item.PERMANENT_IDENTIFIER);
-      });
-
-      // add graphics from AGOL that haven't been changed
-      editsLayer.published.forEach((item) => {
-        // don't re-add graphics that have already been added above
-        if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
-
-        displayedFeatures.push(item);
-      });
-
-      // add graphics to the map
-      displayedFeatures.forEach((graphic) => {
-        let layerType = editsLayer.layerType;
-        if (layerType === 'VSP') layerType = 'Samples';
-        if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
-
-        // set the symbol styles based on sample/layer type
-        let symbol = defaultSymbols.symbols[layerType] as any;
-        if (
-          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
-        ) {
-          symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
-        }
-
-        const poly = new Graphic({
-          attributes: { ...graphic.attributes },
-          popupTemplate,
-          symbol,
-          geometry: new Polygon({
-            spatialReference: {
-              wkid: 3857,
-            },
-            rings: graphic.geometry.rings,
-          }),
-        });
-
-        polyFeatures.push(poly);
-        pointFeatures.push(convertToPoint(poly));
-      });
-      sketchLayer.addMany(polyFeatures);
-      if (
-        editsLayer.layerType === 'Samples' ||
-        editsLayer.layerType === 'VSP'
-      ) {
-        pointsLayer.addMany(pointFeatures);
-      }
-
-      newLayers.push({
-        id: editsLayer.id,
-        pointsId: editsLayer.pointsId,
-        uuid: editsLayer.uuid,
-        layerId: editsLayer.layerId,
-        portalId: editsLayer.portalId,
-        value: editsLayer.label,
-        name: editsLayer.name,
-        label: editsLayer.label,
-        layerType: editsLayer.layerType,
-        editType: 'add',
-        addedFrom: editsLayer.addedFrom,
-        status: editsLayer.status,
-        visible: editsLayer.visible,
-        listMode: editsLayer.listMode,
-        sort: editsLayer.sort,
-        geometryType: 'esriGeometryPolygon',
-        sketchLayer,
-        pointsLayer:
-          editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
-            ? pointsLayer
-            : null,
-        parentLayer,
-      });
-
-      return [sketchLayer, pointsLayer];
-    }
-
     const newLayers: LayerType[] = [];
     const graphicsLayers: (__esri.GraphicsLayer | __esri.GroupLayer)[] = [];
     edits.edits.forEach((editsLayer) => {
       // add layer edits directly
       if (editsLayer.type === 'layer') {
-        graphicsLayers.push(...createLayer(editsLayer, newLayers));
+        graphicsLayers.push(
+          ...createLayer({
+            defaultSymbols,
+            editsLayer,
+            getPopupTemplate,
+            newLayers,
+          }),
+        );
       }
       // scenarios need to be added to a group layer first
       if (editsLayer.type === 'scenario') {
@@ -1400,7 +1283,15 @@ function useEditsLayerStorage() {
         // create the layers and add them to the group layer
         const scenarioLayers: __esri.GraphicsLayer[] = [];
         editsLayer.layers.forEach((layer) => {
-          scenarioLayers.push(...createLayer(layer, newLayers, groupLayer));
+          scenarioLayers.push(
+            ...createLayer({
+              defaultSymbols,
+              editsLayer: layer,
+              getPopupTemplate,
+              newLayers,
+              parentLayer: groupLayer,
+            }),
+          );
         });
         groupLayer.addMany(scenarioLayers);
 
@@ -1650,9 +1541,14 @@ function useMapPositionStorage() {
   useEffect(() => {
     if (!mapView || watchExtentInitialized) return;
 
-    watchUtils.watch(mapView, 'extent', (newVal, oldVal, propName, target) => {
-      writeToStorage(key, newVal.toJSON(), setOptions);
-    });
+    reactiveUtils.when(
+      () => mapView.stationary,
+      () => {
+        if (mapView.stationary) {
+          writeToStorage(key, mapView.extent.toJSON(), setOptions);
+        }
+      },
+    );
 
     setWatchExtentInitialized(true);
   }, [
@@ -1694,10 +1590,9 @@ function useHomeWidgetStorage() {
   useEffect(() => {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
-    watchUtils.watch(
-      homeWidget,
-      'viewpoint',
-      (newVal, oldVal, propName, target) => {
+    reactiveUtils.watch(
+      () => homeWidget.viewpoint,
+      () => {
         writeToStorage(key, homeWidget.viewpoint.toJSON(), setOptions);
       },
     );

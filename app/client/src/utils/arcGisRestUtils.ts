@@ -731,7 +731,10 @@ function createFeatureTables(
 
     tableParams.push({
       ...layerProps.data.defaultTableProps,
-      fields: layerProps.data.defaultFields,
+      fields: [
+        ...layerProps.data.defaultFields,
+        ...layerProps.data.additionalTableFields,
+      ],
       type: 'Table',
       name: serviceMetaData.label,
       description: serviceMetaData.description,

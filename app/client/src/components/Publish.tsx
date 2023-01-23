@@ -147,6 +147,7 @@ function Publish() {
     partialPlanAttributes,
   } = useContext(PublishContext);
   const {
+    defaultSymbols,
     edits,
     setEdits,
     layers,
@@ -1543,8 +1544,20 @@ function Publish() {
         if (!type.value) return;
 
         const sampleType = userDefinedAttributes.sampleTypes[type.value];
+        const symbolTypeUuid = sampleType.attributes.TYPEUUID ?? 'Samples';
+        const defaultSymbol =
+          defaultSymbols.symbols[
+            defaultSymbols.symbols.hasOwnProperty(symbolTypeUuid)
+              ? symbolTypeUuid
+              : 'Samples'
+          ];
         const item = {
-          attributes: sampleType.attributes,
+          attributes: {
+            ...sampleType.attributes,
+            SYMBOLCOLOR: JSON.stringify(defaultSymbol.color),
+            SYMBOLOUTLINE: JSON.stringify(defaultSymbol.outline),
+            SYMBOLTYPE: defaultSymbol.type,
+          },
         };
         if (publishSamplesMode === 'new') {
           changes.adds.push(item);
@@ -1592,8 +1605,21 @@ function Publish() {
               if (!type.value) return;
 
               const sampleType = userDefinedAttributes.sampleTypes[type.value];
+              const symbolTypeUuid =
+                sampleType.attributes.TYPEUUID ?? 'Samples';
+              const defaultSymbol =
+                defaultSymbols.symbols[
+                  defaultSymbols.symbols.hasOwnProperty(symbolTypeUuid)
+                    ? symbolTypeUuid
+                    : 'Samples'
+                ];
               const item = {
-                attributes: sampleType.attributes,
+                attributes: {
+                  ...sampleType.attributes,
+                  SYMBOLCOLOR: JSON.stringify(defaultSymbol.color),
+                  SYMBOLOUTLINE: JSON.stringify(defaultSymbol.outline),
+                  SYMBOLTYPE: defaultSymbol.type,
+                },
               };
               const typeUuid = item.attributes.TYPEUUID || '';
 
@@ -1625,6 +1651,7 @@ function Publish() {
         });
       });
   }, [
+    defaultSymbols,
     layerProps,
     portal,
     publishSampleTableMetaData,
