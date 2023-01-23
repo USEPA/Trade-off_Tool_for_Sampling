@@ -114,7 +114,7 @@ jobs:
 
       # Sync static content to public S3 bucket
       - name: Sync static content to S3
-        run: aws s3 sync . s3://$CF_S3_PUB_BUCKET_ID/content
+        run: aws s3 sync . s3://$CF_S3_PUB_BUCKET_ID/data
         working-directory: app/server/app/public/data
 
       # Set CORS configuration for public S3 bucket
