@@ -60,6 +60,7 @@ import { PanelValueType } from 'config/navigation';
 // utils
 import {
   createLayer,
+  deactivateButtons,
   findLayerInEdits,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -374,11 +375,11 @@ export function useGeometryTools() {
         centroid: center,
         rings: [
           [
-            [ptBuff.extent.xmin, ptBuff.extent.ymin],
-            [ptBuff.extent.xmin, ptBuff.extent.ymax],
-            [ptBuff.extent.xmax, ptBuff.extent.ymax],
-            [ptBuff.extent.xmax, ptBuff.extent.ymin],
-            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
+            [ptBuff.extent.xmin, ptBuff.extent.ymax, center.z],
+            [ptBuff.extent.xmax, ptBuff.extent.ymax, center.z],
+            [ptBuff.extent.xmax, ptBuff.extent.ymin, center.z],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
           ],
         ],
       });
@@ -889,16 +890,6 @@ export function useCalculatePlan() {
 export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
   const layerProps = useLayerProps();
-
-  // Makes all sketch buttons no longer active by removing
-  // the sketch-button-selected class.
-  function deactivateButtons() {
-    const buttons = document.querySelectorAll('.sketch-button');
-
-    for (let i = 0; i < buttons.length; i++) {
-      buttons[i].classList.remove('sketch-button-selected');
-    }
-  }
 
   // handles the sketch button clicks
   const handleClick = (
@@ -1510,7 +1501,7 @@ function usePortalLayerStorage() {
 }
 
 // Uses browser storage for holding the map's view port extent.
-function useMapPositionStorage() {
+function useMapExtentStorage() {
   const key = 'tots_map_extent';
 
   const { setOptions } = useContext(DialogContext);
@@ -1528,7 +1519,7 @@ function useMapPositionStorage() {
     if (!positionStr) return;
 
     const extent = JSON.parse(positionStr) as any;
-    mapView.extent = Extent.fromJSON(extent);
+    mapView.extent = Extent.fromJSON(extent.extent);
 
     setLocalMapPositionInitialized(true);
   }, [mapView, localMapPositionInitialized]);
@@ -1557,14 +1548,82 @@ function useMapPositionStorage() {
         }
       },
     );
-    // watchUtils.watch(
-    //   sceneView,
-    //   'extent',
-    //   (newVal, oldVal, propName, target) => {
-    //     if (!newVal) return;
-    //     writeToStorage(key, newVal.toJSON(), setOptions);
-    //   },
-    // );
+
+    setWatchExtentInitialized(true);
+  }, [
+    mapView,
+    sceneView,
+    watchExtentInitialized,
+    localMapPositionInitialized,
+    setOptions,
+  ]);
+}
+
+// Uses browser storage for holding the map's view port extent.
+function useMapPositionStorage() {
+  const key = 'tots_map_scene_position';
+
+  const { setOptions } = useContext(DialogContext);
+  const { mapView, sceneView } = useContext(SketchContext);
+
+  // Retreives the map position and zoom level from browser storage when the app loads
+  const [localMapPositionInitialized, setLocalMapPositionInitialized] =
+    useState(false);
+  useEffect(() => {
+    if (!sceneView || localMapPositionInitialized) return;
+
+    setLocalMapPositionInitialized(true);
+
+    const positionStr = readFromStorage(key);
+    if (!positionStr) return;
+
+    const camera = JSON.parse(positionStr) as any;
+    if (!sceneView.camera) sceneView.camera = {} as any;
+    sceneView.camera.fov = camera.fov;
+    sceneView.camera.heading = camera.heading;
+    sceneView.camera.position = geometryJsonUtils.fromJSON(
+      camera.position,
+    ) as __esri.Point;
+    sceneView.camera.tilt = camera.tilt;
+
+    setLocalMapPositionInitialized(true);
+  }, [sceneView, localMapPositionInitialized]);
+
+  // Saves the map position and zoom level to browser storage whenever it changes
+  const [
+    watchExtentInitialized,
+    setWatchExtentInitialized, //
+  ] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sceneView || watchExtentInitialized) return;
+
+    reactiveUtils.watch(
+      () => mapView.center,
+      () => {
+        if (!mapView.center) return;
+        const cameraObj = {
+          fov: sceneView.camera?.fov,
+          heading: sceneView.camera?.heading,
+          position: mapView.center.toJSON(),
+          tilt: sceneView.camera?.tilt,
+        };
+        writeToStorage(key, cameraObj, setOptions);
+      },
+    );
+
+    reactiveUtils.watch(
+      () => sceneView.camera,
+      () => {
+        if (!sceneView.camera) return;
+        const cameraObj = {
+          fov: sceneView.camera.fov,
+          heading: sceneView.camera.heading,
+          position: sceneView.camera.position.toJSON(),
+          tilt: sceneView.camera.tilt,
+        };
+        writeToStorage(key, cameraObj, setOptions);
+      },
+    );
 
     setWatchExtentInitialized(true);
   }, [
@@ -2339,8 +2398,12 @@ function useDisplayModeStorage() {
   const key = 'tots_display_mode';
 
   const { setOptions } = useContext(DialogContext);
-  const { displayGeometryType, setDisplayGeometryType } =
-    useContext(SketchContext);
+  const {
+    displayDimensions,
+    setDisplayDimensions,
+    displayGeometryType,
+    setDisplayGeometryType,
+  } = useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
   const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
@@ -2351,14 +2414,36 @@ function useDisplayModeStorage() {
     setLocalDisplayModeInitialized(true);
 
     const displayModeStr = readFromStorage(key);
-    setDisplayGeometryType(displayModeStr as 'points' | 'polygons');
-  }, [localDisplayModeInitialized, setDisplayGeometryType]);
+    if (!displayModeStr) {
+      setDisplayDimensions('2d');
+      setDisplayGeometryType('points');
+      return;
+    }
+
+    const displayMode = JSON.parse(displayModeStr);
+
+    setDisplayDimensions(displayMode.dimensions);
+    setDisplayGeometryType(displayMode.geometryType);
+  }, [
+    localDisplayModeInitialized,
+    setDisplayDimensions,
+    setDisplayGeometryType,
+  ]);
 
   useEffect(() => {
     if (!localDisplayModeInitialized) return;
 
-    writeToStorage(key, displayGeometryType, setOptions);
-  }, [displayGeometryType, localDisplayModeInitialized, setOptions]);
+    const displayMode: object = {
+      dimensions: displayDimensions,
+      geometryType: displayGeometryType,
+    };
+    writeToStorage(key, displayMode, setOptions);
+  }, [
+    displayDimensions,
+    displayGeometryType,
+    localDisplayModeInitialized,
+    setOptions,
+  ]);
 }
 
 // Saves/Retrieves data to browser storage
@@ -2369,6 +2454,7 @@ export function useSessionStorage() {
   useReferenceLayerStorage();
   useUrlLayerStorage();
   usePortalLayerStorage();
+  useMapExtentStorage();
   useMapPositionStorage();
   useHomeWidgetStorage();
   useSamplesLayerStorage();

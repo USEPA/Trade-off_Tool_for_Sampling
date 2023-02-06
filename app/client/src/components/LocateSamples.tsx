@@ -540,45 +540,24 @@ function LocateSamples() {
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
 
+    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
+
     if (displayDimensions === '2d') {
-      sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
-      sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
       sketchVM.view = mapView;
     } else {
-      sketchVM.layer.elevationInfo = { mode: 'relative-to-scene' };
+      sketchVM.view = sceneView;
+      sketchVM.layer.elevationInfo = { mode: 'absolute-height' };
       sketchVM.snappingOptions = {
         featureSources: [{ layer: sketchVM.layer }],
       } as any;
-      sketchVM.view = sceneView;
-      sketchVM.polygonSymbol = {
-        type: 'polygon-3d',
-        symbolLayers: [
-          {
-            type: 'extrude',
-            material: defaultSymbols.symbols[symbolType].color,
-            outline: {
-              color: defaultSymbols.symbols[symbolType].outline.color,
-              size: defaultSymbols.symbols[symbolType].outline.width,
-            },
-          },
-        ],
-      } as any;
-      sketchVM.pointSymbol = {
-        type: 'point-3d',
-        symbolLayers: [
-          {
-            type: 'icon',
-            material: defaultSymbols.symbols[symbolType].color,
-            outline: {
-              color: defaultSymbols.symbols[symbolType].outline.color,
-              size: defaultSymbols.symbols[symbolType].outline.width,
-            },
-          },
-        ],
-      } as any;
+      sketchVM.defaultCreateOptions = {
+        hasZ: true,
+      };
+      sketchVM.defaultUpdateOptions = {
+        enableZ: true,
+      };
     }
-
-    console.log('sketchVM: ', sketchVM);
 
     if (wasSet) {
       // let the user draw/place the shape

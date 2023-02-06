@@ -421,7 +421,10 @@ export function createSampleLayer(
   parentLayer: __esri.GroupLayer | null = null,
 ) {
   const layerUuid = generateUUID();
-  const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
+  const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
+    title: name,
+  });
   const pointsLayer = new GraphicsLayer({
     id: layerUuid + '-points',
     title: name,
@@ -865,15 +868,6 @@ function getPointSymbol3d(
     }
   }
 
-  console.log(
-    '(polygon.symbol as any).symbolLayers: ',
-    (polygon.symbol as any).symbolLayers,
-  );
-  console.log(
-    '(polygon.symbol as any).symbolLayers.items[0]: ',
-    (polygon.symbol as any).symbolLayers.items[0],
-  );
-
   // build the symbol
   const symbol: any = {
     type: 'point-3d',
@@ -912,8 +906,6 @@ export function getPointSymbol(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
 ) {
-  console.log('polygon: ', polygon);
-  console.log('symbolColor: ', symbolColor);
   let point;
   if (polygon.symbol.type.includes('-3d')) {
     point = getPointSymbol3d(polygon, symbolColor);
@@ -921,7 +913,6 @@ export function getPointSymbol(
     point = getPointSymbol2d(polygon, symbolColor);
   }
 
-  console.log('point: ', point);
   return point;
 }
 
@@ -941,6 +932,18 @@ export function convertToPoint(polygon: __esri.Graphic) {
     popupTemplate: polygon.popupTemplate,
     symbol,
   });
+}
+
+/**
+ * Makes all sketch buttons no longer active by removing
+ * the sketch-button-selected class.
+ */
+export function deactivateButtons() {
+  const buttons = document.querySelectorAll('.sketch-button');
+
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].classList.remove('sketch-button-selected');
+  }
 }
 
 /**

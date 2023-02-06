@@ -577,6 +577,12 @@ function Toolbar() {
     setLayerList(newLayerList);
   }, [defaultSymbols, layerList, mapView]);
 
+  useEffect(() => {
+    if (!layerList || !mapView || !sceneView) return;
+
+    layerList.view = displayDimensions === '2d' ? mapView : sceneView;
+  }, [displayDimensions, layerList, mapView, sceneView]);
+
   // Rebuild the legend if the sample type definitions are changed
   useEffect(() => {
     if (!layerList) return;
@@ -777,8 +783,9 @@ function Toolbar() {
       sceneView.container = null as any;
       sceneView.map = null as any;
     } else {
-      if (!mapView.viewpoint || !mapView.container || !mapView.map) return;
-      sceneView.viewpoint = mapView.viewpoint.clone();
+      if (!mapView.container || !mapView.map) return;
+      if (mapView.viewpoint) sceneView.viewpoint = mapView.viewpoint?.clone();
+      if (sceneView.camera) sceneView.camera.tilt = 0.5;
       sceneView.container = mapView.container;
       sceneView.map = mapView.map;
 
@@ -807,6 +814,42 @@ function Toolbar() {
             Settings{' '}
           </button>
           <div css={floatContainerStyles(settingsVisible, '223px')}>
+            <fieldset css={settingContainerStyles}>
+              <legend>
+                Dimension
+                <InfoIcon
+                  cssStyles={infoIconStyles}
+                  id="3d-view-switch"
+                  tooltip={'3D view. Tooltip placeholder...'}
+                  place="bottom"
+                  type="info"
+                />
+              </legend>
+              <input
+                id="dimension-2d"
+                type="radio"
+                name="dimension"
+                value="2d"
+                checked={displayDimensions === '2d'}
+                onChange={(ev) => setDisplayDimensions('2d')}
+              />
+              <label htmlFor="dimension-2d">2D</label>
+              <br />
+
+              <input
+                id="dimension-3d"
+                type="radio"
+                name="dimension"
+                value="3d"
+                checked={displayDimensions === '3d'}
+                onChange={(ev) => {
+                  setDisplayDimensions('3d');
+                  setDisplayGeometryType('points');
+                }}
+              />
+              <label htmlFor="dimension-3d">3D</label>
+            </fieldset>
+
             <fieldset css={settingContainerStyles}>
               <legend>
                 Shape
@@ -840,39 +883,6 @@ function Toolbar() {
                 onChange={(ev) => setDisplayGeometryType('polygons')}
               />
               <label htmlFor="shape-polygons">Polygons</label>
-            </fieldset>
-
-            <fieldset css={settingContainerStyles}>
-              <legend>
-                Dimension
-                <InfoIcon
-                  cssStyles={infoIconStyles}
-                  id="3d-view-switch"
-                  tooltip={'3D view. Tooltip placeholder...'}
-                  place="bottom"
-                  type="info"
-                />
-              </legend>
-              <input
-                id="dimension-2d"
-                type="radio"
-                name="dimension"
-                value="2d"
-                checked={displayDimensions === '2d'}
-                onChange={(ev) => setDisplayDimensions('2d')}
-              />
-              <label htmlFor="dimension-2d">2D</label>
-              <br />
-
-              <input
-                id="dimension-3d"
-                type="radio"
-                name="dimension"
-                value="3d"
-                checked={displayDimensions === '3d'}
-                onChange={(ev) => setDisplayDimensions('3d')}
-              />
-              <label htmlFor="dimension-3d">3D</label>
             </fieldset>
 
             <div css={switchLabelContainer}>

@@ -34,21 +34,12 @@ import { SelectedSampleType } from 'config/sampleAttributes';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   convertToPoint,
+  deactivateButtons,
   generateUUID,
   getCurrentDateTime,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { ScenarioEditsType } from 'types/Edits';
-
-// Makes all sketch buttons no longer active by removing
-// the sketch-button-selected class.
-function deactivateButtons() {
-  const buttons = document.querySelectorAll('.sketch-button');
-
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].classList.remove('sketch-button-selected');
-  }
-}
 
 // Replaces the prevClassName with nextClassName for all elements with
 // prevClassName on the DOM.
@@ -167,7 +158,7 @@ function MapWidgets({ mapView }: Props) {
       availableCreateTools: [],
       layer: sketchLayer.sketchLayer,
       view: mapView,
-      viewModel: sketchVM,
+      viewModel: sketchVM as any,
       visibleElements: {
         settingsMenu: false,
         undoRedoMenu: false,
@@ -494,43 +485,23 @@ function MapWidgets({ mapView }: Props) {
   useEffect(() => {
     if (!sketchVM || !mapView || !sceneView) return;
 
+    sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+    sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
+
     if (displayDimensions === '2d') {
       sketchVM.view = mapView;
-      sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-      sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
     } else {
-      sketchVM.layer.elevationInfo = { mode: 'relative-to-scene' };
+      sketchVM.view = sceneView;
+      sketchVM.layer.elevationInfo = { mode: 'absolute-height' };
       sketchVM.snappingOptions = {
         featureSources: [{ layer: sketchVM.layer }],
       } as any;
-      sketchVM.view = sceneView;
-      sketchVM.polygonSymbol = {
-        type: 'polygon-3d',
-        symbolLayers: [
-          {
-            type: 'extrude',
-            size: 1,
-            material: defaultSymbols.symbols['Samples'].color,
-            outline: {
-              color: defaultSymbols.symbols['Samples'].outline.color,
-              size: defaultSymbols.symbols['Samples'].outline.width,
-            },
-          },
-        ],
-      } as any;
-      sketchVM.pointSymbol = {
-        type: 'point-3d',
-        symbolLayers: [
-          {
-            type: 'icon',
-            material: defaultSymbols.symbols['Samples'].color,
-            outline: {
-              color: defaultSymbols.symbols['Samples'].outline.color,
-              size: defaultSymbols.symbols['Samples'].outline.width,
-            },
-          },
-        ],
-      } as any;
+      sketchVM.defaultCreateOptions = {
+        hasZ: true,
+      };
+      sketchVM.defaultUpdateOptions = {
+        enableZ: true,
+      };
     }
   }, [defaultSymbols, mapView, sceneView, displayDimensions, sketchVM]);
 
@@ -568,8 +539,6 @@ function MapWidgets({ mapView }: Props) {
 
         // place the graphic on the map when the drawing is complete
         if (event.state === 'complete') {
-          console.log('event: ', event);
-          console.log('graphic: ', graphic.geometry);
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
@@ -621,9 +590,10 @@ function MapWidgets({ mapView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            console.log('create buffer...');
             createBuffer(graphic);
           }
+
+          graphic.symbol = sketchViewModel.polygonSymbol;
 
           if (id !== 'sampling-mask') {
             // find the points version of the layer
@@ -632,7 +602,6 @@ function MapWidgets({ mapView }: Props) {
               (layer: any) => `${layerId}-points` === layer.id,
             );
             if (pointLayer) {
-              console.log('graphic: ', graphic.geometry);
               pointLayer.add(convertToPoint(graphic));
             }
           }
