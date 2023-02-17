@@ -99,9 +99,10 @@ function getUpdateEventInfo(
 // --- components (MapWidgets) ---
 type Props = {
   mapView: __esri.MapView;
+  sceneView: __esri.SceneView;
 };
 
-function MapWidgets({ mapView }: Props) {
+function MapWidgets({ mapView, sceneView }: Props) {
   const { userInfo } = useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } =
     useContext(NavigationContext);
@@ -127,7 +128,6 @@ function MapWidgets({ mapView }: Props) {
     setLayers,
     map,
     setSelectedSampleIds,
-    sceneView,
     displayDimensions,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
@@ -483,7 +483,7 @@ function MapWidgets({ mapView }: Props) {
 
   // Updates the selected layer of the sketchViewModel
   useEffect(() => {
-    if (!sketchVM || !mapView || !sceneView) return;
+    if (!sketchVM || !sketchVM.layer || !mapView || !sceneView) return;
 
     sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
     sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;

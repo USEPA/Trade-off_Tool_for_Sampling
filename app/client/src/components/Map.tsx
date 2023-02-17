@@ -38,11 +38,13 @@ function Map({ height }: Props) {
 
   const {
     autoZoom,
+    displayDimensions,
     homeWidget,
     map,
     setMap,
     mapView,
     setMapView,
+    sceneView,
     setSceneView,
     sketchLayer,
     aoiSketchLayer,
@@ -51,7 +53,7 @@ function Map({ height }: Props) {
   // Creates the map and view
   useEffect(() => {
     if (!mapRef.current) return;
-    if (mapView) return;
+    if (mapView || sceneView) return;
 
     const newMap = new EsriMap({
       basemap: 'streets-vector',
@@ -86,7 +88,7 @@ function Map({ height }: Props) {
     });
 
     setSceneView(scene);
-  }, [mapView, setMap, setMapView, setSceneView]);
+  }, [mapView, setMap, setMapView, sceneView, setSceneView]);
 
   // Creates a watch event that is used for reordering the layers
   const [watchInitialized, setWatchInitialized] = useState(false);
@@ -151,27 +153,37 @@ function Map({ height }: Props) {
 
   // Zooms to the graphics whenever the sketchLayer changes
   useEffect(() => {
-    if (!map || !mapView || !homeWidget || !autoZoom) return;
+    if (!map || !mapView || !sceneView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
     const zoomGraphics = getGraphicsArray([sketchLayer, aoiSketchLayer]);
 
     if (zoomGraphics.length > 0) {
-      mapView.goTo(zoomGraphics).then(() => {
+      const view = displayDimensions === '3d' ? sceneView : mapView;
+      view.goTo(zoomGraphics).then(() => {
         // set map zoom and home widget's viewpoint
         homeWidget.viewpoint = new Viewpoint({
-          targetGeometry: mapView.extent,
+          targetGeometry: view.extent,
         });
       });
     }
-  }, [autoZoom, map, mapView, aoiSketchLayer, sketchLayer, homeWidget]);
+  }, [
+    autoZoom,
+    displayDimensions,
+    map,
+    mapView,
+    aoiSketchLayer,
+    sceneView,
+    sketchLayer,
+    homeWidget,
+  ]);
 
   return (
     <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
-      {mapView && (
+      {mapView && sceneView && (
         <Fragment>
-          <MapWidgets mapView={mapView} />
-          <MapMouseEvents mapView={mapView} />
+          <MapWidgets mapView={mapView} sceneView={sceneView} />
+          <MapMouseEvents mapView={mapView} sceneView={sceneView} />
         </Fragment>
       )}
     </div>

@@ -19,15 +19,16 @@ function getGraphicFromResponse(res: any) {
 // --- components ---
 type Props = {
   mapView: __esri.MapView;
+  sceneView: __esri.SceneView;
 };
 
-function MapMouseEvents({ mapView }: Props) {
+function MapMouseEvents({ mapView, sceneView }: Props) {
   const { setSelectedSampleIds } = useContext(SketchContext);
 
   const handleMapClick = useCallback(
-    (event: any, mapView: __esri.MapView) => {
+    (event: any, view: __esri.MapView | __esri.SceneView) => {
       // perform a hittest on the click location
-      mapView
+      view
         .hitTest(event)
         .then((res: any) => {
           const graphic = getGraphicFromResponse(res);
@@ -81,7 +82,7 @@ function MapMouseEvents({ mapView }: Props) {
 
           // get list of graphic ids currently in the popup
           const curIds: string[] = [];
-          mapView.popup.features.forEach((feature: any) => {
+          view.popup.features.forEach((feature: any) => {
             if (feature.attributes?.PERMANENT_IDENTIFIER) {
               curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
             }
@@ -97,7 +98,7 @@ function MapMouseEvents({ mapView }: Props) {
             curIds.toString() !== newIds.toString()
           ) {
             const firstGeometry = popupItems[0].geometry as any;
-            mapView.popup.open({
+            view.popup.open({
               location:
                 firstGeometry.type === 'point'
                   ? firstGeometry
@@ -124,9 +125,12 @@ function MapMouseEvents({ mapView }: Props) {
     mapView.on('click', (event) => {
       handleMapClick(event, mapView);
     });
+    sceneView.on('click', (event) => {
+      handleMapClick(event, sceneView);
+    });
 
     setInitialized(true);
-  }, [mapView, handleMapClick, initialized]);
+  }, [handleMapClick, initialized, mapView, sceneView]);
 
   return null;
 }

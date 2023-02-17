@@ -931,6 +931,7 @@ function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
             where: `OBJECTID in (${chunk.join(',')})`,
             outFields: '*',
             returnGeometry: true,
+            returnZ: true,
           };
           appendEnvironmentObjectParam(data);
 
