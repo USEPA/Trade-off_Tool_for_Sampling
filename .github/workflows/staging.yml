@@ -25,7 +25,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:      
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -58,6 +58,7 @@ jobs:
       CF_S3_PUB_BUCKET_ID: ${{ secrets.CF_STAGING_S3_PUB_BUCKET_ID }}
       CF_S3_PUB_REGION: ${{ secrets.CF_STAGING_S3_PUB_REGION }}
       CF_S3_PUB_SECRET_KEY: ${{ secrets.CF_STAGING_S3_PUB_SECRET_KEY }}
+      REACT_APP_ARCGIS_APP_ID: ${{ secrets.REACT_APP_ARCGIS_APP_ID_STAGING }}
       TOTS_BASIC_USER_NAME: ${{ secrets.TOTS_BASIC_USER_NAME }}
       TOTS_BASIC_USER_PWD: ${{ secrets.TOTS_BASIC_USER_PWD }}
       SERVER_URL: https://tots-stage.app.cloud.gov
@@ -65,14 +66,14 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       
       # Set up node and npm
-      - uses: actions/setup-node@master
+      - uses: actions/setup-node@v3
       
       # Run front-end processes (install, lint, test, bundle)
       - name: Cache node modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/client/.npm
           key: v1-npm-client-deps-${{ hashFiles('**/client/package-lock.json') }}
@@ -85,6 +86,7 @@ jobs:
       - name: Build front-end files and move to server
         run: |
           PUBLIC_URL="$SERVER_URL" \
+            REACT_APP_ARCGIS_APP_ID="$REACT_APP_ARCGIS_APP_ID" \
             npm run build
           cd build
           cp -r * ../../server/app/public
@@ -107,7 +109,7 @@ jobs:
           cf set-env $APP_NAME "TOTS_BASIC_USER_PWD" "$TOTS_BASIC_USER_PWD" > /dev/null
 
       - name: Configure Public AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.CF_S3_PUB_ACCESS_KEY }}
           aws-secret-access-key: ${{ env.CF_S3_PUB_SECRET_KEY }}
