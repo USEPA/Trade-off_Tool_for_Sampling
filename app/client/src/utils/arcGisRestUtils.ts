@@ -1283,6 +1283,7 @@ function addWebMap({
     });
 
     // run the webserivce call to update ArcGIS Online
+    // TODO - Check the values below to see if any need to be updated
     const data = {
       f: 'json',
       token: tempPortal.credential.token,
@@ -1323,6 +1324,191 @@ function addWebMap({
           wkid: 102100,
         },
         version: '2.20',
+      },
+    };
+    appendEnvironmentObjectParam(data);
+
+    fetchPost(`${portal.user.userContentUrl}/addItem`, data)
+      .then((res) => resolve(res))
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
+  });
+}
+
+/**
+ * Publishes a web scene version of the feature service.
+ *
+ * @param portal The portal object to apply edits to
+ * @param service The feature service object
+ * @param layers The layers that the edits object pertain to
+ * @param layersResponse The response from creating layers
+ * @param attributesToInclude The attributes to include with each graphic
+ * @returns A promise that resolves to the successfully saved web map
+ */
+function addWebScene({
+  portal,
+  service,
+  layers,
+  layersResponse,
+  attributesToInclude,
+  layerProps,
+}: {
+  portal: __esri.Portal;
+  service: any;
+  layers: LayerType[];
+  layersResponse: any;
+  attributesToInclude: AttributesType[] | null;
+  layerProps: LookupFile;
+}) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    const itemId = service.portalService.id;
+    const baseUrl = service.portalService.url;
+    const title = service.portalService.title;
+
+    const fieldInfos: any[] = [];
+    attributesToInclude?.forEach((attribute) => {
+      if (layerProps.data.webMapFieldProps.hasOwnProperty(attribute.name)) {
+        fieldInfos.push(
+          (layerProps.data.webMapFieldProps as any)[attribute.name],
+        );
+      } else {
+        let format: any = undefined;
+        if (
+          attribute.dataType === 'double' ||
+          attribute.dataType === 'integer'
+        ) {
+          format = {
+            digitSeparator: true,
+            places: 0,
+          };
+        }
+
+        fieldInfos.push({
+          fieldName: attribute.name,
+          label: attribute.label,
+          isEditable: true,
+          visible: true,
+          format,
+        });
+      }
+    });
+
+    const operationalLayers: any[] = [];
+    const mainLayer = layers[0];
+    let extent: __esri.Extent = mainLayer.sketchLayer.fullExtent;
+    const { graphicsExtent } = buildRendererParams(mainLayer);
+    if (graphicsExtent) {
+      extent = graphicsExtent;
+    }
+
+    // TODO - Add capability to add in reference layers to this list of operational layers
+    //        start off with just portal and url layers
+    layersResponse.layers.forEach((layer: any) => {
+      operationalLayers.push({
+        title: layer.name,
+        url: `${baseUrl}/${layer.id}`,
+        itemId,
+        layerType: 'ArcGISFeatureLayer',
+        popupInfo: {
+          popupElements: [{ type: 'fields' }, { type: 'attachments' }],
+          showAttachments: true,
+          fieldInfos: fieldInfos,
+          title: `${layer.name}: {USERNAME}`,
+        },
+      });
+    });
+
+    // run the webserivce call to update ArcGIS Online
+    const data = {
+      f: 'json',
+      token: tempPortal.credential.token,
+      title: title,
+      type: 'Web Scene',
+      text: {
+        operationalLayers,
+        baseMap: {
+          baseMapLayers: [
+            {
+              id: '1866114cd76-layer-1',
+              title: 'World Topo Map',
+              url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer',
+              layerType: 'ArcGISTiledMapServiceLayer',
+            },
+          ],
+          id: '1866114cb4d-basemap-0',
+          title: 'Topographic',
+          elevationLayers: [
+            {
+              id: 'globalElevation',
+              listMode: 'hide',
+              title: 'Terrain3D',
+              url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+              layerType: 'ArcGISTiledElevationServiceLayer',
+            },
+          ],
+        },
+        ground: {
+          layers: [
+            {
+              id: 'globalElevation',
+              listMode: 'hide',
+              title: 'Terrain3D',
+              url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+              layerType: 'ArcGISTiledElevationServiceLayer',
+            },
+          ],
+          transparency: 0,
+          navigationConstraint: {
+            type: 'stayAbove',
+          },
+        },
+        heightModelInfo: {
+          heightModel: 'gravity_related_height',
+          heightUnit: 'meter',
+        },
+        version: '1.29',
+        authoringApp: 'WebSceneViewer',
+        authoringAppVersion: '10.3.0.0',
+        initialState: {
+          environment: {
+            lighting: {
+              type: 'sun',
+              datetime: 1678899363000,
+              displayUTCOffset: -5,
+            },
+            atmosphereEnabled: true,
+            starsEnabled: true,
+            weather: {
+              type: 'sunny',
+              cloudCover: 0.5,
+            },
+          },
+          viewpoint: {
+            camera: {
+              // TODO - look into pulling this from the screen
+              position: {
+                spatialReference: {
+                  latestWkid: 3857,
+                  wkid: 102100,
+                },
+                x: -8238974.69885178,
+                y: 4967790.2180431,
+                z: 429.89201813656837,
+              },
+              heading: 0.12192561374136514,
+              tilt: 65.05057033863466,
+            },
+          },
+        },
+        spatialReference: {
+          latestWkid: 3857,
+          wkid: 102100,
+        },
       },
     };
     appendEnvironmentObjectParam(data);
@@ -1385,6 +1571,11 @@ function applyEditsTable({
  * @param layers The layers that the edits object pertain to
  * @param edits The edits to be saved to the hosted feature service
  * @param serviceMetaData The name and description of the service to be saved
+ * @param layerProps Default/shared properties used for creating feature services, layers, web maps, and web scenes.
+ * @param createWebMap Saves a web map, if true
+ * @param createWebScene Saves a web scene, if true
+ * @param attributesToInclude Attributes to include in the final layers, web map, and web scene
+ * @param table Table of custom sample types
  * @returns A promise that resolves to the successfully published data
  */
 function publish({
@@ -1393,7 +1584,8 @@ function publish({
   edits,
   serviceMetaData,
   layerProps,
-  createWebMap = false,
+  createWebMap,
+  createWebScene,
   attributesToInclude = null,
   table = null,
 }: {
@@ -1402,7 +1594,8 @@ function publish({
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
   layerProps: LookupFile;
-  createWebMap?: boolean;
+  createWebMap: boolean;
+  createWebScene: boolean;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
 }) {
@@ -1497,35 +1690,39 @@ function publish({
                   table: tableParam,
                   attributesToInclude,
                 })
-                  .then((editsRes: any) => {
-                    if (!createWebMap) {
+                  .then(async (editsRes: any) => {
+                    try {
+                      if (createWebMap) {
+                        await addWebMap({
+                          portal,
+                          service,
+                          layers,
+                          layersResponse: layersRes,
+                          attributesToInclude,
+                          layerProps,
+                        });
+                      }
+
+                      if (createWebScene) {
+                        await addWebScene({
+                          portal,
+                          service,
+                          layers,
+                          layersResponse: layersRes,
+                          attributesToInclude,
+                          layerProps,
+                        });
+                      }
+
                       resolve({
                         portalId,
                         idMapping,
                         edits: editsRes.response,
                         table: editsRes.table,
                       });
-                    } else {
-                      addWebMap({
-                        portal,
-                        service,
-                        layers,
-                        layersResponse: layersRes,
-                        attributesToInclude,
-                        layerProps,
-                      })
-                        .then(() => {
-                          resolve({
-                            portalId,
-                            idMapping,
-                            edits: editsRes.response,
-                            table: editsRes.table,
-                          });
-                        })
-                        .catch((err) => {
-                          window.logErrorToGa(err);
-                          reject(err);
-                        });
+                    } catch (err) {
+                      window.logErrorToGa(err);
+                      reject(err);
                     }
                   })
                   .catch((err) => {

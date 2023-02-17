@@ -161,6 +161,8 @@ function ConfigureOutput() {
     setIncludePartialPlan,
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,
+    includePartialPlanWebScene,
+    setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
     partialPlanAttributes,
@@ -194,6 +196,16 @@ function ConfigureOutput() {
       id={id}
       cssStyles={infoIconStyles}
       tooltip="A web map is used with Field Maps and supports field data collection activities."
+      place="right"
+      type="info"
+    />
+  );
+
+  const webSceneIcon = (id: string) => (
+    <InfoIcon
+      id={id}
+      cssStyles={infoIconStyles}
+      tooltip="A web scene is used for viewing TOTS sampling plans in ArcGIS Online with 3D."
       place="right"
       type="info"
     />
@@ -314,19 +326,37 @@ function ConfigureOutput() {
               </p>
             </div>
             <div css={sectionContainer}>
-              <input
-                id="include-partial-web-map-toggle"
-                type="checkbox"
-                css={checkboxStyles}
-                checked={includePartialPlanWebMap}
-                onChange={(ev) =>
-                  setIncludePartialPlanWebMap(!includePartialPlanWebMap)
-                }
-              />
-              <label htmlFor="include-partial-web-map-toggle">
-                Include web map in output
-              </label>
-              {webMapIcon('partial-web-map-icon')}
+              <div>
+                <input
+                  id="include-partial-web-map-toggle"
+                  type="checkbox"
+                  css={checkboxStyles}
+                  checked={includePartialPlanWebMap}
+                  onChange={(ev) =>
+                    setIncludePartialPlanWebMap(!includePartialPlanWebMap)
+                  }
+                />
+                <label htmlFor="include-partial-web-map-toggle">
+                  Include web map in output
+                </label>
+                {webMapIcon('partial-web-map-icon')}
+              </div>
+
+              <div>
+                <input
+                  id="include-partial-web-scene-toggle"
+                  type="checkbox"
+                  css={checkboxStyles}
+                  checked={includePartialPlanWebScene}
+                  onChange={(ev) =>
+                    setIncludePartialPlanWebScene(!includePartialPlanWebScene)
+                  }
+                />
+                <label htmlFor="include-partial-web-scene-toggle">
+                  Include web scene in output
+                </label>
+                {webSceneIcon('partial-web-scene-icon')}
+              </div>
             </div>
             <div css={nestedAccordionStyles}>
               <AccordionList>

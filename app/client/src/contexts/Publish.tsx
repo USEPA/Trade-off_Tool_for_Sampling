@@ -38,6 +38,8 @@ type PublishType = {
   setIncludePartialPlan: Dispatch<SetStateAction<boolean>>;
   includePartialPlanWebMap: boolean;
   setIncludePartialPlanWebMap: Dispatch<SetStateAction<boolean>>;
+  includePartialPlanWebScene: boolean;
+  setIncludePartialPlanWebScene: Dispatch<SetStateAction<boolean>>;
   includeCustomSampleTypes: boolean;
   setIncludeCustomSampleTypes: Dispatch<SetStateAction<boolean>>;
   partialPlanAttributes: AttributesType[];
@@ -158,6 +160,8 @@ export const PublishContext = createContext<PublishType>({
   setIncludePartialPlan: () => {},
   includePartialPlanWebMap: true,
   setIncludePartialPlanWebMap: () => {},
+  includePartialPlanWebScene: true,
+  setIncludePartialPlanWebScene: () => {},
   includeCustomSampleTypes: false,
   setIncludeCustomSampleTypes: () => {},
   partialPlanAttributes: [],
@@ -184,6 +188,8 @@ export function PublishProvider({ children }: Props) {
   const [includeFullPlanWebMap, setIncludeFullPlanWebMap] = useState(true);
   const [includePartialPlan, setIncludePartialPlan] = useState(true);
   const [includePartialPlanWebMap, setIncludePartialPlanWebMap] =
+    useState(true);
+  const [includePartialPlanWebScene, setIncludePartialPlanWebScene] =
     useState(true);
   const [includeCustomSampleTypes, setIncludeCustomSampleTypes] =
     useState(false);
@@ -216,6 +222,8 @@ export function PublishProvider({ children }: Props) {
         setIncludePartialPlan,
         includePartialPlanWebMap,
         setIncludePartialPlanWebMap,
+        includePartialPlanWebScene,
+        setIncludePartialPlanWebScene,
         includeCustomSampleTypes,
         setIncludeCustomSampleTypes,
         partialPlanAttributes,
