@@ -58,6 +58,7 @@ jobs:
       CF_S3_PUB_BUCKET_ID: ${{ secrets.CF_STAGING_S3_PUB_BUCKET_ID }}
       CF_S3_PUB_REGION: ${{ secrets.CF_STAGING_S3_PUB_REGION }}
       CF_S3_PUB_SECRET_KEY: ${{ secrets.CF_STAGING_S3_PUB_SECRET_KEY }}
+      REACT_APP_ARCGIS_APP_ID: ${{ secrets.REACT_APP_ARCGIS_APP_ID_STAGING }}
       TOTS_BASIC_USER_NAME: ${{ secrets.TOTS_BASIC_USER_NAME }}
       TOTS_BASIC_USER_PWD: ${{ secrets.TOTS_BASIC_USER_PWD }}
       SERVER_URL: https://tots-stage.app.cloud.gov
@@ -85,6 +86,7 @@ jobs:
       - name: Build front-end files and move to server
         run: |
           PUBLIC_URL="$SERVER_URL" \
+            REACT_APP_ARCGIS_APP_ID="$REACT_APP_ARCGIS_APP_ID" \
             npm run build
           cd build
           cp -r * ../../server/app/public

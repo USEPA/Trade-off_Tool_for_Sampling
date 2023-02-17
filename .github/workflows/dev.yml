@@ -57,6 +57,7 @@ jobs:
       CF_S3_PUB_BUCKET_ID: ${{ secrets.CF_DEV_S3_PUB_BUCKET_ID }}
       CF_S3_PUB_REGION: ${{ secrets.CF_DEV_S3_PUB_REGION }}
       CF_S3_PUB_SECRET_KEY: ${{ secrets.CF_DEV_S3_PUB_SECRET_KEY }}
+      REACT_APP_ARCGIS_APP_ID: ${{ secrets.REACT_APP_ARCGIS_APP_ID_DEV }}
       TOTS_BASIC_USER_NAME: ${{ secrets.TOTS_BASIC_USER_NAME }}
       TOTS_BASIC_USER_PWD: ${{ secrets.TOTS_BASIC_USER_PWD }}
       SERVER_URL: https://tots-dev.app.cloud.gov
@@ -84,6 +85,7 @@ jobs:
       - name: Build front-end files and move to server
         run: |
           PUBLIC_URL="$SERVER_URL" \
+            REACT_APP_ARCGIS_APP_ID="$REACT_APP_ARCGIS_APP_ID" \
             npm run build
           cd build
           cp -r * ../../server/app/public
