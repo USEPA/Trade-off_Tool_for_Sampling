@@ -543,22 +543,6 @@ function LocateSamples() {
     sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
     sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
 
-    if (displayDimensions === '2d') {
-      sketchVM.view = mapView;
-    } else {
-      sketchVM.view = sceneView;
-      sketchVM.layer.elevationInfo = { mode: 'absolute-height' };
-      sketchVM.snappingOptions = {
-        featureSources: [{ layer: sketchVM.layer }],
-      } as any;
-      sketchVM.defaultCreateOptions = {
-        hasZ: true,
-      };
-      sketchVM.defaultUpdateOptions = {
-        enableZ: true,
-      };
-    }
-
     if (wasSet) {
       // let the user draw/place the shape
       sketchVM.create(shapeType);
