@@ -40,7 +40,7 @@ const toolBarHeight = '40px';
 // Builds the legend item for a layer
 function buildLegendListItem(event: any) {
   const item = event.item;
-  const mapView = event.view;
+  const view = event.view;
 
   // create the slider
   const sliderContainer = document.createElement('div');
@@ -206,7 +206,7 @@ function buildLegendListItem(event: any) {
     const legendContainer = document.createElement('div');
     const legend: any = new Legend({
       container: legendContainer,
-      view: mapView,
+      view,
       layerInfos: [
         {
           layer: item.layer,
@@ -413,6 +413,7 @@ function Toolbar() {
   const {
     autoZoom,
     setAutoZoom,
+    basemapWidget,
     setBasemapWidget,
     defaultSymbols,
     edits,
@@ -537,7 +538,7 @@ function Toolbar() {
       if (id === 'zoom-layer') {
         if (event.item.layer.type === 'graphics') {
           const graphicsLayer = event.item.layer as __esri.GraphicsLayer;
-          mapView.goTo(graphicsLayer.graphics);
+          newLayerList.view.goTo(graphicsLayer.graphics);
           return;
         }
         if (event.item.layer.type === 'group') {
@@ -549,7 +550,7 @@ function Toolbar() {
               else fullExtent.union(layer.fullExtent);
             });
 
-            if (fullExtent) mapView.goTo(fullExtent);
+            if (fullExtent) newLayerList.view.goTo(fullExtent);
           } else {
             const groupLayer = event.item.layer as __esri.GroupLayer;
             const graphics = new Collection<__esri.Graphic>();
@@ -560,13 +561,13 @@ function Toolbar() {
               graphics.addMany(tempLayer.graphics);
             });
 
-            if (graphics.length > 0) mapView.goTo(graphics);
+            if (graphics.length > 0) newLayerList.view.goTo(graphics);
           }
           return;
         }
 
         const fullExtent = event.item.layer.fullExtent;
-        if (fullExtent) mapView.goTo(fullExtent);
+        if (fullExtent) newLayerList.view.goTo(fullExtent);
       }
       if (id === 'delete-layer') {
         // remove the layer from the map
@@ -576,12 +577,6 @@ function Toolbar() {
 
     setLayerList(newLayerList);
   }, [defaultSymbols, layerList, mapView]);
-
-  useEffect(() => {
-    if (!layerList || !mapView || !sceneView) return;
-
-    layerList.view = displayDimensions === '2d' ? mapView : sceneView;
-  }, [displayDimensions, layerList, mapView, sceneView]);
 
   // Rebuild the legend if the sample type definitions are changed
   useEffect(() => {
@@ -740,6 +735,14 @@ function Toolbar() {
     );
     setBasemapInitialized(true);
   }, [mapView, basemapInitialized, setBasemapWidget]);
+
+  // Switches the layer list and basemap widgets between 2D and 3D
+  useEffect(() => {
+    if (!basemapWidget || !layerList || !mapView || !sceneView) return;
+
+    layerList.view = displayDimensions === '2d' ? mapView : sceneView;
+    basemapWidget.view = displayDimensions === '2d' ? mapView : sceneView;
+  }, [basemapWidget, displayDimensions, layerList, mapView, sceneView]);
 
   // Switches between point and polygon representations
   useEffect(() => {

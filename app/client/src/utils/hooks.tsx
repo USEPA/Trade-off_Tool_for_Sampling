@@ -162,19 +162,21 @@ export function useStartOver() {
   } = useContext(PublishContext);
   const {
     basemapWidget,
+    displayDimensions,
+    homeWidget,
     map,
     mapView,
-    homeWidget,
-    setLayers,
     resetDefaultSymbols,
-    setEdits,
-    setUrlLayers,
-    setReferenceLayers,
-    setPortalLayers,
-    setSelectedScenario,
-    setDisplayGeometryType,
-    setSketchLayer,
+    sceneView,
     setAoiSketchLayer,
+    setDisplayGeometryType,
+    setEdits,
+    setLayers,
+    setPortalLayers,
+    setReferenceLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    setUrlLayers,
     setUserDefinedAttributes,
     setUserDefinedOptions,
   } = useContext(SketchContext);
@@ -232,23 +234,36 @@ export function useStartOver() {
     if (mapView) {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
+      mapView.rotation = 0;
       mapView.popup?.close();
+    }
+    if (sceneView) {
+      sceneView.camera.fov = 55;
+      sceneView.camera.heading = 0;
+      sceneView.camera.tilt = 0.171544;
+      sceneView.camera.position = new Point({
+        longitude: -95,
+        latitude: 36.6715,
+      });
+      sceneView.zoom = 4;
+      sceneView.popup?.close();
+    }
 
-      if (homeWidget) {
-        homeWidget.viewpoint = mapView.viewpoint;
-      }
+    if (homeWidget && mapView && sceneView) {
+      homeWidget['2d'].viewpoint = mapView.viewpoint;
+      homeWidget['3d'].viewpoint = sceneView.viewpoint;
+    }
 
-      if (basemapWidget) {
-        // Search for the basemap with the matching portal id
-        const portalId = 'f81bc478e12c4f1691d0d7ab6361f5a6';
-        let selectedBasemap: __esri.Basemap | null = null;
-        basemapWidget.source.basemaps.forEach((basemap) => {
-          if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
-        });
+    if (basemapWidget) {
+      // Search for the basemap with the matching portal id
+      const portalId = 'f81bc478e12c4f1691d0d7ab6361f5a6';
+      let selectedBasemap: __esri.Basemap | null = null;
+      basemapWidget.source.basemaps.forEach((basemap) => {
+        if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
+      });
 
-        // Set the activeBasemap to the basemap that was found
-        if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
-      }
+      // Set the activeBasemap to the basemap that was found
+      if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
     }
   }
 
@@ -1511,7 +1526,7 @@ function useMapExtentStorage() {
   const [localMapPositionInitialized, setLocalMapPositionInitialized] =
     useState(false);
   useEffect(() => {
-    if (!mapView || localMapPositionInitialized) return;
+    if (!mapView || !sceneView || localMapPositionInitialized) return;
 
     setLocalMapPositionInitialized(true);
 
@@ -1520,9 +1535,10 @@ function useMapExtentStorage() {
 
     const extent = JSON.parse(positionStr) as any;
     mapView.extent = Extent.fromJSON(extent.extent);
+    sceneView.extent = Extent.fromJSON(extent.extent);
 
     setLocalMapPositionInitialized(true);
-  }, [mapView, localMapPositionInitialized]);
+  }, [mapView, sceneView, localMapPositionInitialized]);
 
   // Saves the map position and zoom level to browser storage whenever it changes
   const [
@@ -1654,7 +1670,8 @@ function useHomeWidgetStorage() {
 
     if (viewpointStr) {
       const viewpoint = JSON.parse(viewpointStr) as any;
-      homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
+      homeWidget['2d'].viewpoint = Viewpoint.fromJSON(viewpoint);
+      homeWidget['3d'].viewpoint = Viewpoint.fromJSON(viewpoint);
     }
   }, [homeWidget, localHomeWidgetInitialized]);
 
@@ -1667,9 +1684,16 @@ function useHomeWidgetStorage() {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
     reactiveUtils.watch(
-      () => homeWidget.viewpoint,
+      () => homeWidget['2d'].viewpoint,
       () => {
-        writeToStorage(key, homeWidget.viewpoint.toJSON(), setOptions);
+        writeToStorage(key, homeWidget['2d'].viewpoint.toJSON(), setOptions);
+      },
+    );
+
+    reactiveUtils.watch(
+      () => homeWidget['3d'].viewpoint,
+      () => {
+        writeToStorage(key, homeWidget['3d'].viewpoint.toJSON(), setOptions);
       },
     );
 

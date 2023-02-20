@@ -213,7 +213,7 @@ type SearchResultsType = {
 
 function SearchPanel() {
   const { portal, userInfo } = useContext(AuthenticationContext);
-  const { mapView } = useContext(SketchContext);
+  const { mapView, sceneView } = useContext(SketchContext);
 
   // filters
   const [
@@ -477,12 +477,19 @@ function SearchPanel() {
   // Defines a watch event for filtering results based on the map extent
   const [watchViewInitialized, setWatchViewInitialized] = useState(false);
   useEffect(() => {
-    if (!mapView || watchViewInitialized) return;
+    if (!mapView || !sceneView || watchViewInitialized) return;
 
-    const watchEvent = reactiveUtils.when(
+    const watchEvent2d = reactiveUtils.when(
       () => mapView.stationary,
       () => {
         if (mapView.stationary) setCurrentExtent(mapView.extent);
+      },
+    );
+
+    const watchEvent3d = reactiveUtils.when(
+      () => sceneView.stationary,
+      () => {
+        if (sceneView.stationary) setCurrentExtent(sceneView.extent);
       },
     );
 
@@ -490,9 +497,10 @@ function SearchPanel() {
 
     // remove watch event to prevent it from running after component unmounts
     return function cleanup() {
-      watchEvent.remove();
+      watchEvent2d.remove();
+      watchEvent3d.remove();
     };
-  }, [mapView, watchViewInitialized]);
+  }, [mapView, sceneView, watchViewInitialized]);
 
   const [showFilterOptions, setShowFilterOptions] = useState(false);
 
@@ -840,6 +848,7 @@ function ResultCard({ result }: ResultCardProps) {
   const {
     defaultSymbols,
     setDefaultSymbols,
+    displayDimensions,
     edits,
     setEdits,
     layers,
@@ -850,6 +859,7 @@ function ResultCard({ result }: ResultCardProps) {
     setPortalLayers,
     setReferenceLayers,
     sampleAttributes,
+    sceneView,
     setSelectedScenario,
     setSketchLayer,
     userDefinedOptions,
@@ -1021,8 +1031,11 @@ function ResultCard({ result }: ResultCardProps) {
               map.addMany(mapLayersToAdd);
 
               // zoom to the graphics layer
-              if (zoomToGraphics.length > 0 && mapView) {
-                mapView.goTo(zoomToGraphics);
+              if (zoomToGraphics.length > 0) {
+                if (mapView && displayDimensions === '2d')
+                  mapView.goTo(zoomToGraphics);
+                if (sceneView && displayDimensions === '3d')
+                  sceneView.goTo(zoomToGraphics);
               }
 
               // set the state for session storage
@@ -1790,13 +1803,14 @@ function ResultCard({ result }: ResultCardProps) {
               tileLayer.maxScale = 0;
             }
 
-            if (mapView) {
-              layer.visible = true;
+            layer.visible = true;
 
-              // zoom to the layer if it has an extent
-              if (layer.fullExtent) {
+            // zoom to the layer if it has an extent
+            if (layer.fullExtent) {
+              if (mapView && displayDimensions === '2d')
                 mapView.goTo(layer.fullExtent);
-              }
+              if (sceneView && displayDimensions === '3d')
+                sceneView.goTo(layer.fullExtent);
             }
           } else if (layer.loadStatus === 'failed') {
             setStatus('error');

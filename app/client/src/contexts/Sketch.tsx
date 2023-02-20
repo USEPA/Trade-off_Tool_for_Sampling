@@ -28,6 +28,11 @@ import {
   PolygonSymbol,
 } from 'config/sampleAttributes';
 
+type HomeWidgetType = {
+  '2d': __esri.Home;
+  '3d': __esri.Home;
+};
+
 type SketchType = {
   autoZoom: boolean;
   setAutoZoom: Dispatch<SetStateAction<boolean>>;
@@ -39,8 +44,8 @@ type SketchType = {
   resetDefaultSymbols: Function;
   edits: EditsType;
   setEdits: Dispatch<SetStateAction<EditsType>>;
-  homeWidget: __esri.Home | null;
-  setHomeWidget: Dispatch<SetStateAction<__esri.Home | null>>;
+  homeWidget: HomeWidgetType | null;
+  setHomeWidget: Dispatch<SetStateAction<HomeWidgetType | null>>;
   symbolsInitialized: boolean;
   setSymbolsInitialized: Dispatch<SetStateAction<boolean>>;
   layersInitialized: boolean;
@@ -187,7 +192,7 @@ export function SketchProvider({ children }: Props) {
   const [urlLayers, setUrlLayers] = useState<UrlLayerType[]>([]);
   const [sketchLayer, setSketchLayer] = useState<LayerType | null>(null);
   const [aoiSketchLayer, setAoiSketchLayer] = useState<LayerType | null>(null);
-  const [homeWidget, setHomeWidget] = useState<__esri.Home | null>(null);
+  const [homeWidget, setHomeWidget] = useState<HomeWidgetType | null>(null);
   const [symbolsInitialized, setSymbolsInitialized] = useState(false);
   const [map, setMap] = useState<__esri.Map | null>(null);
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);

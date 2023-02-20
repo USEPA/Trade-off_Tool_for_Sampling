@@ -162,7 +162,10 @@ function Map({ height }: Props) {
       const view = displayDimensions === '3d' ? sceneView : mapView;
       view.goTo(zoomGraphics).then(() => {
         // set map zoom and home widget's viewpoint
-        homeWidget.viewpoint = new Viewpoint({
+        homeWidget['2d'].viewpoint = new Viewpoint({
+          targetGeometry: view.extent,
+        });
+        homeWidget['3d'].viewpoint = new Viewpoint({
           targetGeometry: view.extent,
         });
       });
