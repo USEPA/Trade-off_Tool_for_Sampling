@@ -438,7 +438,6 @@ function LocateSamples() {
     setUserDefinedAttributes,
     allSampleOptions,
     displayGeometryType,
-    displayDimensions,
     sceneView,
     mapView,
   } = useContext(SketchContext);
