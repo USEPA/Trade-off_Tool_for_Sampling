@@ -173,8 +173,13 @@ function ConfigureOutput() {
     webSceneReferenceLayerSelections,
     setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
-  const { portalLayers, selectedScenario, urlLayers, userDefinedAttributes } =
-    useContext(SketchContext);
+  const {
+    map,
+    portalLayers,
+    selectedScenario,
+    urlLayers,
+    userDefinedAttributes,
+  } = useContext(SketchContext);
 
   const sampleTypeOptions: SampleTypeOptions = Object.values(
     userDefinedAttributes.sampleTypes,
@@ -335,6 +340,37 @@ function ConfigureOutput() {
     setWebMapRefOptions(webMapRefLayers);
     setWebSceneRefOptions(webSceneRefLayers);
   }, [portalLayers, urlLayers]);
+
+  const [initializedRefSelections, setInitializedRefSelections] =
+    useState(false);
+  useEffect(() => {
+    if (!map || initializedRefSelections) return;
+    if (webMapRefOptions.length === 0 && webSceneRefOptions.length === 0)
+      return;
+
+    const webMapReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    const webSceneReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    map.layers.forEach((l) => {
+      if (!l.visible) return;
+
+      const wmOption = webMapRefOptions.find((o) => o.id === l.id);
+      const wsOption = webSceneRefOptions.find((o) => o.id === l.id);
+
+      if (wmOption) webMapReferenceLayerSelections.push(wmOption);
+      if (wsOption) webSceneReferenceLayerSelections.push(wsOption);
+    });
+
+    setWebMapReferenceLayerSelections(webMapReferenceLayerSelections);
+    setWebSceneReferenceLayerSelections(webSceneReferenceLayerSelections);
+    setInitializedRefSelections(true);
+  }, [
+    initializedRefSelections,
+    map,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
+    webMapRefOptions,
+    webSceneRefOptions,
+  ]);
 
   return (
     <div css={panelContainer}>
