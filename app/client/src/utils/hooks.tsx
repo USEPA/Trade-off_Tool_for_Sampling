@@ -1510,7 +1510,8 @@ function usePortalLayerStorage() {
 
 // Uses browser storage for holding the map's view port extent.
 function useMapExtentStorage() {
-  const key = 'tots_map_extent';
+  const key2d = 'tots_map_2d_extent';
+  const key3d = 'tots_map_3d_extent';
 
   const { setOptions } = useContext(DialogContext);
   const { mapView, sceneView } = useContext(SketchContext);
@@ -1523,12 +1524,18 @@ function useMapExtentStorage() {
 
     setLocalMapPositionInitialized(true);
 
-    const positionStr = readFromStorage(key);
-    if (!positionStr) return;
+    const position2dStr = readFromStorage(key2d);
+    if (position2dStr) {
+      const extent = JSON.parse(position2dStr) as any;
+      console.log('set extent from session storage');
+      mapView.extent = Extent.fromJSON(extent);
+    }
 
-    const extent = JSON.parse(positionStr) as any;
-    mapView.extent = Extent.fromJSON(extent.extent);
-    sceneView.extent = Extent.fromJSON(extent.extent);
+    const position3dStr = readFromStorage(key3d);
+    if (position3dStr) {
+      const extent = JSON.parse(position3dStr) as any;
+      sceneView.extent = Extent.fromJSON(extent);
+    }
 
     setLocalMapPositionInitialized(true);
   }, [mapView, sceneView, localMapPositionInitialized]);
@@ -1545,7 +1552,8 @@ function useMapExtentStorage() {
       () => mapView.stationary,
       () => {
         if (mapView && mapView.extent && mapView.stationary) {
-          writeToStorage(key, mapView.extent.toJSON(), setOptions);
+          console.log('save extent to session storage');
+          writeToStorage(key2d, mapView.extent.toJSON(), setOptions);
         }
       },
     );
@@ -1553,7 +1561,7 @@ function useMapExtentStorage() {
       () => sceneView.stationary,
       () => {
         if (sceneView && sceneView.extent && sceneView.stationary) {
-          writeToStorage(key, sceneView.extent.toJSON(), setOptions);
+          writeToStorage(key3d, sceneView.extent.toJSON(), setOptions);
         }
       },
     );
