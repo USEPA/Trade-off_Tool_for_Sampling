@@ -772,7 +772,7 @@ function Toolbar() {
     });
   }, [displayGeometryType, layers]);
 
-  // const [switchInit, setSwitchInit] = useState(false);
+  // Switches between 2d and 3d
   useEffect(() => {
     if (!mapView || !sceneView) return;
 

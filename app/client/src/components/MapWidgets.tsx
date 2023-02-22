@@ -535,6 +535,16 @@ function MapWidgets({ mapView, sceneView }: Props) {
 
     if (displayDimensions === '2d') {
       sketchVM.view = mapView;
+      sketchVM.layer.elevationInfo = null as any;
+      sketchVM.snappingOptions = {
+        featureSources: [],
+      } as any;
+      sketchVM.defaultCreateOptions = {
+        hasZ: false,
+      };
+      sketchVM.defaultUpdateOptions = {
+        enableZ: false,
+      };
     } else {
       sketchVM.view = sceneView;
       sketchVM.layer.elevationInfo = { mode: 'absolute-height' };
