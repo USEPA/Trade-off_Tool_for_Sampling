@@ -256,11 +256,10 @@ export function useStartOver() {
     }
 
     if (basemapWidget) {
-      // Search for the basemap with the matching portal id
-      const portalId = 'f81bc478e12c4f1691d0d7ab6361f5a6';
+      // Search for the basemap with the matching basemap
       let selectedBasemap: __esri.Basemap | null = null;
       basemapWidget.source.basemaps.forEach((basemap) => {
-        if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
+        if (basemap.title === 'Streets') selectedBasemap = basemap;
       });
 
       // Set the activeBasemap to the basemap that was found
@@ -1647,7 +1646,8 @@ function useMapPositionStorage() {
 
 // Uses browser storage for holding the home widget's viewpoint.
 function useHomeWidgetStorage() {
-  const key = 'tots_home_viewpoint';
+  const key2d = 'tots_home_2d_viewpoint';
+  const key3d = 'tots_home_3d_viewpoint';
 
   const { setOptions } = useContext(DialogContext);
   const { homeWidget } = useContext(SketchContext);
@@ -1660,12 +1660,16 @@ function useHomeWidgetStorage() {
 
     setLocalHomeWidgetInitialized(true);
 
-    const viewpointStr = readFromStorage(key);
+    const viewpoint2dStr = readFromStorage(key2d);
+    const viewpoint3dStr = readFromStorage(key3d);
 
-    if (viewpointStr) {
-      const viewpoint = JSON.parse(viewpointStr) as any;
-      homeWidget['2d'].viewpoint = Viewpoint.fromJSON(viewpoint);
-      homeWidget['3d'].viewpoint = Viewpoint.fromJSON(viewpoint);
+    if (viewpoint2dStr) {
+      const viewpoint2d = JSON.parse(viewpoint2dStr) as any;
+      homeWidget['2d'].viewpoint = Viewpoint.fromJSON(viewpoint2d);
+    }
+    if (viewpoint3dStr) {
+      const viewpoint3d = JSON.parse(viewpoint3dStr) as any;
+      homeWidget['3d'].viewpoint = Viewpoint.fromJSON(viewpoint3d);
     }
   }, [homeWidget, localHomeWidgetInitialized]);
 
@@ -1678,16 +1682,28 @@ function useHomeWidgetStorage() {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
     reactiveUtils.watch(
-      () => homeWidget['2d'].viewpoint,
+      () => homeWidget['2d']?.viewpoint,
       () => {
-        writeToStorage(key, homeWidget['2d'].viewpoint.toJSON(), setOptions);
+        writeToStorage(
+          key2d,
+          homeWidget['2d']?.viewpoint
+            ? homeWidget['2d']?.viewpoint.toJSON()
+            : {},
+          setOptions,
+        );
       },
     );
 
     reactiveUtils.watch(
-      () => homeWidget['3d'].viewpoint,
+      () => homeWidget['3d']?.viewpoint,
       () => {
-        writeToStorage(key, homeWidget['3d'].viewpoint.toJSON(), setOptions);
+        writeToStorage(
+          key3d,
+          homeWidget['3d']?.viewpoint
+            ? homeWidget['3d']?.viewpoint.toJSON()
+            : {},
+          setOptions,
+        );
       },
     );
 

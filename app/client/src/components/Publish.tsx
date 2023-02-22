@@ -1899,8 +1899,8 @@ function Publish() {
                   <ul>
                     {webMapReferenceLayerSelections
                       .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((l) => (
-                        <li>{l.label}</li>
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
                       ))}
                   </ul>
                 </div>
@@ -1922,8 +1922,8 @@ function Publish() {
                   <ul>
                     {webSceneReferenceLayerSelections
                       .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((l) => (
-                        <li>{l.label}</li>
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
                       ))}
                   </ul>
                 </div>
