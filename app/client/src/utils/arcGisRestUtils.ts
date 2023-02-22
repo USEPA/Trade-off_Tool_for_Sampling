@@ -7,7 +7,7 @@ import {
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 import { LookupFile } from 'types/Misc';
-import { AttributesType } from 'types/Publish';
+import { AttributesType, ReferenceLayerSelections } from 'types/Publish';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
@@ -1198,6 +1198,82 @@ function buildTableEdits({
   };
 }
 
+type AgoLayerType =
+  | 'ArcGISFeatureLayer'
+  | 'ArcGISImageServiceLayer'
+  | 'ArcGISMapServiceLayer'
+  | 'ArcGISSceneServiceLayer'
+  | 'BuildingSceneLayer'
+  | 'CSV'
+  | 'GeoRSS'
+  | 'IntegratedMeshLayer'
+  | 'KML'
+  | 'PointCloudLayer'
+  | 'VectorTileLayer'
+  | 'WMS';
+
+function getAgoLayerType(
+  refLayer: ReferenceLayerSelections,
+): AgoLayerType | null {
+  const layerType = refLayer.layerType;
+
+  let layerTypeOut: AgoLayerType | null = null;
+  if (refLayer.type === 'url' && refLayer.urlType === 'ArcGIS') {
+    if (layerType === 'feature') layerTypeOut = 'ArcGISFeatureLayer';
+    if (layerType === 'tile') layerTypeOut = 'ArcGISMapServiceLayer';
+    if (layerType === 'map-image') layerTypeOut = 'ArcGISMapServiceLayer';
+    if (layerType === 'imagery') layerTypeOut = 'ArcGISImageServiceLayer';
+    if (layerType === 'imagery-tile') layerTypeOut = 'ArcGISImageServiceLayer';
+    if (layerType === 'scene') layerTypeOut = 'ArcGISSceneServiceLayer';
+    if (layerType === 'integrated-mesh') layerTypeOut = 'IntegratedMeshLayer';
+    if (layerType === 'point-cloud') layerTypeOut = 'PointCloudLayer';
+    if (layerType === 'building-scene') layerTypeOut = 'BuildingSceneLayer';
+    return layerTypeOut;
+  }
+
+  if (['CSV', 'csv'].includes(layerType)) layerTypeOut = 'CSV';
+  if (['GeoRSS', 'geo-rss'].includes(layerType)) layerTypeOut = 'GeoRSS';
+  if (layerType === 'Feature Service') layerTypeOut = 'ArcGISFeatureLayer';
+  if (layerType === 'Image Service') layerTypeOut = 'ArcGISImageServiceLayer';
+  if (['KML', 'kml'].includes(layerType)) layerTypeOut = 'KML';
+  if (layerType === 'Map Service') layerTypeOut = 'ArcGISMapServiceLayer';
+  if (layerType === 'Scene Service') layerTypeOut = 'ArcGISSceneServiceLayer';
+  if (layerType === 'Vector Tile Service') layerTypeOut = 'VectorTileLayer';
+  if (['WMS', 'wms'].includes(layerType)) layerTypeOut = 'WMS';
+
+  return layerTypeOut;
+}
+
+function buildReferenceLayers(
+  map: __esri.Map,
+  operationalLayers: any[],
+  referenceMaterials: ReferenceLayerSelections[],
+) {
+  referenceMaterials
+    .sort((a, b) => {
+      const aIndex = map.layers.findIndex((l) => l.id === a.id);
+      const bIndex = map.layers.findIndex((l) => l.id === b.id);
+
+      return aIndex - bIndex;
+    })
+    .forEach((l) => {
+      const layerType = getAgoLayerType(l);
+      if (layerType === 'VectorTileLayer') {
+        operationalLayers.push({
+          layerType,
+          title: l.label,
+          styleUrl: `${l.value}/resources/styles/root.json`,
+        });
+      } else {
+        operationalLayers.push({
+          layerType,
+          title: l.label,
+          url: l.value,
+        });
+      }
+    });
+}
+
 /**
  * Publishes a web map version of the feature service.
  *
@@ -1215,6 +1291,8 @@ function addWebMap({
   layersResponse,
   attributesToInclude,
   layerProps,
+  referenceMaterials,
+  map,
 }: {
   portal: __esri.Portal;
   service: any;
@@ -1222,6 +1300,8 @@ function addWebMap({
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
   layerProps: LookupFile;
+  referenceMaterials: ReferenceLayerSelections[];
+  map: __esri.Map;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1266,6 +1346,8 @@ function addWebMap({
     if (graphicsExtent) {
       extent = graphicsExtent;
     }
+
+    buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
     layersResponse.layers.forEach((layer: any) => {
       operationalLayers.push({
@@ -1350,17 +1432,19 @@ function addWebMap({
 function addWebScene({
   portal,
   service,
-  layers,
   layersResponse,
   attributesToInclude,
   layerProps,
+  referenceMaterials,
+  map,
 }: {
   portal: __esri.Portal;
   service: any;
-  layers: LayerType[];
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
   layerProps: LookupFile;
+  referenceMaterials: ReferenceLayerSelections[];
+  map: __esri.Map;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1399,15 +1483,8 @@ function addWebScene({
     });
 
     const operationalLayers: any[] = [];
-    const mainLayer = layers[0];
-    let extent: __esri.Extent = mainLayer.sketchLayer.fullExtent;
-    const { graphicsExtent } = buildRendererParams(mainLayer);
-    if (graphicsExtent) {
-      extent = graphicsExtent;
-    }
+    buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
-    // TODO - Add capability to add in reference layers to this list of operational layers
-    //        start off with just portal and url layers
     layersResponse.layers.forEach((layer: any) => {
       operationalLayers.push({
         title: layer.name,
@@ -1584,8 +1661,8 @@ function publish({
   edits,
   serviceMetaData,
   layerProps,
-  createWebMap,
-  createWebScene,
+  referenceMaterials,
+  map,
   attributesToInclude = null,
   table = null,
 }: {
@@ -1594,8 +1671,13 @@ function publish({
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
   layerProps: LookupFile;
-  createWebMap: boolean;
-  createWebScene: boolean;
+  referenceMaterials: {
+    createWebMap: boolean;
+    createWebScene: boolean;
+    webMapReferenceLayerSelections: ReferenceLayerSelections[];
+    webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  };
+  map: __esri.Map;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
 }) {
@@ -1692,7 +1774,7 @@ function publish({
                 })
                   .then(async (editsRes: any) => {
                     try {
-                      if (createWebMap) {
+                      if (referenceMaterials.createWebMap) {
                         await addWebMap({
                           portal,
                           service,
@@ -1700,17 +1782,22 @@ function publish({
                           layersResponse: layersRes,
                           attributesToInclude,
                           layerProps,
+                          referenceMaterials:
+                            referenceMaterials.webMapReferenceLayerSelections,
+                          map,
                         });
                       }
 
-                      if (createWebScene) {
+                      if (referenceMaterials.createWebScene) {
                         await addWebScene({
                           portal,
                           service,
-                          layers,
                           layersResponse: layersRes,
                           attributesToInclude,
                           layerProps,
+                          referenceMaterials:
+                            referenceMaterials.webSceneReferenceLayerSelections,
+                          map,
                         });
                       }
 

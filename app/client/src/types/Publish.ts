@@ -1,3 +1,5 @@
+import { PortalLayerTypes, UrlLayerTypes } from 'types/Layer';
+
 export type SampleTypeOption = {
   label: string;
   value: string | null;
@@ -30,3 +32,20 @@ export type AttributesType = {
   length: null | number;
   domain: null | Domain;
 };
+
+export type ReferenceLayerSelections =
+  | {
+      id: string;
+      label: string;
+      layerType: PortalLayerTypes;
+      type: 'acrgis';
+      value: string;
+    }
+  | {
+      id: string;
+      label: string;
+      layerType: string;
+      type: 'url';
+      urlType: UrlLayerTypes;
+      value: string;
+    };

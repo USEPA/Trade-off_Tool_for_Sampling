@@ -147,10 +147,9 @@ export function useStartOver() {
     setTrainingMode,
   } = useContext(NavigationContext);
   const {
-    setIncludeFullPlan,
-    setIncludeFullPlanWebMap,
     setIncludePartialPlan,
     setIncludePartialPlanWebMap,
+    setIncludePartialPlanWebScene,
     setIncludeCustomSampleTypes,
     setPartialPlanAttributes,
     setPublishSamplesMode,
@@ -159,10 +158,11 @@ export function useStartOver() {
     setSampleTableName,
     setSampleTypeSelections,
     setSelectedService,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
     basemapWidget,
-    displayDimensions,
     homeWidget,
     map,
     mapView,
@@ -223,12 +223,13 @@ export function useStartOver() {
     setSampleTableName('');
     setSampleTypeSelections([]);
     setSelectedService(null);
-    setIncludeFullPlan(false);
-    setIncludeFullPlanWebMap(true);
     setIncludePartialPlan(true);
     setIncludePartialPlanWebMap(true);
+    setIncludePartialPlanWebScene(true);
     setIncludeCustomSampleTypes(false);
     setPartialPlanAttributes(defaultPlanAttributes);
+    setWebMapReferenceLayerSelections([]);
+    setWebSceneReferenceLayerSelections([]);
 
     // reset the zoom
     if (mapView) {
@@ -1419,14 +1420,9 @@ function useUrlLayerStorage() {
 
       let layer;
       if (type === 'ArcGIS') {
+        newUrlLayers.push(urlLayer);
         Layer.fromArcGISServerUrl({ url, properties: { id } })
-          .then((layer) => {
-            map.add(layer);
-
-            setUrlLayers((urlLayers) => {
-              return [...urlLayers, urlLayer];
-            });
-          })
+          .then((layer) => map.add(layer))
           .catch((err) => {
             console.error(err);
 
@@ -1459,9 +1455,7 @@ function useUrlLayerStorage() {
       }
     });
 
-    setUrlLayers((urlLayers) => {
-      return [...urlLayers, ...newUrlLayers];
-    });
+    setUrlLayers(newUrlLayers);
   }, [localUrlLayerInitialized, map, setUrlLayers]);
 
   // Saves the url layers to browser storage everytime they change
@@ -2265,26 +2259,29 @@ function usePublishStorage() {
     setSampleTypeSelections,
     selectedService,
     setSelectedService,
-    includeFullPlan,
-    setIncludeFullPlan,
-    includeFullPlanWebMap,
-    setIncludeFullPlanWebMap,
     includePartialPlan,
     setIncludePartialPlan,
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,
+    includePartialPlanWebScene,
+    setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
     partialPlanAttributes,
     setPartialPlanAttributes,
+    webMapReferenceLayerSelections,
+    setWebMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
 
   type OutputSettingsType = {
-    includeFullPlan: boolean;
-    includeFullPlanWebMap: boolean;
     includePartialPlan: boolean;
     includePartialPlanWebMap: boolean;
+    includePartialPlanWebScene: boolean;
     includeCustomSampleTypes: boolean;
+    webMapReferenceLayerSelections: any[];
+    webSceneReferenceLayerSelections: any[];
   };
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
@@ -2323,11 +2320,16 @@ function usePublishStorage() {
     const outputSettingsStr = readFromStorage(key4);
     if (outputSettingsStr !== null) {
       const outputSettings: OutputSettingsType = JSON.parse(outputSettingsStr);
-      setIncludeFullPlan(outputSettings.includeFullPlan);
-      setIncludeFullPlanWebMap(outputSettings.includeFullPlanWebMap);
       setIncludePartialPlan(outputSettings.includePartialPlan);
       setIncludePartialPlanWebMap(outputSettings.includePartialPlanWebMap);
+      setIncludePartialPlanWebScene(outputSettings.includePartialPlanWebScene);
       setIncludeCustomSampleTypes(outputSettings.includeCustomSampleTypes);
+      setWebMapReferenceLayerSelections(
+        outputSettings.webMapReferenceLayerSelections,
+      );
+      setWebSceneReferenceLayerSelections(
+        outputSettings.webSceneReferenceLayerSelections,
+      );
     }
 
     // set the partial plan attributes list
@@ -2339,10 +2341,9 @@ function usePublishStorage() {
   }, [
     localSampleTypeInitialized,
     setIncludeCustomSampleTypes,
-    setIncludeFullPlan,
-    setIncludeFullPlanWebMap,
     setIncludePartialPlan,
     setIncludePartialPlanWebMap,
+    setIncludePartialPlanWebScene,
     setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
@@ -2350,6 +2351,8 @@ function usePublishStorage() {
     setSampleTableName,
     setSampleTypeSelections,
     setSelectedService,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
@@ -2391,22 +2394,24 @@ function usePublishStorage() {
     if (!localSampleTypeInitialized) return;
 
     const settings: OutputSettingsType = {
-      includeFullPlan,
-      includeFullPlanWebMap,
       includePartialPlan,
       includePartialPlanWebMap,
+      includePartialPlanWebScene,
       includeCustomSampleTypes,
+      webMapReferenceLayerSelections,
+      webSceneReferenceLayerSelections,
     };
 
     writeToStorage(key4, settings, setOptions);
   }, [
-    includeFullPlan,
-    includeFullPlanWebMap,
     includePartialPlan,
     includePartialPlanWebMap,
+    includePartialPlanWebScene,
     includeCustomSampleTypes,
     localSampleTypeInitialized,
     setOptions,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   ]);
 
   // Saves the partial plan attributes list to browser storage whenever it changers

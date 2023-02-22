@@ -101,7 +101,7 @@ function Map({ height }: Props) {
 
       // gets a layer type value used for sorting
       function getLayerType(layer: __esri.Layer) {
-        const imageryTypes = ['imagery', 'tile', 'vector-tile'];
+        const imageryTypes = ['imagery', 'imagery-tile', 'tile', 'vector-tile'];
         let type = 'other';
 
         let groupType = '';
@@ -125,6 +125,10 @@ function Map({ height }: Props) {
           type = 'graphics';
         } else if (layer.type === 'feature' || groupType === 'feature') {
           type = 'feature';
+        } else if (layer.type === 'map-image') {
+          type = 'map-image';
+        } else if (['csv', 'geo-rss', 'kml', 'wms'].includes(layer.type)) {
+          type = 'file';
         } else if (
           imageryTypes.includes(type) ||
           imageryTypes.includes(groupType)
@@ -140,7 +144,14 @@ function Map({ height }: Props) {
       // featureLayers
       // otherLayers
       // imageryLayers (bottom)
-      const sortBy = ['other', 'imagery', 'feature', 'graphics'];
+      const sortBy = [
+        'other',
+        'imagery',
+        'map-image',
+        'file',
+        'feature',
+        'graphics',
+      ];
       map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
         return (
           sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))

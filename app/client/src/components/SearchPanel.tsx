@@ -1053,7 +1053,13 @@ function ResultCard({ result }: ResultCardProps) {
               // the search panel shows up as the layer having been added.
               setPortalLayers((portalLayers) => [
                 ...portalLayers,
-                { id: result.id, type: 'tots' },
+                {
+                  id: result.id,
+                  label: result.title,
+                  layerType: 'Feature Service',
+                  type: 'tots',
+                  url: result.url,
+                },
               ]);
 
               // reset the status
@@ -1792,7 +1798,13 @@ function ResultCard({ result }: ResultCardProps) {
           if (layer.loadStatus === 'loaded') {
             setPortalLayers((portalLayers) => [
               ...portalLayers,
-              { id: result.id, type: 'arcgis' },
+              {
+                id: result.id,
+                label: result.title,
+                layerType: result.type,
+                type: 'arcgis',
+                url: result.url,
+              },
             ]);
             setStatus('');
 

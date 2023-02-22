@@ -18,6 +18,8 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
+// types
+import { UrlLayerTypes } from 'types/Layer';
 // config
 import {
   unsupportedLayerMessage,
@@ -80,21 +82,24 @@ function URLPanel() {
   useEffect(() => {
     if (!map || !layer) return;
 
-    // keep the original set of url layers in case the layer errors out
-    const originalUrlLayers = urlLayers;
-
     // add the layer to the map
     map.add(layer);
 
     layer.on('layerview-create', (event) => {
+      const urlLayer = {
+        label: layer.title,
+        layerId: layer.id,
+        layerType: layer.type,
+        type: urlType.value as UrlLayerTypes,
+        url,
+      };
       setUrlLayers((urlLayers) => {
-        urlLayers.forEach((urlLayer) => {
-          if (urlLayer.url === url && urlLayer.type === urlType.value) {
-            urlLayer.layerId = layer.id;
-          }
-        });
-
-        return urlLayers;
+        let tmpUrlLayer = urlLayers.find((l) => l.url === url);
+        if (!tmpUrlLayer) return [...urlLayers, urlLayer];
+        else {
+          tmpUrlLayer = urlLayer;
+          return urlLayers;
+        }
       });
       setStatus('success');
     });
@@ -103,8 +108,6 @@ function URLPanel() {
       console.error('create error event: ', event);
 
       map.remove(layer);
-
-      setUrlLayers(originalUrlLayers);
 
       setStatus('failure');
     });
@@ -130,10 +133,6 @@ function URLPanel() {
 
     let layer: SupportedUrlLayerTypes | null = null;
     if (type === 'ArcGIS') {
-      // add this layer to the url layers
-      const urlLayer = { url, type: urlType.value, layerId: '' };
-      setUrlLayers([...urlLayers, urlLayer]);
-
       Layer.fromArcGISServerUrl({ url })
         .then((layer) => {
           setLayer(layer);
@@ -165,10 +164,6 @@ function URLPanel() {
 
     // unsupported layer type
     if (layer) {
-      // add this layer to the url layers
-      const urlLayer = { url, type: urlType.value, layerId: layer.id };
-      setUrlLayers([...urlLayers, urlLayer]);
-
       setLayer(layer);
     } else {
       setStatus('unsupported');
@@ -262,7 +257,7 @@ function URLPanel() {
           {urlType.value === 'WMS' && (
             <div>
               <p>
-                http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?service=WMS&request=GetCapabilities
+                https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?service=WMS&request=GetCapabilities
               </p>
             </div>
           )}
@@ -276,19 +271,19 @@ function URLPanel() {
           {urlType.value === 'KML' && (
             <div>
               <p>
-                http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month_age_animated.kml
+                https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month_age_animated.kml
               </p>
             </div>
           )}
           {urlType.value === 'GeoRSS' && (
             <div>
-              <p>http://www.gdacs.org/xml/rss.xml</p>
+              <p>https://www.gdacs.org/xml/rss.xml</p>
             </div>
           )}
           {urlType.value === 'CSV' && (
             <div>
               <p>
-                http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv
+                https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv
               </p>
             </div>
           )}
