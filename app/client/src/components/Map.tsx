@@ -57,6 +57,7 @@ function Map({ height }: Props) {
 
     const newMap = new EsriMap({
       basemap: 'streets-vector',
+      ground: 'world-elevation',
       layers: [],
     });
     setMap(newMap);
