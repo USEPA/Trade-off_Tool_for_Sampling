@@ -1365,13 +1365,15 @@ function addWebMap({
     });
 
     // run the webserivce call to update ArcGIS Online
-    // TODO - Check the values below to see if any need to be updated
     const data = {
       f: 'json',
       token: tempPortal.credential.token,
       title: title,
       type: 'Web Map',
       text: {
+        version: '2.27',
+        authoringApp: 'ArcGISMapViewer',
+        authoringAppVersion: '2023.1',
         operationalLayers,
         baseMap: {
           baseMapLayers: [
@@ -1385,8 +1387,6 @@ function addWebMap({
           ],
           title: 'Topographic',
         },
-        authoringApp: 'ArcGISMapViewer',
-        authoringAppVersion: '9.1',
         initialState: {
           viewpoint: {
             targetGeometry: {
@@ -1405,7 +1405,6 @@ function addWebMap({
           latestWkid: 3857,
           wkid: 102100,
         },
-        version: '2.20',
       },
     };
     appendEnvironmentObjectParam(data);
@@ -1432,6 +1431,7 @@ function addWebMap({
 function addWebScene({
   portal,
   service,
+  layers,
   layersResponse,
   attributesToInclude,
   layerProps,
@@ -1440,6 +1440,7 @@ function addWebScene({
 }: {
   portal: __esri.Portal;
   service: any;
+  layers: LayerType[];
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
   layerProps: LookupFile;
@@ -1483,6 +1484,13 @@ function addWebScene({
     });
 
     const operationalLayers: any[] = [];
+    const mainLayer = layers[0];
+    let extent: __esri.Extent = mainLayer.sketchLayer.fullExtent;
+    const { graphicsExtent } = buildRendererParams(mainLayer);
+    if (graphicsExtent) {
+      extent = graphicsExtent;
+    }
+
     buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
     layersResponse.layers.forEach((layer: any) => {
@@ -1507,6 +1515,9 @@ function addWebScene({
       title: title,
       type: 'Web Scene',
       text: {
+        version: '1.30',
+        authoringApp: 'WebSceneViewer',
+        authoringAppVersion: '2023.1.0',
         operationalLayers,
         baseMap: {
           baseMapLayers: [
@@ -1522,7 +1533,7 @@ function addWebScene({
           elevationLayers: [
             {
               id: 'globalElevation',
-              listMode: 'hide',
+              listMode: 'show',
               title: 'Terrain3D',
               url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
               layerType: 'ArcGISTiledElevationServiceLayer',
@@ -1533,7 +1544,7 @@ function addWebScene({
           layers: [
             {
               id: 'globalElevation',
-              listMode: 'hide',
+              listMode: 'show',
               title: 'Terrain3D',
               url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
               layerType: 'ArcGISTiledElevationServiceLayer',
@@ -1541,16 +1552,13 @@ function addWebScene({
           ],
           transparency: 0,
           navigationConstraint: {
-            type: 'stayAbove',
+            type: 'none',
           },
         },
         heightModelInfo: {
           heightModel: 'gravity_related_height',
           heightUnit: 'meter',
         },
-        version: '1.29',
-        authoringApp: 'WebSceneViewer',
-        authoringAppVersion: '10.3.0.0',
         initialState: {
           environment: {
             lighting: {
@@ -1566,19 +1574,20 @@ function addWebScene({
             },
           },
           viewpoint: {
-            camera: {
-              // TODO - look into pulling this from the screen
-              position: {
-                spatialReference: {
-                  latestWkid: 3857,
-                  wkid: 102100,
-                },
-                x: -8238974.69885178,
-                y: 4967790.2180431,
-                z: 429.89201813656837,
+            targetGeometry: {
+              spatialReference: {
+                latestWkid: 3857,
+                wkid: 102100,
               },
-              heading: 0.12192561374136514,
-              tilt: 65.05057033863466,
+              xmin: extent.xmin,
+              ymin: extent.ymin,
+              xmax: extent.xmax,
+              ymax: extent.ymax,
+            },
+            camera: {
+              fov: 55,
+              heading: 0,
+              tilt: 0.22039218612040226,
             },
           },
         },
@@ -1792,6 +1801,7 @@ function publish({
                         await addWebScene({
                           portal,
                           service,
+                          layers,
                           layersResponse: layersRes,
                           attributesToInclude,
                           layerProps,
