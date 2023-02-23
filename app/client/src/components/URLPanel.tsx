@@ -12,6 +12,7 @@ import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
@@ -82,35 +83,38 @@ function URLPanel() {
   useEffect(() => {
     if (!map || !layer) return;
 
+    // setup the watch event to see when the layer finishes loading
+    const watcher = reactiveUtils.watch(
+      () => layer.loadStatus,
+      () => {
+        // set the status based on the load status
+        if (layer.loadStatus === 'loaded') {
+          const urlLayer = {
+            label: layer.title,
+            layerId: layer.id,
+            layerType: layer.type,
+            type: urlType.value as UrlLayerTypes,
+            url,
+          };
+          setUrlLayers((urlLayers) => {
+            let tmpUrlLayer = urlLayers.find((l) => l.url === url);
+            if (!tmpUrlLayer) return [...urlLayers, urlLayer];
+            else {
+              tmpUrlLayer = urlLayer;
+              return urlLayers;
+            }
+          });
+          setStatus('success');
+          watcher.remove();
+        } else if (layer.loadStatus === 'failed') {
+          setStatus('failure');
+          watcher.remove();
+        }
+      },
+    );
+
     // add the layer to the map
     map.add(layer);
-
-    layer.on('layerview-create', (event) => {
-      const urlLayer = {
-        label: layer.title,
-        layerId: layer.id,
-        layerType: layer.type,
-        type: urlType.value as UrlLayerTypes,
-        url,
-      };
-      setUrlLayers((urlLayers) => {
-        let tmpUrlLayer = urlLayers.find((l) => l.url === url);
-        if (!tmpUrlLayer) return [...urlLayers, urlLayer];
-        else {
-          tmpUrlLayer = urlLayer;
-          return urlLayers;
-        }
-      });
-      setStatus('success');
-    });
-
-    layer.on('layerview-create-error', (event) => {
-      console.error('create error event: ', event);
-
-      map.remove(layer);
-
-      setStatus('failure');
-    });
 
     setLayer(null);
   }, [map, layer, setUrlLayers, url, urlLayers, urlType]);
