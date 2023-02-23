@@ -342,12 +342,12 @@ function SketchButton({
 const headerContainer = css`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-evenly;
+`;
 
-  h2 {
-    margin: 0;
-    padding: 0;
-  }
+const headerStyles = css`
+  margin: 0;
+  padding: 0;
 `;
 
 const iconButtonContainerStyles = css`
@@ -387,15 +387,6 @@ const deleteButtonStyles = css`
   }
 `;
 
-const trainingStyles = css`
-  margin-left: 25px;
-  font-size: 0.875rem;
-
-  input {
-    margin-right: 5px;
-  }
-`;
-
 const lineSeparatorStyles = css`
   border-bottom: 1px solid #d8dfe2;
 `;
@@ -419,12 +410,10 @@ type GenerateRandomType = {
 function LocateSamples() {
   const { userInfo } = useContext(AuthenticationContext);
   const { setOptions } = useContext(DialogContext);
-  const { setGoTo, setGoToOptions, trainingMode, setTrainingMode } =
+  const { setGoTo, setGoToOptions, trainingMode } =
     useContext(NavigationContext);
   const { setSampleTypeSelections } = useContext(PublishContext);
   const {
-    autoZoom,
-    setAutoZoom,
     defaultSymbols,
     setDefaultSymbolSingle,
     edits,
@@ -448,7 +437,9 @@ function LocateSamples() {
     userDefinedAttributes,
     setUserDefinedAttributes,
     allSampleOptions,
-    showAsPoints,
+    displayGeometryType,
+    sceneView,
+    mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
@@ -521,7 +512,7 @@ function LocateSamples() {
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
-    if (!sketchVM || !map || !sketchLayer) return;
+    if (!sketchVM || !map || !sketchLayer || !sceneView || !mapView) return;
 
     // put the sketch layer on the map, if it isn't there already and
     // is not part of a group layer
@@ -547,6 +538,7 @@ function LocateSamples() {
     // update the sketchVM symbol
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
+
     sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
     sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
 
@@ -1177,32 +1169,13 @@ function LocateSamples() {
     <div css={panelContainer}>
       <div>
         <div css={sectionContainer}>
+          <h2 css={headerStyles}>Create Plan</h2>
           <div css={headerContainer}>
-            <h2>Create Plan</h2>
             <button css={deleteButtonStyles} onClick={startOver}>
               <i className="fas fa-redo-alt" />
               <br />
               Start Over
             </button>
-          </div>
-          <div css={headerContainer}>
-            <div css={trainingStyles}>
-              <input
-                id="training-mode-toggle"
-                type="checkbox"
-                checked={trainingMode}
-                onChange={(ev) => setTrainingMode(!trainingMode)}
-              />
-              <label htmlFor="training-mode-toggle">Training Mode</label>
-              <br />
-              <input
-                id="auto-zoom-toggle"
-                type="checkbox"
-                checked={autoZoom}
-                onChange={(ev) => setAutoZoom(!autoZoom)}
-              />
-              <label htmlFor="auto-zoom-toggle">Auto Zoom</label>
-            </div>
             <button
               css={deleteButtonStyles}
               onClick={() => {
@@ -1813,7 +1786,10 @@ function LocateSamples() {
                             }
 
                             // show the newly added layer
-                            if (showAsPoints && sketchLayer.pointsLayer) {
+                            if (
+                              displayGeometryType === 'points' &&
+                              sketchLayer.pointsLayer
+                            ) {
                               sketchLayer.pointsLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;

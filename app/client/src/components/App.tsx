@@ -269,8 +269,10 @@ function App() {
     trainingMode,
   } = useContext(NavigationContext);
   const {
-    mapView,
+    displayDimensions,
     layers,
+    mapView,
+    sceneView,
     selectedSampleIds,
     setSelectedSampleIds,
     selectedScenario,
@@ -719,9 +721,20 @@ function App() {
                                           ]);
 
                                           // zoom to the graphic
-                                          if (!mapView) return;
-                                          mapView.goTo(row.original.graphic);
-                                          mapView.zoom = mapView.zoom - 1;
+                                          if (
+                                            displayDimensions === '2d' &&
+                                            mapView
+                                          ) {
+                                            mapView.goTo(row.original.graphic);
+                                            mapView.zoom = mapView.zoom - 1;
+                                          } else if (
+                                            displayDimensions === '3d' &&
+                                            sceneView
+                                          ) {
+                                            sceneView.goTo(
+                                              row.original.graphic,
+                                            );
+                                          }
                                         }}
                                       >
                                         <i className="fas fa-search-plus" />

@@ -28,6 +28,7 @@ import {
   AttributesType,
   CodedValue,
   Domain,
+  ReferenceLayerSelections,
   SampleTypeOptions,
 } from 'types/Publish';
 // config
@@ -110,6 +111,14 @@ const labelStyles = css`
   }
 `;
 
+const subLabelStyles = css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  pointer-events: none;
+`;
+
 const switchStyles = css`
   margin-right: 10px;
   pointer-events: all;
@@ -126,10 +135,6 @@ const editButtonStyles = css`
   margin: 0;
   padding: 3px 6px;
   font-size: 16px;
-`;
-
-const checkboxStyles = css`
-  margin-right: 5px;
 `;
 
 const nextInstructionStyles = css`
@@ -153,20 +158,28 @@ function ConfigureOutput() {
     setPublishSamplesMode,
     sampleTypeSelections,
     setSampleTypeSelections,
-    // includeFullPlan,
-    // setIncludeFullPlan,
-    // includeFullPlanWebMap,
-    // setIncludeFullPlanWebMap,
     includePartialPlan,
     setIncludePartialPlan,
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,
+    includePartialPlanWebScene,
+    setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
     partialPlanAttributes,
     setPartialPlanAttributes,
+    webMapReferenceLayerSelections,
+    setWebMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
-  const { selectedScenario, userDefinedAttributes } = useContext(SketchContext);
+  const {
+    map,
+    portalLayers,
+    selectedScenario,
+    urlLayers,
+    userDefinedAttributes,
+  } = useContext(SketchContext);
 
   const sampleTypeOptions: SampleTypeOptions = Object.values(
     userDefinedAttributes.sampleTypes,
@@ -183,11 +196,12 @@ function ConfigureOutput() {
 
   const [editAttributesOpen, setEditAttributesOpen] = useState(false);
   const [attributesIndex, setAttributesIndex] = useState(-1);
-  // const [isFullOpen, setIsFullOpen] = useState(includeFullPlan);
   const [isPartialOpen, setIsPartialOpen] = useState(includePartialPlan);
   const [isSampleTypesOpen, setIsSampleTypesOpen] = useState(
     includeCustomSampleTypes,
   );
+  const [isIncludeWebMapOpen, setIsIncludeWebMapOpen] = useState(false);
+  const [isIncludeWebMapSceneOpen, setIsIncludeWebSceneOpen] = useState(false);
 
   const webMapIcon = (id: string) => (
     <InfoIcon
@@ -198,6 +212,165 @@ function ConfigureOutput() {
       type="info"
     />
   );
+
+  const webSceneIcon = (id: string) => (
+    <InfoIcon
+      id={id}
+      cssStyles={infoIconStyles}
+      tooltip="A web scene is used for viewing TOTS sampling plans in ArcGIS Online with 3D."
+      place="right"
+      type="info"
+    />
+  );
+
+  const [webMapRefOptions, setWebMapRefOptions] = useState<
+    ReferenceLayerSelections[]
+  >([]);
+  const [webSceneRefOptions, setWebSceneRefOptions] = useState<
+    ReferenceLayerSelections[]
+  >([]);
+  useEffect(() => {
+    const webMapRefLayers: ReferenceLayerSelections[] = [];
+    const webSceneRefLayers: ReferenceLayerSelections[] = [];
+
+    const applicableLayerTypesAgoWebMap = [
+      'Feature Service',
+      'Image Service',
+      'KML',
+      'Map Service',
+      'Vector Tile Service',
+      'WMS',
+    ];
+    const applicableLayerTypesAgoWebScene = [
+      'Feature Service',
+      'Image Service',
+      'Map Service',
+      'Scene Service',
+      'Vector Tile Service',
+    ];
+    portalLayers.forEach((l) => {
+      if (l.type === 'tots') return;
+
+      if (applicableLayerTypesAgoWebMap.includes(l.layerType)) {
+        webMapRefLayers.push({
+          label: window.location.search.includes('devMode=true')
+            ? `${l.label} (${l.layerType} | Portal)`
+            : l.label,
+          id: l.id,
+          value: l.url,
+          layerType: l.layerType,
+          type: 'acrgis',
+        });
+      }
+
+      if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
+        webSceneRefLayers.push({
+          label: window.location.search.includes('devMode=true')
+            ? `${l.label} (${l.layerType} | Portal)`
+            : l.label,
+          id: l.id,
+          value: l.url,
+          layerType: l.layerType,
+          type: 'acrgis',
+        });
+      }
+    });
+
+    const applicableLayerTypesUrlWebMap = [
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'map-image',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebMap = ['CSV', 'GeoRSS', 'KML', 'WMS'];
+    const applicableLayerTypesUrlWebScene = [
+      'building-scene',
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'integrated-mesh',
+      'map-image',
+      'point-cloud',
+      'scene',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebScene = ['CSV'];
+    urlLayers.forEach((l) => {
+      if (l.layerType === 'stream') return;
+
+      if (
+        applicableUrlTypesUrlWebMap.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebMap.includes(l.layerType))
+      ) {
+        webMapRefLayers.push({
+          label: window.location.search.includes('devMode=true')
+            ? `${l.label} (URL | ${l.type} | ${l.layerType})`
+            : l.label,
+          id: l.layerId,
+          value: l.url,
+          layerType: l.layerType,
+          urlType: l.type,
+          type: 'url',
+        });
+      }
+
+      if (
+        applicableUrlTypesUrlWebScene.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebScene.includes(l.layerType))
+      ) {
+        webSceneRefLayers.push({
+          label: window.location.search.includes('devMode=true')
+            ? `${l.label} (URL | ${l.type} | ${l.layerType})`
+            : l.label,
+          id: l.layerId,
+          value: l.url,
+          layerType: l.layerType,
+          urlType: l.type,
+          type: 'url',
+        });
+      }
+    });
+
+    webMapRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+    webSceneRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+
+    setWebMapRefOptions(webMapRefLayers);
+    setWebSceneRefOptions(webSceneRefLayers);
+  }, [portalLayers, urlLayers]);
+
+  const [initializedRefSelections, setInitializedRefSelections] =
+    useState(false);
+  useEffect(() => {
+    if (!map || initializedRefSelections) return;
+    if (webMapRefOptions.length === 0 && webSceneRefOptions.length === 0)
+      return;
+
+    const webMapReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    const webSceneReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    map.layers.forEach((l) => {
+      if (!l.visible) return;
+
+      const wmOption = webMapRefOptions.find((o) => o.id === l.id);
+      const wsOption = webSceneRefOptions.find((o) => o.id === l.id);
+
+      if (wmOption) webMapReferenceLayerSelections.push(wmOption);
+      if (wsOption) webSceneReferenceLayerSelections.push(wsOption);
+    });
+
+    setWebMapReferenceLayerSelections(webMapReferenceLayerSelections);
+    setWebSceneReferenceLayerSelections(webSceneReferenceLayerSelections);
+    setInitializedRefSelections(true);
+  }, [
+    initializedRefSelections,
+    map,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
+    webMapRefOptions,
+    webSceneRefOptions,
+  ]);
 
   return (
     <div css={panelContainer}>
@@ -233,53 +406,6 @@ function ConfigureOutput() {
           </p>
         </div>
         <AccordionList>
-          {/* <AccordionItem
-          isOpenParam={isFullOpen}
-          onChange={(isOpen) => {
-            setIsFullOpen(!isFullOpen);
-            if (!isOpen) return;
-
-            setIncludeFullPlan(true);
-          }}
-          title={
-            <label css={labelStyles}>
-              <strong>Include TOTS Full Reference File</strong>
-              <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
-                <Switch
-                  checked={includeFullPlan}
-                  onChange={() => {
-                    setIncludeFullPlan(!includeFullPlan);
-                    setIsFullOpen(!includeFullPlan);
-                  }}
-                  ariaLabel="Include TOTS Full Reference File"
-                />
-              </div>
-            </label>
-          }
-        >
-          <div css={sectionContainer}>
-            <p>
-              Choose this option to publish a complete set of output, including
-              all TOTS attribute values, that can be imported back into TOTS in
-              the future.
-            </p>
-            <div>
-              <input
-                id="include-web-map-toggle"
-                type="checkbox"
-                css={checkboxStyles}
-                checked={includeFullPlanWebMap}
-                onChange={(ev) =>
-                  setIncludeFullPlanWebMap(!includeFullPlanWebMap)
-                }
-              />
-              <label htmlFor="include-web-map-toggle">
-                Include web map in output
-              </label>
-              {webMapIcon('full-web-map-icon')}
-            </div>
-          </div>
-        </AccordionItem> */}
           <AccordionItem
             isOpenParam={isPartialOpen}
             onChange={(isOpen) => {
@@ -313,23 +439,108 @@ function ConfigureOutput() {
                 to use with field data collection apps.
               </p>
             </div>
-            <div css={sectionContainer}>
-              <input
-                id="include-partial-web-map-toggle"
-                type="checkbox"
-                css={checkboxStyles}
-                checked={includePartialPlanWebMap}
-                onChange={(ev) =>
-                  setIncludePartialPlanWebMap(!includePartialPlanWebMap)
-                }
-              />
-              <label htmlFor="include-partial-web-map-toggle">
-                Include web map in output
-              </label>
-              {webMapIcon('partial-web-map-icon')}
-            </div>
             <div css={nestedAccordionStyles}>
               <AccordionList>
+                <AccordionItem
+                  isOpenParam={isIncludeWebMapOpen}
+                  onChange={(isOpen) => {
+                    setIsIncludeWebMapOpen(!isIncludeWebMapOpen);
+                    if (!isOpen) return;
+
+                    setIncludePartialPlanWebMap(true);
+                  }}
+                  title={
+                    <label css={subLabelStyles}>
+                      <span>
+                        Include Web Map
+                        {webMapIcon('partial-web-map-icon')}
+                      </span>
+                      <div
+                        css={switchStyles}
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <Switch
+                          checked={includePartialPlanWebMap}
+                          onChange={() => {
+                            setIsIncludeWebMapOpen(!includePartialPlanWebMap);
+                            setIncludePartialPlanWebMap(
+                              !includePartialPlanWebMap,
+                            );
+                          }}
+                          ariaLabel="Include Web Map"
+                        />
+                      </div>
+                    </label>
+                  }
+                >
+                  <div>
+                    <label htmlFor="webmap-reference-layers-select">
+                      Reference Layers to Include with web map
+                    </label>
+                    <Select
+                      inputId="webmap-reference-layers-select"
+                      isMulti={true}
+                      isSearchable={false}
+                      options={webMapRefOptions}
+                      value={webMapReferenceLayerSelections}
+                      onChange={(ev) =>
+                        setWebMapReferenceLayerSelections(ev as any)
+                      }
+                      css={multiSelectStyles}
+                    />
+                  </div>
+                </AccordionItem>
+                <AccordionItem
+                  isOpenParam={isIncludeWebMapSceneOpen}
+                  onChange={(isOpen) => {
+                    setIsIncludeWebSceneOpen(!isIncludeWebMapSceneOpen);
+                    if (!isOpen) return;
+
+                    setIncludePartialPlanWebScene(true);
+                  }}
+                  title={
+                    <label css={subLabelStyles}>
+                      <span>
+                        Include Web Scene
+                        {webSceneIcon('partial-web-scene-icon')}
+                      </span>
+                      <div
+                        css={switchStyles}
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <Switch
+                          checked={includePartialPlanWebScene}
+                          onChange={() => {
+                            setIsIncludeWebSceneOpen(
+                              !includePartialPlanWebScene,
+                            );
+                            setIncludePartialPlanWebScene(
+                              !includePartialPlanWebScene,
+                            );
+                          }}
+                          ariaLabel="Include Web Scene"
+                        />
+                      </div>
+                    </label>
+                  }
+                >
+                  <div>
+                    <label htmlFor="webscene-reference-layers-select">
+                      Reference Layers to Include with web scene
+                    </label>
+                    <Select
+                      inputId="webscene-reference-layers-select"
+                      isMulti={true}
+                      isSearchable={false}
+                      options={webSceneRefOptions}
+                      value={webSceneReferenceLayerSelections}
+                      onChange={(ev) =>
+                        setWebSceneReferenceLayerSelections(ev as any)
+                      }
+                      css={multiSelectStyles}
+                    />
+                  </div>
+                </AccordionItem>
                 <AccordionItem title="Add User-Defined Attributes">
                   <div css={tableContainer}>
                     <p>
@@ -462,10 +673,10 @@ function ConfigureOutput() {
                 </label>
                 <Select
                   inputId="publish-sample-select"
-                  isMulti={true as any}
+                  isMulti={true}
                   isSearchable={false}
-                  options={sampleTypeOptions as any}
-                  value={sampleTypeSelections as any}
+                  options={sampleTypeOptions}
+                  value={sampleTypeSelections}
                   onChange={(ev) => setSampleTypeSelections(ev as any)}
                   css={multiSelectStyles}
                 />

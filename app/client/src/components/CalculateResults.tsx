@@ -93,8 +93,15 @@ function CalculateResults() {
     calculateResults,
     contaminationMap, //
   } = useContext(CalculateContext);
-  const { aoiSketchLayer, layers, map, mapView, selectedScenario } =
-    useContext(SketchContext);
+  const {
+    aoiSketchLayer,
+    displayDimensions,
+    layers,
+    map,
+    mapView,
+    sceneView,
+    selectedScenario,
+  } = useContext(SketchContext);
 
   const [
     downloadStatus,
@@ -112,11 +119,19 @@ function CalculateResults() {
   ] = useState<__esri.Screenshot | null>(null);
   useEffect(() => {
     if (screenshotInitialized) return;
-    if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
+    if (
+      !map ||
+      !mapView ||
+      !sceneView ||
+      !selectedScenario ||
+      downloadStatus !== 'fetching'
+    )
       return;
 
+    const view = displayDimensions === '3d' ? sceneView : mapView;
+
     // save the current extent
-    const initialExtent = mapView.extent;
+    const initialExtent = view.extent;
 
     const originalVisiblity: { [key: string]: boolean } = {};
     // store current visiblity settings
@@ -157,17 +172,17 @@ function CalculateResults() {
       contaminationMap?.visible ? contaminationMap : null,
     ]);
     if (zoomGraphics.length > 0) {
-      mapView.goTo(zoomGraphics, { animate: false }).then(() => {
+      view.goTo(zoomGraphics, { animate: false }).then(() => {
         // allow some time for the layers to load in prior to taking the screenshot
         setTimeout(() => {
           // const mapImageRes = await printTask.execute(params);
-          mapView
+          view
             .takeScreenshot()
             .then((data) => {
               setScreenshot(data);
 
               // zoom back to the initial extent
-              mapView.goTo(initialExtent, { animate: false });
+              view.goTo(initialExtent, { animate: false });
 
               // set the visiblity back
               map.layers.forEach((layer) => {
@@ -179,7 +194,7 @@ function CalculateResults() {
               setDownloadStatus('screenshot-failure');
 
               // zoom back to the initial extent
-              mapView.goTo(initialExtent, { animate: false });
+              view.goTo(initialExtent, { animate: false });
 
               // set the visiblity back
               map.layers.forEach((layer) => {
@@ -196,10 +211,12 @@ function CalculateResults() {
   }, [
     aoiSketchLayer,
     contaminationMap,
+    displayDimensions,
     downloadStatus,
     layers,
     map,
     mapView,
+    sceneView,
     screenshotInitialized,
     selectedScenario,
   ]);

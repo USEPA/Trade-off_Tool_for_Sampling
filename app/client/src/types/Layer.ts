@@ -39,15 +39,33 @@ export type LayerType = {
   parentLayer: __esri.GroupLayer | null;
 };
 
+export type UrlLayerTypes = 'ArcGIS' | 'CSV' | 'GeoRSS' | 'KML' | 'WMS';
+
+export type PortalLayerTypes =
+  | 'Feature Service'
+  | 'Image Service'
+  | 'KML'
+  | 'Map Service'
+  | 'Scene Service'
+  | 'Vector Tile Service'
+  | 'WMS';
+
+export type PortalUrlLayerTypes = PortalLayerTypes & UrlLayerTypes;
+
 export type PortalLayerType = {
   id: string;
   type: 'arcgis' | 'tots';
+  label: string;
+  layerType: PortalLayerTypes;
+  url: string;
 };
 
 export type UrlLayerType = {
-  url: string;
-  type: string;
+  label: string;
   layerId: string;
+  layerType: string;
+  type: UrlLayerTypes;
+  url: string;
 };
 
 export type FieldInfos = {

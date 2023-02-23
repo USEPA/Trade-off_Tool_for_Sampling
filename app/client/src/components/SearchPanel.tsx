@@ -213,7 +213,7 @@ type SearchResultsType = {
 
 function SearchPanel() {
   const { portal, userInfo } = useContext(AuthenticationContext);
-  const { mapView } = useContext(SketchContext);
+  const { mapView, sceneView } = useContext(SketchContext);
 
   // filters
   const [
@@ -240,6 +240,7 @@ function SearchPanel() {
   const [vectorTileService, setVectorTileService] = useState(false);
   const [kml, setKml] = useState(false);
   const [wms, setWms] = useState(false);
+  const [sceneService, setSceneService] = useState(false);
 
   const [
     searchResults,
@@ -329,7 +330,7 @@ function SearchPanel() {
     let typePart = '';
     const defaultTypePart =
       'type:"Map Service" OR type:"Feature Service" OR type:"Image Service" ' +
-      'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS"';
+      'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS" OR type:"Scene Service"';
     if (mapService) {
       typePart = appendToQuery(typePart, 'type:"Map Service"', 'OR');
     }
@@ -347,6 +348,9 @@ function SearchPanel() {
     }
     if (wms) {
       typePart = appendToQuery(typePart, 'type:"WMS"', 'OR');
+    }
+    if (sceneService) {
+      typePart = appendToQuery(typePart, 'type:"Scene Service"', 'OR');
     }
 
     // add the type selection to the query, use all types if all types are set to false
@@ -419,6 +423,7 @@ function SearchPanel() {
     vectorTileService,
     kml,
     wms,
+    sceneService,
     sortBy,
     sortOrder,
     userInfo,
@@ -472,12 +477,19 @@ function SearchPanel() {
   // Defines a watch event for filtering results based on the map extent
   const [watchViewInitialized, setWatchViewInitialized] = useState(false);
   useEffect(() => {
-    if (!mapView || watchViewInitialized) return;
+    if (!mapView || !sceneView || watchViewInitialized) return;
 
-    const watchEvent = reactiveUtils.when(
+    const watchEvent2d = reactiveUtils.when(
       () => mapView.stationary,
       () => {
         if (mapView.stationary) setCurrentExtent(mapView.extent);
+      },
+    );
+
+    const watchEvent3d = reactiveUtils.when(
+      () => sceneView.stationary,
+      () => {
+        if (sceneView.stationary) setCurrentExtent(sceneView.extent);
       },
     );
 
@@ -485,9 +497,10 @@ function SearchPanel() {
 
     // remove watch event to prevent it from running after component unmounts
     return function cleanup() {
-      watchEvent.remove();
+      watchEvent2d.remove();
+      watchEvent3d.remove();
     };
-  }, [mapView, watchViewInitialized]);
+  }, [mapView, sceneView, watchViewInitialized]);
 
   const [showFilterOptions, setShowFilterOptions] = useState(false);
 
@@ -643,6 +656,16 @@ function SearchPanel() {
                     onChange={(ev) => setWms(!wms)}
                   />
                   <label htmlFor="wms_filter">WMS</label>
+                </li>
+
+                <li>
+                  <input
+                    id="scene_service_filter"
+                    type="checkbox"
+                    checked={sceneService}
+                    onChange={(ev) => setSceneService(!sceneService)}
+                  />
+                  <label htmlFor="scene_service_filter">Scene Service</label>
                 </li>
               </ul>
             </div>
@@ -825,6 +848,7 @@ function ResultCard({ result }: ResultCardProps) {
   const {
     defaultSymbols,
     setDefaultSymbols,
+    displayDimensions,
     edits,
     setEdits,
     layers,
@@ -835,6 +859,7 @@ function ResultCard({ result }: ResultCardProps) {
     setPortalLayers,
     setReferenceLayers,
     sampleAttributes,
+    sceneView,
     setSelectedScenario,
     setSketchLayer,
     userDefinedOptions,
@@ -1006,8 +1031,11 @@ function ResultCard({ result }: ResultCardProps) {
               map.addMany(mapLayersToAdd);
 
               // zoom to the graphics layer
-              if (zoomToGraphics.length > 0 && mapView) {
-                mapView.goTo(zoomToGraphics);
+              if (zoomToGraphics.length > 0) {
+                if (mapView && displayDimensions === '2d')
+                  mapView.goTo(zoomToGraphics);
+                if (sceneView && displayDimensions === '3d')
+                  sceneView.goTo(zoomToGraphics);
               }
 
               // set the state for session storage
@@ -1025,7 +1053,13 @@ function ResultCard({ result }: ResultCardProps) {
               // the search panel shows up as the layer having been added.
               setPortalLayers((portalLayers) => [
                 ...portalLayers,
-                { id: result.id, type: 'tots' },
+                {
+                  id: result.id,
+                  label: result.title,
+                  layerType: 'Feature Service',
+                  type: 'tots',
+                  url: result.url,
+                },
               ]);
 
               // reset the status
@@ -1764,7 +1798,13 @@ function ResultCard({ result }: ResultCardProps) {
           if (layer.loadStatus === 'loaded') {
             setPortalLayers((portalLayers) => [
               ...portalLayers,
-              { id: result.id, type: 'arcgis' },
+              {
+                id: result.id,
+                label: result.title,
+                layerType: result.type,
+                type: 'arcgis',
+                url: result.url,
+              },
             ]);
             setStatus('');
 
@@ -1775,13 +1815,14 @@ function ResultCard({ result }: ResultCardProps) {
               tileLayer.maxScale = 0;
             }
 
-            if (mapView) {
-              layer.visible = true;
+            layer.visible = true;
 
-              // zoom to the layer if it has an extent
-              if (layer.fullExtent) {
+            // zoom to the layer if it has an extent
+            if (layer.fullExtent) {
+              if (mapView && displayDimensions === '2d')
                 mapView.goTo(layer.fullExtent);
-              }
+              if (sceneView && displayDimensions === '3d')
+                sceneView.goTo(layer.fullExtent);
             }
           } else if (layer.loadStatus === 'failed') {
             setStatus('error');

@@ -28,6 +28,11 @@ import {
   PolygonSymbol,
 } from 'config/sampleAttributes';
 
+type HomeWidgetType = {
+  '2d': __esri.Home;
+  '3d': __esri.Home;
+};
+
 type SketchType = {
   autoZoom: boolean;
   setAutoZoom: Dispatch<SetStateAction<boolean>>;
@@ -39,8 +44,8 @@ type SketchType = {
   resetDefaultSymbols: Function;
   edits: EditsType;
   setEdits: Dispatch<SetStateAction<EditsType>>;
-  homeWidget: __esri.Home | null;
-  setHomeWidget: Dispatch<SetStateAction<__esri.Home | null>>;
+  homeWidget: HomeWidgetType | null;
+  setHomeWidget: Dispatch<SetStateAction<HomeWidgetType | null>>;
   symbolsInitialized: boolean;
   setSymbolsInitialized: Dispatch<SetStateAction<boolean>>;
   layersInitialized: boolean;
@@ -61,6 +66,8 @@ type SketchType = {
   setMap: Dispatch<SetStateAction<__esri.Map | null>>;
   mapView: __esri.MapView | null;
   setMapView: Dispatch<SetStateAction<__esri.MapView | null>>;
+  sceneView: __esri.SceneView | null;
+  setSceneView: Dispatch<SetStateAction<__esri.SceneView | null>>;
   selectedSampleIds: SelectedSampleType[];
   setSelectedSampleIds: Dispatch<SetStateAction<SelectedSampleType[]>>;
   selectedScenario: ScenarioEditsType | null;
@@ -78,8 +85,14 @@ type SketchType = {
   setSampleAttributes: Dispatch<SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
-  showAsPoints: boolean;
-  setShowAsPoints: Dispatch<SetStateAction<boolean>>;
+  displayGeometryType: 'points' | 'polygons';
+  setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
+  displayDimensions: '2d' | '3d';
+  setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
+  terrain3dVisible: boolean;
+  setTerrain3dVisible: Dispatch<SetStateAction<boolean>>;
+  viewUnderground3d: boolean;
+  setViewUnderground3d: Dispatch<SetStateAction<boolean>>;
 };
 
 export const SketchContext = createContext<SketchType>({
@@ -122,6 +135,8 @@ export const SketchContext = createContext<SketchType>({
   setMap: () => {},
   mapView: null,
   setMapView: () => {},
+  sceneView: null,
+  setSceneView: () => {},
   sketchVM: null,
   setSketchVM: () => {},
   aoiSketchVM: null,
@@ -135,8 +150,14 @@ export const SketchContext = createContext<SketchType>({
   setSampleAttributes: () => {},
   allSampleOptions: [],
   setAllSampleOptions: () => {},
-  showAsPoints: false,
-  setShowAsPoints: () => {},
+  displayGeometryType: 'points',
+  setDisplayGeometryType: () => {},
+  displayDimensions: '2d',
+  setDisplayDimensions: () => {},
+  terrain3dVisible: true,
+  setTerrain3dVisible: () => {},
+  viewUnderground3d: false,
+  setViewUnderground3d: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -179,10 +200,11 @@ export function SketchProvider({ children }: Props) {
   const [urlLayers, setUrlLayers] = useState<UrlLayerType[]>([]);
   const [sketchLayer, setSketchLayer] = useState<LayerType | null>(null);
   const [aoiSketchLayer, setAoiSketchLayer] = useState<LayerType | null>(null);
-  const [homeWidget, setHomeWidget] = useState<__esri.Home | null>(null);
+  const [homeWidget, setHomeWidget] = useState<HomeWidgetType | null>(null);
   const [symbolsInitialized, setSymbolsInitialized] = useState(false);
   const [map, setMap] = useState<__esri.Map | null>(null);
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
+  const [sceneView, setSceneView] = useState<__esri.SceneView | null>(null);
   const [selectedSampleIds, setSelectedSampleIds] = useState<
     SelectedSampleType[]
   >([]);
@@ -207,8 +229,12 @@ export function SketchProvider({ children }: Props) {
   const [allSampleOptions, setAllSampleOptions] = useState<SampleSelectType[]>(
     [],
   );
-  const [showAsPoints, setShowAsPoints] = useState<boolean>(true);
-
+  const [displayGeometryType, setDisplayGeometryType] = useState<
+    'points' | 'polygons'
+  >('points');
+  const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
+  const [terrain3dVisible, setTerrain3dVisible] = useState(true);
+  const [viewUnderground3d, setViewUnderground3d] = useState(false);
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
@@ -349,6 +375,8 @@ export function SketchProvider({ children }: Props) {
         setMap,
         mapView,
         setMapView,
+        sceneView,
+        setSceneView,
         sketchVM,
         setSketchVM,
         aoiSketchVM,
@@ -362,8 +390,14 @@ export function SketchProvider({ children }: Props) {
         setSampleAttributes,
         allSampleOptions,
         setAllSampleOptions,
-        showAsPoints,
-        setShowAsPoints,
+        displayGeometryType,
+        setDisplayGeometryType,
+        displayDimensions,
+        setDisplayDimensions,
+        terrain3dVisible,
+        setTerrain3dVisible,
+        viewUnderground3d,
+        setViewUnderground3d,
       }}
     >
       {children}

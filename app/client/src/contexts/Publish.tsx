@@ -9,7 +9,11 @@ import React, {
 } from 'react';
 // types
 import { ServiceMetaDataType } from 'types/Edits';
-import { AttributesType, SampleTypeOptions } from 'types/Publish';
+import {
+  AttributesType,
+  ReferenceLayerSelections,
+  SampleTypeOptions,
+} from 'types/Publish';
 
 type NameAvailableStatus = 'unknown' | 'yes' | 'no';
 
@@ -38,10 +42,20 @@ type PublishType = {
   setIncludePartialPlan: Dispatch<SetStateAction<boolean>>;
   includePartialPlanWebMap: boolean;
   setIncludePartialPlanWebMap: Dispatch<SetStateAction<boolean>>;
+  includePartialPlanWebScene: boolean;
+  setIncludePartialPlanWebScene: Dispatch<SetStateAction<boolean>>;
   includeCustomSampleTypes: boolean;
   setIncludeCustomSampleTypes: Dispatch<SetStateAction<boolean>>;
   partialPlanAttributes: AttributesType[];
   setPartialPlanAttributes: Dispatch<SetStateAction<AttributesType[]>>;
+  webMapReferenceLayerSelections: ReferenceLayerSelections[];
+  setWebMapReferenceLayerSelections: Dispatch<
+    SetStateAction<ReferenceLayerSelections[]>
+  >;
+  webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  setWebSceneReferenceLayerSelections: Dispatch<
+    SetStateAction<ReferenceLayerSelections[]>
+  >;
 };
 
 export const defaultPlanAttributes: AttributesType[] = [
@@ -158,10 +172,16 @@ export const PublishContext = createContext<PublishType>({
   setIncludePartialPlan: () => {},
   includePartialPlanWebMap: true,
   setIncludePartialPlanWebMap: () => {},
+  includePartialPlanWebScene: true,
+  setIncludePartialPlanWebScene: () => {},
   includeCustomSampleTypes: false,
   setIncludeCustomSampleTypes: () => {},
   partialPlanAttributes: [],
   setPartialPlanAttributes: () => {},
+  webMapReferenceLayerSelections: [],
+  setWebMapReferenceLayerSelections: () => {},
+  webSceneReferenceLayerSelections: [],
+  setWebSceneReferenceLayerSelections: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -185,11 +205,19 @@ export function PublishProvider({ children }: Props) {
   const [includePartialPlan, setIncludePartialPlan] = useState(true);
   const [includePartialPlanWebMap, setIncludePartialPlanWebMap] =
     useState(true);
+  const [includePartialPlanWebScene, setIncludePartialPlanWebScene] =
+    useState(true);
   const [includeCustomSampleTypes, setIncludeCustomSampleTypes] =
     useState(false);
   const [partialPlanAttributes, setPartialPlanAttributes] = useState<
     AttributesType[]
   >(defaultPlanAttributes);
+  const [webMapReferenceLayerSelections, setWebMapReferenceLayerSelections] =
+    useState<ReferenceLayerSelections[]>([]);
+  const [
+    webSceneReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
+  ] = useState<ReferenceLayerSelections[]>([]);
 
   return (
     <PublishContext.Provider
@@ -216,10 +244,16 @@ export function PublishProvider({ children }: Props) {
         setIncludePartialPlan,
         includePartialPlanWebMap,
         setIncludePartialPlanWebMap,
+        includePartialPlanWebScene,
+        setIncludePartialPlanWebScene,
         includeCustomSampleTypes,
         setIncludeCustomSampleTypes,
         partialPlanAttributes,
         setPartialPlanAttributes,
+        webMapReferenceLayerSelections,
+        setWebMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
+        setWebSceneReferenceLayerSelections,
       }}
     >
       {children}

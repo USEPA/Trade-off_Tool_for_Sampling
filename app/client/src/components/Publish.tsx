@@ -107,6 +107,10 @@ const layerInfo = css`
   padding-bottom: 0.5em;
 `;
 
+const totsOutputContainer = css`
+  padding-bottom: 1.5em;
+`;
+
 const checkedStyles = css`
   color: green;
   margin-right: 10px;
@@ -130,21 +134,24 @@ function Publish() {
   } = useContext(AuthenticationContext);
   const { goToOptions, setGoToOptions } = useContext(NavigationContext);
   const {
-    publishSamplesMode,
-    publishSampleTableMetaData,
-    sampleTableDescription,
-    setSampleTableDescription,
-    sampleTableName,
-    setSampleTableName,
-    sampleTypeSelections,
-    selectedService,
-    setSelectedService,
+    includeCustomSampleTypes,
     includeFullPlan,
     includeFullPlanWebMap,
     includePartialPlan,
     includePartialPlanWebMap,
-    includeCustomSampleTypes,
+    includePartialPlanWebScene,
     partialPlanAttributes,
+    publishSamplesMode,
+    publishSampleTableMetaData,
+    sampleTableDescription,
+    sampleTableName,
+    sampleTypeSelections,
+    selectedService,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSelectedService,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
     defaultSymbols,
@@ -152,6 +159,7 @@ function Publish() {
     setEdits,
     layers,
     setLayers,
+    map,
     sampleAttributes,
     selectedScenario,
     setSelectedScenario,
@@ -320,7 +328,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishFullPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -480,7 +488,13 @@ function Publish() {
       portal,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includeFullPlanWebMap,
+      referenceMaterials: {
+        createWebMap: includeFullPlanWebMap,
+        createWebScene: false,
+        webMapReferenceLayerSelections: [],
+        webSceneReferenceLayerSelections: [],
+      },
+      map,
       table: editsScenario.table,
       layerProps,
       serviceMetaData: {
@@ -813,6 +827,7 @@ function Publish() {
     includeFullPlanWebMap,
     includePartialPlan,
     setLayers,
+    map,
     portal,
     layers,
     layerProps,
@@ -829,7 +844,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishPartialPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -1015,7 +1030,13 @@ function Publish() {
       portal,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includePartialPlanWebMap,
+      referenceMaterials: {
+        createWebMap: includePartialPlanWebMap,
+        createWebScene: includePartialPlanWebScene,
+        webMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
+      },
+      map,
       table: editsScenario.table,
       attributesToInclude: partialPlanAttributes,
       layerProps,
@@ -1350,16 +1371,20 @@ function Publish() {
       });
   }, [
     edits,
-    setEdits,
     includePartialPlanWebMap,
-    setLayers,
-    partialPlanAttributes,
-    portal,
+    includePartialPlanWebScene,
     layers,
     layerProps,
+    map,
+    partialPlanAttributes,
+    portal,
     sampleAttributes,
     selectedScenario,
+    setEdits,
+    setLayers,
     setSelectedScenario,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   ]);
 
   const [publishSamplesResponse, setPublishSamplesResponse] =
@@ -1847,7 +1872,7 @@ function Publish() {
 
       <div>
         <h3>Publish Summary</h3>
-        <p>
+        <div css={totsOutputContainer}>
           <strong>
             {includePartialPlan ? (
               <i className="fas fa-check" css={checkedStyles}></i>
@@ -1857,19 +1882,55 @@ function Publish() {
             Include Tailored TOTS Output Files:
           </strong>
           {includePartialPlan && (
-            <Fragment>
-              <br />
-              <strong css={webMapContainerCheckboxStyles}>
-                {includePartialPlanWebMap ? (
-                  <i className="fas fa-check" css={checkedStyles}></i>
-                ) : (
-                  <i className="fas fa-times" css={unCheckedStyles}></i>
-                )}
-                Include Web Map:
-              </strong>
-            </Fragment>
+            <div>
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebMap ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Map:
+                </strong>
+              </div>
+              {webMapReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webMapReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebScene ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Scene:
+                </strong>
+              </div>
+              {webSceneReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webSceneReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
-        </p>
+        </div>
 
         {includeCustomSampleTypes && (
           <div>

@@ -421,7 +421,10 @@ export function createSampleLayer(
   parentLayer: __esri.GroupLayer | null = null,
 ) {
   const layerUuid = generateUUID();
-  const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
+  const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
+    title: name,
+  });
   const pointsLayer = new GraphicsLayer({
     id: layerUuid + '-points',
     title: name,
@@ -806,12 +809,12 @@ export function getSampleTableColumns({
 }
 
 /**
- * Gets a point symbol representation of the provided polygon.
+ * Gets a point symbol representation of the provided polygon for 2d.
  *
  * @param polygon The polygon to be converted
  * @returns A point symbol representation of the provided polygon
  */
-export function getPointSymbol(
+function getPointSymbol2d(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
 ) {
@@ -843,6 +846,89 @@ export function getPointSymbol(
 }
 
 /**
+ * Gets a point symbol representation of the provided polygon for 3d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+function getPointSymbol3d(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // mapping 2d builtin shapes to 3d builtin shapes
+  const shapeMapping: any = {
+    circle: 'circle',
+    cross: 'cross',
+    diamond: 'kite',
+    square: 'square',
+    triangle: 'triangle',
+    x: 'x',
+  };
+
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+
+      // TODO need to figure out how to handle this
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = shapeMapping[polygon.attributes.POINT_STYLE];
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'point-3d',
+    symbolLayers: [
+      {
+        type: 'icon',
+        // size:
+        material: {
+          color: symbolColor
+            ? symbolColor.color
+            : (polygon.symbol as any).symbolLayers.items[0].material.color,
+        },
+        outline: symbolColor
+          ? {
+              ...symbolColor.outline,
+              size: symbolColor.outline.width,
+            }
+          : (polygon.symbol as any).symbolLayers.items[0].outline,
+      },
+    ],
+  };
+
+  if (path) symbol.path = path;
+  else symbol.symbolLayers[0].resource = { primitive: style };
+
+  return symbol;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+export function getPointSymbol(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  let point;
+  if (polygon.symbol.type.includes('-3d')) {
+    point = getPointSymbol3d(polygon, symbolColor);
+  } else {
+    point = getPointSymbol2d(polygon, symbolColor);
+  }
+
+  return point;
+}
+
+/**
  * Converts a polygon graphic to a point graphic.
  *
  * @param polygon The polygon to be converted
@@ -858,6 +944,18 @@ export function convertToPoint(polygon: __esri.Graphic) {
     popupTemplate: polygon.popupTemplate,
     symbol,
   });
+}
+
+/**
+ * Makes all sketch buttons no longer active by removing
+ * the sketch-button-selected class.
+ */
+export function deactivateButtons() {
+  const buttons = document.querySelectorAll('.sketch-button');
+
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].classList.remove('sketch-button-selected');
+  }
 }
 
 /**

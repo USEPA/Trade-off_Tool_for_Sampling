@@ -227,6 +227,7 @@ function FilePanel() {
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
+    displayDimensions,
     edits,
     setEdits,
     layers,
@@ -238,6 +239,7 @@ function FilePanel() {
     getGpMaxRecordCount,
     sampleAttributes,
     allSampleOptions,
+    sceneView,
     selectedScenario,
     setSelectedScenario,
     setSketchLayer,
@@ -449,6 +451,7 @@ function FilePanel() {
   useEffect(() => {
     if (
       !mapView ||
+      !sceneView ||
       !layerType ||
       !file?.file?.esriFileType ||
       !sharingUrl ||
@@ -461,6 +464,8 @@ function FilePanel() {
     if (file.file.esriFileType === 'kml') return; // KML doesn't need to do this
     if (file.file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
     if (layerType.value === 'VSP' && !sampleType) return; // VSP layers need a sample type
+
+    const view = displayDimensions === '3d' ? sceneView : mapView;
 
     const localSampleType = sampleType;
 
@@ -482,7 +487,7 @@ function FilePanel() {
     const publishParameters: any = {
       ...resParameters,
       name: file.file.name,
-      targetSR: mapView.spatialReference,
+      targetSR: view.spatialReference,
       maxRecordCount: 4000, // 4000 is the absolute max for this service.
       enforceInputFileSizeLimit: true,
       enforceOutputJsonSizeLimit: true,
@@ -491,17 +496,17 @@ function FilePanel() {
     // generalize features since this option was selected
     if (generalizeFeatures) {
       // save the current scale
-      const originalScale = mapView.scale;
+      const originalScale = view.scale;
 
       // get the width for a scale of 40000
-      mapView.scale = 40000;
-      const extent = mapView.extent;
+      view.scale = 40000;
+      const extent = view.extent;
 
       // revert the scale back to the original value
-      mapView.scale = originalScale;
+      view.scale = originalScale;
 
       // get the resolution
-      let resolution = extent.width / mapView.width;
+      let resolution = extent.width / view.width;
 
       // append the publish parameters
       publishParameters['generalize'] = true;
@@ -702,6 +707,7 @@ function FilePanel() {
         window.logErrorToGa(err);
       });
   }, [
+    displayDimensions,
     generalizeFeatures,
     analyzeResponse,
     file,
@@ -716,6 +722,7 @@ function FilePanel() {
     sampleAttributes,
     userInfo,
     layerProps,
+    sceneView,
   ]);
 
   // validate the area and attributes of features of the uploads. If there is an
@@ -724,6 +731,7 @@ function FilePanel() {
     if (
       !map ||
       !mapView ||
+      !sceneView ||
       !layerType ||
       !file?.file?.esriFileType ||
       fileValidationStarted ||
@@ -781,6 +789,7 @@ function FilePanel() {
     sampleTypeContext,
     sampleValidation,
     setOptions,
+    sceneView,
   ]);
 
   // add features to the map as graphics layers. This is for every layer type
@@ -790,6 +799,7 @@ function FilePanel() {
     if (
       !map ||
       !mapView ||
+      !sceneView ||
       !layerType ||
       !file?.file?.esriFileType ||
       !fileValidated ||
@@ -1049,7 +1059,8 @@ function FilePanel() {
           groupLayer.add(layerToAdd.pointsLayer);
         }
       } else {
-        mapView.goTo(graphics);
+        const view = displayDimensions === '3d' ? sceneView : mapView;
+        view.goTo(graphics);
       }
     }
 
@@ -1057,6 +1068,7 @@ function FilePanel() {
   }, [
     createBuffer,
     defaultSymbols,
+    displayDimensions,
     edits,
     setEdits,
     featuresAdded,
@@ -1072,6 +1084,7 @@ function FilePanel() {
     sampleAttributes,
     selectedScenario,
     setSelectedScenario,
+    sceneView,
     setSketchLayer,
     trainingMode,
   ]);
@@ -1082,6 +1095,7 @@ function FilePanel() {
     if (
       !map ||
       !mapView ||
+      !sceneView ||
       !layerType ||
       !file?.file?.esriFileType ||
       featuresAdded
@@ -1172,10 +1186,12 @@ function FilePanel() {
     });
 
     map.addMany(featureLayers);
-    if (graphicsAdded.length > 0) mapView.goTo(graphicsAdded);
+    const view = displayDimensions === '3d' ? sceneView : mapView;
+    if (graphicsAdded.length > 0) view.goTo(graphicsAdded);
 
     setUploadStatus('success');
   }, [
+    displayDimensions,
     layerType,
     generateResponse,
     featuresAdded,
@@ -1186,6 +1202,7 @@ function FilePanel() {
     setLayers,
     referenceLayers,
     setReferenceLayers,
+    sceneView,
   ]);
 
   // handle loading of the KMLLayer
@@ -1193,6 +1210,7 @@ function FilePanel() {
     if (
       !file?.file?.esriFileType ||
       !mapView ||
+      !sceneView ||
       file.file.esriFileType !== 'kml'
     ) {
       return;
@@ -1214,13 +1232,14 @@ function FilePanel() {
 
       // build the arcgis kml call
       // this data is used to get the renderers
+      const view = displayDimensions === '3d' ? sceneView : mapView;
       const kmlUrl = 'https://utility.arcgis.com/sharing/kml';
       const contents = reader.result as string;
       const params = {
         kmlString: encodeURIComponent(contents),
         model: 'simple',
         folders: '',
-        outSR: mapView.spatialReference,
+        outSR: view.spatialReference,
       };
       appendEnvironmentObjectParam(params);
 
@@ -1248,7 +1267,7 @@ function FilePanel() {
 
       window.logErrorToGa(ex);
     }
-  }, [mapView, file]);
+  }, [displayDimensions, file, mapView, sceneView]);
 
   const filename = file?.file?.name ? file.file.name : '';
 

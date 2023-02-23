@@ -7,7 +7,7 @@ import {
 } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 import { LookupFile } from 'types/Misc';
-import { AttributesType } from 'types/Publish';
+import { AttributesType, ReferenceLayerSelections } from 'types/Publish';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
@@ -931,6 +931,7 @@ function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
             where: `OBJECTID in (${chunk.join(',')})`,
             outFields: '*',
             returnGeometry: true,
+            returnZ: true,
           };
           appendEnvironmentObjectParam(data);
 
@@ -1197,6 +1198,97 @@ function buildTableEdits({
   };
 }
 
+type AgoLayerType =
+  | 'ArcGISFeatureLayer'
+  | 'ArcGISImageServiceLayer'
+  | 'ArcGISMapServiceLayer'
+  | 'ArcGISSceneServiceLayer'
+  | 'BuildingSceneLayer'
+  | 'CSV'
+  | 'GeoRSS'
+  | 'IntegratedMeshLayer'
+  | 'KML'
+  | 'PointCloudLayer'
+  | 'VectorTileLayer'
+  | 'WMS';
+
+/**
+ * Gets the layer type value that the ArcGIS REST API needs from
+ * the TOTS layer type value.
+ *
+ * @param refLayer Object of the reference layer being added
+ * @returns AGO Layer type
+ */
+function getAgoLayerType(
+  refLayer: ReferenceLayerSelections,
+): AgoLayerType | null {
+  const layerType = refLayer.layerType;
+
+  let layerTypeOut: AgoLayerType | null = null;
+  if (refLayer.type === 'url' && refLayer.urlType === 'ArcGIS') {
+    if (layerType === 'feature') layerTypeOut = 'ArcGISFeatureLayer';
+    if (layerType === 'tile') layerTypeOut = 'ArcGISMapServiceLayer';
+    if (layerType === 'map-image') layerTypeOut = 'ArcGISMapServiceLayer';
+    if (layerType === 'imagery') layerTypeOut = 'ArcGISImageServiceLayer';
+    if (layerType === 'imagery-tile') layerTypeOut = 'ArcGISImageServiceLayer';
+    if (layerType === 'scene') layerTypeOut = 'ArcGISSceneServiceLayer';
+    if (layerType === 'integrated-mesh') layerTypeOut = 'IntegratedMeshLayer';
+    if (layerType === 'point-cloud') layerTypeOut = 'PointCloudLayer';
+    if (layerType === 'building-scene') layerTypeOut = 'BuildingSceneLayer';
+    return layerTypeOut;
+  }
+
+  if (['CSV', 'csv'].includes(layerType)) layerTypeOut = 'CSV';
+  if (['GeoRSS', 'geo-rss'].includes(layerType)) layerTypeOut = 'GeoRSS';
+  if (layerType === 'Feature Service') layerTypeOut = 'ArcGISFeatureLayer';
+  if (layerType === 'Image Service') layerTypeOut = 'ArcGISImageServiceLayer';
+  if (['KML', 'kml'].includes(layerType)) layerTypeOut = 'KML';
+  if (layerType === 'Map Service') layerTypeOut = 'ArcGISMapServiceLayer';
+  if (layerType === 'Scene Service') layerTypeOut = 'ArcGISSceneServiceLayer';
+  if (layerType === 'Vector Tile Service') layerTypeOut = 'VectorTileLayer';
+  if (['WMS', 'wms'].includes(layerType)) layerTypeOut = 'WMS';
+
+  return layerTypeOut;
+}
+
+/**
+ * Builds reference layers to be published to the web map and or web scene.
+ * Then adds them to the provided operationalLayers array.
+ *
+ * @param map Esri map - Used for sorting the reference layers
+ * @param operationalLayers Layers to be saved to web map/scene
+ * @param referenceMaterials Reference layers to be saved to web map/scene
+ */
+function buildReferenceLayers(
+  map: __esri.Map,
+  operationalLayers: any[],
+  referenceMaterials: ReferenceLayerSelections[],
+) {
+  referenceMaterials
+    .sort((a, b) => {
+      const aIndex = map.layers.findIndex((l) => l.id === a.id);
+      const bIndex = map.layers.findIndex((l) => l.id === b.id);
+
+      return aIndex - bIndex;
+    })
+    .forEach((l) => {
+      const layerType = getAgoLayerType(l);
+      if (layerType === 'VectorTileLayer') {
+        operationalLayers.push({
+          layerType,
+          title: l.label,
+          styleUrl: `${l.value}/resources/styles/root.json`,
+        });
+      } else {
+        operationalLayers.push({
+          layerType,
+          title: l.label,
+          url: l.value,
+        });
+      }
+    });
+}
+
 /**
  * Publishes a web map version of the feature service.
  *
@@ -1205,6 +1297,9 @@ function buildTableEdits({
  * @param layers The layers that the edits object pertain to
  * @param layersResponse The response from creating layers
  * @param attributesToInclude The attributes to include with each graphic
+ * @param layerProps Default properties to apply to the layer
+ * @param referenceMaterials Reference layers to apply to web map
+ * @param map Esri Map - Used for sorting the reference layers
  * @returns A promise that resolves to the successfully saved web map
  */
 function addWebMap({
@@ -1214,6 +1309,8 @@ function addWebMap({
   layersResponse,
   attributesToInclude,
   layerProps,
+  referenceMaterials,
+  map,
 }: {
   portal: __esri.Portal;
   service: any;
@@ -1221,6 +1318,8 @@ function addWebMap({
   layersResponse: any;
   attributesToInclude: AttributesType[] | null;
   layerProps: LookupFile;
+  referenceMaterials: ReferenceLayerSelections[];
+  map: __esri.Map;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1266,6 +1365,8 @@ function addWebMap({
       extent = graphicsExtent;
     }
 
+    buildReferenceLayers(map, operationalLayers, referenceMaterials);
+
     layersResponse.layers.forEach((layer: any) => {
       operationalLayers.push({
         title: layer.name,
@@ -1288,6 +1389,9 @@ function addWebMap({
       title: title,
       type: 'Web Map',
       text: {
+        version: '2.27',
+        authoringApp: 'ArcGISMapViewer',
+        authoringAppVersion: '2023.1',
         operationalLayers,
         baseMap: {
           baseMapLayers: [
@@ -1301,8 +1405,6 @@ function addWebMap({
           ],
           title: 'Topographic',
         },
-        authoringApp: 'ArcGISMapViewer',
-        authoringAppVersion: '9.1',
         initialState: {
           viewpoint: {
             targetGeometry: {
@@ -1321,7 +1423,199 @@ function addWebMap({
           latestWkid: 3857,
           wkid: 102100,
         },
-        version: '2.20',
+      },
+    };
+    appendEnvironmentObjectParam(data);
+
+    fetchPost(`${portal.user.userContentUrl}/addItem`, data)
+      .then((res) => resolve(res))
+      .catch((err) => {
+        window.logErrorToGa(err);
+        reject(err);
+      });
+  });
+}
+
+/**
+ * Publishes a web scene version of the feature service.
+ *
+ * @param portal The portal object to apply edits to
+ * @param service The feature service object
+ * @param layers The layers that the edits object pertain to
+ * @param layersResponse The response from creating layers
+ * @param attributesToInclude The attributes to include with each graphic
+ * @param layerProps Default properties to apply to the layer
+ * @param referenceMaterials Reference layers to apply to web scene
+ * @param map Esri Map - Used for sorting the reference layers
+ * @returns A promise that resolves to the successfully saved web scene
+ */
+function addWebScene({
+  portal,
+  service,
+  layers,
+  layersResponse,
+  attributesToInclude,
+  layerProps,
+  referenceMaterials,
+  map,
+}: {
+  portal: __esri.Portal;
+  service: any;
+  layers: LayerType[];
+  layersResponse: any;
+  attributesToInclude: AttributesType[] | null;
+  layerProps: LookupFile;
+  referenceMaterials: ReferenceLayerSelections[];
+  map: __esri.Map;
+}) {
+  return new Promise((resolve, reject) => {
+    // Workaround for esri.Portal not having credential
+    const tempPortal: any = portal;
+
+    const itemId = service.portalService.id;
+    const baseUrl = service.portalService.url;
+    const title = service.portalService.title;
+
+    const fieldInfos: any[] = [];
+    attributesToInclude?.forEach((attribute) => {
+      if (layerProps.data.webMapFieldProps.hasOwnProperty(attribute.name)) {
+        fieldInfos.push(
+          (layerProps.data.webMapFieldProps as any)[attribute.name],
+        );
+      } else {
+        let format: any = undefined;
+        if (
+          attribute.dataType === 'double' ||
+          attribute.dataType === 'integer'
+        ) {
+          format = {
+            digitSeparator: true,
+            places: 0,
+          };
+        }
+
+        fieldInfos.push({
+          fieldName: attribute.name,
+          label: attribute.label,
+          isEditable: true,
+          visible: true,
+          format,
+        });
+      }
+    });
+
+    const operationalLayers: any[] = [];
+    const mainLayer = layers[0];
+    let extent: __esri.Extent = mainLayer.sketchLayer.fullExtent;
+    const { graphicsExtent } = buildRendererParams(mainLayer);
+    if (graphicsExtent) {
+      extent = graphicsExtent;
+    }
+
+    buildReferenceLayers(map, operationalLayers, referenceMaterials);
+
+    layersResponse.layers.forEach((layer: any) => {
+      operationalLayers.push({
+        title: layer.name,
+        url: `${baseUrl}/${layer.id}`,
+        itemId,
+        layerType: 'ArcGISFeatureLayer',
+        popupInfo: {
+          popupElements: [{ type: 'fields' }, { type: 'attachments' }],
+          showAttachments: true,
+          fieldInfos: fieldInfos,
+          title: `${layer.name}: {USERNAME}`,
+        },
+      });
+    });
+
+    // run the webserivce call to update ArcGIS Online
+    const data = {
+      f: 'json',
+      token: tempPortal.credential.token,
+      title: title,
+      type: 'Web Scene',
+      text: {
+        version: '1.30',
+        authoringApp: 'WebSceneViewer',
+        authoringAppVersion: '2023.1.0',
+        operationalLayers,
+        baseMap: {
+          baseMapLayers: [
+            {
+              id: '1866114cd76-layer-1',
+              title: 'World Topo Map',
+              url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer',
+              layerType: 'ArcGISTiledMapServiceLayer',
+            },
+          ],
+          id: '1866114cb4d-basemap-0',
+          title: 'Topographic',
+          elevationLayers: [
+            {
+              id: 'globalElevation',
+              listMode: 'show',
+              title: 'Terrain3D',
+              url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+              layerType: 'ArcGISTiledElevationServiceLayer',
+            },
+          ],
+        },
+        ground: {
+          layers: [
+            {
+              id: 'globalElevation',
+              listMode: 'show',
+              title: 'Terrain3D',
+              url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+              layerType: 'ArcGISTiledElevationServiceLayer',
+            },
+          ],
+          transparency: 0,
+          navigationConstraint: {
+            type: 'none',
+          },
+        },
+        heightModelInfo: {
+          heightModel: 'gravity_related_height',
+          heightUnit: 'meter',
+        },
+        initialState: {
+          environment: {
+            lighting: {
+              type: 'sun',
+              datetime: 1678899363000,
+              displayUTCOffset: -5,
+            },
+            atmosphereEnabled: true,
+            starsEnabled: true,
+            weather: {
+              type: 'sunny',
+              cloudCover: 0.5,
+            },
+          },
+          viewpoint: {
+            targetGeometry: {
+              spatialReference: {
+                latestWkid: 3857,
+                wkid: 102100,
+              },
+              xmin: extent.xmin,
+              ymin: extent.ymin,
+              xmax: extent.xmax,
+              ymax: extent.ymax,
+            },
+            camera: {
+              fov: 55,
+              heading: 0,
+              tilt: 0.22039218612040226,
+            },
+          },
+        },
+        spatialReference: {
+          latestWkid: 3857,
+          wkid: 102100,
+        },
       },
     };
     appendEnvironmentObjectParam(data);
@@ -1384,6 +1678,11 @@ function applyEditsTable({
  * @param layers The layers that the edits object pertain to
  * @param edits The edits to be saved to the hosted feature service
  * @param serviceMetaData The name and description of the service to be saved
+ * @param layerProps Default/shared properties used for creating feature services, layers, web maps, and web scenes.
+ * @param createWebMap Saves a web map, if true
+ * @param createWebScene Saves a web scene, if true
+ * @param attributesToInclude Attributes to include in the final layers, web map, and web scene
+ * @param table Table of custom sample types
  * @returns A promise that resolves to the successfully published data
  */
 function publish({
@@ -1392,7 +1691,8 @@ function publish({
   edits,
   serviceMetaData,
   layerProps,
-  createWebMap = false,
+  referenceMaterials,
+  map,
   attributesToInclude = null,
   table = null,
 }: {
@@ -1401,7 +1701,13 @@ function publish({
   edits: LayerEditsType[];
   serviceMetaData: ServiceMetaDataType;
   layerProps: LookupFile;
-  createWebMap?: boolean;
+  referenceMaterials: {
+    createWebMap: boolean;
+    createWebScene: boolean;
+    webMapReferenceLayerSelections: ReferenceLayerSelections[];
+    webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  };
+  map: __esri.Map;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
 }) {
@@ -1496,35 +1802,45 @@ function publish({
                   table: tableParam,
                   attributesToInclude,
                 })
-                  .then((editsRes: any) => {
-                    if (!createWebMap) {
+                  .then(async (editsRes: any) => {
+                    try {
+                      if (referenceMaterials.createWebMap) {
+                        await addWebMap({
+                          portal,
+                          service,
+                          layers,
+                          layersResponse: layersRes,
+                          attributesToInclude,
+                          layerProps,
+                          referenceMaterials:
+                            referenceMaterials.webMapReferenceLayerSelections,
+                          map,
+                        });
+                      }
+
+                      if (referenceMaterials.createWebScene) {
+                        await addWebScene({
+                          portal,
+                          service,
+                          layers,
+                          layersResponse: layersRes,
+                          attributesToInclude,
+                          layerProps,
+                          referenceMaterials:
+                            referenceMaterials.webSceneReferenceLayerSelections,
+                          map,
+                        });
+                      }
+
                       resolve({
                         portalId,
                         idMapping,
                         edits: editsRes.response,
                         table: editsRes.table,
                       });
-                    } else {
-                      addWebMap({
-                        portal,
-                        service,
-                        layers,
-                        layersResponse: layersRes,
-                        attributesToInclude,
-                        layerProps,
-                      })
-                        .then(() => {
-                          resolve({
-                            portalId,
-                            idMapping,
-                            edits: editsRes.response,
-                            table: editsRes.table,
-                          });
-                        })
-                        .catch((err) => {
-                          window.logErrorToGa(err);
-                          reject(err);
-                        });
+                    } catch (err) {
+                      window.logErrorToGa(err);
+                      reject(err);
                     }
                   })
                   .catch((err) => {
