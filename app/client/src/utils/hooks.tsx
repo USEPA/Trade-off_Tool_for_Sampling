@@ -1527,7 +1527,6 @@ function useMapExtentStorage() {
     const position2dStr = readFromStorage(key2d);
     if (position2dStr) {
       const extent = JSON.parse(position2dStr) as any;
-      console.log('set extent from session storage');
       mapView.extent = Extent.fromJSON(extent);
     }
 
@@ -1552,7 +1551,6 @@ function useMapExtentStorage() {
       () => mapView.stationary,
       () => {
         if (mapView && mapView.extent && mapView.stationary) {
-          console.log('save extent to session storage');
           writeToStorage(key2d, mapView.extent.toJSON(), setOptions);
         }
       },
