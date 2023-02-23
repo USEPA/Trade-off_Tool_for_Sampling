@@ -169,6 +169,7 @@ export function useStartOver() {
     resetDefaultSymbols,
     sceneView,
     setAoiSketchLayer,
+    setDisplayDimensions,
     setDisplayGeometryType,
     setEdits,
     setLayers,
@@ -176,9 +177,11 @@ export function useStartOver() {
     setReferenceLayers,
     setSelectedScenario,
     setSketchLayer,
+    setTerrain3dVisible,
     setUrlLayers,
     setUserDefinedAttributes,
     setUserDefinedOptions,
+    setViewUnderground3d,
   } = useContext(SketchContext);
 
   function startOver() {
@@ -211,7 +214,10 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
+    setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setTerrain3dVisible(true);
+    setViewUnderground3d(false);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -2454,6 +2460,10 @@ function useDisplayModeStorage() {
     setDisplayDimensions,
     displayGeometryType,
     setDisplayGeometryType,
+    terrain3dVisible,
+    setTerrain3dVisible,
+    viewUnderground3d,
+    setViewUnderground3d,
   } = useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
@@ -2468,6 +2478,8 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setTerrain3dVisible(true);
+      setViewUnderground3d(false);
       return;
     }
 
@@ -2475,10 +2487,14 @@ function useDisplayModeStorage() {
 
     setDisplayDimensions(displayMode.dimensions);
     setDisplayGeometryType(displayMode.geometryType);
+    setTerrain3dVisible(displayMode.terrain3dVisible);
+    setViewUnderground3d(displayMode.viewUnderground3d);
   }, [
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setTerrain3dVisible,
+    setViewUnderground3d,
   ]);
 
   useEffect(() => {
@@ -2487,6 +2503,8 @@ function useDisplayModeStorage() {
     const displayMode: object = {
       dimensions: displayDimensions,
       geometryType: displayGeometryType,
+      terrain3dVisible,
+      viewUnderground3d,
     };
     writeToStorage(key, displayMode, setOptions);
   }, [
@@ -2494,6 +2512,8 @@ function useDisplayModeStorage() {
     displayGeometryType,
     localDisplayModeInitialized,
     setOptions,
+    terrain3dVisible,
+    viewUnderground3d,
   ]);
 }
 

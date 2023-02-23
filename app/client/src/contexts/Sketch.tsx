@@ -89,6 +89,10 @@ type SketchType = {
   setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
   displayDimensions: '2d' | '3d';
   setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
+  terrain3dVisible: boolean;
+  setTerrain3dVisible: Dispatch<SetStateAction<boolean>>;
+  viewUnderground3d: boolean;
+  setViewUnderground3d: Dispatch<SetStateAction<boolean>>;
 };
 
 export const SketchContext = createContext<SketchType>({
@@ -150,6 +154,10 @@ export const SketchContext = createContext<SketchType>({
   setDisplayGeometryType: () => {},
   displayDimensions: '2d',
   setDisplayDimensions: () => {},
+  terrain3dVisible: true,
+  setTerrain3dVisible: () => {},
+  viewUnderground3d: false,
+  setViewUnderground3d: () => {},
 });
 
 type Props = { children: ReactNode };
@@ -225,6 +233,8 @@ export function SketchProvider({ children }: Props) {
     'points' | 'polygons'
   >('points');
   const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
+  const [terrain3dVisible, setTerrain3dVisible] = useState(true);
+  const [viewUnderground3d, setViewUnderground3d] = useState(false);
 
   // Update totsLayers variable on the window object. This is a workaround
   // to an issue where the layers state variable is not available within esri
@@ -384,6 +394,10 @@ export function SketchProvider({ children }: Props) {
         setDisplayGeometryType,
         displayDimensions,
         setDisplayDimensions,
+        terrain3dVisible,
+        setTerrain3dVisible,
+        viewUnderground3d,
+        setViewUnderground3d,
       }}
     >
       {children}

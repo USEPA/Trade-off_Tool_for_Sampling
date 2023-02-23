@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
@@ -438,6 +438,10 @@ function Toolbar() {
     sceneView,
     displayDimensions,
     setDisplayDimensions,
+    terrain3dVisible,
+    setTerrain3dVisible,
+    viewUnderground3d,
+    setViewUnderground3d,
   } = useContext(SketchContext);
   const {
     signedIn,
@@ -797,6 +801,27 @@ function Toolbar() {
     }
   }, [mapView, sceneView, displayDimensions]);
 
+  // Toggle the 3D terrain visibility
+  useEffect(() => {
+    if (!map) return;
+
+    const elevationLayer = map.ground.layers.find(
+      (l) => l.id === 'worldElevation',
+    );
+    if (!elevationLayer) return;
+
+    elevationLayer.visible = terrain3dVisible;
+  }, [map, terrain3dVisible]);
+
+  // Toggle the 3D view underground feature
+  useEffect(() => {
+    if (!map) return;
+
+    map.ground.navigationConstraint = {
+      type: viewUnderground3d ? 'none' : 'stay-above',
+    };
+  }, [map, viewUnderground3d]);
+
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
       <h2 css={toolBarTitle}>
@@ -888,6 +913,36 @@ function Toolbar() {
               <label htmlFor="shape-polygons">Polygons</label>
             </fieldset>
 
+            {displayDimensions === '3d' && (
+              <Fragment>
+                <div css={switchLabelContainer}>
+                  <label htmlFor="terrain-3d-toggle" css={switchLabel}>
+                    3D Terrain Visible
+                  </label>
+                  <Switch
+                    checked={terrain3dVisible}
+                    onChange={(checked) => setTerrain3dVisible(checked)}
+                    ariaLabel="3D Terrain Visible"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </div>
+
+                <div css={switchLabelContainer}>
+                  <label htmlFor="view-underground-3d-toggle" css={switchLabel}>
+                    3D View Underground
+                  </label>
+                  <Switch
+                    checked={viewUnderground3d}
+                    onChange={(checked) => setViewUnderground3d(checked)}
+                    ariaLabel="3D View Underground"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </div>
+              </Fragment>
+            )}
+
             <div css={switchLabelContainer}>
               <label htmlFor="training-mode-toggle" css={switchLabel}>
                 Training Mode
@@ -902,7 +957,7 @@ function Toolbar() {
             </div>
 
             <div css={switchLabelContainer}>
-              <label htmlFor="training-mode-toggle" css={switchLabel}>
+              <label htmlFor="auto-zoom-toggle" css={switchLabel}>
                 Auto Zoom
               </label>
               <Switch
