@@ -1212,6 +1212,13 @@ type AgoLayerType =
   | 'VectorTileLayer'
   | 'WMS';
 
+/**
+ * Gets the layer type value that the ArcGIS REST API needs from
+ * the TOTS layer type value.
+ *
+ * @param refLayer Object of the reference layer being added
+ * @returns AGO Layer type
+ */
 function getAgoLayerType(
   refLayer: ReferenceLayerSelections,
 ): AgoLayerType | null {
@@ -1244,6 +1251,14 @@ function getAgoLayerType(
   return layerTypeOut;
 }
 
+/**
+ * Builds reference layers to be published to the web map and or web scene.
+ * Then adds them to the provided operationalLayers array.
+ *
+ * @param map Esri map - Used for sorting the reference layers
+ * @param operationalLayers Layers to be saved to web map/scene
+ * @param referenceMaterials Reference layers to be saved to web map/scene
+ */
 function buildReferenceLayers(
   map: __esri.Map,
   operationalLayers: any[],
@@ -1282,6 +1297,9 @@ function buildReferenceLayers(
  * @param layers The layers that the edits object pertain to
  * @param layersResponse The response from creating layers
  * @param attributesToInclude The attributes to include with each graphic
+ * @param layerProps Default properties to apply to the layer
+ * @param referenceMaterials Reference layers to apply to web map
+ * @param map Esri Map - Used for sorting the reference layers
  * @returns A promise that resolves to the successfully saved web map
  */
 function addWebMap({
@@ -1426,7 +1444,10 @@ function addWebMap({
  * @param layers The layers that the edits object pertain to
  * @param layersResponse The response from creating layers
  * @param attributesToInclude The attributes to include with each graphic
- * @returns A promise that resolves to the successfully saved web map
+ * @param layerProps Default properties to apply to the layer
+ * @param referenceMaterials Reference layers to apply to web scene
+ * @param map Esri Map - Used for sorting the reference layers
+ * @returns A promise that resolves to the successfully saved web scene
  */
 function addWebScene({
   portal,

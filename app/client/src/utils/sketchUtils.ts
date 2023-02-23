@@ -808,6 +808,12 @@ export function getSampleTableColumns({
   return columns;
 }
 
+/**
+ * Gets a point symbol representation of the provided polygon for 2d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
 function getPointSymbol2d(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
@@ -839,6 +845,12 @@ function getPointSymbol2d(
   return symbol;
 }
 
+/**
+ * Gets a point symbol representation of the provided polygon for 3d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
 function getPointSymbol3d(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
