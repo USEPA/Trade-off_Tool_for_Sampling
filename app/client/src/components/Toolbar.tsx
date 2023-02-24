@@ -622,7 +622,7 @@ function Toolbar() {
       const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
-          (layer) => layer.layerId !== layerToRemove.id,
+          (layer) => layer.layerId !== layerToRemove.id.replace('-points', ''),
         ),
       };
 
