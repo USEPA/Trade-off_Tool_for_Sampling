@@ -10,17 +10,17 @@ const app = express();
 const browserSyncPort = 9091;
 let port = process.env.PORT || 9090;
 
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  }),
-);
-app.use(
-  helmet.hsts({
-    maxAge: 31536000,
-  }),
-);
+// app.use(
+//   helmet({
+//     contentSecurityPolicy: false,
+//     crossOriginEmbedderPolicy: false,
+//   }),
+// );
+// app.use(
+//   helmet.hsts({
+//     maxAge: 31536000,
+//   }),
+// );
 
 /****************************************************************
  Instruct web browsers to disable caching
