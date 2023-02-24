@@ -613,10 +613,14 @@ function LocateSamples() {
 
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
+        const originalValuesZ: number[] = [];
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
           const fullGraphics = aoiMaskLayer.sketchLayer.graphics.clone();
-          fullGraphics.forEach((graphic) => removeZValues(graphic));
+          fullGraphics.forEach((graphic) => {
+            const z = removeZValues(graphic);
+            originalValuesZ.push(z);
+          });
 
           graphics = fullGraphics.toArray();
         }
@@ -729,6 +733,7 @@ function LocateSamples() {
               }
 
               // build an array of graphics to draw on the map
+              const originalZ = originalValuesZ[i];
               for (const feature of results.features) {
                 // results.features.forEach((feature: any) => {
                 const poly = new Graphic({
@@ -754,7 +759,14 @@ function LocateSamples() {
                   popupTemplate,
                 });
 
-                await setZValues({ map, graphic: poly });
+                await setZValues({
+                  map,
+                  graphic: poly,
+                  zOverride:
+                    generateRandomElevationMode === 'aoiElevation'
+                      ? originalZ
+                      : null,
+                });
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
@@ -1133,6 +1145,8 @@ function LocateSamples() {
   const [generateRandomMode, setGenerateRandomMode] = useState<
     'draw' | 'file' | ''
   >('');
+  const [generateRandomElevationMode, setGenerateRandomElevationMode] =
+    useState<'ground' | 'aoiElevation'>('aoiElevation');
   const [selectedAoiFile, setSelectedAoiFile] = useState<LayerType | null>(
     null,
   );
@@ -2297,6 +2311,59 @@ function LocateSamples() {
                                     setNumberRandomSamples(ev.target.value)
                                   }
                                 />
+
+                                <div>
+                                  <input
+                                    id="use-aoi-elevation"
+                                    type="radio"
+                                    name="elevation-mode"
+                                    value="Use AOI Elevation"
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
+                                    checked={
+                                      generateRandomElevationMode ===
+                                      'aoiElevation'
+                                    }
+                                    onChange={(ev) => {
+                                      setGenerateRandomElevationMode(
+                                        'aoiElevation',
+                                      );
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor="use-aoi-elevation"
+                                    css={radioLabelStyles}
+                                  >
+                                    Use AOI Elevation
+                                  </label>
+                                </div>
+                                <div>
+                                  <input
+                                    id="snap-to-ground"
+                                    type="radio"
+                                    name="elevation-mode"
+                                    value="Snap to Ground"
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
+                                    checked={
+                                      generateRandomElevationMode === 'ground'
+                                    }
+                                    onChange={(ev) => {
+                                      setGenerateRandomElevationMode('ground');
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor="snap-to-ground"
+                                    css={radioLabelStyles}
+                                  >
+                                    Snap to Ground
+                                  </label>
+                                </div>
+
                                 {generateRandomResponse.status === 'success' &&
                                   sketchLayer &&
                                   generateRandomSuccessMessage(
