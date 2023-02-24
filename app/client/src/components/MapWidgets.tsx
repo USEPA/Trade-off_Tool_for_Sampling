@@ -1118,7 +1118,16 @@ function MapWidgets({ mapView, sceneView }: Props) {
         });
       });
     }
-  }, [map, handles, edits, selectedScenario, mapView, sceneView, trainingMode]);
+  }, [
+    displayDimensions,
+    map,
+    handles,
+    edits,
+    selectedScenario,
+    mapView,
+    sceneView,
+    trainingMode,
+  ]);
 
   useEffect(() => {
     if (!map) {
