@@ -15,11 +15,12 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
   }),
 );
 app.use(
   helmet.permittedCrossDomainPolicies({
-    permittedPolicies: 'none',
+    permittedPolicies: 'all',
   }),
 );
 app.use(
