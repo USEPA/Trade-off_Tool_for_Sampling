@@ -245,13 +245,15 @@ export function useStartOver() {
       mapView.popup?.close();
     }
     if (sceneView) {
-      sceneView.camera.fov = 55;
-      sceneView.camera.heading = 0;
-      sceneView.camera.tilt = 0.171544;
-      sceneView.camera.position = new Point({
-        longitude: -95,
-        latitude: 36.6715,
-      });
+      if (sceneView.camera) {
+        sceneView.camera.fov = 55;
+        sceneView.camera.heading = 0;
+        sceneView.camera.tilt = 0.171544;
+        sceneView.camera.position = new Point({
+          longitude: -95,
+          latitude: 36.6715,
+        });
+      }
       sceneView.zoom = 4;
       sceneView.popup?.close();
     }
