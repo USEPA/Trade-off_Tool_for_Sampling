@@ -15,7 +15,7 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
-    crossOriginResourcePolicy: false,
+    // crossOriginResourcePolicy: false,
   }),
 );
 // app.use(
