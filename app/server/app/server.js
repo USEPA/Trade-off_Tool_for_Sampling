@@ -15,14 +15,8 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
-    // crossOriginResourcePolicy: false,
   }),
 );
-// app.use(
-//   helmet.permittedCrossDomainPolicies({
-//     permittedPolicies: 'all',
-//   }),
-// );
 app.use(
   helmet.hsts({
     maxAge: 31536000,
@@ -106,13 +100,13 @@ if (isDevelopment || isStaging) {
   let users = {};
   users[process.env.TOTS_BASIC_USER_NAME] = process.env.TOTS_BASIC_USER_PWD;
 
-  // app.use(
-  //   basicAuth({
-  //     users: users,
-  //     challenge: true,
-  //     unauthorizedResponse: getUnauthorizedResponse,
-  //   }),
-  // );
+  app.use(
+    basicAuth({
+      users: users,
+      challenge: true,
+      unauthorizedResponse: getUnauthorizedResponse,
+    }),
+  );
 }
 
 /****************************************************************
