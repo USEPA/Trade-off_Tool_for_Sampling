@@ -976,7 +976,7 @@ function FilePanel() {
           graphic.popupTemplate = new PopupTemplate(popupTemplate);
 
           // update the z values
-          await setZValues(map, graphic);
+          await setZValues({ map, graphic });
 
           // Add graphics to the layers based on what the original geometry type is
           if (graphic.geometry.type === 'point') {

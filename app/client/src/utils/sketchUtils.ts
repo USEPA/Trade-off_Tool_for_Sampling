@@ -1134,24 +1134,39 @@ function setPolygonZValues(poly: __esri.Polygon, z: number) {
  * @param map Map used for getting the elevation of a coordinate
  * @param graphic Graphic to add z value to
  * @param zRefParam (Optional) Point to use for getting the z value from
+ * @param elevationSampler (Optional) Elevation sampler
  */
-export async function setZValues(
-  map: __esri.Map,
-  graphic: __esri.Graphic,
-  zRefParam: __esri.Point | null = null,
-) {
+export async function setZValues({
+  map,
+  graphic,
+  zRefParam = null,
+  elevationSampler = null,
+}: {
+  map: __esri.Map;
+  graphic: __esri.Graphic;
+  zRefParam?: __esri.Point | null;
+  elevationSampler?: __esri.ElevationSampler | null;
+}) {
   // get the elevation layer
   const elevationLayer = getElevationLayer(map);
+
+  async function getZAtPoint(point: __esri.Point) {
+    if (!elevationLayer && !elevationSampler) return 0;
+
+    let geometry: __esri.Geometry;
+    if (elevationSampler) {
+      geometry = elevationSampler.queryElevation(point);
+    } else {
+      geometry = (await elevationLayer.queryElevation(point)).geometry;
+    }
+
+    return (geometry as __esri.Point).z;
+  }
 
   // update the z value of the point if necessary
   const point = graphic.geometry as __esri.Point;
   if (graphic.geometry.type === 'point' && !point.z) {
-    if (elevationLayer) {
-      const result = await elevationLayer.queryElevation(point);
-      point.z = (result.geometry as __esri.Point).z;
-    } else {
-      point.z = 0;
-    }
+    point.z = await getZAtPoint(point);
     return;
   }
 
@@ -1168,8 +1183,7 @@ export async function setZValues(
     (!poly.hasZ || firstCoordinate?.length === 2)
   ) {
     if (elevationLayer && firstCoordinate.length === 2) {
-      const result = await elevationLayer.queryElevation(zRef);
-      const z = (result.geometry as __esri.Point).z;
+      const z = await getZAtPoint(point);
       setPolygonZValues(poly, z);
     } else if (firstCoordinate?.length === 3) {
       poly.hasZ = true;

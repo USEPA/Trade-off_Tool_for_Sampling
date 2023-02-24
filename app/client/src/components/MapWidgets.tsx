@@ -699,7 +699,11 @@ function MapWidgets({ mapView, sceneView }: Props) {
           );
 
           // update the z values
-          await setZValues(sketchViewModel.view.map, graphic, firstPoint);
+          await setZValues({
+            map: sketchViewModel.view.map,
+            graphic,
+            zRefParam: firstPoint,
+          });
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
