@@ -41,6 +41,7 @@ import {
   generateUUID,
   getCurrentDateTime,
   getPointSymbol,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject, getLayerName } from 'utils/utils';
@@ -872,199 +873,210 @@ function FilePanel() {
       parentLayer: groupLayer ? groupLayer : null,
     };
 
-    const graphics: __esri.Graphic[] = [];
-    const points: __esri.Graphic[] = [];
-    let missingAttributes: string[] = [];
-    let unknownSampleTypes: boolean = false;
-    generateResponse.featureCollection.layers.forEach((layer: any) => {
-      if (
-        !layer?.featureSet?.features ||
-        layer.featureSet.features.length === 0
-      ) {
-        return;
-      }
+    async function processItem() {
+      if (!layerType || !map || !mapView || !sceneView) return;
 
-      // get the features from the response and add the correct type value
-      layer.featureSet.features.forEach((feature: any, index: number) => {
+      const graphics: __esri.Graphic[] = [];
+      const points: __esri.Graphic[] = [];
+      let missingAttributes: string[] = [];
+      let unknownSampleTypes: boolean = false;
+      for (const layer of generateResponse.featureCollection.layers) {
         if (
-          !feature?.geometry?.spatialReference &&
-          file.file.esriFileType === 'kml'
+          !layer?.featureSet?.features ||
+          layer.featureSet.features.length === 0
         ) {
-          feature.geometry['spatialReference'] =
-            generateResponse.lookAtExtent.spatialReference;
+          return;
         }
 
-        // non-VSP layers need to be converted from ArcGIS Rest to ArcGIS JS
-        let graphic: any = feature;
-        if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
+        // get the features from the response and add the correct type value
+        for (const feature of layer.featureSet.features) {
+          if (
+            !feature?.geometry?.spatialReference &&
+            file.file.esriFileType === 'kml'
+          ) {
+            feature.geometry['spatialReference'] =
+              generateResponse.lookAtExtent.spatialReference;
+          }
 
-        // add sample layer specific attributes
-        const timestamp = getCurrentDateTime();
-        let uuid = generateUUID();
-        if (layerType.value === 'Samples') {
-          const { TYPE } = graphic.attributes;
-          if (!sampleAttributes.hasOwnProperty(TYPE)) {
-            unknownSampleTypes = true;
-          } else {
-            graphic.attributes = { ...sampleAttributes[TYPE] };
+          // non-VSP layers need to be converted from ArcGIS Rest to ArcGIS JS
+          let graphic: any = feature;
+          if (layerType.value !== 'VSP') graphic = Graphic.fromJSON(feature);
+
+          // add sample layer specific attributes
+          const timestamp = getCurrentDateTime();
+          let uuid = generateUUID();
+          if (layerType.value === 'Samples') {
+            const { TYPE } = graphic.attributes;
+            if (!sampleAttributes.hasOwnProperty(TYPE)) {
+              unknownSampleTypes = true;
+            } else {
+              graphic.attributes = { ...sampleAttributes[TYPE] };
+
+              graphic.attributes['AA'] = null;
+              graphic.attributes['AC'] = null;
+              graphic.attributes['CREATEDDATE'] = timestamp;
+              graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+              graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
+              graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
+              graphic.attributes['DECISIONUNITSORT'] = 0;
+              graphic.attributes['GLOBALID'] = uuid;
+            }
+          }
+          if (layerType.value === 'VSP') {
+            const { CREATEDDATE } = graphic.attributes;
 
             graphic.attributes['AA'] = null;
             graphic.attributes['AC'] = null;
-            graphic.attributes['CREATEDDATE'] = timestamp;
-            graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
             graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
             graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
             graphic.attributes['DECISIONUNITSORT'] = 0;
+            if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
+          }
+
+          // add a layer type to the graphic
+          if (!graphic?.attributes?.TYPE) {
+            graphic.attributes['TYPE'] = layerType.value;
+          }
+
+          // add ids to the graphic, if the graphic doesn't already have them
+          if (!graphic.attributes.PERMANENT_IDENTIFIER) {
+            graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
+          }
+          if (!graphic.attributes.GLOBALID) {
             graphic.attributes['GLOBALID'] = uuid;
           }
-        }
-        if (layerType.value === 'VSP') {
-          const { CREATEDDATE } = graphic.attributes;
 
-          graphic.attributes['AA'] = null;
-          graphic.attributes['AC'] = null;
-          graphic.attributes['DECISIONUNITUUID'] = layerToAdd.uuid;
-          graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
-          graphic.attributes['DECISIONUNITSORT'] = 0;
-          if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
-        }
-
-        // add a layer type to the graphic
-        if (!graphic?.attributes?.TYPE) {
-          graphic.attributes['TYPE'] = layerType.value;
-        }
-
-        // add ids to the graphic, if the graphic doesn't already have them
-        if (!graphic.attributes.PERMANENT_IDENTIFIER) {
-          graphic.attributes['PERMANENT_IDENTIFIER'] = uuid;
-        }
-        if (!graphic.attributes.GLOBALID) {
-          graphic.attributes['GLOBALID'] = uuid;
-        }
-
-        // verify the graphic has all required attributes
-        const missingFields = fileVerification(
-          layerType.value,
-          graphic.attributes,
-        );
-        if (missingFields.length > 0) {
-          missingAttributes = missingAttributes.concat(
-            // filter out duplicates
-            missingFields.filter((item) => missingAttributes.indexOf(item) < 0),
+          // verify the graphic has all required attributes
+          const missingFields = fileVerification(
+            layerType.value,
+            graphic.attributes,
           );
+          if (missingFields.length > 0) {
+            missingFields.forEach((item) => {
+              if (missingAttributes.includes(item)) return;
+
+              missingAttributes.push(item);
+            });
+          }
+
+          // set the symbol styles based on the sample/layer type
+          if (
+            defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+          ) {
+            graphic.symbol =
+              defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+          } else {
+            graphic.symbol =
+              defaultSymbols.symbols[
+                layerType.value === 'VSP' ? 'Samples' : layerType.value
+              ];
+          }
+
+          // add the popup template
+          graphic.popupTemplate = new PopupTemplate(popupTemplate);
+
+          // update the z values
+          await setZValues({ map, graphic });
+
+          // Add graphics to the layers based on what the original geometry type is
+          if (graphic.geometry.type === 'point') {
+            points.push(
+              new Graphic({
+                attributes: graphic.attributes,
+                geometry: graphic.geometry,
+                popupTemplate: graphic.popupTemplate,
+                symbol: getPointSymbol(graphic),
+              }),
+            );
+
+            const polyGraphic = graphic.clone();
+            createBuffer(polyGraphic);
+            graphics.push(polyGraphic);
+          } else {
+            graphics.push(graphic);
+            points.push(convertToPoint(graphic));
+          }
         }
-
-        // set the symbol styles based on the sample/layer type
-        if (
-          defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
-        ) {
-          graphic.symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
-        } else {
-          graphic.symbol =
-            defaultSymbols.symbols[
-              layerType.value === 'VSP' ? 'Samples' : layerType.value
-            ];
-        }
-
-        // add the popup template
-        graphic.popupTemplate = new PopupTemplate(popupTemplate);
-
-        // Add graphics to the layers based on what the original geometry type is
-        if (graphic.geometry.type === 'point') {
-          points.push(
-            new Graphic({
-              attributes: graphic.attributes,
-              geometry: graphic.geometry,
-              popupTemplate: graphic.popupTemplate,
-              symbol: getPointSymbol(graphic),
-            }),
-          );
-
-          const polyGraphic = graphic.clone();
-          createBuffer(polyGraphic);
-          graphics.push(polyGraphic);
-        } else {
-          graphics.push(graphic);
-          points.push(convertToPoint(graphic));
-        }
-      });
-    });
-
-    if (unknownSampleTypes) {
-      setUploadStatus('unknown-sample-type');
-      return;
-    }
-
-    if (missingAttributes.length > 0) {
-      setUploadStatus('missing-attributes');
-      const sortedMissingAttributes = missingAttributes.sort();
-      const missingAttributesStr =
-        sortedMissingAttributes.slice(0, -1).join(', ') +
-        ' and ' +
-        sortedMissingAttributes.slice(-1);
-
-      setMissingAttributes(missingAttributesStr);
-      return;
-    }
-
-    graphicsLayer.addMany(graphics);
-    pointsLayer.addMany(points);
-
-    // make a copy of the edits context variable
-    const editsCopy = updateLayerEdits({
-      edits,
-      scenario: isSamplesOrVsp ? selectedScenario : null,
-      layer: layerToAdd,
-      type: 'add',
-      changes: graphicsLayer.graphics,
-    });
-
-    setEdits(editsCopy);
-
-    setLayers([...layers, layerToAdd]);
-
-    map.add(graphicsLayer);
-
-    if (isSamplesOrVsp) {
-      map.add(pointsLayer);
-
-      setSelectedScenario((selectedScenario) => {
-        if (!selectedScenario) return selectedScenario;
-
-        const scenario = editsCopy.edits.find(
-          (edit) =>
-            edit.type === 'scenario' &&
-            edit.layerId === selectedScenario.layerId,
-        ) as ScenarioEditsType;
-        const newLayer = scenario.layers.find(
-          (layer) => layer.layerId === layerToAdd.layerId,
-        );
-
-        if (!newLayer) return selectedScenario;
-
-        return {
-          ...selectedScenario,
-          layers: [...selectedScenario.layers, newLayer],
-        };
-      });
-
-      setSketchLayer(layerToAdd);
-    }
-
-    // zoom to the layer unless it is a contamination map
-    if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
-      if (selectedScenario && groupLayer && isSamplesOrVsp) {
-        groupLayer.add(layerToAdd.sketchLayer);
-        if (layerToAdd.pointsLayer) {
-          groupLayer.add(layerToAdd.pointsLayer);
-        }
-      } else {
-        const view = displayDimensions === '3d' ? sceneView : mapView;
-        view.goTo(graphics);
       }
+
+      if (unknownSampleTypes) {
+        setUploadStatus('unknown-sample-type');
+        return;
+      }
+
+      if (missingAttributes.length > 0) {
+        setUploadStatus('missing-attributes');
+        const sortedMissingAttributes = missingAttributes.sort();
+        const missingAttributesStr =
+          sortedMissingAttributes.slice(0, -1).join(', ') +
+          ' and ' +
+          sortedMissingAttributes.slice(-1);
+
+        setMissingAttributes(missingAttributesStr);
+        return;
+      }
+
+      graphicsLayer.addMany(graphics);
+      pointsLayer.addMany(points);
+
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        scenario: isSamplesOrVsp ? selectedScenario : null,
+        layer: layerToAdd,
+        type: 'add',
+        changes: graphicsLayer.graphics,
+      });
+
+      setEdits(editsCopy);
+
+      setLayers([...layers, layerToAdd]);
+
+      map.add(graphicsLayer);
+
+      if (isSamplesOrVsp) {
+        map.add(pointsLayer);
+
+        setSelectedScenario((selectedScenario) => {
+          if (!selectedScenario) return selectedScenario;
+
+          const scenario = editsCopy.edits.find(
+            (edit) =>
+              edit.type === 'scenario' &&
+              edit.layerId === selectedScenario.layerId,
+          ) as ScenarioEditsType;
+          const newLayer = scenario.layers.find(
+            (layer) => layer.layerId === layerToAdd.layerId,
+          );
+
+          if (!newLayer) return selectedScenario;
+
+          return {
+            ...selectedScenario,
+            layers: [...selectedScenario.layers, newLayer],
+          };
+        });
+
+        setSketchLayer(layerToAdd);
+      }
+
+      // zoom to the layer unless it is a contamination map
+      if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
+        if (selectedScenario && groupLayer && isSamplesOrVsp) {
+          groupLayer.add(layerToAdd.sketchLayer);
+          if (layerToAdd.pointsLayer) {
+            groupLayer.add(layerToAdd.pointsLayer);
+          }
+        } else {
+          const view = displayDimensions === '3d' ? sceneView : mapView;
+          view.goTo(graphics);
+        }
+      }
+
+      setUploadStatus('success');
     }
 
-    setUploadStatus('success');
+    processItem();
   }, [
     createBuffer,
     defaultSymbols,

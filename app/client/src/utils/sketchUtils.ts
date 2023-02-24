@@ -1089,3 +1089,150 @@ export function createLayer({
 
   return [sketchLayer, pointsLayer];
 }
+
+/**
+ * Gets the elevation layer from the map. This can be
+ * used for querying the elevation of points on the map.
+ *
+ * @param map The map object
+ * @returns Elevation layer
+ */
+export function getElevationLayer(map: __esri.Map) {
+  return map.ground.layers.find((l) => l.id === 'worldElevation');
+}
+
+/**
+ * Adds z value to every coordinate in a polygon, if necessary.
+ *
+ * @param poly Polygon to add z value to
+ * @param z The value for z
+ */
+function setPolygonZValues(poly: __esri.Polygon, z: number) {
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push([...coord, z]);
+      } else if (coord.length === 3 && !coord[2]) {
+        newCoords.push([coord[0], coord[1], z]);
+      } else {
+        newCoords.push(coord);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = true;
+}
+
+/**
+ * Sets the z values for a point or polygon. If the zRefParam
+ * is provided the z value will be the elevation at that coordinate,
+ * otherwise the z value will be the centroid of the geometry.
+ *
+ * @param map Map used for getting the elevation of a coordinate
+ * @param graphic Graphic to add z value to
+ * @param zRefParam (Optional) Point to use for getting the z value from
+ * @param elevationSampler (Optional) Elevation sampler
+ */
+export async function setZValues({
+  map,
+  graphic,
+  zRefParam = null,
+  elevationSampler = null,
+}: {
+  map: __esri.Map;
+  graphic: __esri.Graphic;
+  zRefParam?: __esri.Point | null;
+  elevationSampler?: __esri.ElevationSampler | null;
+}) {
+  // get the elevation layer
+  const elevationLayer = getElevationLayer(map);
+
+  async function getZAtPoint(point: __esri.Point) {
+    if (!elevationLayer && !elevationSampler) return 0;
+
+    let geometry: __esri.Geometry;
+    if (elevationSampler) {
+      geometry = elevationSampler.queryElevation(point);
+    } else {
+      geometry = (await elevationLayer.queryElevation(point)).geometry;
+    }
+
+    return (geometry as __esri.Point).z;
+  }
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point' && !point.z) {
+    point.z = await getZAtPoint(point);
+    return;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  const zRef: __esri.Point = zRefParam ? zRefParam : poly.centroid;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (
+    graphic.geometry.type === 'polygon' &&
+    zRef &&
+    (!poly.hasZ || firstCoordinate?.length === 2)
+  ) {
+    if (elevationLayer && firstCoordinate.length === 2) {
+      const z = await getZAtPoint(zRef);
+      setPolygonZValues(poly, z);
+    } else if (firstCoordinate?.length === 3) {
+      poly.hasZ = true;
+    } else {
+      setPolygonZValues(poly, 0);
+    }
+  }
+}
+
+/**
+ * Removes z values from the provided graphic. This is primarily
+ * for calling the gp server.
+ *
+ * @param graphic Graphic to remove z values from.
+ * @returns z value of the graphic that was removed
+ */
+export function removeZValues(graphic: __esri.Graphic) {
+  let z: number = 0;
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    (point as any).z = undefined;
+    point.hasZ = false;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push(coord);
+      } else {
+        newCoords.push([coord[0], coord[1]]);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = false;
+
+  return z;
+}
