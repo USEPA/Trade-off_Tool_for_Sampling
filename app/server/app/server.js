@@ -99,13 +99,13 @@ if (isDevelopment || isStaging) {
   let users = {};
   users[process.env.TOTS_BASIC_USER_NAME] = process.env.TOTS_BASIC_USER_PWD;
 
-  app.use(
-    basicAuth({
-      users: users,
-      challenge: true,
-      unauthorizedResponse: getUnauthorizedResponse,
-    }),
-  );
+  // app.use(
+  //   basicAuth({
+  //     users: users,
+  //     challenge: true,
+  //     unauthorizedResponse: getUnauthorizedResponse,
+  //   }),
+  // );
 }
 
 /****************************************************************
