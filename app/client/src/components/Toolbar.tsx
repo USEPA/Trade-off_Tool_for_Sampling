@@ -1025,15 +1025,21 @@ function Toolbar() {
                   {
                     oAuthPopupConfirmation: false,
                   },
-                ).then(() => {
-                  setSignedIn(true);
+                )
+                  .then(() => {
+                    setSignedIn(true);
 
-                  const portal = new Portal();
-                  portal.authMode = 'immediate';
-                  portal.load().then(() => {
-                    setPortal(portal);
+                    const portal = new Portal();
+                    portal.authMode = 'immediate';
+                    portal.load().then(() => {
+                      setPortal(portal);
+                    });
+                  })
+                  .catch((err) => {
+                    console.error(err);
+                    setSignedIn(false);
+                    setPortal(null);
                   });
-                });
               }
             }}
           >
