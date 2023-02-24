@@ -1141,11 +1141,13 @@ export async function setZValues({
   graphic,
   zRefParam = null,
   elevationSampler = null,
+  zOverride = null,
 }: {
   map: __esri.Map;
   graphic: __esri.Graphic;
   zRefParam?: __esri.Point | null;
   elevationSampler?: __esri.ElevationSampler | null;
+  zOverride?: number | null;
 }) {
   // get the elevation layer
   const elevationLayer = getElevationLayer(map);
@@ -1166,7 +1168,7 @@ export async function setZValues({
   // update the z value of the point if necessary
   const point = graphic.geometry as __esri.Point;
   if (graphic.geometry.type === 'point' && !point.z) {
-    point.z = await getZAtPoint(point);
+    point.z = zOverride ?? (await getZAtPoint(point));
     return;
   }
 
@@ -1183,12 +1185,12 @@ export async function setZValues({
     (!poly.hasZ || firstCoordinate?.length === 2)
   ) {
     if (elevationLayer && firstCoordinate.length === 2) {
-      const z = await getZAtPoint(zRef);
+      const z = zOverride ?? (await getZAtPoint(zRef));
       setPolygonZValues(poly, z);
     } else if (firstCoordinate?.length === 3) {
       poly.hasZ = true;
     } else {
-      setPolygonZValues(poly, 0);
+      setPolygonZValues(poly, zOverride ?? 0);
     }
   }
 }
@@ -1212,7 +1214,7 @@ export function removeZValues(graphic: __esri.Graphic) {
     return z;
   }
 
-  if (graphic.geometry.type !== 'polygon') return;
+  if (graphic.geometry.type !== 'polygon') return 0;
   const poly = graphic.geometry as __esri.Polygon;
 
   // update the z value of the polygon if necessary
