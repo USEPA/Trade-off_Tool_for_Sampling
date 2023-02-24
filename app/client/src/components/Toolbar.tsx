@@ -464,7 +464,9 @@ function Toolbar() {
 
     const info = new OAuthInfo({
       appId: process.env.REACT_APP_ARCGIS_APP_ID,
-      popup: false,
+      popup: true,
+      flowType: 'authorization-code',
+      popupCallbackUrl: `${window.location.origin}/oauth-callback.html`,
     });
     IdentityManager.registerOAuthInfos([info]);
 
@@ -1015,9 +1017,23 @@ function Toolbar() {
             onClick={(ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();
-                window.location.reload();
+                setSignedIn(false);
+                setPortal(null);
               } else {
-                IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+                IdentityManager.getCredential(
+                  `${oAuthInfo.portalUrl}/sharing`,
+                  {
+                    oAuthPopupConfirmation: false,
+                  },
+                ).then(() => {
+                  setSignedIn(true);
+
+                  const portal = new Portal();
+                  portal.authMode = 'immediate';
+                  portal.load().then(() => {
+                    setPortal(portal);
+                  });
+                });
               }
             }}
           >
