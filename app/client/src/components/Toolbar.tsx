@@ -23,7 +23,11 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
-import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
+import {
+  findLayerInEdits,
+  getElevationLayer,
+  getNextScenarioLayer,
+} from 'utils/sketchUtils';
 // types
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
@@ -805,9 +809,7 @@ function Toolbar() {
   useEffect(() => {
     if (!map) return;
 
-    const elevationLayer = map.ground.layers.find(
-      (l) => l.id === 'worldElevation',
-    );
+    const elevationLayer = getElevationLayer(map);
     if (!elevationLayer) return;
 
     elevationLayer.visible = terrain3dVisible;

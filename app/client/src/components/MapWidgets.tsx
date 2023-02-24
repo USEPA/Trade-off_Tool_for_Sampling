@@ -38,6 +38,7 @@ import {
   deactivateButtons,
   generateUUID,
   getCurrentDateTime,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { ScenarioEditsType } from 'types/Edits';
@@ -577,11 +578,45 @@ function MapWidgets({ mapView, sceneView }: Props) {
       aoiSketchVM.pointSymbol = defaultSymbols.symbols[
         'Area of Interest'
       ] as any;
+
+      if (displayDimensions === '2d') {
+        aoiSketchVM.view = mapView;
+        aoiSketchVM.layer.elevationInfo = null as any;
+        aoiSketchVM.snappingOptions = {
+          featureSources: [],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: false,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: false,
+        };
+      } else {
+        aoiSketchVM.view = sceneView;
+        aoiSketchVM.layer.elevationInfo = { mode: 'absolute-height' };
+        aoiSketchVM.snappingOptions = {
+          featureSources: [{ layer: aoiSketchVM.layer }],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: true,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: true,
+        };
+      }
     } else {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
-  }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
+  }, [
+    aoiSketchLayer,
+    aoiSketchVM,
+    currentPanel,
+    defaultSymbols,
+    displayDimensions,
+    mapView,
+    sceneView,
+  ]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const setupEvents = useCallback(
@@ -590,25 +625,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
       setter: Dispatch<SetStateAction<boolean>>,
       sketchEventSetter: Dispatch<any>,
     ) => {
-      function setZValues(poly: __esri.Polygon, z: number) {
-        const newRings: number[][][] = [];
-        poly.rings.forEach((ring) => {
-          const newCoords: number[][] = [];
-          ring.forEach((coord) => {
-            if (coord.length === 2) {
-              newCoords.push([...coord, z]);
-            } else if (coord.length === 3 && !coord[2]) {
-              newCoords.push([coord[0], coord[1], z]);
-            } else {
-              newCoords.push(coord);
-            }
-          });
-          newRings.push(newCoords);
-        });
-        poly.rings = newRings;
-        poly.hasZ = true;
-      }
-
       let firstPoint: __esri.Point | null = null;
 
       sketchViewModel.on('create', async (event) => {
@@ -682,40 +698,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
             getPopupTemplate(layerType, getTrainingMode()),
           );
 
-          // get the elevation layer
-          const elevationLayer = sketchViewModel.view.map.ground.layers.find(
-            (l) => l.id === 'worldElevation',
-          );
-
-          // update the z value of the point if necessary
-          const point = graphic.geometry as __esri.Point;
-          if (graphic.geometry.type === 'point' && !point.z) {
-            if (elevationLayer) {
-              const result = await elevationLayer.queryElevation(point);
-              point.z = (result.geometry as __esri.Point).z;
-            } else {
-              point.z = 0;
-            }
-          }
-
-          // update the z value of the polygon if necessary
-          const poly = graphic.geometry as __esri.Polygon;
-          const firstCoordinate = poly.rings?.[0]?.[0];
-          if (
-            graphic.geometry.type === 'polygon' &&
-            firstPoint &&
-            (!poly.hasZ || firstCoordinate?.length === 2)
-          ) {
-            if (elevationLayer && firstCoordinate.length === 2) {
-              const result = await elevationLayer.queryElevation(firstPoint);
-              const z = (result.geometry as __esri.Point).z;
-              setZValues(poly, z);
-            } else if (firstCoordinate?.length === 3) {
-              poly.hasZ = true;
-            } else {
-              setZValues(poly, 0);
-            }
-          }
+          // update the z values
+          await setZValues(sketchViewModel.view.map, graphic, firstPoint);
 
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
