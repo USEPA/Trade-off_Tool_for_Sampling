@@ -60,6 +60,8 @@ import {
   getPointSymbol,
   getScenarios,
   getSketchableLayers,
+  removeZValues,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
@@ -613,7 +615,10 @@ function LocateSamples() {
       .then((maxRecordCount) => {
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
-          graphics = aoiMaskLayer.sketchLayer.graphics.toArray();
+          const fullGraphics = aoiMaskLayer.sketchLayer.graphics.clone();
+          fullGraphics.forEach((graphic) => removeZValues(graphic));
+
+          graphics = fullGraphics.toArray();
         }
 
         // create a feature set for communicating with the GPServer
@@ -686,7 +691,7 @@ function LocateSamples() {
           numSamplesLeft = numSamplesLeft - numSamples;
         }
         Promise.all(requests)
-          .then((responses: any) => {
+          .then(async (responses: any) => {
             let res;
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
@@ -724,7 +729,8 @@ function LocateSamples() {
               }
 
               // build an array of graphics to draw on the map
-              results.features.forEach((feature: any) => {
+              for (const feature of results.features) {
+                // results.features.forEach((feature: any) => {
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[typeuuid],
@@ -748,9 +754,11 @@ function LocateSamples() {
                   popupTemplate,
                 });
 
+                await setZValues({ map, graphic: poly });
+
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
-              });
+              }
             }
 
             // put the graphics on the map

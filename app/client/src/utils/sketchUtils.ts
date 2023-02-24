@@ -1183,7 +1183,7 @@ export async function setZValues({
     (!poly.hasZ || firstCoordinate?.length === 2)
   ) {
     if (elevationLayer && firstCoordinate.length === 2) {
-      const z = await getZAtPoint(point);
+      const z = await getZAtPoint(zRef);
       setPolygonZValues(poly, z);
     } else if (firstCoordinate?.length === 3) {
       poly.hasZ = true;
@@ -1191,4 +1191,48 @@ export async function setZValues({
       setPolygonZValues(poly, 0);
     }
   }
+}
+
+/**
+ * Removes z values from the provided graphic. This is primarily
+ * for calling the gp server.
+ *
+ * @param graphic Graphic to remove z values from.
+ * @returns z value of the graphic that was removed
+ */
+export function removeZValues(graphic: __esri.Graphic) {
+  let z: number = 0;
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    (point as any).z = undefined;
+    point.hasZ = false;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push(coord);
+      } else {
+        newCoords.push([coord[0], coord[1]]);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = false;
+
+  return z;
 }

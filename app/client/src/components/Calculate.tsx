@@ -39,7 +39,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { removeZValues, updateLayerEdits } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
@@ -73,7 +73,10 @@ function getGraphics(map: __esri.Map, layerId: string) {
       if (layer.type !== 'graphics' || layer.id.includes('-points')) return;
 
       const graphicsLayer = layer as __esri.GraphicsLayer;
-      graphics.push(...graphicsLayer.graphics.toArray());
+
+      const fullGraphics = graphicsLayer.graphics.clone();
+      fullGraphics.forEach((graphic) => removeZValues(graphic));
+      graphics.push(...fullGraphics.toArray());
     });
   }
 
@@ -319,7 +322,10 @@ function Calculate() {
     let contamMapSet: __esri.FeatureSet | null = null;
     let graphics: __esri.GraphicProperties[] = [];
     if (contaminationMap?.sketchLayer?.type === 'graphics') {
-      graphics = contaminationMap.sketchLayer.graphics.toArray();
+      const fullGraphics = contaminationMap.sketchLayer.graphics.clone();
+      fullGraphics.forEach((graphic) => removeZValues(graphic));
+
+      graphics = fullGraphics.toArray();
     }
     if (graphics.length === 0) {
       // display the no graphics on contamination map warning
