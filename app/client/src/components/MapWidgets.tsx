@@ -724,7 +724,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
           }
 
           // save the graphic
-          sketchViewModel.complete();
           sketchEventSetter(event);
 
           firstPoint = null;
@@ -738,6 +737,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         // place the graphic on the map when the drawing is complete
         if (event.state === 'complete') {
           console.log('sketch complete...');
+          sketchViewModel.complete();
           processSketchEvent();
         }
       });
