@@ -322,10 +322,13 @@ export function useGeometryTools() {
 
       console.log('wgsGeometry: ', wgsGeometry);
       console.log('wgsGeometry.centroid: ', wgsGeometry?.centroid);
-      if (!wgsGeometry?.centroid) return 'ERROR - WGS Geometry is null';
+      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+
+      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+      if (!center) return;
 
       // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry.centroid;
+      const { latitude, longitude } = center;
       const base_wkid = latitude > 0 ? 32600 : 32700;
       const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
       const spatialReference = new SpatialReference({ wkid: out_wkid });
