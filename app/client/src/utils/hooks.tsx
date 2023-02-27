@@ -320,7 +320,9 @@ export function useGeometryTools() {
         false,
       ) as __esri.Polygon;
 
-      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+      console.log('wgsGeometry: ', wgsGeometry);
+      console.log('wgsGeometry.centroid: ', wgsGeometry?.centroid);
+      if (!wgsGeometry?.centroid) return 'ERROR - WGS Geometry is null';
 
       // get the spatial reference from the centroid
       const { latitude, longitude } = wgsGeometry.centroid;
