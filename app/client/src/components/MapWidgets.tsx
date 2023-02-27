@@ -627,7 +627,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     ) => {
       let firstPoint: __esri.Point | null = null;
 
-      sketchViewModel.on('create', async (event) => {
+      sketchViewModel.on('create', (event) => {
         const { graphic } = event;
         if (!graphic) return;
 
@@ -648,8 +648,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
           }
         }
 
-        // place the graphic on the map when the drawing is complete
-        if (event.state === 'complete') {
+        async function processSketchEvent() {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
@@ -735,6 +734,9 @@ function MapWidgets({ mapView, sceneView }: Props) {
             sketchViewModel.create(graphic.attributes.ShapeType);
           }
         }
+
+        // place the graphic on the map when the drawing is complete
+        if (event.state === 'complete') processSketchEvent();
       });
 
       sketchViewModel.on('update', (event) => {
