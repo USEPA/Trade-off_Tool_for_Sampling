@@ -320,10 +320,9 @@ export function useGeometryTools() {
         false,
       ) as __esri.Polygon;
 
-      console.log('wgsGeometry: ', wgsGeometry);
-      console.log('wgsGeometry.centroid: ', wgsGeometry?.centroid);
       if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
 
+      // get the center
       let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
       if (!center) return;
 
