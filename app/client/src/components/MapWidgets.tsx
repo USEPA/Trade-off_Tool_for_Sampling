@@ -736,7 +736,10 @@ function MapWidgets({ mapView, sceneView }: Props) {
         }
 
         // place the graphic on the map when the drawing is complete
-        if (event.state === 'complete') processSketchEvent();
+        if (event.state === 'complete') {
+          console.log('sketch complete...');
+          processSketchEvent();
+        }
       });
 
       sketchViewModel.on('update', (event) => {
