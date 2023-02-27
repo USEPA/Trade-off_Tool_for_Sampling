@@ -10,6 +10,7 @@ import React, {
 import { css } from '@emotion/react';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import Portal from '@arcgis/core/portal/Portal';
 // components
 import {
   EditCustomSampleTypesTable,
@@ -127,11 +128,9 @@ const webMapContainerCheckboxStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const {
-    oAuthInfo,
-    portal,
-    signedIn, //
-  } = useContext(AuthenticationContext);
+  const { oAuthInfo, portal, setSignedIn, setPortal, signedIn } = useContext(
+    AuthenticationContext,
+  );
   const { goToOptions, setGoToOptions } = useContext(NavigationContext);
   const {
     includeCustomSampleTypes,
@@ -198,9 +197,33 @@ function Publish() {
     // have the user login if necessary
     if (!portal || !signedIn) {
       setGoToOptions({ continuePublish: true });
-      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`, {
+        oAuthPopupConfirmation: false,
+      })
+        .then(() => {
+          setSignedIn(true);
+
+          const portal = new Portal();
+          portal.authMode = 'immediate';
+          portal.load().then(() => {
+            setPortal(portal);
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          setSignedIn(false);
+          setPortal(null);
+        });
     }
-  }, [setGoToOptions, portal, signedIn, oAuthInfo, publishButtonClicked]);
+  }, [
+    oAuthInfo,
+    portal,
+    publishButtonClicked,
+    setGoToOptions,
+    setPortal,
+    setSignedIn,
+    signedIn,
+  ]);
 
   // Check if the scenario name is available
   const [hasNameBeenChecked, setHasNameBeenChecked] = useState(false);
