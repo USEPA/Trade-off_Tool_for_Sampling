@@ -38,13 +38,17 @@ export type ReferenceLayerSelections =
       id: string;
       label: string;
       layerType: PortalLayerTypes;
-      type: 'acrgis';
+      onWebMap: number;
+      onWebScene: number;
+      type: 'arcgis';
       value: string;
     }
   | {
       id: string;
       label: string;
       layerType: string;
+      onWebMap: number;
+      onWebScene: number;
       type: 'url';
       urlType: UrlLayerTypes;
       value: string;

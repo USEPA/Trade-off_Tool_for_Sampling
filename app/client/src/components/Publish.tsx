@@ -519,6 +519,7 @@ function Publish() {
       },
       map,
       table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
       layerProps,
       serviceMetaData: {
         value: '',
@@ -1061,6 +1062,7 @@ function Publish() {
       },
       map,
       table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
       attributesToInclude: partialPlanAttributes,
       layerProps,
       serviceMetaData: {
