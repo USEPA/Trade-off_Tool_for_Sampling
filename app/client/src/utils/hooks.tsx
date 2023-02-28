@@ -1527,7 +1527,8 @@ function usePortalLayerStorage() {
     portalLayers.forEach((portalLayer) => {
       const id = portalLayer.id;
 
-      const layerFound = map.layers.findIndex((l) => l.id === id) > -1;
+      const layerFound =
+        map.layers.findIndex((l: any) => l?.portalItem?.id === id) > -1;
       if (layerFound) return;
 
       // Skip tots layers, since they are stored in edits.

@@ -24,6 +24,8 @@ export type ReferenceLayerTableType = {
   label: string;
   layerType: string;
   objectId: number;
+  onWebMap: number;
+  onWebScene: number;
   type: string;
   url: string;
   urlType: string;

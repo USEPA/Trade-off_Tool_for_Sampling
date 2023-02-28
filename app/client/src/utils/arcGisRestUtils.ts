@@ -1268,12 +1268,36 @@ function buildReferenceLayerTableEdits({
   referenceMaterials.webMapReferenceLayerSelections.forEach((l) => {
     if (refIdsAdded.includes(l.id)) return;
     refIdsAdded.push(l.id);
-    uniqueReferenceLayerSelections.push(l);
+
+    const onWebScene =
+      referenceMaterials.webSceneReferenceLayerSelections.findIndex(
+        (m) => m.id === l.id,
+      ) > -1
+        ? 1
+        : 0;
+
+    uniqueReferenceLayerSelections.push({
+      ...l,
+      onWebMap: 1,
+      onWebScene: onWebScene,
+    });
   });
   referenceMaterials.webSceneReferenceLayerSelections.forEach((l) => {
     if (refIdsAdded.includes(l.id)) return;
     refIdsAdded.push(l.id);
-    uniqueReferenceLayerSelections.push(l);
+
+    const onWebMap =
+      referenceMaterials.webMapReferenceLayerSelections.findIndex(
+        (m) => m.id === l.id,
+      ) > -1
+        ? 1
+        : 0;
+
+    uniqueReferenceLayerSelections.push({
+      ...l,
+      onWebMap,
+      onWebScene: 1,
+    });
   });
 
   // get reference layers that were already published
@@ -1300,6 +1324,8 @@ function buildReferenceLayerTableEdits({
           LAYERID: refLayer.id,
           LABEL: refLayer.label,
           LAYERTYPE: refLayer.layerType,
+          ONWEBMAP: refLayer.onWebMap,
+          ONWEBSCENE: refLayer.onWebScene,
           TYPE: refLayer.type,
           URL: refLayer.value,
           URLTYPE: refLayer.type === 'url' ? refLayer.urlType : '',

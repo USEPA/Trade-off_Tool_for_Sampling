@@ -1306,6 +1306,8 @@ function ResultCard({ result }: ResultCardProps) {
                       label: f.attributes.LABEL,
                       layerType: f.attributes.LAYERTYPE,
                       objectId: f.attributes.OBJECTID,
+                      onWebMap: f.attributes.ONWEBMAP,
+                      onWebScene: f.attributes.ONWEBSCENE,
                       type: f.attributes.TYPE,
                       url: f.attributes.URL,
                       urlType: f.attributes.URLTYPE,

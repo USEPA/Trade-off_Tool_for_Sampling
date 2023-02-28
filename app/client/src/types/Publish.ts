@@ -38,6 +38,8 @@ export type ReferenceLayerSelections =
       id: string;
       label: string;
       layerType: PortalLayerTypes;
+      onWebMap: number;
+      onWebScene: number;
       type: 'arcgis';
       value: string;
     }
@@ -45,6 +47,8 @@ export type ReferenceLayerSelections =
       id: string;
       label: string;
       layerType: string;
+      onWebMap: number;
+      onWebScene: number;
       type: 'url';
       urlType: UrlLayerTypes;
       value: string;

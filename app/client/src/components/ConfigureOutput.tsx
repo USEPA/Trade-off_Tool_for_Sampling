@@ -260,6 +260,8 @@ function ConfigureOutput() {
           value: l.url,
           layerType: l.layerType,
           type: 'arcgis',
+          onWebMap: 1,
+          onWebScene: 0,
         });
       }
 
@@ -272,6 +274,8 @@ function ConfigureOutput() {
           value: l.url,
           layerType: l.layerType,
           type: 'arcgis',
+          onWebMap: 0,
+          onWebScene: 1,
         });
       }
     });
@@ -313,6 +317,8 @@ function ConfigureOutput() {
           layerType: l.layerType,
           urlType: l.type,
           type: 'url',
+          onWebMap: 1,
+          onWebScene: 0,
         });
       }
 
@@ -330,6 +336,8 @@ function ConfigureOutput() {
           layerType: l.layerType,
           urlType: l.type,
           type: 'url',
+          onWebMap: 0,
+          onWebScene: 1,
         });
       }
     });
@@ -350,15 +358,35 @@ function ConfigureOutput() {
 
     const webMapReferenceLayerSelections: ReferenceLayerSelections[] = [];
     const webSceneReferenceLayerSelections: ReferenceLayerSelections[] = [];
-    map.layers.forEach((l) => {
-      if (!l.visible) return;
+    if (
+      selectedScenario &&
+      selectedScenario.referenceLayersTable.referenceLayers.length > 0
+    ) {
+      selectedScenario.referenceLayersTable.referenceLayers.forEach((l) => {
+        const wmOption = webMapRefOptions.find((o) => o.id === l.layerId);
+        const wsOption = webSceneRefOptions.find((o) => o.id === l.layerId);
 
-      const wmOption = webMapRefOptions.find((o) => o.id === l.id);
-      const wsOption = webSceneRefOptions.find((o) => o.id === l.id);
+        if (wmOption && l.onWebMap)
+          webMapReferenceLayerSelections.push(wmOption);
+        if (wsOption && l.onWebScene)
+          webSceneReferenceLayerSelections.push(wsOption);
+      });
+    } else {
+      const findLayer = (layer: any, refLayers: ReferenceLayerSelections[]) => {
+        return refLayers.find(
+          (o) => o.id === layer.id || o.id === layer?.portalItem?.id,
+        );
+      };
+      map.layers.forEach((l) => {
+        if (!l.visible) return;
 
-      if (wmOption) webMapReferenceLayerSelections.push(wmOption);
-      if (wsOption) webSceneReferenceLayerSelections.push(wsOption);
-    });
+        const wmOption = findLayer(l, webMapRefOptions);
+        const wsOption = findLayer(l, webSceneRefOptions);
+
+        if (wmOption) webMapReferenceLayerSelections.push(wmOption);
+        if (wsOption) webSceneReferenceLayerSelections.push(wsOption);
+      });
+    }
 
     setWebMapReferenceLayerSelections(webMapReferenceLayerSelections);
     setWebSceneReferenceLayerSelections(webSceneReferenceLayerSelections);
@@ -366,6 +394,7 @@ function ConfigureOutput() {
   }, [
     initializedRefSelections,
     map,
+    selectedScenario,
     setWebMapReferenceLayerSelections,
     setWebSceneReferenceLayerSelections,
     webMapRefOptions,

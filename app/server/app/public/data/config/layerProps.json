@@ -507,6 +507,30 @@
       "defaultValue": null
     },
     {
+      "name": "ONWEBMAP",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "ONWEBMAP",
+      "sqlType": "sqlTypeInteger",
+      "length": 1,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "ONWEBSCENE",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "ONWEBSCENE",
+      "sqlType": "sqlTypeInteger",
+      "length": 1,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
       "name": "CREATEDDATE",
       "type": "esriFieldTypeDate",
       "alias": "CREATEDDATE",
