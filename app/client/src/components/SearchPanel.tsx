@@ -41,8 +41,12 @@ import {
 } from 'utils/sketchUtils';
 import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
-import { LayerType } from 'types/Layer';
-import { EditsType, ScenarioEditsType } from 'types/Edits';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
+import {
+  EditsType,
+  ReferenceLayersTableType,
+  ScenarioEditsType,
+} from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 import {
   Attributes,
@@ -862,6 +866,7 @@ function ResultCard({ result }: ResultCardProps) {
     sceneView,
     setSelectedScenario,
     setSketchLayer,
+    setUrlLayers,
     userDefinedOptions,
     setUserDefinedOptions,
     userDefinedAttributes,
@@ -941,8 +946,20 @@ function ResultCard({ result }: ResultCardProps) {
           }
         });
 
+        const resRefLayersTypes: any[] = [];
+        res.tables.forEach((table: any) => {
+          if (table.name.endsWith('-reference-layers')) {
+            resRefLayersTypes.push(table);
+          }
+        });
+
         // fire off the calls with the points layers last
-        const resCombined = [...resSampleTypes, ...resPolys, ...resPoints];
+        const resCombined = [
+          ...resRefLayersTypes,
+          ...resSampleTypes,
+          ...resPolys,
+          ...resPoints,
+        ];
         resCombined.forEach((layer: any) => {
           const id = layer.id;
 
@@ -968,6 +985,10 @@ function ResultCard({ result }: ResultCardProps) {
             const refLayersToAdd: any[] = [];
             const zoomToGraphics: __esri.Graphic[] = [];
             let table: any = {};
+            let referenceLayersTable: ReferenceLayersTableType = {
+              id: -1,
+              referenceLayers: [],
+            };
 
             // function used for finalizing the adding of layers. This function is needed
             // for displaying a popup mesage if there is an issue with any of the samples
@@ -1237,7 +1258,10 @@ function ResultCard({ result }: ResultCardProps) {
               }
 
               // add sample layers as graphics layers
-              if (layerDetails.type === 'Table') {
+              if (
+                layerDetails.type === 'Table' &&
+                layerDetails.name.endsWith('-sample-types')
+              ) {
                 table.id = layerDetails.id;
                 table.sampleTypes = {};
 
@@ -1248,6 +1272,50 @@ function ResultCard({ result }: ResultCardProps) {
                 });
 
                 addedSampleTypesViaTable = true;
+              } else if (
+                layerDetails.type === 'Table' &&
+                layerDetails.name.endsWith('-reference-layers')
+              ) {
+                const newUrlLayers: UrlLayerType[] = [];
+                const newPortalLayers: PortalLayerType[] = [];
+                referenceLayersTable = {
+                  id: layerDetails.id,
+                  referenceLayers: layerFeatures.features.map((f: any) => {
+                    if (f.attributes.TYPE === 'arcgis') {
+                      newPortalLayers.push({
+                        id: f.attributes.LAYERID,
+                        label: f.attributes.LABEL,
+                        layerType: f.attributes.LAYERTYPE,
+                        type: f.attributes.TYPE,
+                        url: f.attributes.URL,
+                      });
+                    }
+                    if (f.attributes.TYPE === 'url') {
+                      newUrlLayers.push({
+                        layerId: f.attributes.LAYERID,
+                        label: f.attributes.LABEL,
+                        layerType: f.attributes.LAYERTYPE,
+                        type: f.attributes.URLTYPE,
+                        url: f.attributes.URL,
+                      });
+                    }
+
+                    return {
+                      globalId: f.attributes.GLOBALID,
+                      layerId: f.attributes.LAYERID,
+                      label: f.attributes.LABEL,
+                      layerType: f.attributes.LAYERTYPE,
+                      objectId: f.attributes.OBJECTID,
+                      type: f.attributes.TYPE,
+                      url: f.attributes.URL,
+                      urlType: f.attributes.URLTYPE,
+                    };
+                  }),
+                };
+
+                if (newPortalLayers.length > 0)
+                  setPortalLayers(newPortalLayers);
+                if (newUrlLayers.length > 0) setUrlLayers(newUrlLayers);
               } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
                 if (layerFeatures.features?.length > 0) {
                   updatePointIds(layerFeatures, layerDetails);
@@ -1375,6 +1443,7 @@ function ResultCard({ result }: ResultCardProps) {
                   scenarioDescription: layerDetails.description,
                   layers: [],
                   table,
+                  referenceLayersTable,
                 };
 
                 // make a copy of the edits context variable

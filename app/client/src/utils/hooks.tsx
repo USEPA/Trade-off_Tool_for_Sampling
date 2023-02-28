@@ -1422,12 +1422,43 @@ function useUrlLayerStorage() {
     // add the portal layers to the map
     urlLayers.forEach((urlLayer) => {
       const type = urlLayer.type;
+
+      if (
+        type === 'ArcGIS' ||
+        type === 'WMS' ||
+        // type === 'WFS' ||
+        type === 'KML' ||
+        type === 'GeoRSS' ||
+        type === 'CSV'
+      ) {
+        newUrlLayers.push(urlLayer);
+      }
+    });
+
+    setUrlLayers(newUrlLayers);
+  }, [localUrlLayerInitialized, map, setUrlLayers]);
+
+  // Saves the url layers to browser storage everytime they change
+  useEffect(() => {
+    if (!localUrlLayerInitialized) return;
+    writeToStorage(key, urlLayers, setOptions);
+  }, [urlLayers, localUrlLayerInitialized, setOptions]);
+
+  // adds url layers to map
+  useEffect(() => {
+    if (!map || urlLayers.length === 0) return;
+
+    // add the url layers to the map
+    urlLayers.forEach((urlLayer) => {
+      const type = urlLayer.type;
       const url = urlLayer.url;
       const id = urlLayer.layerId;
 
+      const layerFound = map.layers.findIndex((l) => l.id === id) > -1;
+      if (layerFound) return;
+
       let layer;
       if (type === 'ArcGIS') {
-        newUrlLayers.push(urlLayer);
         Layer.fromArcGISServerUrl({ url, properties: { id } })
           .then((layer) => map.add(layer))
           .catch((err) => {
@@ -1457,19 +1488,9 @@ function useUrlLayerStorage() {
       // add the layer if isn't null
       if (layer) {
         map.add(layer);
-
-        newUrlLayers.push(urlLayer);
       }
     });
-
-    setUrlLayers(newUrlLayers);
-  }, [localUrlLayerInitialized, map, setUrlLayers]);
-
-  // Saves the url layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localUrlLayerInitialized) return;
-    writeToStorage(key, urlLayers, setOptions);
-  }, [urlLayers, localUrlLayerInitialized, setOptions]);
+  }, [map, urlLayers]);
 }
 
 // Uses browser storage for holding the portal layers that have been added.
@@ -1489,23 +1510,6 @@ function usePortalLayerStorage() {
     if (!portalLayersStr) return;
 
     const portalLayers: PortalLayerType[] = JSON.parse(portalLayersStr);
-
-    // add the portal layers to the map
-    portalLayers.forEach((portalLayer) => {
-      // Skip tots layers, since they are stored in edits.
-      // The only reason tots layers are also in portal layers is
-      // so the search panel will show the layer as having been
-      // added.
-      if (portalLayer.type === 'tots') return;
-
-      const layer = Layer.fromPortalItem({
-        portalItem: new PortalItem({
-          id: portalLayer.id,
-        }),
-      });
-      map.add(layer);
-    });
-
     setPortalLayers(portalLayers);
   }, [localPortalLayerInitialized, map, portalLayers, setPortalLayers]);
 
@@ -1514,6 +1518,30 @@ function usePortalLayerStorage() {
     if (!localPortalLayerInitialized) return;
     writeToStorage(key, portalLayers, setOptions);
   }, [portalLayers, localPortalLayerInitialized, setOptions]);
+
+  // adds portal layers to map
+  useEffect(() => {
+    if (!map || portalLayers.length === 0) return;
+
+    // add the portal layers to the map
+    portalLayers.forEach((portalLayer) => {
+      const id = portalLayer.id;
+
+      const layerFound = map.layers.findIndex((l) => l.id === id) > -1;
+      if (layerFound) return;
+
+      // Skip tots layers, since they are stored in edits.
+      // The only reason tots layers are also in portal layers is
+      // so the search panel will show the layer as having been
+      // added.
+      if (portalLayer.type === 'tots') return;
+
+      const layer = Layer.fromPortalItem({
+        portalItem: new PortalItem({ id }),
+      });
+      map.add(layer);
+    });
+  }, [map, portalLayers]);
 }
 
 // Uses browser storage for holding the map's view port extent.

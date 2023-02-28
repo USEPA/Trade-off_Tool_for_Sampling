@@ -38,7 +38,7 @@ export type ReferenceLayerSelections =
       id: string;
       label: string;
       layerType: PortalLayerTypes;
-      type: 'acrgis';
+      type: 'arcgis';
       value: string;
     }
   | {

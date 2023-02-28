@@ -259,7 +259,7 @@ function ConfigureOutput() {
           id: l.id,
           value: l.url,
           layerType: l.layerType,
-          type: 'acrgis',
+          type: 'arcgis',
         });
       }
 
@@ -271,7 +271,7 @@ function ConfigureOutput() {
           id: l.id,
           value: l.url,
           layerType: l.layerType,
-          type: 'acrgis',
+          type: 'arcgis',
         });
       }
     });

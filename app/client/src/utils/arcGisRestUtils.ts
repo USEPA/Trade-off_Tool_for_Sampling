@@ -2,6 +2,8 @@
 import {
   FeatureEditsType,
   LayerEditsType,
+  ReferenceLayersTableType,
+  ReferenceLayerTableType,
   ServiceMetaDataType,
   TableType,
 } from 'types/Edits';
@@ -10,7 +12,15 @@ import { LookupFile } from 'types/Misc';
 import { AttributesType, ReferenceLayerSelections } from 'types/Publish';
 // utils
 import { fetchPost, fetchCheck } from 'utils/fetchUtils';
+import { generateUUID, getCurrentDateTime } from 'utils/sketchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
+
+const agoLayerIdsEnum = {
+  polygons: 0,
+  points: 1,
+  customSampleTypes: 2,
+  referenceLayers: 3,
+};
 
 /**
  * Returns an environment string to be passed as a parameter
@@ -681,7 +691,14 @@ function createFeatureLayers(
             fields: layerProps.data.defaultFields,
             type: 'Table',
             name: `${serviceMetaData.label}-sample-types`,
-            description: '',
+            description: `Custom sample type definitions for "${serviceMetaData.label}".`,
+          },
+          {
+            ...layerProps.data.defaultTableProps,
+            fields: layerProps.data.defaultReferenceTableFields,
+            type: 'Table',
+            name: `${serviceMetaData.label}-reference-layers`,
+            description: `Links to reference layers for "${serviceMetaData.label}".`,
           },
         ],
       },
@@ -802,19 +819,22 @@ function updateFeatureLayers(
 
       // update the polygon representation
       requests.push(
-        fetchPost(`${adminServiceUrl}/${layer.id}/updateDefinition`, {
-          f: 'json',
-          token: tempPortal.credential.token,
-          updateDefinition: {
-            drawingInfo: {
-              renderer: {
-                type: 'uniqueValue',
-                field1: 'TYPEUUID',
-                uniqueValueInfos: uniqueValueInfosPolygons,
+        fetchPost(
+          `${adminServiceUrl}/${agoLayerIdsEnum.polygons}/updateDefinition`,
+          {
+            f: 'json',
+            token: tempPortal.credential.token,
+            updateDefinition: {
+              drawingInfo: {
+                renderer: {
+                  type: 'uniqueValue',
+                  field1: 'TYPEUUID',
+                  uniqueValueInfos: uniqueValueInfosPolygons,
+                },
               },
             },
           },
-        }),
+        ),
       );
 
       // update the point representation
@@ -1046,6 +1066,8 @@ function applyEdits({
   edits,
   table,
   attributesToInclude,
+  referenceMaterials,
+  referenceLayersTable,
 }: {
   portal: __esri.Portal;
   serviceUrl: string;
@@ -1053,6 +1075,13 @@ function applyEdits({
   edits: LayerEditsType[];
   table: TableType | null;
   attributesToInclude: AttributesType[] | null;
+  referenceMaterials: {
+    createWebMap: boolean;
+    createWebScene: boolean;
+    webMapReferenceLayerSelections: ReferenceLayerSelections[];
+    webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  };
+  referenceLayersTable: ReferenceLayersTableType;
 }) {
   return new Promise((resolve, reject) => {
     const changes: any[] = [];
@@ -1065,7 +1094,7 @@ function applyEdits({
       });
 
       changes.push({
-        id: layerEdits.id,
+        id: agoLayerIdsEnum.polygons,
         adds: layerEdits.adds,
         updates: layerEdits.updates,
         deletes,
@@ -1101,7 +1130,7 @@ function applyEdits({
 
       // Push the points version into the changes array
       changes.push({
-        id: mapLayer.pointsId,
+        id: agoLayerIdsEnum.points,
         adds: pointsAdds,
         updates: pointsUpdates,
         deletes: pointsDeletes,
@@ -1109,11 +1138,17 @@ function applyEdits({
     });
 
     let tableOut: TableType | null = null;
-    if (table) {
-      const output = buildTableEdits({ layers, table });
-      changes.push(output.edits);
-      tableOut = output.table;
-    }
+    const output = buildTableEdits({ layers, table });
+    changes.push(output.edits);
+    tableOut = output.table;
+
+    let refLayerTableOut: ReferenceLayersTableType | null = null;
+    const refOutput = buildReferenceLayerTableEdits({
+      referenceLayersTable,
+      referenceMaterials,
+    });
+    changes.push(refOutput.edits);
+    refLayerTableOut = refOutput.table;
 
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
@@ -1133,6 +1168,7 @@ function applyEdits({
         resolve({
           response: res,
           table: tableOut,
+          refLayerTableOut,
         }),
       )
       .catch((err) => {
@@ -1155,7 +1191,7 @@ function buildTableEdits({
   table,
 }: {
   layers: LayerType[];
-  table: TableType;
+  table: TableType | null;
 }) {
   const adds: any[] = [];
   const updates: any[] = [];
@@ -1166,15 +1202,17 @@ function buildTableEdits({
     const { sampleTypes } = buildRendererParams(layer);
 
     // build the deletes array
-    Object.keys(table.sampleTypes).forEach((key) => {
-      if (!sampleTypes.hasOwnProperty(key)) {
-        deletes.push(table.sampleTypes[key].OBJECTID);
-      }
-    });
+    if (table?.sampleTypes) {
+      Object.keys(table.sampleTypes).forEach((key) => {
+        if (!sampleTypes.hasOwnProperty(key)) {
+          deletes.push(table.sampleTypes[key].OBJECTID);
+        }
+      });
+    }
 
     // build the adds and updates arrays
     Object.keys(sampleTypes).forEach((key) => {
-      if (table.sampleTypes.hasOwnProperty(key)) {
+      if (table?.sampleTypes.hasOwnProperty(key)) {
         updates.push(sampleTypes[key]);
         sampleTypesOut[key] = sampleTypes[key];
       } else {
@@ -1186,11 +1224,99 @@ function buildTableEdits({
 
   return {
     table: {
-      id: table.id,
+      id: agoLayerIdsEnum.customSampleTypes,
       sampleTypes: sampleTypesOut,
     },
     edits: {
-      id: table.id,
+      id: agoLayerIdsEnum.customSampleTypes,
+      adds,
+      updates,
+      deletes,
+    },
+  };
+}
+
+/**
+ * Builds the edits arrays for publishing the sample types layer of
+ * the sampling plan feature service.
+ *
+ * @param layers LayerType[] - The layers to search for sample types in
+ * @param table any - The table object
+ * @returns An object containing the edits arrays
+ */
+function buildReferenceLayerTableEdits({
+  referenceLayersTable,
+  referenceMaterials,
+}: {
+  referenceLayersTable: ReferenceLayersTableType;
+  referenceMaterials: {
+    createWebMap: boolean;
+    createWebScene: boolean;
+    webMapReferenceLayerSelections: ReferenceLayerSelections[];
+    webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  };
+}) {
+  const adds: any[] = [];
+  const updates: any[] = [];
+  const deletes: any[] = [];
+  let referenceLayersOut: ReferenceLayerTableType[] = [];
+  const timestamp = getCurrentDateTime();
+
+  // build a unique list of reference materials across web map and web scene
+  const uniqueReferenceLayerSelections: ReferenceLayerSelections[] = [];
+  const refIdsAdded: string[] = [];
+  referenceMaterials.webMapReferenceLayerSelections.forEach((l) => {
+    if (refIdsAdded.includes(l.id)) return;
+    refIdsAdded.push(l.id);
+    uniqueReferenceLayerSelections.push(l);
+  });
+  referenceMaterials.webSceneReferenceLayerSelections.forEach((l) => {
+    if (refIdsAdded.includes(l.id)) return;
+    refIdsAdded.push(l.id);
+    uniqueReferenceLayerSelections.push(l);
+  });
+
+  // get reference layers that were already published
+  const layersAlreadyPublished: string[] = [];
+  referenceLayersTable?.referenceLayers.forEach((l) => {
+    layersAlreadyPublished.push(l.layerId);
+
+    // add to deletes array if layer isn't in output list
+    const newLayer = uniqueReferenceLayerSelections.find(
+      (j) => j.id === l.layerId,
+    );
+    if (!newLayer && l.globalId) deletes.push(l.globalId);
+  });
+
+  // build the adds, updates, and deletes
+  uniqueReferenceLayerSelections.forEach((refLayer) => {
+    // build the adds and updates arrays
+    if (layersAlreadyPublished.includes(refLayer.id)) {
+      updates.push(refLayer);
+    } else {
+      adds.push({
+        attributes: {
+          GLOBALID: generateUUID(),
+          LAYERID: refLayer.id,
+          LABEL: refLayer.label,
+          LAYERTYPE: refLayer.layerType,
+          TYPE: refLayer.type,
+          URL: refLayer.value,
+          URLTYPE: refLayer.type === 'url' ? refLayer.urlType : '',
+          CREATEDDATE: timestamp,
+          UPDATEDDATE: timestamp,
+        },
+      });
+    }
+  });
+
+  return {
+    table: {
+      id: agoLayerIdsEnum.referenceLayers,
+      referenceLayers: referenceLayersOut,
+    },
+    edits: {
+      id: agoLayerIdsEnum.referenceLayers,
       adds,
       updates,
       deletes,
@@ -1693,6 +1819,7 @@ function publish({
   layerProps,
   referenceMaterials,
   map,
+  referenceLayersTable,
   attributesToInclude = null,
   table = null,
 }: {
@@ -1708,6 +1835,7 @@ function publish({
     webSceneReferenceLayerSelections: ReferenceLayerSelections[];
   };
   map: __esri.Map;
+  referenceLayersTable: ReferenceLayersTableType;
   attributesToInclude?: AttributesType[] | null;
   table?: any;
 }) {
@@ -1801,6 +1929,8 @@ function publish({
                   edits,
                   table: tableParam,
                   attributesToInclude,
+                  referenceMaterials,
+                  referenceLayersTable,
                 })
                   .then(async (editsRes: any) => {
                     try {
