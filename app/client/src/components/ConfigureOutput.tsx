@@ -176,6 +176,7 @@ function ConfigureOutput() {
   const {
     map,
     portalLayers,
+    referenceLayers,
     selectedScenario,
     urlLayers,
     userDefinedAttributes,
@@ -251,32 +252,28 @@ function ConfigureOutput() {
     portalLayers.forEach((l) => {
       if (l.type === 'tots') return;
 
+      const item: ReferenceLayerSelections = {
+        label: window.location.search.includes('devMode=true')
+          ? `${l.label} (${l.layerType} | Portal)`
+          : l.label,
+        id: l.id,
+        value: l.url,
+        layerType: l.layerType,
+        type: 'arcgis',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
       if (applicableLayerTypesAgoWebMap.includes(l.layerType)) {
-        webMapRefLayers.push({
-          label: window.location.search.includes('devMode=true')
-            ? `${l.label} (${l.layerType} | Portal)`
-            : l.label,
-          id: l.id,
-          value: l.url,
-          layerType: l.layerType,
-          type: 'arcgis',
-          onWebMap: 1,
-          onWebScene: 0,
-        });
+        item.onWebMap = 1;
+        item.onWebScene = 0;
+        webMapRefLayers.push(item);
       }
 
       if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
-        webSceneRefLayers.push({
-          label: window.location.search.includes('devMode=true')
-            ? `${l.label} (${l.layerType} | Portal)`
-            : l.label,
-          id: l.id,
-          value: l.url,
-          layerType: l.layerType,
-          type: 'arcgis',
-          onWebMap: 0,
-          onWebScene: 1,
-        });
+        item.onWebMap = 0;
+        item.onWebScene = 1;
+        webMapRefLayers.push(item);
       }
     });
 
@@ -303,23 +300,27 @@ function ConfigureOutput() {
     urlLayers.forEach((l) => {
       if (l.layerType === 'stream') return;
 
+      const item: ReferenceLayerSelections = {
+        label: window.location.search.includes('devMode=true')
+          ? `${l.label} (URL | ${l.type} | ${l.layerType})`
+          : l.label,
+        id: l.layerId,
+        value: l.url,
+        layerType: l.layerType,
+        urlType: l.type,
+        type: 'url',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
       if (
         applicableUrlTypesUrlWebMap.includes(l.type) ||
         (l.type === 'ArcGIS' &&
           applicableLayerTypesUrlWebMap.includes(l.layerType))
       ) {
-        webMapRefLayers.push({
-          label: window.location.search.includes('devMode=true')
-            ? `${l.label} (URL | ${l.type} | ${l.layerType})`
-            : l.label,
-          id: l.layerId,
-          value: l.url,
-          layerType: l.layerType,
-          urlType: l.type,
-          type: 'url',
-          onWebMap: 1,
-          onWebScene: 0,
-        });
+        item.onWebMap = 1;
+        item.onWebScene = 0;
+        webMapRefLayers.push(item);
       }
 
       if (
@@ -327,19 +328,30 @@ function ConfigureOutput() {
         (l.type === 'ArcGIS' &&
           applicableLayerTypesUrlWebScene.includes(l.layerType))
       ) {
-        webSceneRefLayers.push({
-          label: window.location.search.includes('devMode=true')
-            ? `${l.label} (URL | ${l.type} | ${l.layerType})`
-            : l.label,
-          id: l.layerId,
-          value: l.url,
-          layerType: l.layerType,
-          urlType: l.type,
-          type: 'url',
-          onWebMap: 0,
-          onWebScene: 1,
-        });
+        item.onWebMap = 0;
+        item.onWebScene = 1;
+        webSceneRefLayers.push(item);
       }
+    });
+
+    // add in file reference layers
+    referenceLayers.forEach((l) => {
+      const item: ReferenceLayerSelections = {
+        label: window.location.search.includes('devMode=true')
+          ? `${l.title} (${l.rawLayer.layerDefinition.type} | File)`
+          : l.title,
+        id: l.layerId,
+        value: l.layerId,
+        layer: l,
+        type: 'file',
+        onWebMap: 1,
+        onWebScene: 0,
+      };
+      webMapRefLayers.push(item);
+
+      item.onWebMap = 0;
+      item.onWebScene = 1;
+      webSceneRefLayers.push(item);
     });
 
     webMapRefLayers.sort((a, b) => a.label.localeCompare(b.label));
@@ -347,7 +359,7 @@ function ConfigureOutput() {
 
     setWebMapRefOptions(webMapRefLayers);
     setWebSceneRefOptions(webSceneRefLayers);
-  }, [portalLayers, urlLayers]);
+  }, [portalLayers, referenceLayers, urlLayers]);
 
   const [initializedRefSelections, setInitializedRefSelections] =
     useState(false);

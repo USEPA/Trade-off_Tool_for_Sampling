@@ -15,13 +15,6 @@ import { fetchPost, fetchCheck } from 'utils/fetchUtils';
 import { generateUUID, getCurrentDateTime } from 'utils/sketchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
 
-const agoLayerIdsEnum = {
-  polygons: 0,
-  points: 1,
-  customSampleTypes: 2,
-  referenceLayers: 3,
-};
-
 /**
  * Returns an environment string to be passed as a parameter
  * to ESRI web service calls in order to avoid CORS errors.
@@ -505,6 +498,12 @@ function createFeatureLayers(
   serviceMetaData: ServiceMetaDataType,
   attributesToInclude: AttributesType[] | null,
   layerProps: LookupFile,
+  referenceMaterials: {
+    createWebMap: boolean;
+    createWebScene: boolean;
+    webMapReferenceLayerSelections: ReferenceLayerSelections[];
+    webSceneReferenceLayerSelections: ReferenceLayerSelections[];
+  },
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -517,6 +516,7 @@ function createFeatureLayers(
       return;
     }
 
+    const layerIds: string[] = [];
     layers.forEach((layer) => {
       // don't duplicate existing layers
       if (layer.id > -1) return;
@@ -627,6 +627,7 @@ function createFeatureLayers(
       });
 
       // add the polygon representation
+      layerIds.push(layer.sketchLayer.id);
       layersParams.push({
         ...layerProps.data.defaultLayerProps,
         fields,
@@ -660,6 +661,7 @@ function createFeatureLayers(
       }
 
       // add the point representation
+      layerIds.push(layer.pointsLayer?.id || '');
       layersParams.push({
         ...layerProps.data.defaultLayerProps,
         fields,
@@ -676,6 +678,24 @@ function createFeatureLayers(
         },
         types: templatesPoints,
       });
+    });
+
+    const refIdsAdded: string[] = [];
+    referenceMaterials.webMapReferenceLayerSelections.forEach((l) => {
+      if (refIdsAdded.includes(l.id)) return;
+      if (l.type !== 'file') return;
+      refIdsAdded.push(l.id);
+
+      layerIds.push(l.id);
+      layersParams.push(l.layer.rawLayer.layerDefinition);
+    });
+    referenceMaterials.webSceneReferenceLayerSelections.forEach((l) => {
+      if (refIdsAdded.includes(l.id)) return;
+      if (l.type !== 'file') return;
+      refIdsAdded.push(l.id);
+
+      layerIds.push(l.id);
+      layersParams.push(l.layer.rawLayer.layerDefinition);
     });
 
     // Workaround for esri.Portal not having credential
@@ -720,7 +740,12 @@ function createFeatureLayers(
       'rest/admin/services',
     );
     fetchPost(`${adminServiceUrl}/addToDefinition`, data)
-      .then((res) => resolve(res))
+      .then((res: any) => {
+        res.layers.forEach((l: any, index: number) => {
+          l['layerId'] = layerIds[index];
+        });
+        resolve(res);
+      })
       .catch((err) => {
         window.logErrorToGa(err);
         reject(err);
@@ -785,21 +810,21 @@ function createFeatureTables(
  * @param portal The portal object to create feature layers on
  * @param serviceUrl The hosted feature service to save layers to
  * @param layers The layers to be updated
- * @param createResponse The response from creating layers
+ * @param layersResponse The response from creating layers
  * @returns A promise that resolves to the layers that were updated
  */
 function updateFeatureLayers(
   portal: __esri.Portal,
   serviceUrl: string,
   layers: LayerType[],
-  createResponse: any,
+  layersResponse: any,
 ) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
 
     const requests: any[] = [];
-    if (layers.length === 0 || createResponse.layers.length > 0) {
+    if (layers.length === 0 || layersResponse.layers.length > 0) {
       resolve({
         success: true,
         layers: [],
@@ -813,33 +838,30 @@ function updateFeatureLayers(
       'rest/admin/services',
     );
 
-    layers.forEach((layer) => {
+    layers.forEach((layer, index: number) => {
       const { uniqueValueInfosPolygons, uniqueValueInfosPoints } =
         buildRendererParams(layer);
 
       // update the polygon representation
       requests.push(
-        fetchPost(
-          `${adminServiceUrl}/${agoLayerIdsEnum.polygons}/updateDefinition`,
-          {
-            f: 'json',
-            token: tempPortal.credential.token,
-            updateDefinition: {
-              drawingInfo: {
-                renderer: {
-                  type: 'uniqueValue',
-                  field1: 'TYPEUUID',
-                  uniqueValueInfos: uniqueValueInfosPolygons,
-                },
+        fetchPost(`${adminServiceUrl}/0/updateDefinition`, {
+          f: 'json',
+          token: tempPortal.credential.token,
+          updateDefinition: {
+            drawingInfo: {
+              renderer: {
+                type: 'uniqueValue',
+                field1: 'TYPEUUID',
+                uniqueValueInfos: uniqueValueInfosPolygons,
               },
             },
           },
-        ),
+        }),
       );
 
       // update the point representation
       requests.push(
-        fetchPost(`${adminServiceUrl}/${layer.pointsId}/updateDefinition`, {
+        fetchPost(`${adminServiceUrl}/1/updateDefinition`, {
           f: 'json',
           token: tempPortal.credential.token,
           updateDefinition: {
@@ -1085,6 +1107,7 @@ function applyEdits({
 }) {
   return new Promise((resolve, reject) => {
     const changes: any[] = [];
+    let index = 0;
     // loop through the layers and build the payload
     edits.forEach((layerEdits) => {
       // build the deletes list, which is just an array of global ids.
@@ -1093,8 +1116,10 @@ function applyEdits({
         deletes.push(item.GLOBALID);
       });
 
+      const polysId = index;
+      index += 1;
       changes.push({
-        id: agoLayerIdsEnum.polygons,
+        id: polysId,
         adds: layerEdits.adds,
         updates: layerEdits.updates,
         deletes,
@@ -1129,16 +1154,55 @@ function applyEdits({
       });
 
       // Push the points version into the changes array
+      const pointsId = index;
+      index += 1;
       changes.push({
-        id: agoLayerIdsEnum.points,
+        id: pointsId,
         adds: pointsAdds,
         updates: pointsUpdates,
         deletes: pointsDeletes,
       });
     });
 
+    const refIdsAdded: string[] = [];
+    referenceMaterials.webMapReferenceLayerSelections.forEach((l) => {
+      if (refIdsAdded.includes(l.id)) return;
+      if (l.type !== 'file') return;
+      refIdsAdded.push(l.id);
+
+      const id = index;
+      index += 1;
+
+      changes.push({
+        id,
+        adds: l.layer.rawLayer.featureSet.features,
+        updates: [],
+        deletes: [],
+      });
+    });
+    referenceMaterials.webSceneReferenceLayerSelections.forEach((l) => {
+      if (refIdsAdded.includes(l.id)) return;
+      if (l.type !== 'file') return;
+      refIdsAdded.push(l.id);
+
+      const id = index;
+      index += 1;
+
+      changes.push({
+        id,
+        adds: l.layer.rawLayer.featureSet.features,
+        updates: [],
+        deletes: [],
+      });
+    });
+
     let tableOut: TableType | null = null;
-    const output = buildTableEdits({ layers, table });
+    const output = buildTableEdits({
+      layers,
+      table,
+      id: index,
+    });
+    index += 1;
     changes.push(output.edits);
     tableOut = output.table;
 
@@ -1146,7 +1210,9 @@ function applyEdits({
     const refOutput = buildReferenceLayerTableEdits({
       referenceLayersTable,
       referenceMaterials,
+      id: index,
     });
+    index += 1;
     changes.push(refOutput.edits);
     refLayerTableOut = refOutput.table;
 
@@ -1189,9 +1255,11 @@ function applyEdits({
 function buildTableEdits({
   layers,
   table,
+  id,
 }: {
   layers: LayerType[];
   table: TableType | null;
+  id: number;
 }) {
   const adds: any[] = [];
   const updates: any[] = [];
@@ -1224,11 +1292,11 @@ function buildTableEdits({
 
   return {
     table: {
-      id: agoLayerIdsEnum.customSampleTypes,
+      id,
       sampleTypes: sampleTypesOut,
     },
     edits: {
-      id: agoLayerIdsEnum.customSampleTypes,
+      id,
       adds,
       updates,
       deletes,
@@ -1247,6 +1315,7 @@ function buildTableEdits({
 function buildReferenceLayerTableEdits({
   referenceLayersTable,
   referenceMaterials,
+  id,
 }: {
   referenceLayersTable: ReferenceLayersTableType;
   referenceMaterials: {
@@ -1255,6 +1324,7 @@ function buildReferenceLayerTableEdits({
     webMapReferenceLayerSelections: ReferenceLayerSelections[];
     webSceneReferenceLayerSelections: ReferenceLayerSelections[];
   };
+  id: number;
 }) {
   const adds: any[] = [];
   const updates: any[] = [];
@@ -1314,6 +1384,8 @@ function buildReferenceLayerTableEdits({
 
   // build the adds, updates, and deletes
   uniqueReferenceLayerSelections.forEach((refLayer) => {
+    if (refLayer.type === 'file') return;
+
     // build the adds and updates arrays
     if (layersAlreadyPublished.includes(refLayer.id)) {
       updates.push(refLayer);
@@ -1338,11 +1410,11 @@ function buildReferenceLayerTableEdits({
 
   return {
     table: {
-      id: agoLayerIdsEnum.referenceLayers,
+      id,
       referenceLayers: referenceLayersOut,
     },
     edits: {
-      id: agoLayerIdsEnum.referenceLayers,
+      id,
       adds,
       updates,
       deletes,
@@ -1374,6 +1446,7 @@ type AgoLayerType =
 function getAgoLayerType(
   refLayer: ReferenceLayerSelections,
 ): AgoLayerType | null {
+  if (refLayer.type === 'file') return 'ArcGISFeatureLayer';
   const layerType = refLayer.layerType;
 
   let layerTypeOut: AgoLayerType | null = null;
@@ -1424,6 +1497,8 @@ function buildReferenceLayers(
       return aIndex - bIndex;
     })
     .forEach((l) => {
+      if (l.type === 'file') return;
+
       const layerType = getAgoLayerType(l);
       if (layerType === 'VectorTileLayer') {
         operationalLayers.push({
@@ -1519,7 +1594,17 @@ function addWebMap({
 
     buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
-    layersResponse.layers.forEach((layer: any) => {
+    const layer0 = layersResponse.layers[0];
+    const layer1 = layersResponse.layers[1];
+    const layersOut: any[] = [];
+    layersResponse.layers.forEach((l: any, index: number) => {
+      if (index === 0 || index === 1) return;
+      layersOut.push(l);
+    });
+    layersOut.push(layer0);
+    layersOut.push(layer1);
+
+    layersOut.forEach((layer: any) => {
       operationalLayers.push({
         title: layer.name,
         url: `${baseUrl}/${layer.id}`,
@@ -1884,11 +1969,12 @@ function publish({
           serviceMetaData,
           attributesToInclude,
           layerProps,
+          referenceMaterials,
         )
-          .then((layersRes: any) => {
+          .then((layersResponse: any) => {
             let tableParam = table;
             // update the layer ids in edits
-            layersRes.layers.forEach((layer: any) => {
+            layersResponse.layers.forEach((layer: any) => {
               const isPoints = layer.name.endsWith('-points');
 
               const layerEdits = edits.find((layerEdit) => {
@@ -1934,7 +2020,7 @@ function publish({
               }
             });
 
-            layersRes.tables.forEach((table: any) => {
+            layersResponse.tables.forEach((table: any) => {
               const isSampleTypes = table.name.endsWith('-sample-types');
               if (isSampleTypes) {
                 tableParam = {
@@ -1945,7 +2031,7 @@ function publish({
             });
 
             // update the renderers
-            updateFeatureLayers(portal, serviceUrl, layers, layersRes)
+            updateFeatureLayers(portal, serviceUrl, layers, layersResponse)
               .then((updateRes) => {
                 // publish the edits
                 applyEdits({
@@ -1965,7 +2051,7 @@ function publish({
                           portal,
                           service,
                           layers,
-                          layersResponse: layersRes,
+                          layersResponse,
                           attributesToInclude,
                           layerProps,
                           referenceMaterials:
@@ -1979,7 +2065,7 @@ function publish({
                           portal,
                           service,
                           layers,
-                          layersResponse: layersRes,
+                          layersResponse,
                           attributesToInclude,
                           layerProps,
                           referenceMaterials:
