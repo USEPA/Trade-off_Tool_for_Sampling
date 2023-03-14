@@ -681,22 +681,24 @@ function createFeatureLayers(
     });
 
     const refIdsAdded: string[] = [];
-    referenceMaterials.webMapReferenceLayerSelections.forEach((l) => {
+    const processReferencLayerSelections = (l: ReferenceLayerSelections) => {
       if (refIdsAdded.includes(l.id)) return;
       if (l.type !== 'file') return;
       refIdsAdded.push(l.id);
 
       layerIds.push(l.id);
-      layersParams.push(l.layer.rawLayer.layerDefinition);
-    });
-    referenceMaterials.webSceneReferenceLayerSelections.forEach((l) => {
-      if (refIdsAdded.includes(l.id)) return;
-      if (l.type !== 'file') return;
-      refIdsAdded.push(l.id);
+      layersParams.push({
+        ...l.layer.rawLayer.layerDefinition,
+        name: l.label.replaceAll('.', ' '), // workaround for .zip causing failure
+      });
+    };
 
-      layerIds.push(l.id);
-      layersParams.push(l.layer.rawLayer.layerDefinition);
-    });
+    referenceMaterials.webMapReferenceLayerSelections.forEach(
+      processReferencLayerSelections,
+    );
+    referenceMaterials.webSceneReferenceLayerSelections.forEach(
+      processReferencLayerSelections,
+    );
 
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
