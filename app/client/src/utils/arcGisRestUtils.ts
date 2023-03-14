@@ -939,7 +939,11 @@ function deleteFeatureLayer(
  * @returns A promise that resolves to all of the features on the hosted
  *  feature service
  */
-function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
+function getAllFeatures(
+  portal: __esri.Portal,
+  serviceUrl: string,
+  objectIdField: string = 'OBJECTID',
+) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
@@ -970,7 +974,7 @@ function getAllFeatures(portal: __esri.Portal, serviceUrl: string) {
           const data = {
             f: 'json',
             token: tempPortal.credential.token,
-            where: `OBJECTID in (${chunk.join(',')})`,
+            where: `${objectIdField} in (${chunk.join(',')})`,
             outFields: '*',
             returnGeometry: true,
             returnZ: true,
