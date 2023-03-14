@@ -1084,11 +1084,8 @@ function Publish() {
         };
         const changes: PublishResults = {};
 
-        res.edits.forEach((layerRes: any, index: number) => {
-          // odd layers are points layers so ignore those
-          const isOdd = index % 2 === 1;
-          if (isOdd) return;
-          if (layerRes.id === res.table.id) return;
+        res.edits.forEach((layerRes: any) => {
+          if (layerRes.id !== 0) return;
 
           // need to loop through each array and check the success flag
           if (layerRes.addResults) {

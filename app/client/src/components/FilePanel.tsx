@@ -1193,7 +1193,12 @@ function FilePanel() {
 
       setReferenceLayers([
         ...referenceLayers,
-        { ...layerProps, layerId: layerToAdd.id, portalId: '' },
+        {
+          ...layerProps,
+          rawLayer: layer,
+          layerId: layerToAdd.id,
+          portalId: '',
+        },
       ]);
     });
 

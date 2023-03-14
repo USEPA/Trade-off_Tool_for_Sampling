@@ -52,4 +52,13 @@ export type ReferenceLayerSelections =
       type: 'url';
       urlType: UrlLayerTypes;
       value: string;
+    }
+  | {
+      id: string;
+      label: string;
+      layer: any;
+      onWebMap: number;
+      onWebScene: number;
+      type: 'file';
+      value: string;
     };
