@@ -1183,14 +1183,11 @@ function ResultCard({ result }: ResultCardProps) {
       });
 
       const resSampleTypes: any[] = [];
+      const resRefLayersTypes: any[] = [];
       featureLayersRes.tables.forEach((table: any) => {
         if (table.name.endsWith('-sample-types')) {
           resSampleTypes.push(table);
         }
-      });
-
-      const resRefLayersTypes: any[] = [];
-      featureLayersRes.tables.forEach((table: any) => {
         if (table.name.endsWith('-reference-layers')) {
           resRefLayersTypes.push(table);
         }

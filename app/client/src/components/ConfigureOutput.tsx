@@ -144,6 +144,7 @@ const nextInstructionStyles = css`
 const infoIconStyles = css`
   margin-left: 10px;
   color: #19a3dd;
+  pointer-events: all;
 `;
 
 const nestedAccordionStyles = css`
@@ -266,12 +267,10 @@ function ConfigureOutput() {
 
       if (applicableLayerTypesAgoWebMap.includes(l.layerType)) {
         item.onWebMap = 1;
-        item.onWebScene = 0;
         webMapRefLayers.push(item);
       }
 
       if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
-        item.onWebMap = 0;
         item.onWebScene = 1;
         webMapRefLayers.push(item);
       }
@@ -319,7 +318,6 @@ function ConfigureOutput() {
           applicableLayerTypesUrlWebMap.includes(l.layerType))
       ) {
         item.onWebMap = 1;
-        item.onWebScene = 0;
         webMapRefLayers.push(item);
       }
 
@@ -328,7 +326,6 @@ function ConfigureOutput() {
         (l.type === 'ArcGIS' &&
           applicableLayerTypesUrlWebScene.includes(l.layerType))
       ) {
-        item.onWebMap = 0;
         item.onWebScene = 1;
         webSceneRefLayers.push(item);
       }
@@ -345,12 +342,9 @@ function ConfigureOutput() {
         layer: l,
         type: 'file',
         onWebMap: 1,
-        onWebScene: 0,
+        onWebScene: 1,
       };
       webMapRefLayers.push(item);
-
-      item.onWebMap = 0;
-      item.onWebScene = 1;
       webSceneRefLayers.push(item);
     });
 
