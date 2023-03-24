@@ -226,6 +226,37 @@ function getFeatureServiceWrapped(
 }
 
 /**
+ * Gets the web map or web scene and returns null if it it
+ * doesn't already exist
+ *
+ * @param portal The portal object to retreive the hosted feature service from
+ * @param serviceMetaData Metadata to be added to the feature service and layers.
+ * @param type Web Map or Web Scene depending on what needs to be retrieved
+ * @returns A promise that resolves to the web map/scene object or
+ *  null if the service does not exist
+ */
+async function getWebMapSceneWrapped(
+  portal: __esri.Portal,
+  serviceMetaData: ServiceMetaDataType,
+  type: 'Web Map' | 'Web Scene',
+) {
+  try {
+    let query = `orgid:"${escapeForLucene(portal.user.orgId)}"`;
+    query += `AND title:"${serviceMetaData.label}" AND type: "${type}"`;
+    const res = await portal.queryItems({ query });
+
+    const exactMatch = res.results.find(
+      (layer: any) => layer.title === serviceMetaData.label,
+    );
+    if (exactMatch) return exactMatch;
+    else return null;
+  } catch (err) {
+    window.logErrorToGa(err);
+    throw err;
+  }
+}
+
+/**
  * Creates and returns the hosted feature service
  *
  * @param portal The portal object to create the hosted feature service on
@@ -960,8 +991,11 @@ function getAllFeatures(
 
     fetchPost(`${serviceUrl}/query`, query)
       .then((objectIds: any) => {
-        if (!objectIds) {
-          resolve({ features: [] });
+        if (objectIds.objectIds.length === 0) {
+          resolve({
+            features: [],
+            objectIdFieldName: objectIds.objectIdFieldName,
+          });
           return;
         }
 
@@ -1544,6 +1578,7 @@ function addWebMap({
   layerProps,
   referenceMaterials,
   map,
+  existingWebMap,
 }: {
   portal: __esri.Portal;
   service: any;
@@ -1553,6 +1588,7 @@ function addWebMap({
   layerProps: LookupFile;
   referenceMaterials: ReferenceLayerSelections[];
   map: __esri.Map;
+  existingWebMap: any | null;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1600,10 +1636,15 @@ function addWebMap({
 
     buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
-    const layer0 = layersResponse.layers[0];
-    const layer1 = layersResponse.layers[1];
+    const responseChoice =
+      service.featureService.layers.length > 0
+        ? service.featureService.layers
+        : layersResponse.layers;
+
+    const layer0 = responseChoice[0];
+    const layer1 = responseChoice[1];
     const layersOut: any[] = [];
-    layersResponse.layers.forEach((l: any, index: number) => {
+    responseChoice.forEach((l: any, index: number) => {
       if (index === 0 || index === 1) return;
       layersOut.push(l);
     });
@@ -1670,7 +1711,12 @@ function addWebMap({
     };
     appendEnvironmentObjectParam(data);
 
-    fetchPost(`${portal.user.userContentUrl}/addItem`, data)
+    // const serviceUrl: string = service.portalService.url;
+    const url = existingWebMap
+      ? `${existingWebMap.userItemUrl}/update`
+      : `${portal.user.userContentUrl}/addItem`;
+
+    fetchPost(url, data)
       .then((res) => resolve(res))
       .catch((err) => {
         window.logErrorToGa(err);
@@ -1701,6 +1747,7 @@ function addWebScene({
   layerProps,
   referenceMaterials,
   map,
+  existingWebScene,
 }: {
   portal: __esri.Portal;
   service: any;
@@ -1710,6 +1757,7 @@ function addWebScene({
   layerProps: LookupFile;
   referenceMaterials: ReferenceLayerSelections[];
   map: __esri.Map;
+  existingWebScene: any | null;
 }) {
   return new Promise((resolve, reject) => {
     // Workaround for esri.Portal not having credential
@@ -1757,7 +1805,12 @@ function addWebScene({
 
     buildReferenceLayers(map, operationalLayers, referenceMaterials);
 
-    layersResponse.layers.forEach((layer: any) => {
+    const responseChoice =
+      service.featureService.layers.length > 0
+        ? service.featureService.layers
+        : layersResponse.layers;
+
+    responseChoice.forEach((layer: any) => {
       operationalLayers.push({
         title: layer.name,
         url: `${baseUrl}/${layer.id}`,
@@ -1863,7 +1916,11 @@ function addWebScene({
     };
     appendEnvironmentObjectParam(data);
 
-    fetchPost(`${portal.user.userContentUrl}/addItem`, data)
+    const url = existingWebScene
+      ? `${existingWebScene.itemUrl}/update`
+      : `${portal.user.userContentUrl}/addItem`;
+
+    fetchPost(url, data)
       .then((res) => resolve(res))
       .catch((err) => {
         window.logErrorToGa(err);
@@ -2053,6 +2110,12 @@ function publish({
                   .then(async (editsRes: any) => {
                     try {
                       if (referenceMaterials.createWebMap) {
+                        const webMapRes = await getWebMapSceneWrapped(
+                          portal,
+                          serviceMetaData,
+                          'Web Map',
+                        );
+
                         await addWebMap({
                           portal,
                           service,
@@ -2063,10 +2126,17 @@ function publish({
                           referenceMaterials:
                             referenceMaterials.webMapReferenceLayerSelections,
                           map,
+                          existingWebMap: webMapRes,
                         });
                       }
 
                       if (referenceMaterials.createWebScene) {
+                        const webSceneRes = await getWebMapSceneWrapped(
+                          portal,
+                          serviceMetaData,
+                          'Web Scene',
+                        );
+
                         await addWebScene({
                           portal,
                           service,
@@ -2077,6 +2147,7 @@ function publish({
                           referenceMaterials:
                             referenceMaterials.webSceneReferenceLayerSelections,
                           map,
+                          existingWebScene: webSceneRes,
                         });
                       }
 
