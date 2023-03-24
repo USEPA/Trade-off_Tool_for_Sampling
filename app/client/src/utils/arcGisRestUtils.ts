@@ -1917,7 +1917,7 @@ function addWebScene({
     appendEnvironmentObjectParam(data);
 
     const url = existingWebScene
-      ? `${existingWebScene.itemUrl}/update`
+      ? `${existingWebScene.userItemUrl}/update`
       : `${portal.user.userContentUrl}/addItem`;
 
     fetchPost(url, data)
