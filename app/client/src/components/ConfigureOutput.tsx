@@ -144,6 +144,7 @@ const nextInstructionStyles = css`
 const infoIconStyles = css`
   margin-left: 10px;
   color: #19a3dd;
+  pointer-events: all;
 `;
 
 const nestedAccordionStyles = css`
