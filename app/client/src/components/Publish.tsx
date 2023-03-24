@@ -1031,24 +1031,11 @@ function Publish() {
       });
     });
 
-    if (
-      layerEdits.adds.length === 0 &&
-      layerEdits.updates.length === 0 &&
-      layerEdits.deletes.length === 0
-    ) {
-      setPublishPartialResponse({
-        status: 'success',
-        summary: { success: '', failed: '' },
-        rawData: {},
-      });
-      return;
-    } else {
-      setPublishPartialResponse({
-        status: 'fetching',
-        summary: { success: '', failed: '' },
-        rawData: null,
-      });
-    }
+    setPublishPartialResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
 
     publish({
       portal,
