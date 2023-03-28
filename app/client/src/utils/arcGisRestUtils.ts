@@ -535,6 +535,7 @@ function createFeatureLayers(
     webMapReferenceLayerSelections: ReferenceLayerSelections[];
     webSceneReferenceLayerSelections: ReferenceLayerSelections[];
   },
+  service: any,
 ) {
   return new Promise((resolve, reject) => {
     const layersParams: any[] = [];
@@ -550,7 +551,10 @@ function createFeatureLayers(
     const layerIds: string[] = [];
     layers.forEach((layer) => {
       // don't duplicate existing layers
-      if (layer.id > -1) return;
+      const layerFromService = service.featureService.layers.find(
+        (l: any) => l.id === layer.id && l.name === layer.label,
+      );
+      if (layerFromService) return;
 
       const {
         graphicsExtent,
@@ -731,6 +735,40 @@ function createFeatureLayers(
       processReferencLayerSelections,
     );
 
+    const tablesOut: any[] = [];
+
+    // add the sample-types table if it hasn't already been added
+    const sampleTypeTableName = `${serviceMetaData.label}-sample-types`;
+    const hasSampleTable =
+      service.featureService.tables.findIndex(
+        (t: any) => t.name === sampleTypeTableName,
+      ) > -1;
+    if (!hasSampleTable) {
+      tablesOut.push({
+        ...layerProps.data.defaultTableProps,
+        fields: layerProps.data.defaultFields,
+        type: 'Table',
+        name: sampleTypeTableName,
+        description: `Custom sample type definitions for "${serviceMetaData.label}".`,
+      });
+    }
+
+    // add the reference-layers table if it hasn't already been added
+    const refLayerTableName = `${serviceMetaData.label}-reference-layers`;
+    const hasRefLayerTable =
+      service.featureService.tables.findIndex(
+        (t: any) => t.name === refLayerTableName,
+      ) > -1;
+    if (!hasRefLayerTable) {
+      tablesOut.push({
+        ...layerProps.data.defaultTableProps,
+        fields: layerProps.data.defaultReferenceTableFields,
+        type: 'Table',
+        name: refLayerTableName,
+        description: `Links to reference layers for "${serviceMetaData.label}".`,
+      });
+    }
+
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
     const data = {
@@ -738,22 +776,7 @@ function createFeatureLayers(
       token: tempPortal.credential.token,
       addToDefinition: {
         layers: layersParams,
-        tables: [
-          {
-            ...layerProps.data.defaultTableProps,
-            fields: layerProps.data.defaultFields,
-            type: 'Table',
-            name: `${serviceMetaData.label}-sample-types`,
-            description: `Custom sample type definitions for "${serviceMetaData.label}".`,
-          },
-          {
-            ...layerProps.data.defaultTableProps,
-            fields: layerProps.data.defaultReferenceTableFields,
-            type: 'Table',
-            name: `${serviceMetaData.label}-reference-layers`,
-            description: `Links to reference layers for "${serviceMetaData.label}".`,
-          },
-        ],
+        tables: tablesOut,
       },
     };
     appendEnvironmentObjectParam(data);
@@ -857,7 +880,7 @@ function updateFeatureLayers(
     const tempPortal: any = portal;
 
     const requests: any[] = [];
-    if (layers.length === 0 || layersResponse.layers.length > 0) {
+    if (layers?.length === 0 || layersResponse?.layers?.length > 0) {
       resolve({
         success: true,
         layers: [],
@@ -2033,11 +2056,12 @@ function publish({
           attributesToInclude,
           layerProps,
           referenceMaterials,
+          service,
         )
           .then((layersResponse: any) => {
             let tableParam = table;
             // update the layer ids in edits
-            layersResponse.layers.forEach((layer: any) => {
+            layersResponse.layers?.forEach((layer: any) => {
               const isPoints = layer.name.endsWith('-points');
 
               const layerEdits = edits.find((layerEdit) => {
@@ -2083,7 +2107,7 @@ function publish({
               }
             });
 
-            layersResponse.tables.forEach((table: any) => {
+            layersResponse.tables?.forEach((table: any) => {
               const isSampleTypes = table.name.endsWith('-sample-types');
               if (isSampleTypes) {
                 tableParam = {
