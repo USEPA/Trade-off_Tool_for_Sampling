@@ -24,7 +24,7 @@ import ShowLessMore from 'components/ShowLessMore';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import { defaultPlanAttributes, PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -139,7 +139,6 @@ function Publish() {
     includePartialPlan,
     includePartialPlanWebMap,
     includePartialPlanWebScene,
-    partialPlanAttributes,
     publishSamplesMode,
     publishSampleTableMetaData,
     sampleTableDescription,
@@ -966,6 +965,12 @@ function Publish() {
       published: [],
     };
 
+    // get the attributes to be published
+    const attributesToInclude = [
+      ...defaultPlanAttributes,
+      ...editsScenario.customAttributes,
+    ];
+
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
     editsScenario.layers.forEach((layer) => {
@@ -982,7 +987,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -997,7 +1003,9 @@ function Publish() {
           attributes,
         });
       });
-      layer.updates.forEach((item) => {
+
+      const combinedUpdates = [...layer.updates, ...layer.published];
+      combinedUpdates.forEach((item) => {
         let attributes: any = {};
         if (publishLayer?.sketchLayer.type === 'graphics') {
           const graphic = publishLayer.sketchLayer.graphics.find(
@@ -1008,7 +1016,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -1050,7 +1059,7 @@ function Publish() {
       map,
       table: editsScenario.table,
       referenceLayersTable: editsScenario.referenceLayersTable,
-      attributesToInclude: partialPlanAttributes,
+      attributesToInclude,
       layerProps,
       serviceMetaData: {
         value: '',
@@ -1385,7 +1394,6 @@ function Publish() {
     layers,
     layerProps,
     map,
-    partialPlanAttributes,
     portal,
     sampleAttributes,
     selectedScenario,

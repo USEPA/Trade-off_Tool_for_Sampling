@@ -100,30 +100,41 @@ function isServiceNameAvailable(portal: __esri.Portal, serviceName: string) {
  * @param isTable Determines what category to add.
  * @returns A promise that resolves to the hosted feature service object
  */
-function getFeatureService(
+async function getFeatureService(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
   isTable: boolean = false,
 ) {
-  return new Promise((resolve, reject) => {
+  try {
     // check if the tots feature service already exists
-    getFeatureServiceWrapped(portal, serviceMetaData)
-      .then((service) => {
-        if (service) resolve(service);
-        else {
-          createFeatureService(portal, serviceMetaData, isTable)
-            .then((service) => resolve(service))
-            .catch((err) => {
-              window.logErrorToGa(err);
-              reject(err);
-            });
-        }
-      })
-      .catch((err) => {
-        window.logErrorToGa(err);
-        reject(err);
-      });
-  });
+    let service = await getFeatureServiceWrapped(portal, serviceMetaData);
+    if (!service) {
+      service = await createFeatureService(portal, serviceMetaData, isTable);
+    }
+
+    // get individual layer definitions
+    const tempPortal: any = portal;
+    const requests: Promise<any>[] = [];
+    service.featureService.layers.forEach((layer: any) => {
+      requests.push(
+        getFeatureLayer(
+          `${service.portalService.url}`,
+          tempPortal.credential.token,
+          layer.id,
+        ),
+      );
+    });
+
+    const layerDefinitions = await Promise.all(requests);
+
+    return {
+      ...service,
+      layerDefinitions,
+    };
+  } catch (err) {
+    window.logErrorToGa(err);
+    throw err;
+  }
 }
 
 function getFeatureServiceRetry(
@@ -178,7 +189,7 @@ function getFeatureServiceRetry(
 function getFeatureServiceWrapped(
   portal: __esri.Portal,
   serviceMetaData: ServiceMetaDataType,
-) {
+): Promise<any> {
   return new Promise((resolve, reject) => {
     let query = `orgid:${escapeForLucene(portal.user.orgId)}`;
     query += serviceMetaData.value
@@ -597,68 +608,7 @@ function createFeatureLayers(
 
         if (fieldIndex > -1) return;
 
-        let esriType = '';
-        let actualType: string | undefined = undefined;
-        let sqlType = '';
-        let length: number | undefined = undefined;
-        if (attribute.dataType === 'date') {
-          esriType = 'esriFieldTypeDate';
-          sqlType = 'sqlTypeOther';
-        }
-        if (attribute.dataType === 'double') {
-          esriType = 'esriFieldTypeDouble';
-          actualType = 'double';
-          sqlType = 'sqlTypeDouble';
-        }
-        if (attribute.dataType === 'integer') {
-          esriType = 'esriFieldTypeInteger';
-          actualType = 'int';
-          sqlType = 'sqlTypeInteger';
-        }
-        if (attribute.dataType === 'string') {
-          esriType = 'esriFieldTypeString';
-          actualType = 'nvarchar';
-          sqlType = 'sqlTypeNVarchar';
-          length = attribute.length ?? undefined;
-        }
-
-        let domain = null;
-        if (attribute.domain?.type === 'range' && attribute.domain.range) {
-          const range = attribute.domain.range;
-          domain = {
-            type: 'range',
-            name: `${attribute.name}DOMAIN`,
-            range: [range.min, range.max],
-          };
-        }
-        if (
-          attribute.domain?.type === 'coded' &&
-          attribute.domain.codedValues
-        ) {
-          domain = {
-            type: 'codedValue',
-            name: `${attribute.name}DOMAIN`,
-            codedValues: attribute.domain.codedValues.map((item) => {
-              return {
-                name: item.label,
-                code: item.value,
-              };
-            }),
-          };
-        }
-
-        fields.push({
-          name: attribute.name,
-          alias: attribute.label,
-          type: esriType,
-          actualType,
-          sqlType,
-          nullable: true,
-          editable: true,
-          defaultValue: null,
-          length,
-          domain,
-        } as any);
+        fields.push(buildFieldFromCustomAttribute(attribute));
       });
 
       // add the polygon representation
@@ -719,6 +669,13 @@ function createFeatureLayers(
     const processReferencLayerSelections = (l: ReferenceLayerSelections) => {
       if (refIdsAdded.includes(l.id)) return;
       if (l.type !== 'file') return;
+
+      // don't duplicate existing layers
+      const layerFromService = service.featureService.layers.find(
+        (m: any) => m.name === l.label,
+      );
+      if (layerFromService) return;
+
       refIdsAdded.push(l.id);
 
       layerIds.push(l.id);
@@ -858,6 +815,135 @@ function createFeatureTables(
       .then((res) => resolve(res))
       .catch((err) => reject(err));
   });
+}
+
+/**
+ * Builds a field to be sent to AGO from the TOTS definition of
+ * custom attributes.
+ *
+ * @param attribute The attribute to be converted
+ * @returns A field that can be sent to AGO
+ */
+function buildFieldFromCustomAttribute(attribute: AttributesType) {
+  let esriType = '';
+  let actualType: string | undefined = undefined;
+  let sqlType = '';
+  let length: number | undefined = undefined;
+  if (attribute.dataType === 'date') {
+    esriType = 'esriFieldTypeDate';
+    sqlType = 'sqlTypeOther';
+  }
+  if (attribute.dataType === 'double') {
+    esriType = 'esriFieldTypeDouble';
+    actualType = 'double';
+    sqlType = 'sqlTypeDouble';
+  }
+  if (attribute.dataType === 'integer') {
+    esriType = 'esriFieldTypeInteger';
+    actualType = 'int';
+    sqlType = 'sqlTypeInteger';
+  }
+  if (attribute.dataType === 'string') {
+    esriType = 'esriFieldTypeString';
+    actualType = 'nvarchar';
+    sqlType = 'sqlTypeNVarchar';
+    length = attribute.length ?? undefined;
+  }
+
+  let domain = null;
+  if (attribute.domain?.type === 'range' && attribute.domain.range) {
+    const range = attribute.domain.range;
+    domain = {
+      type: 'range',
+      name: `${attribute.name}DOMAIN`,
+      range: [range.min, range.max],
+    };
+  }
+  if (attribute.domain?.type === 'coded' && attribute.domain.codedValues) {
+    domain = {
+      type: 'codedValue',
+      name: `${attribute.name}DOMAIN`,
+      codedValues: attribute.domain.codedValues.map((item) => {
+        return {
+          name: item.label,
+          code: item.value,
+        };
+      }),
+    };
+  }
+
+  return {
+    name: attribute.name,
+    alias: attribute.label,
+    type: esriType,
+    actualType,
+    sqlType,
+    nullable: true,
+    editable: true,
+    defaultValue: null,
+    length,
+    domain,
+  } as any;
+}
+
+/**
+ * Builds a TOTS custom attribute from a field from AGO.
+ *
+ * @param field A field from AGO to be converted
+ * @param id Id to be applied to the TOTS attributes
+ * @returns A TOTS custom attribute definition
+ */
+export function buildCustomAttributeFromField(field: any, id: number) {
+  let dataType = '';
+  let length: number | null = null;
+  if (field.type === 'esriFieldTypeDate') {
+    dataType = 'date';
+  }
+  if (field.type === 'esriFieldTypeDouble') {
+    dataType = 'double';
+  }
+  if (field.type === 'esriFieldTypeInteger') {
+    dataType = 'integer';
+  }
+  if (field.type === 'esriFieldTypeString') {
+    dataType = 'string';
+    length = field.length ?? null;
+  }
+
+  let domain = null;
+  if (field.domain?.type === 'range' && field.domain.range) {
+    const range = field.domain.range;
+    domain = {
+      type: 'range',
+      codededValues: null,
+      range: { min: range[0], max: range[1] },
+    };
+  }
+  if (field.domain?.type === 'codedValue' && field.domain.codedValues) {
+    domain = {
+      type: 'coded',
+      range: null,
+      codedValues: field.domain.codedValues.map((item: any, index: number) => {
+        const localIndex = index + 1;
+        const id =
+          localIndex === field.domain.codedValues.length ? -1 : localIndex;
+        return {
+          id,
+          label: item.name,
+          value: item.code,
+        };
+      }),
+    };
+  }
+
+  return {
+    id,
+    name: field.name,
+    label: field.alias,
+    dataType,
+    length,
+    domain,
+  } as any;
 }
 
 /**

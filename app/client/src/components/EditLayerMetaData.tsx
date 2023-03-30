@@ -274,6 +274,7 @@ function EditScenario({
           id: -1,
           referenceLayers: [],
         },
+        customAttributes: [],
       };
 
       // make a copy of the edits context variable

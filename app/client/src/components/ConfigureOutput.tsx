@@ -1,12 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
@@ -20,9 +14,10 @@ import ShowLessMore from 'components/ShowLessMore';
 import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
-import { PublishContext } from 'contexts/Publish';
+import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
+import { ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 import {
   AttributesType,
@@ -167,18 +162,18 @@ function ConfigureOutput() {
     setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
-    partialPlanAttributes,
-    setPartialPlanAttributes,
     webMapReferenceLayerSelections,
     setWebMapReferenceLayerSelections,
     webSceneReferenceLayerSelections,
     setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
+    edits,
     map,
     portalLayers,
     referenceLayers,
     selectedScenario,
+    setEdits,
     urlLayers,
     userDefinedAttributes,
   } = useContext(SketchContext);
@@ -412,8 +407,10 @@ function ConfigureOutput() {
       <div>
         <EditAttributePopup
           isOpen={editAttributesOpen}
-          attributes={partialPlanAttributes}
-          setAttributes={setPartialPlanAttributes}
+          attributes={[
+            ...defaultPlanAttributes,
+            ...(selectedScenario ? selectedScenario.customAttributes : []),
+          ]}
           selectedIndex={attributesIndex}
           onSave={() => setEditAttributesOpen(false)}
           onClose={() => setEditAttributesOpen(false)}
@@ -587,6 +584,7 @@ function ConfigureOutput() {
                       previously added.
                     </p>
                     <button
+                      disabled={!selectedScenario}
                       onClick={() => {
                         setAttributesIndex(-1);
                         setEditAttributesOpen(true);
@@ -600,7 +598,12 @@ function ConfigureOutput() {
                     </label>
                     <ReactTable
                       id="tots-survey123-attributes-table"
-                      data={partialPlanAttributes}
+                      data={[
+                        ...defaultPlanAttributes,
+                        ...(selectedScenario
+                          ? selectedScenario.customAttributes
+                          : []),
+                      ]}
                       idColumn={'ID'}
                       striped={true}
                       initialSelectedRowIds={{ ids: [] }}
@@ -636,6 +639,7 @@ function ConfigureOutput() {
                                 <div css={editColumnContainerStyles}>
                                   <button
                                     css={editButtonStyles}
+                                    disabled={!selectedScenario}
                                     onClick={(event) => {
                                       setAttributesIndex(row.index);
                                       setEditAttributesOpen(true);
@@ -645,14 +649,37 @@ function ConfigureOutput() {
                                   </button>
                                   <button
                                     css={editButtonStyles}
+                                    disabled={!selectedScenario}
                                     onClick={(event) => {
-                                      setPartialPlanAttributes((attr) => {
-                                        return attr.filter(
-                                          (x) =>
-                                            x.id !== row.original.id ||
-                                            x.name !== row.original.name ||
-                                            x.label !== row.original.label,
-                                        );
+                                      if (!selectedScenario) return;
+
+                                      const index = edits.edits.findIndex(
+                                        (item) =>
+                                          item.type === 'scenario' &&
+                                          item.layerId ===
+                                            selectedScenario.layerId,
+                                      );
+                                      setEdits((edits) => {
+                                        const editedScenario = edits.edits[
+                                          index
+                                        ] as ScenarioEditsType;
+
+                                        editedScenario.customAttributes =
+                                          editedScenario.customAttributes.filter(
+                                            (x) =>
+                                              x.id !== row.original.id ||
+                                              x.name !== row.original.name ||
+                                              x.label !== row.original.label,
+                                          );
+
+                                        return {
+                                          count: edits.count + 1,
+                                          edits: [
+                                            ...edits.edits.slice(0, index),
+                                            editedScenario,
+                                            ...edits.edits.slice(index + 1),
+                                          ],
+                                        };
                                       });
                                     }}
                                   >
@@ -847,7 +874,6 @@ const hiddenInput = css`
 type Props = {
   isOpen: boolean;
   attributes: AttributesType[];
-  setAttributes: Dispatch<SetStateAction<AttributesType[]>>;
   onClose: Function;
   onSave: Function;
   selectedIndex: number;
@@ -856,7 +882,6 @@ type Props = {
 function EditAttributePopup({
   isOpen,
   attributes,
-  setAttributes,
   onClose,
   onSave,
   selectedIndex,
@@ -865,6 +890,7 @@ function EditAttributePopup({
     value: string;
     label: string;
   };
+  const { edits, setEdits, selectedScenario } = useContext(SketchContext);
 
   const [name, setName] = useState('');
   const [label, setLabel] = useState('');
@@ -993,7 +1019,7 @@ function EditAttributePopup({
       <DialogContent css={dialogStyles} aria-label="Edit Attribute">
         <form
           onSubmit={() => {
-            if (!dataType) return;
+            if (!dataType || !selectedScenario) return;
 
             let domain: null | Domain = null;
             if (
@@ -1039,19 +1065,37 @@ function EditAttributePopup({
               domain,
             };
 
-            setAttributes((attributes) => {
-              let newAttributes = attributes.map((attribute, index) => {
-                if (index === selectedIndex) {
-                  return newAttribute;
-                }
-                return attribute;
-              });
+            const index = edits.edits.findIndex(
+              (item) =>
+                item.type === 'scenario' &&
+                item.layerId === selectedScenario.layerId,
+            );
+            setEdits((edits) => {
+              const editedScenario = edits.edits[index] as ScenarioEditsType;
+
+              let newAttributes = editedScenario.customAttributes.map(
+                (attribute, index) => {
+                  if (index === selectedIndex) {
+                    return newAttribute;
+                  }
+                  return attribute;
+                },
+              );
 
               if (selectedIndex === -1) {
                 newAttributes.push(newAttribute);
               }
 
-              return newAttributes;
+              editedScenario.customAttributes = newAttributes;
+
+              return {
+                count: edits.count + 1,
+                edits: [
+                  ...edits.edits.slice(0, index),
+                  editedScenario,
+                  ...edits.edits.slice(index + 1),
+                ],
+              };
             });
 
             onSave();
