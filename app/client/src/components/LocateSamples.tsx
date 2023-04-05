@@ -664,8 +664,9 @@ function LocateSamples() {
         };
 
         // determine the number of service calls needed to satisfy the request
-        const intNumberRandomSamples = parseInt(numberRandomSamples);
-        const iterations = Math.ceil(intNumberRandomSamples / maxRecordCount);
+        const intNumberRandomSamples = parseInt(numberRandomSamples); // 7
+        const samplesPerCall = Math.floor(maxRecordCount / graphics.length);
+        const iterations = Math.ceil(intNumberRandomSamples / samplesPerCall);
 
         // fire off the generateRandom requests
         const requests = [];
@@ -674,7 +675,7 @@ function LocateSamples() {
         for (let i = 0; i < iterations; i++) {
           // determine the number of samples for this request
           numSamples =
-            numSamplesLeft > maxRecordCount ? maxRecordCount : numSamplesLeft;
+            numSamplesLeft > samplesPerCall ? samplesPerCall : numSamplesLeft;
 
           const props = {
             f: 'json',
@@ -701,6 +702,7 @@ function LocateSamples() {
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
+            const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -732,10 +734,16 @@ function LocateSamples() {
                 symbol = defaultSymbols.symbols[sampleType.value];
               }
 
+              let originalZIndex = 0;
+              const graphicsPerAoi = results.features.length / numberOfAois;
+
               // build an array of graphics to draw on the map
-              const originalZ = originalValuesZ[i];
+              let index = 0;
               for (const feature of results.features) {
-                // results.features.forEach((feature: any) => {
+                if (index !== 0 && index % graphicsPerAoi === 0)
+                  originalZIndex += 1;
+
+                const originalZ = originalValuesZ[originalZIndex];
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[typeuuid],
@@ -770,6 +778,8 @@ function LocateSamples() {
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
+
+                index += 1;
               }
             }
 
