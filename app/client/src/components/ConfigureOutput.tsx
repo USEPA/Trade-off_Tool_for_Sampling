@@ -272,7 +272,7 @@ function ConfigureOutput() {
 
       if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
         item.onWebScene = 1;
-        webMapRefLayers.push(item);
+        webSceneRefLayers.push(item);
       }
     });
 
