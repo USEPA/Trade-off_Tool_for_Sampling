@@ -1538,7 +1538,7 @@ function ResultCard({ result }: ResultCardProps) {
         } else {
           // add non-sample layers as feature layers
           fields = [];
-          layerFeatures.fields.forEach(fieldsLoop);
+          layerDetails.fields.forEach(fieldsLoop);
 
           const source: __esri.Graphic[] = [];
           layerFeatures.features.forEach((feature: any) => {
@@ -1563,7 +1563,7 @@ function ResultCard({ result }: ResultCardProps) {
             };
           }
           // if no popup template, then make the template all of the attributes
-          if (!layerDetails.popupInfo && source.length > -1) {
+          if (!layerDetails.popupInfo && source.length > 0) {
             popupTemplate = getSimplePopupTemplate(source[0].attributes);
           }
 
