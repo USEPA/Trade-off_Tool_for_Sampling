@@ -16,6 +16,16 @@ import { generateUUID, getCurrentDateTime } from 'utils/sketchUtils';
 import { chunkArray, escapeForLucene } from 'utils/utils';
 
 /**
+ * Changes the layer name such that it will work with ArcGIS Online
+ *
+ * @param name Desired name for layer
+ * @returns Name of layer that is suitable for AGO
+ */
+function convertLayerName(name: string): string {
+  return name.replaceAll('.', ' '); // workaround for .zip causing failure
+}
+
+/**
  * Returns an environment string to be passed as a parameter
  * to ESRI web service calls in order to avoid CORS errors.
  *
@@ -697,7 +707,7 @@ function createFeatureLayers(
       layerIds.push(l.id);
       layersParams.push({
         ...l.layer.rawLayer.layerDefinition,
-        name: l.label.replaceAll('.', ' '), // workaround for .zip causing failure
+        name: convertLayerName(l.label),
       });
     };
 
@@ -1430,6 +1440,45 @@ function addPointFeatures(
 }
 
 /**
+ * Finds the layer id for the provided layer name from the
+ * hosted feature service and the addToDefinition response.
+ *
+ * @param service The feature service object
+ * @param layersReponse The addToDefinition response for newly added layers
+ * @param name Name of the layer to search for
+ * @returns AGO id of the desired layer
+ */
+function findLayerId({
+  service,
+  layersResponse,
+  name,
+}: {
+  service: any;
+  layersResponse: any;
+  name: string;
+}): number {
+  let layer;
+
+  // check in service.layers
+  layer = service.featureService.layers.find((l: any) => l.name === name);
+  if (layer) return layer.id;
+
+  // check in service.tables
+  layer = service.featureService.tables.find((l: any) => l.name === name);
+  if (layer) return layer.id;
+
+  // check in layersResponse.layers
+  layer = layersResponse.layers.find((l: any) => l.name === name);
+  if (layer) return layer.id;
+
+  // check in layersResponse.tables
+  layer = layersResponse.tables.find((l: any) => l.name === name);
+  if (layer) return layer.id;
+
+  return -1;
+}
+
+/**
  * Applys edits to a layer or layers within a hosted feature service
  * on ArcGIS Online.
  *
@@ -1439,6 +1488,7 @@ function addPointFeatures(
  * @param layerProps Default/shared properties used for creating feature services, layers, web maps, and web scenes.
  * @param layers The layers that the edits object pertain to
  * @param edits The edits to be saved to the hosted feature service
+ * @param serviceMetaData The name and description of the service to be saved
  * @param table any - The table object
  * @param attributesToInclude The attributes to include with each graphic
  * @param referenceLayersTable Reference layers that were previously published
@@ -1451,7 +1501,9 @@ async function applyEdits({
   serviceUrl,
   layerProps,
   layers,
+  layersResponse,
   edits,
+  serviceMetaData,
   table,
   attributesToInclude,
   referenceLayersTable,
@@ -1462,7 +1514,9 @@ async function applyEdits({
   serviceUrl: string;
   layerProps: any | null;
   layers: LayerType[];
+  layersResponse: any;
   edits: LayerEditsType[];
+  serviceMetaData: ServiceMetaDataType;
   table: TableType | null;
   attributesToInclude: AttributesType[] | null;
   referenceLayersTable: ReferenceLayersTableType;
@@ -1475,7 +1529,8 @@ async function applyEdits({
 }) {
   try {
     const changes: any[] = [];
-    let index = 0;
+    const scenarioName = serviceMetaData.label;
+
     // loop through the layers and build the payload
     edits.forEach((layerEdits) => {
       // build the deletes list, which is just an array of global ids.
@@ -1484,15 +1539,13 @@ async function applyEdits({
         deletes.push(item.GLOBALID);
       });
 
-      const polysId = index;
-      index += 1;
       if (
         layerEdits.adds.length > 0 ||
         layerEdits.updates.length > 0 ||
         deletes.length > 0
       ) {
         changes.push({
-          id: polysId,
+          id: findLayerId({ service, layersResponse, name: scenarioName }),
           adds: layerEdits.adds,
           updates: layerEdits.updates,
           deletes,
@@ -1533,10 +1586,12 @@ async function applyEdits({
         pointsUpdates.length > 0 ||
         pointsDeletes.length > 0
       ) {
-        const pointsId = index;
-        index += 1;
         changes.push({
-          id: pointsId,
+          id: findLayerId({
+            service,
+            layersResponse,
+            name: `${scenarioName}-points`,
+          }),
           adds: pointsAdds,
           updates: pointsUpdates,
           deletes: pointsDeletes,
@@ -1557,13 +1612,14 @@ async function applyEdits({
 
       refIdsAdded.push(l.id);
 
-      const id = index;
-      index += 1;
-
       if (l.layer.rawLayer.featureSet.features.length === 0) return;
 
       changes.push({
-        id,
+        id: findLayerId({
+          service,
+          layersResponse,
+          name: convertLayerName(l.label),
+        }),
         adds: l.layer.rawLayer.featureSet.features,
         updates: [],
         deletes: [],
@@ -1581,13 +1637,14 @@ async function applyEdits({
 
       refIdsAdded.push(l.id);
 
-      const id = index;
-      index += 1;
-
       if (l.layer.rawLayer.featureSet.features.length === 0) return;
 
       changes.push({
-        id,
+        id: findLayerId({
+          service,
+          layersResponse,
+          name: convertLayerName(l.label),
+        }),
         adds: l.layer.rawLayer.featureSet.features,
         updates: [],
         deletes: [],
@@ -1598,20 +1655,26 @@ async function applyEdits({
     const output = buildTableEdits({
       layers,
       table,
-      id: index,
+      id: findLayerId({
+        service,
+        layersResponse,
+        name: `${scenarioName}-sample-types`,
+      }),
       layerProps,
     });
-    index += 1;
     changes.push(output.edits);
     tableOut = output.table;
 
     let refLayerTableOut: ReferenceLayersTableType | null = null;
     const refOutput = await buildReferenceLayerTableEdits({
-      id: index,
+      id: findLayerId({
+        service,
+        layersResponse,
+        name: `${scenarioName}-reference-layers`,
+      }),
       referenceLayersTable,
       referenceMaterials,
     });
-    index += 1;
     changes.push(refOutput.edits);
     refLayerTableOut = refOutput.table;
 
@@ -1797,8 +1860,6 @@ async function buildReferenceLayerTableEdits({
 
   // build the adds, updates, and deletes
   uniqueReferenceLayerSelections.forEach((refLayer) => {
-    if (refLayer.type === 'file') return;
-
     // build the adds and updates arrays
     if (layersAlreadyPublished.includes(refLayer.id)) {
       updates.push(refLayer);
@@ -1808,7 +1869,7 @@ async function buildReferenceLayerTableEdits({
           GLOBALID: generateUUID(),
           LAYERID: refLayer.id,
           LABEL: refLayer.label,
-          LAYERTYPE: refLayer.layerType,
+          LAYERTYPE: refLayer.type === 'file' ? '' : refLayer.layerType,
           ONWEBMAP: refLayer.onWebMap,
           ONWEBSCENE: refLayer.onWebScene,
           TYPE: refLayer.type,
@@ -2017,7 +2078,11 @@ function addWebMap({
     const layer0 = responseChoice[0];
     const layer1 = responseChoice[1];
     const layersOut: any[] = [];
-    responseChoice.forEach((l: any, index: number) => {
+    const choicesCombined = [
+      ...service.featureService.layers,
+      ...layersResponse.layers,
+    ];
+    choicesCombined.forEach((l: any, index: number) => {
       if (index === 0 || index === 1) return;
       layersOut.push(l);
     });
@@ -2183,7 +2248,21 @@ function addWebScene({
         ? service.featureService.layers
         : layersResponse.layers;
 
-    responseChoice.forEach((layer: any) => {
+    const layer0 = responseChoice[0];
+    const layer1 = responseChoice[1];
+    const layersOut: any[] = [];
+    const choicesCombined = [
+      ...service.featureService.layers,
+      ...layersResponse.layers,
+    ];
+    choicesCombined.forEach((l: any, index: number) => {
+      if (index === 0 || index === 1) return;
+      layersOut.push(l);
+    });
+    layersOut.push(layer0);
+    layersOut.push(layer1);
+
+    layersOut.forEach((layer: any) => {
       operationalLayers.push({
         title: layer.name,
         url: `${baseUrl}/${layer.id}`,
@@ -2485,7 +2564,9 @@ function publish({
                   serviceUrl,
                   layerProps,
                   layers,
+                  layersResponse,
                   edits,
+                  serviceMetaData,
                   table: tableParam,
                   attributesToInclude,
                   referenceLayersTable,
