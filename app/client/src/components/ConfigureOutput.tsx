@@ -249,9 +249,7 @@ function ConfigureOutput() {
       if (l.type === 'tots') return;
 
       const item: ReferenceLayerSelections = {
-        label: window.location.search.includes('devMode=true')
-          ? `${l.label} (${l.layerType} | Portal)`
-          : l.label,
+        label: l.label,
         id: l.id,
         value: l.url,
         layerType: l.layerType,
@@ -295,9 +293,7 @@ function ConfigureOutput() {
       if (l.layerType === 'stream') return;
 
       const item: ReferenceLayerSelections = {
-        label: window.location.search.includes('devMode=true')
-          ? `${l.label} (URL | ${l.type} | ${l.layerType})`
-          : l.label,
+        label: l.label,
         id: l.layerId,
         value: l.url,
         layerType: l.layerType,
@@ -329,9 +325,7 @@ function ConfigureOutput() {
     // add in file reference layers
     referenceLayers.forEach((l) => {
       const item: ReferenceLayerSelections = {
-        label: window.location.search.includes('devMode=true')
-          ? `${l.title} (${l.rawLayer.layerDefinition.type} | File)`
-          : l.title,
+        label: l.title,
         id: l.layerId,
         value: l.layerId,
         layer: l,

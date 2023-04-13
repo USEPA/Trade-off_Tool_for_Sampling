@@ -508,23 +508,23 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      referenceMaterials: {
-        createWebMap: includeFullPlanWebMap,
-        createWebScene: false,
-        webMapReferenceLayerSelections: [],
-        webSceneReferenceLayerSelections: [],
-      },
-      map,
-      table: editsScenario.table,
-      referenceLayersTable: editsScenario.referenceLayersTable,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includeFullPlanWebMap,
+        createWebScene: false,
+        webMapReferenceLayerSelections: [],
+        webSceneReferenceLayerSelections: [],
       },
     })
       .then((res: any) => {
@@ -1048,24 +1048,24 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      referenceMaterials: {
-        createWebMap: includePartialPlanWebMap,
-        createWebScene: includePartialPlanWebScene,
-        webMapReferenceLayerSelections,
-        webSceneReferenceLayerSelections,
-      },
-      map,
-      table: editsScenario.table,
-      referenceLayersTable: editsScenario.referenceLayersTable,
-      attributesToInclude,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      attributesToInclude,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includePartialPlanWebMap,
+        createWebScene: includePartialPlanWebScene,
+        webMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
       },
     })
       .then((res: any) => {
