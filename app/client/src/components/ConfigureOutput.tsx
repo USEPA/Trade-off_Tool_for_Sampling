@@ -358,8 +358,16 @@ function ConfigureOutput() {
       selectedScenario.referenceLayersTable.referenceLayers.length > 0
     ) {
       selectedScenario.referenceLayersTable.referenceLayers.forEach((l) => {
-        const wmOption = webMapRefOptions.find((o) => o.id === l.layerId);
-        const wsOption = webSceneRefOptions.find((o) => o.id === l.layerId);
+        const wmOption = webMapRefOptions.find(
+          (o) =>
+            (o.type !== 'file' && o.id === l.layerId) ||
+            (o.type === 'file' && o.label === l.label),
+        );
+        const wsOption = webSceneRefOptions.find(
+          (o) =>
+            (o.type !== 'file' && o.id === l.layerId) ||
+            (o.type === 'file' && o.label === l.label),
+        );
 
         if (wmOption && l.onWebMap)
           webMapReferenceLayerSelections.push(wmOption);
