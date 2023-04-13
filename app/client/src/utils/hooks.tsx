@@ -39,7 +39,7 @@ import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -54,7 +54,7 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
-import { AttributesType, SampleTypeOptions } from 'types/Publish';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
@@ -151,7 +151,6 @@ export function useStartOver() {
     setIncludePartialPlanWebMap,
     setIncludePartialPlanWebScene,
     setIncludeCustomSampleTypes,
-    setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
@@ -233,7 +232,6 @@ export function useStartOver() {
     setIncludePartialPlanWebMap(true);
     setIncludePartialPlanWebScene(true);
     setIncludeCustomSampleTypes(false);
-    setPartialPlanAttributes(defaultPlanAttributes);
     setWebMapReferenceLayerSelections([]);
     setWebSceneReferenceLayerSelections([]);
 
@@ -2306,7 +2304,6 @@ function usePublishStorage() {
   const key2 = 'tots_sample_table_metadata';
   const key3 = 'tots_publish_samples_mode';
   const key4 = 'tots_output_settings';
-  const key5 = 'tots_partial_plan_attributes';
 
   const { setOptions } = useContext(DialogContext);
   const {
@@ -2330,8 +2327,6 @@ function usePublishStorage() {
     setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
-    partialPlanAttributes,
-    setPartialPlanAttributes,
     webMapReferenceLayerSelections,
     setWebMapReferenceLayerSelections,
     webSceneReferenceLayerSelections,
@@ -2394,20 +2389,12 @@ function usePublishStorage() {
         outputSettings.webSceneReferenceLayerSelections,
       );
     }
-
-    // set the partial plan attributes list
-    const partialAttributesStr = readFromStorage(key5);
-    if (partialAttributesStr) {
-      const partialAttributes = JSON.parse(partialAttributesStr);
-      setPartialPlanAttributes(partialAttributes as AttributesType[]);
-    }
   }, [
     localSampleTypeInitialized,
     setIncludeCustomSampleTypes,
     setIncludePartialPlan,
     setIncludePartialPlanWebMap,
     setIncludePartialPlanWebScene,
-    setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
@@ -2476,13 +2463,6 @@ function usePublishStorage() {
     webMapReferenceLayerSelections,
     webSceneReferenceLayerSelections,
   ]);
-
-  // Saves the partial plan attributes list to browser storage whenever it changers
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
-
-    writeToStorage(key5, partialPlanAttributes, setOptions);
-  }, [partialPlanAttributes, localSampleTypeInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the display mode (points or polygons) selection.

@@ -24,7 +24,7 @@ import ShowLessMore from 'components/ShowLessMore';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import { defaultPlanAttributes, PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -139,7 +139,6 @@ function Publish() {
     includePartialPlan,
     includePartialPlanWebMap,
     includePartialPlanWebScene,
-    partialPlanAttributes,
     publishSamplesMode,
     publishSampleTableMetaData,
     sampleTableDescription,
@@ -509,23 +508,23 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      referenceMaterials: {
-        createWebMap: includeFullPlanWebMap,
-        createWebScene: false,
-        webMapReferenceLayerSelections: [],
-        webSceneReferenceLayerSelections: [],
-      },
-      map,
-      table: editsScenario.table,
-      referenceLayersTable: editsScenario.referenceLayersTable,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includeFullPlanWebMap,
+        createWebScene: false,
+        webMapReferenceLayerSelections: [],
+        webSceneReferenceLayerSelections: [],
       },
     })
       .then((res: any) => {
@@ -966,6 +965,12 @@ function Publish() {
       published: [],
     };
 
+    // get the attributes to be published
+    const attributesToInclude = [
+      ...defaultPlanAttributes,
+      ...editsScenario.customAttributes,
+    ];
+
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
     editsScenario.layers.forEach((layer) => {
@@ -982,7 +987,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -997,7 +1003,9 @@ function Publish() {
           attributes,
         });
       });
-      layer.updates.forEach((item) => {
+
+      const combinedUpdates = [...layer.updates, ...layer.published];
+      combinedUpdates.forEach((item) => {
         let attributes: any = {};
         if (publishLayer?.sketchLayer.type === 'graphics') {
           const graphic = publishLayer.sketchLayer.graphics.find(
@@ -1008,7 +1016,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -1039,24 +1048,24 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      referenceMaterials: {
-        createWebMap: includePartialPlanWebMap,
-        createWebScene: includePartialPlanWebScene,
-        webMapReferenceLayerSelections,
-        webSceneReferenceLayerSelections,
-      },
-      map,
-      table: editsScenario.table,
-      referenceLayersTable: editsScenario.referenceLayersTable,
-      attributesToInclude: partialPlanAttributes,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      attributesToInclude,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includePartialPlanWebMap,
+        createWebScene: includePartialPlanWebScene,
+        webMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
       },
     })
       .then((res: any) => {
@@ -1385,7 +1394,6 @@ function Publish() {
     layers,
     layerProps,
     map,
-    partialPlanAttributes,
     portal,
     sampleAttributes,
     selectedScenario,

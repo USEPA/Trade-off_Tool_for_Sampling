@@ -19,12 +19,13 @@ import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { DialogContext } from 'contexts/Dialog';
-import { useSampleTypesContext } from 'contexts/LookupFiles';
+import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
+  buildCustomAttributeFromField,
   getAllFeatures,
   getFeatureLayer,
   getFeatureLayers,
@@ -48,6 +49,7 @@ import {
   ScenarioEditsType,
 } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
+import { AttributesType } from 'types/Publish';
 import {
   Attributes,
   DefaultSymbolsType,
@@ -874,6 +876,7 @@ function ResultCard({ result }: ResultCardProps) {
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
   const { sampleValidation } = useGeometryTools();
+  const layerProps = useLayerProps();
 
   // Used to determine if the layer for this card has been added or not
   const [added, setAdded] = useState(false);
@@ -907,6 +910,7 @@ function ResultCard({ result }: ResultCardProps) {
    */
   async function addTotsLayer() {
     if (!map || !portal) return;
+    if (layerProps.status !== 'success') return;
     if (sampleTypeContext.status === 'failure') {
       setStatus('error');
       return;
@@ -1228,6 +1232,7 @@ function ResultCard({ result }: ResultCardProps) {
       let editsCopy: EditsType = deepCopyObject(edits);
       const mapLayersToAdd: __esri.Layer[] = [];
       const newAttributes: Attributes = {};
+      const newCustomAttributes: AttributesType[] = [];
       const newUserSampleTypes: SampleSelectType[] = [];
       const layersToAdd: LayerType[] = [];
       const refLayersToAdd: any[] = [];
@@ -1404,7 +1409,6 @@ function ResultCard({ result }: ResultCardProps) {
               } else if (sampleAttributes.hasOwnProperty(typeUuid)) {
                 customAttributes = sampleAttributes[typeUuid];
               }
-
               newGraphic.attributes = {
                 ...customAttributes,
                 ...graphic.attributes,
@@ -1438,6 +1442,24 @@ function ResultCard({ result }: ResultCardProps) {
             title: scenarioName,
           });
 
+          const defaultFields = layerProps.data.defaultFields;
+          layerDetails.fields.forEach((field: any, index: number) => {
+            if (['Shape__Area', 'Shape__Length'].includes(field.name)) return;
+
+            const wasAlreadyAdded =
+              newCustomAttributes.findIndex((f: any) => f.name === field.name) >
+              -1;
+            if (wasAlreadyAdded) return;
+
+            const isDefaultField =
+              defaultFields.findIndex((f: any) => f.name === field.name) > -1;
+            if (isDefaultField) return;
+
+            const id = defaultPlanAttributes.length + index;
+
+            newCustomAttributes.push(buildCustomAttributeFromField(field, id));
+          });
+
           const newScenario: ScenarioEditsType = {
             type: 'scenario',
             id: layerDetails.id,
@@ -1459,6 +1481,7 @@ function ResultCard({ result }: ResultCardProps) {
             layers: [],
             table,
             referenceLayersTable,
+            customAttributes: newCustomAttributes,
           };
 
           // make a copy of the edits context variable
@@ -1568,7 +1591,7 @@ function ResultCard({ result }: ResultCardProps) {
           }
 
           // add the feature layer
-          const layerProps: __esri.FeatureLayerProperties = {
+          const featureLayerProps: __esri.FeatureLayerProperties = {
             fields,
             source,
             objectIdField: layerFeatures.objectIdFieldName,
@@ -1577,12 +1600,12 @@ function ResultCard({ result }: ResultCardProps) {
             renderer,
             popupTemplate,
           };
-          const featureLayer = new FeatureLayer(layerProps);
+          const featureLayer = new FeatureLayer(featureLayerProps);
           mapLayersToAdd.push(featureLayer);
 
           // add the layer to referenceLayers with the layer id
           refLayersToAdd.push({
-            ...layerProps,
+            ...featureLayerProps,
             layerId: featureLayer.id,
             portalId: result.id,
           });

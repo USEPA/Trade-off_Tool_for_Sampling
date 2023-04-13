@@ -1,4 +1,5 @@
 import { AddedFrom, LayerTypeName, PublishStatus } from 'types/Layer';
+import { AttributesType } from 'types/Publish';
 
 export type EditsType = {
   count: number;
@@ -57,6 +58,7 @@ export type ScenarioEditsType = {
   layers: LayerEditsType[];
   table: TableType | null;
   referenceLayersTable: ReferenceLayersTableType;
+  customAttributes: AttributesType[];
 };
 
 export type LayerEditsType = {
