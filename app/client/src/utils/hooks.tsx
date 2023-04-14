@@ -39,7 +39,7 @@ import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import {
@@ -54,12 +54,13 @@ import {
   PortalLayerType,
   UrlLayerType,
 } from 'types/Layer';
-import { AttributesType, SampleTypeOptions } from 'types/Publish';
+import { SampleTypeOptions } from 'types/Publish';
 // config
 import { PanelValueType } from 'config/navigation';
 // utils
 import {
   createLayer,
+  deactivateButtons,
   findLayerInEdits,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -146,36 +147,40 @@ export function useStartOver() {
     setTrainingMode,
   } = useContext(NavigationContext);
   const {
-    setIncludeFullPlan,
-    setIncludeFullPlanWebMap,
     setIncludePartialPlan,
     setIncludePartialPlanWebMap,
+    setIncludePartialPlanWebScene,
     setIncludeCustomSampleTypes,
-    setPartialPlanAttributes,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
     setSampleTableName,
     setSampleTypeSelections,
     setSelectedService,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
     basemapWidget,
+    homeWidget,
     map,
     mapView,
-    homeWidget,
-    setLayers,
     resetDefaultSymbols,
-    setEdits,
-    setUrlLayers,
-    setReferenceLayers,
-    setPortalLayers,
-    setSelectedScenario,
-    setShowAsPoints,
-    setSketchLayer,
+    sceneView,
     setAoiSketchLayer,
+    setDisplayDimensions,
+    setDisplayGeometryType,
+    setEdits,
+    setLayers,
+    setPortalLayers,
+    setReferenceLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    setTerrain3dVisible,
+    setUrlLayers,
     setUserDefinedAttributes,
     setUserDefinedOptions,
+    setViewUnderground3d,
   } = useContext(SketchContext);
 
   function startOver() {
@@ -208,7 +213,10 @@ export function useStartOver() {
     setLatestStepIndex(-1);
     setTrainingMode(false);
     setGettingStartedOpen(false);
-    setShowAsPoints(true);
+    setDisplayDimensions('2d');
+    setDisplayGeometryType('points');
+    setTerrain3dVisible(true);
+    setViewUnderground3d(false);
 
     // set the calculate settings back to defaults
     resetCalculateContext();
@@ -220,34 +228,48 @@ export function useStartOver() {
     setSampleTableName('');
     setSampleTypeSelections([]);
     setSelectedService(null);
-    setIncludeFullPlan(false);
-    setIncludeFullPlanWebMap(true);
     setIncludePartialPlan(true);
     setIncludePartialPlanWebMap(true);
+    setIncludePartialPlanWebScene(true);
     setIncludeCustomSampleTypes(false);
-    setPartialPlanAttributes(defaultPlanAttributes);
+    setWebMapReferenceLayerSelections([]);
+    setWebSceneReferenceLayerSelections([]);
 
     // reset the zoom
     if (mapView) {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
+      mapView.rotation = 0;
       mapView.popup?.close();
-
-      if (homeWidget) {
-        homeWidget.viewpoint = mapView.viewpoint;
-      }
-
-      if (basemapWidget) {
-        // Search for the basemap with the matching portal id
-        const portalId = 'f81bc478e12c4f1691d0d7ab6361f5a6';
-        let selectedBasemap: __esri.Basemap | null = null;
-        basemapWidget.source.basemaps.forEach((basemap) => {
-          if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
+    }
+    if (sceneView) {
+      if (sceneView.camera) {
+        sceneView.camera.fov = 55;
+        sceneView.camera.heading = 0;
+        sceneView.camera.tilt = 0.171544;
+        sceneView.camera.position = new Point({
+          longitude: -95,
+          latitude: 36.6715,
         });
-
-        // Set the activeBasemap to the basemap that was found
-        if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
       }
+      sceneView.zoom = 4;
+      sceneView.popup?.close();
+    }
+
+    if (homeWidget && mapView && sceneView) {
+      homeWidget['2d'].viewpoint = mapView.viewpoint;
+      homeWidget['3d'].viewpoint = sceneView.viewpoint;
+    }
+
+    if (basemapWidget) {
+      // Search for the basemap with the matching basemap
+      let selectedBasemap: __esri.Basemap | null = null;
+      basemapWidget.source.basemaps.forEach((basemap) => {
+        if (basemap.title === 'Streets') selectedBasemap = basemap;
+      });
+
+      // Set the activeBasemap to the basemap that was found
+      if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
     }
   }
 
@@ -298,8 +320,12 @@ export function useGeometryTools() {
 
       if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
 
+      // get the center
+      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+      if (!center) return;
+
       // get the spatial reference from the centroid
-      const { latitude, longitude } = wgsGeometry.centroid;
+      const { latitude, longitude } = center;
       const base_wkid = latitude > 0 ? 32600 : 32700;
       const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
       const spatialReference = new SpatialReference({ wkid: out_wkid });
@@ -374,11 +400,11 @@ export function useGeometryTools() {
         centroid: center,
         rings: [
           [
-            [ptBuff.extent.xmin, ptBuff.extent.ymin],
-            [ptBuff.extent.xmin, ptBuff.extent.ymax],
-            [ptBuff.extent.xmax, ptBuff.extent.ymax],
-            [ptBuff.extent.xmax, ptBuff.extent.ymin],
-            [ptBuff.extent.xmin, ptBuff.extent.ymin],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
+            [ptBuff.extent.xmin, ptBuff.extent.ymax, center.z],
+            [ptBuff.extent.xmax, ptBuff.extent.ymax, center.z],
+            [ptBuff.extent.xmax, ptBuff.extent.ymin, center.z],
+            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
           ],
         ],
       });
@@ -890,16 +916,6 @@ export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
   const layerProps = useLayerProps();
 
-  // Makes all sketch buttons no longer active by removing
-  // the sketch-button-selected class.
-  function deactivateButtons() {
-    const buttons = document.querySelectorAll('.sketch-button');
-
-    for (let i = 0; i < buttons.length; i++) {
-      buttons[i].classList.remove('sketch-button-selected');
-    }
-  }
-
   // handles the sketch button clicks
   const handleClick = (
     ev: ReactMouseEvent<HTMLElement>,
@@ -1408,19 +1424,45 @@ function useUrlLayerStorage() {
     // add the portal layers to the map
     urlLayers.forEach((urlLayer) => {
       const type = urlLayer.type;
+
+      if (
+        type === 'ArcGIS' ||
+        type === 'WMS' ||
+        // type === 'WFS' ||
+        type === 'KML' ||
+        type === 'GeoRSS' ||
+        type === 'CSV'
+      ) {
+        newUrlLayers.push(urlLayer);
+      }
+    });
+
+    setUrlLayers(newUrlLayers);
+  }, [localUrlLayerInitialized, map, setUrlLayers]);
+
+  // Saves the url layers to browser storage everytime they change
+  useEffect(() => {
+    if (!localUrlLayerInitialized) return;
+    writeToStorage(key, urlLayers, setOptions);
+  }, [urlLayers, localUrlLayerInitialized, setOptions]);
+
+  // adds url layers to map
+  useEffect(() => {
+    if (!map || urlLayers.length === 0) return;
+
+    // add the url layers to the map
+    urlLayers.forEach((urlLayer) => {
+      const type = urlLayer.type;
       const url = urlLayer.url;
       const id = urlLayer.layerId;
+
+      const layerFound = map.layers.findIndex((l) => l.id === id) > -1;
+      if (layerFound) return;
 
       let layer;
       if (type === 'ArcGIS') {
         Layer.fromArcGISServerUrl({ url, properties: { id } })
-          .then((layer) => {
-            map.add(layer);
-
-            setUrlLayers((urlLayers) => {
-              return [...urlLayers, urlLayer];
-            });
-          })
+          .then((layer) => map.add(layer))
           .catch((err) => {
             console.error(err);
 
@@ -1448,21 +1490,9 @@ function useUrlLayerStorage() {
       // add the layer if isn't null
       if (layer) {
         map.add(layer);
-
-        newUrlLayers.push(urlLayer);
       }
     });
-
-    setUrlLayers((urlLayers) => {
-      return [...urlLayers, ...newUrlLayers];
-    });
-  }, [localUrlLayerInitialized, map, setUrlLayers]);
-
-  // Saves the url layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localUrlLayerInitialized) return;
-    writeToStorage(key, urlLayers, setOptions);
-  }, [urlLayers, localUrlLayerInitialized, setOptions]);
+  }, [map, urlLayers]);
 }
 
 // Uses browser storage for holding the portal layers that have been added.
@@ -1482,23 +1512,6 @@ function usePortalLayerStorage() {
     if (!portalLayersStr) return;
 
     const portalLayers: PortalLayerType[] = JSON.parse(portalLayersStr);
-
-    // add the portal layers to the map
-    portalLayers.forEach((portalLayer) => {
-      // Skip tots layers, since they are stored in edits.
-      // The only reason tots layers are also in portal layers is
-      // so the search panel will show the layer as having been
-      // added.
-      if (portalLayer.type === 'tots') return;
-
-      const layer = Layer.fromPortalItem({
-        portalItem: new PortalItem({
-          id: portalLayer.id,
-        }),
-      });
-      map.add(layer);
-    });
-
     setPortalLayers(portalLayers);
   }, [localPortalLayerInitialized, map, portalLayers, setPortalLayers]);
 
@@ -1507,31 +1520,63 @@ function usePortalLayerStorage() {
     if (!localPortalLayerInitialized) return;
     writeToStorage(key, portalLayers, setOptions);
   }, [portalLayers, localPortalLayerInitialized, setOptions]);
+
+  // adds portal layers to map
+  useEffect(() => {
+    if (!map || portalLayers.length === 0) return;
+
+    // add the portal layers to the map
+    portalLayers.forEach((portalLayer) => {
+      const id = portalLayer.id;
+
+      const layerFound =
+        map.layers.findIndex((l: any) => l?.portalItem?.id === id) > -1;
+      if (layerFound) return;
+
+      // Skip tots layers, since they are stored in edits.
+      // The only reason tots layers are also in portal layers is
+      // so the search panel will show the layer as having been
+      // added.
+      if (portalLayer.type === 'tots') return;
+
+      const layer = Layer.fromPortalItem({
+        portalItem: new PortalItem({ id }),
+      });
+      map.add(layer);
+    });
+  }, [map, portalLayers]);
 }
 
 // Uses browser storage for holding the map's view port extent.
-function useMapPositionStorage() {
-  const key = 'tots_map_extent';
+function useMapExtentStorage() {
+  const key2d = 'tots_map_2d_extent';
+  const key3d = 'tots_map_3d_extent';
 
   const { setOptions } = useContext(DialogContext);
-  const { mapView } = useContext(SketchContext);
+  const { mapView, sceneView } = useContext(SketchContext);
 
   // Retreives the map position and zoom level from browser storage when the app loads
   const [localMapPositionInitialized, setLocalMapPositionInitialized] =
     useState(false);
   useEffect(() => {
-    if (!mapView || localMapPositionInitialized) return;
+    if (!mapView || !sceneView || localMapPositionInitialized) return;
 
     setLocalMapPositionInitialized(true);
 
-    const positionStr = readFromStorage(key);
-    if (!positionStr) return;
+    const position2dStr = readFromStorage(key2d);
+    if (position2dStr) {
+      const extent = JSON.parse(position2dStr) as any;
+      mapView.extent = Extent.fromJSON(extent);
+    }
 
-    const extent = JSON.parse(positionStr) as any;
-    mapView.extent = Extent.fromJSON(extent);
+    const position3dStr = readFromStorage(key3d);
+    if (position3dStr) {
+      const extent = JSON.parse(position3dStr) as any;
+      sceneView.extent = Extent.fromJSON(extent);
+    }
 
     setLocalMapPositionInitialized(true);
-  }, [mapView, localMapPositionInitialized]);
+  }, [mapView, sceneView, localMapPositionInitialized]);
 
   // Saves the map position and zoom level to browser storage whenever it changes
   const [
@@ -1539,13 +1584,21 @@ function useMapPositionStorage() {
     setWatchExtentInitialized, //
   ] = useState(false);
   useEffect(() => {
-    if (!mapView || watchExtentInitialized) return;
+    if (!mapView || !sceneView || watchExtentInitialized) return;
 
     reactiveUtils.when(
       () => mapView.stationary,
       () => {
-        if (mapView.stationary) {
-          writeToStorage(key, mapView.extent.toJSON(), setOptions);
+        if (mapView && mapView.extent && mapView.stationary) {
+          writeToStorage(key2d, mapView.extent.toJSON(), setOptions);
+        }
+      },
+    );
+    reactiveUtils.watch(
+      () => sceneView.stationary,
+      () => {
+        if (sceneView && sceneView.extent && sceneView.stationary) {
+          writeToStorage(key3d, sceneView.extent.toJSON(), setOptions);
         }
       },
     );
@@ -1553,6 +1606,83 @@ function useMapPositionStorage() {
     setWatchExtentInitialized(true);
   }, [
     mapView,
+    sceneView,
+    watchExtentInitialized,
+    localMapPositionInitialized,
+    setOptions,
+  ]);
+}
+
+// Uses browser storage for holding the map's view port extent.
+function useMapPositionStorage() {
+  const key = 'tots_map_scene_position';
+
+  const { setOptions } = useContext(DialogContext);
+  const { mapView, sceneView } = useContext(SketchContext);
+
+  // Retreives the map position and zoom level from browser storage when the app loads
+  const [localMapPositionInitialized, setLocalMapPositionInitialized] =
+    useState(false);
+  useEffect(() => {
+    if (!sceneView || localMapPositionInitialized) return;
+
+    setLocalMapPositionInitialized(true);
+
+    const positionStr = readFromStorage(key);
+    if (!positionStr) return;
+
+    const camera = JSON.parse(positionStr) as any;
+    if (!sceneView.camera) sceneView.camera = {} as any;
+    sceneView.camera.fov = camera.fov;
+    sceneView.camera.heading = camera.heading;
+    sceneView.camera.position = geometryJsonUtils.fromJSON(
+      camera.position,
+    ) as __esri.Point;
+    sceneView.camera.tilt = camera.tilt;
+
+    setLocalMapPositionInitialized(true);
+  }, [sceneView, localMapPositionInitialized]);
+
+  // Saves the map position and zoom level to browser storage whenever it changes
+  const [
+    watchExtentInitialized,
+    setWatchExtentInitialized, //
+  ] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sceneView || watchExtentInitialized) return;
+
+    reactiveUtils.watch(
+      () => mapView.center,
+      () => {
+        if (!mapView.center) return;
+        const cameraObj = {
+          fov: sceneView.camera?.fov,
+          heading: sceneView.camera?.heading,
+          position: mapView.center.toJSON(),
+          tilt: sceneView.camera?.tilt,
+        };
+        writeToStorage(key, cameraObj, setOptions);
+      },
+    );
+
+    reactiveUtils.watch(
+      () => sceneView.camera,
+      () => {
+        if (!sceneView.camera) return;
+        const cameraObj = {
+          fov: sceneView.camera.fov,
+          heading: sceneView.camera.heading,
+          position: sceneView.camera.position.toJSON(),
+          tilt: sceneView.camera.tilt,
+        };
+        writeToStorage(key, cameraObj, setOptions);
+      },
+    );
+
+    setWatchExtentInitialized(true);
+  }, [
+    mapView,
+    sceneView,
     watchExtentInitialized,
     localMapPositionInitialized,
     setOptions,
@@ -1561,7 +1691,8 @@ function useMapPositionStorage() {
 
 // Uses browser storage for holding the home widget's viewpoint.
 function useHomeWidgetStorage() {
-  const key = 'tots_home_viewpoint';
+  const key2d = 'tots_home_2d_viewpoint';
+  const key3d = 'tots_home_3d_viewpoint';
 
   const { setOptions } = useContext(DialogContext);
   const { homeWidget } = useContext(SketchContext);
@@ -1574,11 +1705,16 @@ function useHomeWidgetStorage() {
 
     setLocalHomeWidgetInitialized(true);
 
-    const viewpointStr = readFromStorage(key);
+    const viewpoint2dStr = readFromStorage(key2d);
+    const viewpoint3dStr = readFromStorage(key3d);
 
-    if (viewpointStr) {
-      const viewpoint = JSON.parse(viewpointStr) as any;
-      homeWidget.viewpoint = Viewpoint.fromJSON(viewpoint);
+    if (viewpoint2dStr) {
+      const viewpoint2d = JSON.parse(viewpoint2dStr) as any;
+      homeWidget['2d'].viewpoint = Viewpoint.fromJSON(viewpoint2d);
+    }
+    if (viewpoint3dStr) {
+      const viewpoint3d = JSON.parse(viewpoint3dStr) as any;
+      homeWidget['3d'].viewpoint = Viewpoint.fromJSON(viewpoint3d);
     }
   }, [homeWidget, localHomeWidgetInitialized]);
 
@@ -1591,9 +1727,28 @@ function useHomeWidgetStorage() {
     if (!homeWidget || watchHomeWidgetInitialized) return;
 
     reactiveUtils.watch(
-      () => homeWidget.viewpoint,
+      () => homeWidget['2d']?.viewpoint,
       () => {
-        writeToStorage(key, homeWidget.viewpoint.toJSON(), setOptions);
+        writeToStorage(
+          key2d,
+          homeWidget['2d']?.viewpoint
+            ? homeWidget['2d']?.viewpoint.toJSON()
+            : {},
+          setOptions,
+        );
+      },
+    );
+
+    reactiveUtils.watch(
+      () => homeWidget['3d']?.viewpoint,
+      () => {
+        writeToStorage(
+          key3d,
+          homeWidget['3d']?.viewpoint
+            ? homeWidget['3d']?.viewpoint.toJSON()
+            : {},
+          setOptions,
+        );
       },
     );
 
@@ -2149,7 +2304,6 @@ function usePublishStorage() {
   const key2 = 'tots_sample_table_metadata';
   const key3 = 'tots_publish_samples_mode';
   const key4 = 'tots_output_settings';
-  const key5 = 'tots_partial_plan_attributes';
 
   const { setOptions } = useContext(DialogContext);
   const {
@@ -2165,26 +2319,27 @@ function usePublishStorage() {
     setSampleTypeSelections,
     selectedService,
     setSelectedService,
-    includeFullPlan,
-    setIncludeFullPlan,
-    includeFullPlanWebMap,
-    setIncludeFullPlanWebMap,
     includePartialPlan,
     setIncludePartialPlan,
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,
+    includePartialPlanWebScene,
+    setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
-    partialPlanAttributes,
-    setPartialPlanAttributes,
+    webMapReferenceLayerSelections,
+    setWebMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
 
   type OutputSettingsType = {
-    includeFullPlan: boolean;
-    includeFullPlanWebMap: boolean;
     includePartialPlan: boolean;
     includePartialPlanWebMap: boolean;
+    includePartialPlanWebScene: boolean;
     includeCustomSampleTypes: boolean;
+    webMapReferenceLayerSelections: any[];
+    webSceneReferenceLayerSelections: any[];
   };
 
   // Retreives the selected sample layer (sketchLayer) from browser storage
@@ -2223,33 +2378,31 @@ function usePublishStorage() {
     const outputSettingsStr = readFromStorage(key4);
     if (outputSettingsStr !== null) {
       const outputSettings: OutputSettingsType = JSON.parse(outputSettingsStr);
-      setIncludeFullPlan(outputSettings.includeFullPlan);
-      setIncludeFullPlanWebMap(outputSettings.includeFullPlanWebMap);
       setIncludePartialPlan(outputSettings.includePartialPlan);
       setIncludePartialPlanWebMap(outputSettings.includePartialPlanWebMap);
+      setIncludePartialPlanWebScene(outputSettings.includePartialPlanWebScene);
       setIncludeCustomSampleTypes(outputSettings.includeCustomSampleTypes);
-    }
-
-    // set the partial plan attributes list
-    const partialAttributesStr = readFromStorage(key5);
-    if (partialAttributesStr) {
-      const partialAttributes = JSON.parse(partialAttributesStr);
-      setPartialPlanAttributes(partialAttributes as AttributesType[]);
+      setWebMapReferenceLayerSelections(
+        outputSettings.webMapReferenceLayerSelections,
+      );
+      setWebSceneReferenceLayerSelections(
+        outputSettings.webSceneReferenceLayerSelections,
+      );
     }
   }, [
     localSampleTypeInitialized,
     setIncludeCustomSampleTypes,
-    setIncludeFullPlan,
-    setIncludeFullPlanWebMap,
     setIncludePartialPlan,
     setIncludePartialPlanWebMap,
-    setPartialPlanAttributes,
+    setIncludePartialPlanWebScene,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
     setSampleTableName,
     setSampleTypeSelections,
     setSelectedService,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   ]);
 
   // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
@@ -2291,30 +2444,25 @@ function usePublishStorage() {
     if (!localSampleTypeInitialized) return;
 
     const settings: OutputSettingsType = {
-      includeFullPlan,
-      includeFullPlanWebMap,
       includePartialPlan,
       includePartialPlanWebMap,
+      includePartialPlanWebScene,
       includeCustomSampleTypes,
+      webMapReferenceLayerSelections,
+      webSceneReferenceLayerSelections,
     };
 
     writeToStorage(key4, settings, setOptions);
   }, [
-    includeFullPlan,
-    includeFullPlanWebMap,
     includePartialPlan,
     includePartialPlanWebMap,
+    includePartialPlanWebScene,
     includeCustomSampleTypes,
     localSampleTypeInitialized,
     setOptions,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   ]);
-
-  // Saves the partial plan attributes list to browser storage whenever it changers
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
-
-    writeToStorage(key5, partialPlanAttributes, setOptions);
-  }, [partialPlanAttributes, localSampleTypeInitialized, setOptions]);
 }
 
 // Uses browser storage for holding the display mode (points or polygons) selection.
@@ -2322,7 +2470,16 @@ function useDisplayModeStorage() {
   const key = 'tots_display_mode';
 
   const { setOptions } = useContext(DialogContext);
-  const { showAsPoints, setShowAsPoints } = useContext(SketchContext);
+  const {
+    displayDimensions,
+    setDisplayDimensions,
+    displayGeometryType,
+    setDisplayGeometryType,
+    terrain3dVisible,
+    setTerrain3dVisible,
+    viewUnderground3d,
+    setViewUnderground3d,
+  } = useContext(SketchContext);
 
   // Retreives display mode data from browser storage when the app loads
   const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
@@ -2333,17 +2490,46 @@ function useDisplayModeStorage() {
     setLocalDisplayModeInitialized(true);
 
     const displayModeStr = readFromStorage(key);
-    if (!displayModeStr) return;
+    if (!displayModeStr) {
+      setDisplayDimensions('2d');
+      setDisplayGeometryType('points');
+      setTerrain3dVisible(true);
+      setViewUnderground3d(false);
+      return;
+    }
 
-    const trainingMode = JSON.parse(displayModeStr);
-    setShowAsPoints(trainingMode);
-  }, [localDisplayModeInitialized, setShowAsPoints]);
+    const displayMode = JSON.parse(displayModeStr);
+
+    setDisplayDimensions(displayMode.dimensions);
+    setDisplayGeometryType(displayMode.geometryType);
+    setTerrain3dVisible(displayMode.terrain3dVisible);
+    setViewUnderground3d(displayMode.viewUnderground3d);
+  }, [
+    localDisplayModeInitialized,
+    setDisplayDimensions,
+    setDisplayGeometryType,
+    setTerrain3dVisible,
+    setViewUnderground3d,
+  ]);
 
   useEffect(() => {
     if (!localDisplayModeInitialized) return;
 
-    writeToStorage(key, showAsPoints, setOptions);
-  }, [showAsPoints, localDisplayModeInitialized, setOptions]);
+    const displayMode: object = {
+      dimensions: displayDimensions,
+      geometryType: displayGeometryType,
+      terrain3dVisible,
+      viewUnderground3d,
+    };
+    writeToStorage(key, displayMode, setOptions);
+  }, [
+    displayDimensions,
+    displayGeometryType,
+    localDisplayModeInitialized,
+    setOptions,
+    terrain3dVisible,
+    viewUnderground3d,
+  ]);
 }
 
 // Saves/Retrieves data to browser storage
@@ -2354,6 +2540,7 @@ export function useSessionStorage() {
   useReferenceLayerStorage();
   useUrlLayerStorage();
   usePortalLayerStorage();
+  useMapExtentStorage();
   useMapPositionStorage();
   useHomeWidgetStorage();
   useSamplesLayerStorage();

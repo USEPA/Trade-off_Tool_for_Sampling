@@ -85,6 +85,7 @@ jobs:
 
       - name: Build front-end files and move to server
         run: |
+          export NODE_OPTIONS="--max_old_space_size=4096"
           PUBLIC_URL="$SERVER_URL" \
             REACT_APP_ARCGIS_APP_ID="$REACT_APP_ARCGIS_APP_ID" \
             npm run build

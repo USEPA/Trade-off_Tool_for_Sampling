@@ -421,7 +421,10 @@ export function createSampleLayer(
   parentLayer: __esri.GroupLayer | null = null,
 ) {
   const layerUuid = generateUUID();
-  const graphicsLayer = new GraphicsLayer({ id: layerUuid, title: name });
+  const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
+    title: name,
+  });
   const pointsLayer = new GraphicsLayer({
     id: layerUuid + '-points',
     title: name,
@@ -806,12 +809,12 @@ export function getSampleTableColumns({
 }
 
 /**
- * Gets a point symbol representation of the provided polygon.
+ * Gets a point symbol representation of the provided polygon for 2d.
  *
  * @param polygon The polygon to be converted
  * @returns A point symbol representation of the provided polygon
  */
-export function getPointSymbol(
+function getPointSymbol2d(
   polygon: __esri.Graphic,
   symbolColor: PolygonSymbol | null = null,
 ) {
@@ -843,6 +846,89 @@ export function getPointSymbol(
 }
 
 /**
+ * Gets a point symbol representation of the provided polygon for 3d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+function getPointSymbol3d(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // mapping 2d builtin shapes to 3d builtin shapes
+  const shapeMapping: any = {
+    circle: 'circle',
+    cross: 'cross',
+    diamond: 'kite',
+    square: 'square',
+    triangle: 'triangle',
+    x: 'x',
+  };
+
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+
+      // TODO need to figure out how to handle this
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = shapeMapping[polygon.attributes.POINT_STYLE];
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'point-3d',
+    symbolLayers: [
+      {
+        type: 'icon',
+        // size:
+        material: {
+          color: symbolColor
+            ? symbolColor.color
+            : (polygon.symbol as any).symbolLayers.items[0].material.color,
+        },
+        outline: symbolColor
+          ? {
+              ...symbolColor.outline,
+              size: symbolColor.outline.width,
+            }
+          : (polygon.symbol as any).symbolLayers.items[0].outline,
+      },
+    ],
+  };
+
+  if (path) symbol.path = path;
+  else symbol.symbolLayers[0].resource = { primitive: style };
+
+  return symbol;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+export function getPointSymbol(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  let point;
+  if (polygon.symbol.type.includes('-3d')) {
+    point = getPointSymbol3d(polygon, symbolColor);
+  } else {
+    point = getPointSymbol2d(polygon, symbolColor);
+  }
+
+  return point;
+}
+
+/**
  * Converts a polygon graphic to a point graphic.
  *
  * @param polygon The polygon to be converted
@@ -858,6 +944,18 @@ export function convertToPoint(polygon: __esri.Graphic) {
     popupTemplate: polygon.popupTemplate,
     symbol,
   });
+}
+
+/**
+ * Makes all sketch buttons no longer active by removing
+ * the sketch-button-selected class.
+ */
+export function deactivateButtons() {
+  const buttons = document.querySelectorAll('.sketch-button');
+
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].classList.remove('sketch-button-selected');
+  }
 }
 
 /**
@@ -990,4 +1088,153 @@ export function createLayer({
   });
 
   return [sketchLayer, pointsLayer];
+}
+
+/**
+ * Gets the elevation layer from the map. This can be
+ * used for querying the elevation of points on the map.
+ *
+ * @param map The map object
+ * @returns Elevation layer
+ */
+export function getElevationLayer(map: __esri.Map) {
+  return map.ground.layers.find((l) => l.id === 'worldElevation');
+}
+
+/**
+ * Adds z value to every coordinate in a polygon, if necessary.
+ *
+ * @param poly Polygon to add z value to
+ * @param z The value for z
+ */
+function setPolygonZValues(poly: __esri.Polygon, z: number) {
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push([...coord, z]);
+      } else if (coord.length === 3 && !coord[2]) {
+        newCoords.push([coord[0], coord[1], z]);
+      } else {
+        newCoords.push(coord);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = true;
+}
+
+/**
+ * Sets the z values for a point or polygon. If the zRefParam
+ * is provided the z value will be the elevation at that coordinate,
+ * otherwise the z value will be the centroid of the geometry.
+ *
+ * @param map Map used for getting the elevation of a coordinate
+ * @param graphic Graphic to add z value to
+ * @param zRefParam (Optional) Point to use for getting the z value from
+ * @param elevationSampler (Optional) Elevation sampler
+ */
+export async function setZValues({
+  map,
+  graphic,
+  zRefParam = null,
+  elevationSampler = null,
+  zOverride = null,
+}: {
+  map: __esri.Map;
+  graphic: __esri.Graphic;
+  zRefParam?: __esri.Point | null;
+  elevationSampler?: __esri.ElevationSampler | null;
+  zOverride?: number | null;
+}) {
+  // get the elevation layer
+  const elevationLayer = getElevationLayer(map);
+
+  async function getZAtPoint(point: __esri.Point) {
+    if (!elevationLayer && !elevationSampler) return 0;
+
+    let geometry: __esri.Geometry;
+    if (elevationSampler) {
+      geometry = elevationSampler.queryElevation(point);
+    } else {
+      geometry = (await elevationLayer.queryElevation(point)).geometry;
+    }
+
+    return (geometry as __esri.Point).z;
+  }
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point' && !point.z) {
+    point.z = zOverride ?? (await getZAtPoint(point));
+    return;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  const zRef: __esri.Point = zRefParam ? zRefParam : poly.centroid;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (
+    graphic.geometry.type === 'polygon' &&
+    zRef &&
+    (!poly.hasZ || firstCoordinate?.length === 2)
+  ) {
+    if (elevationLayer && firstCoordinate.length === 2) {
+      const z = zOverride ?? (await getZAtPoint(zRef));
+      setPolygonZValues(poly, z);
+    } else if (firstCoordinate?.length === 3) {
+      poly.hasZ = true;
+    } else {
+      setPolygonZValues(poly, zOverride ?? 0);
+    }
+  }
+}
+
+/**
+ * Removes z values from the provided graphic. This is primarily
+ * for calling the gp server.
+ *
+ * @param graphic Graphic to remove z values from.
+ * @returns z value of the graphic that was removed
+ */
+export function removeZValues(graphic: __esri.Graphic) {
+  let z: number = 0;
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    (point as any).z = undefined;
+    point.hasZ = false;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return 0;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push(coord);
+      } else {
+        newCoords.push([coord[0], coord[1]]);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = false;
+
+  return z;
 }

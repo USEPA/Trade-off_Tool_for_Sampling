@@ -14,6 +14,7 @@ import Collection from '@arcgis/core/core/Collection';
 import Handles from '@arcgis/core/core/Handles';
 import Home from '@arcgis/core/widgets/Home';
 import Locate from '@arcgis/core/widgets/Locate';
+import Point from '@arcgis/core/geometry/Point';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
@@ -34,21 +35,18 @@ import { SelectedSampleType } from 'config/sampleAttributes';
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
   convertToPoint,
+  deactivateButtons,
   generateUUID,
   getCurrentDateTime,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { ScenarioEditsType } from 'types/Edits';
 
-// Makes all sketch buttons no longer active by removing
-// the sketch-button-selected class.
-function deactivateButtons() {
-  const buttons = document.querySelectorAll('.sketch-button');
-
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].classList.remove('sketch-button-selected');
-  }
-}
+type SketchWidgetType = {
+  '2d': Sketch;
+  '3d': Sketch;
+};
 
 // Replaces the prevClassName with nextClassName for all elements with
 // prevClassName on the DOM.
@@ -108,9 +106,10 @@ function getUpdateEventInfo(
 // --- components (MapWidgets) ---
 type Props = {
   mapView: __esri.MapView;
+  sceneView: __esri.SceneView;
 };
 
-function MapWidgets({ mapView }: Props) {
+function MapWidgets({ mapView, sceneView }: Props) {
   const { userInfo } = useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } =
     useContext(NavigationContext);
@@ -131,11 +130,12 @@ function MapWidgets({ mapView }: Props) {
     setAoiSketchLayer,
     selectedScenario,
     setSelectedScenario,
-    showAsPoints,
+    displayGeometryType,
     layers,
     setLayers,
     map,
     setSelectedSampleIds,
+    displayDimensions,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
@@ -144,50 +144,72 @@ function MapWidgets({ mapView }: Props) {
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
   useEffect(() => {
-    if (!mapView || !setHomeWidget || homeWidget) return;
+    if (!mapView || !sceneView || !setHomeWidget || homeWidget) return;
 
-    const widget = new Home({ view: mapView });
+    const widget2d = new Home({ view: mapView });
+    mapView.ui.add(widget2d, { position: 'top-right', index: 1 });
 
-    mapView.ui.add(widget, { position: 'top-right', index: 1 });
-    mapView.ui.move('zoom', 'top-right');
+    const widget3d = new Home({ view: sceneView });
+    sceneView.ui.add(widget3d, { position: 'top-right', index: 1 });
 
-    setHomeWidget(widget);
-  }, [mapView, homeWidget, setHomeWidget]);
+    setHomeWidget({
+      '2d': widget2d,
+      '3d': widget3d,
+    });
+  }, [mapView, homeWidget, setHomeWidget, sceneView]);
 
   // Creates the sketch widget used for selecting/moving/deleting samples
   // Also creates an event handler for keeping track of changes
-  const [sketchWidget, setSketchWidget] = useState<Sketch | null>(null);
+  const [sketchWidget, setSketchWidget] = useState<SketchWidgetType | null>(
+    null,
+  );
   const [updateGraphics, setUpdateGraphics] = useState<__esri.Graphic[]>([]);
   useEffect(() => {
     if (!mapView || !sketchLayer || !sketchVM || sketchWidget) return;
 
-    const widget = new Sketch({
-      availableCreateTools: [],
-      layer: sketchLayer.sketchLayer,
-      view: mapView,
-      viewModel: sketchVM,
-      visibleElements: {
-        settingsMenu: false,
-        undoRedoMenu: false,
-      },
+    function buildWidget(
+      view: __esri.MapView | __esri.SceneView,
+      layer: LayerType,
+    ) {
+      const widget = new Sketch({
+        availableCreateTools: [],
+        layer: layer.sketchLayer,
+        view,
+        viewModel: sketchVM as any,
+        visibleElements: {
+          settingsMenu: false,
+          undoRedoMenu: false,
+        },
+      });
+
+      reactiveUtils.watch(
+        () => widget.updateGraphics.length,
+        () => {
+          setUpdateGraphics(widget.updateGraphics.toArray());
+        },
+      );
+
+      return widget;
+    }
+
+    const widget2d = buildWidget(mapView, sketchLayer);
+    mapView.ui.add(widget2d, { position: 'top-right', index: 0 });
+
+    const widget3d = buildWidget(sceneView, sketchLayer);
+    sceneView.ui.add(widget3d, { position: 'top-right', index: 0 });
+
+    setSketchWidget({
+      '2d': widget2d,
+      '3d': widget3d,
     });
-
-    reactiveUtils.watch(
-      () => widget.updateGraphics.length,
-      () => {
-        setUpdateGraphics(widget.updateGraphics.toArray());
-      },
-    );
-
-    mapView.ui.add(widget, { position: 'top-right', index: 0 });
-
-    setSketchWidget(widget);
-  }, [mapView, sketchLayer, sketchVM, sketchWidget]);
+  }, [mapView, sceneView, sketchLayer, sketchVM, sketchWidget]);
 
   // Opens a popup for when multiple samples are selected at once
   useEffect(() => {
-    if (!mapView || !sketchLayer || !sketchWidget) return;
+    if (!mapView || !sceneView || !sketchLayer || !sketchWidget) return;
     if (layerProps.status !== 'success') return;
+
+    const sketchWidgetLocal = sketchWidget[displayDimensions];
 
     const handleClick = (
       ev: ReactMouseEvent<HTMLElement>,
@@ -302,7 +324,7 @@ function MapWidgets({ mapView }: Props) {
     // with the sketch tools
     const popupItems: __esri.Graphic[] = [];
     const newIds: string[] = [];
-    sketchWidget.updateGraphics.forEach((graphic: any) => {
+    sketchWidgetLocal.updateGraphics.forEach((graphic: any) => {
       popupItems.push(graphic);
 
       // get a list of graphic ids
@@ -311,9 +333,11 @@ function MapWidgets({ mapView }: Props) {
       }
     });
 
+    const view = displayDimensions === '2d' ? mapView : sceneView;
+
     // get list of graphic ids currently in the popup
     const curIds: string[] = [];
-    mapView.popup.features.forEach((feature: any) => {
+    view.popup.features.forEach((feature: any) => {
       if (feature.attributes?.PERMANENT_IDENTIFIER) {
         curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
       }
@@ -327,7 +351,7 @@ function MapWidgets({ mapView }: Props) {
     if (popupItems.length > 0 && curIds.toString() !== newIds.toString()) {
       const firstGeometry = popupItems[0].geometry as any;
       if (popupItems.length === 1) {
-        mapView.popup.open({
+        view.popup.open({
           location:
             firstGeometry.type === 'point'
               ? firstGeometry
@@ -354,7 +378,7 @@ function MapWidgets({ mapView }: Props) {
         const contentContainer = document.createElement('div');
         render(content, contentContainer);
 
-        mapView.popup.open({
+        view.popup.open({
           location:
             firstGeometry.type === 'point'
               ? firstGeometry
@@ -363,22 +387,22 @@ function MapWidgets({ mapView }: Props) {
           title: 'Edit Multiple',
         });
 
-        const deleteMultiAction = mapView.popup.actions.find(
+        const deleteMultiAction = view.popup.actions.find(
           (action) => action.id === 'delete-multi',
         );
         if (!deleteMultiAction) {
-          mapView.popup.actions.add({
+          view.popup.actions.add({
             title: 'Delete Samples',
             id: 'delete-multi',
             className: 'esri-icon-trash',
           } as __esri.ActionButton);
         }
 
-        const tableMultiAction = mapView.popup.actions.find(
+        const tableMultiAction = view.popup.actions.find(
           (action) => action.id === 'table-multi',
         );
         if (!tableMultiAction) {
-          mapView.popup.actions.add({
+          view.popup.actions.add({
             title: 'View In Table',
             id: 'table-multi',
             className: 'esri-icon-table',
@@ -387,10 +411,12 @@ function MapWidgets({ mapView }: Props) {
       }
     }
   }, [
+    displayDimensions,
     edits,
     layerProps,
     layers,
     mapView,
+    sceneView,
     setEdits,
     setSelectedSampleIds,
     sketchLayer,
@@ -419,21 +445,34 @@ function MapWidgets({ mapView }: Props) {
   useEffect(() => {
     if (!mapView || locateWidget) return;
 
-    const widget = new Locate({ view: mapView });
+    function buildWidget(view: __esri.MapView | __esri.SceneView) {
+      const widget = new Locate({ view });
 
-    // show the locate icon on success
-    widget.on('locate', (event) => {
-      replaceClassName('esri-icon-error2', 'esri-icon-locate');
-    });
+      // show the locate icon on success
+      widget.on('locate', (event) => {
+        replaceClassName('esri-icon-error2', 'esri-icon-locate');
+      });
 
-    // show the error icon on failure
-    widget.on('locate-error', (event) => {
-      replaceClassName('esri-icon-locate', 'esri-icon-error2');
-    });
+      // show the error icon on failure
+      widget.on('locate-error', (event) => {
+        replaceClassName('esri-icon-locate', 'esri-icon-error2');
+      });
 
-    mapView.ui.add(widget, { position: 'top-right', index: 2 });
-    setLocateWidget(widget);
-  }, [mapView, locateWidget]);
+      return widget;
+    }
+
+    const widget2d = buildWidget(mapView);
+    mapView.ui.add(widget2d, { position: 'top-right', index: 2 });
+    mapView.ui.move('zoom', { position: 'top-right', index: 3 });
+
+    const widget3d = buildWidget(sceneView);
+    sceneView.ui.add(widget3d, { position: 'top-right', index: 2 });
+    sceneView.ui.move('zoom', { position: 'top-right', index: 3 });
+    sceneView.ui.move('navigation-toggle', { position: 'top-right', index: 4 });
+    sceneView.ui.move('compass', { position: 'top-right', index: 5 });
+
+    setLocateWidget(widget2d);
+  }, [mapView, sceneView, locateWidget]);
 
   // Creates the SketchViewModel
   useEffect(() => {
@@ -481,12 +520,47 @@ function MapWidgets({ mapView }: Props) {
       sketchLayer?.sketchLayer?.type === 'graphics'
     ) {
       sketchVM.layer = sketchLayer.sketchLayer;
-      if (sketchWidget) sketchWidget.layer = sketchLayer.sketchLayer;
+      if (sketchWidget) sketchWidget['2d'].layer = sketchLayer.sketchLayer;
+      if (sketchWidget) sketchWidget['3d'].layer = sketchLayer.sketchLayer;
     } else {
       // disable the sketch vm for any panel other than locateSamples
       sketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
   }, [currentPanel, defaultSymbols, sketchWidget, sketchVM, sketchLayer]);
+
+  // Updates the selected layer of the sketchViewModel
+  useEffect(() => {
+    if (!sketchVM || !sketchVM.layer || !mapView || !sceneView) return;
+
+    sketchVM.polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+    sketchVM.pointSymbol = defaultSymbols.symbols['Samples'] as any;
+
+    if (displayDimensions === '2d') {
+      sketchVM.view = mapView;
+      sketchVM.layer.elevationInfo = null as any;
+      sketchVM.snappingOptions = {
+        featureSources: [],
+      } as any;
+      sketchVM.defaultCreateOptions = {
+        hasZ: false,
+      };
+      sketchVM.defaultUpdateOptions = {
+        enableZ: false,
+      };
+    } else {
+      sketchVM.view = sceneView;
+      sketchVM.layer.elevationInfo = { mode: 'absolute-height' };
+      sketchVM.snappingOptions = {
+        featureSources: [{ layer: sketchVM.layer }],
+      } as any;
+      sketchVM.defaultCreateOptions = {
+        hasZ: true,
+      };
+      sketchVM.defaultUpdateOptions = {
+        enableZ: true,
+      };
+    }
+  }, [defaultSymbols, mapView, sceneView, displayDimensions, sketchVM]);
 
   // Updates the selected layer of the aoiSketchViewModel
   useEffect(() => {
@@ -504,11 +578,45 @@ function MapWidgets({ mapView }: Props) {
       aoiSketchVM.pointSymbol = defaultSymbols.symbols[
         'Area of Interest'
       ] as any;
+
+      if (displayDimensions === '2d') {
+        aoiSketchVM.view = mapView;
+        aoiSketchVM.layer.elevationInfo = null as any;
+        aoiSketchVM.snappingOptions = {
+          featureSources: [],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: false,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: false,
+        };
+      } else {
+        aoiSketchVM.view = sceneView;
+        aoiSketchVM.layer.elevationInfo = { mode: 'absolute-height' };
+        aoiSketchVM.snappingOptions = {
+          featureSources: [{ layer: aoiSketchVM.layer }],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: true,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: true,
+        };
+      }
     } else {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
-  }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
+  }, [
+    aoiSketchLayer,
+    aoiSketchVM,
+    currentPanel,
+    defaultSymbols,
+    displayDimensions,
+    mapView,
+    sceneView,
+  ]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const setupEvents = useCallback(
@@ -517,11 +625,30 @@ function MapWidgets({ mapView }: Props) {
       setter: Dispatch<SetStateAction<boolean>>,
       sketchEventSetter: Dispatch<any>,
     ) => {
+      let firstPoint: __esri.Point | null = null;
+
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
+        if (!graphic) return;
 
-        // place the graphic on the map when the drawing is complete
-        if (event.state === 'complete') {
+        if (!firstPoint) {
+          if (graphic.geometry.type === 'point') {
+            firstPoint = graphic.geometry as __esri.Point;
+          }
+          if (graphic.geometry.type === 'polygon') {
+            const poly = graphic.geometry as __esri.Polygon;
+            const firstCoordinate = poly.rings?.[0]?.[0];
+            firstPoint = new Point({
+              x: firstCoordinate[0],
+              y: firstCoordinate[1],
+              spatialReference: {
+                wkid: poly.spatialReference.wkid,
+              },
+            });
+          }
+        }
+
+        async function processSketchEvent() {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
@@ -570,11 +697,20 @@ function MapWidgets({ mapView }: Props) {
             getPopupTemplate(layerType, getTrainingMode()),
           );
 
+          // update the z values
+          await setZValues({
+            map: sketchViewModel.view.map,
+            graphic,
+            zRefParam: firstPoint,
+          });
+
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
             createBuffer(graphic);
           }
+
+          graphic.symbol = sketchViewModel.polygonSymbol;
 
           if (id !== 'sampling-mask') {
             // find the points version of the layer
@@ -588,13 +724,20 @@ function MapWidgets({ mapView }: Props) {
           }
 
           // save the graphic
-          sketchViewModel.complete();
           sketchEventSetter(event);
+
+          firstPoint = null;
 
           if (id !== 'sampling-mask') {
             // start next graphic
             sketchViewModel.create(graphic.attributes.ShapeType);
           }
+        }
+
+        // place the graphic on the map when the drawing is complete
+        if (event.state === 'complete') {
+          sketchViewModel.complete();
+          processSketchEvent();
         }
       });
 
@@ -907,7 +1050,8 @@ function MapWidgets({ mapView }: Props) {
     }
 
     sketchVM.layer = sketchLayer.sketchLayer;
-    if (sketchWidget) sketchWidget.layer = sketchLayer.sketchLayer;
+    if (sketchWidget) sketchWidget['2d'].layer = sketchLayer.sketchLayer;
+    if (sketchWidget) sketchWidget['3d'].layer = sketchLayer.sketchLayer;
   }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer, sketchWidget]);
 
   // Updates the popupTemplates when trainingMode is toggled on/off
@@ -971,9 +1115,23 @@ function MapWidgets({ mapView }: Props) {
           const handle = layerView.highlight(highlightGraphics);
           handles.add(handle, group);
         });
+
+        sceneView.whenLayerView(tempLayer).then((layerView) => {
+          const handle = layerView.highlight(highlightGraphics);
+          handles.add(handle, group);
+        });
       });
     }
-  }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
+  }, [
+    displayDimensions,
+    map,
+    handles,
+    edits,
+    selectedScenario,
+    mapView,
+    sceneView,
+    trainingMode,
+  ]);
 
   useEffect(() => {
     if (!map) {
@@ -1008,6 +1166,11 @@ function MapWidgets({ mapView }: Props) {
         const handle = layerView.highlight(itemsToHighlight);
         handles.add(handle, group);
       });
+
+      sceneView.whenLayerView(tempLayer).then((layerView) => {
+        const handle = layerView.highlight(itemsToHighlight);
+        handles.add(handle, group);
+      });
     }
 
     const samples: any = {};
@@ -1029,7 +1192,15 @@ function MapWidgets({ mapView }: Props) {
       highlightGraphics(layer.sketchLayer, sampleUuids);
       highlightGraphics(layer.pointsLayer, sampleUuids);
     });
-  }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
+  }, [
+    map,
+    handles,
+    layers,
+    mapView,
+    sceneView,
+    selectedSampleIds,
+    displayGeometryType,
+  ]);
 
   const { setTablePanelExpanded } = useContext(NavigationContext);
 
@@ -1091,46 +1262,61 @@ function MapWidgets({ mapView }: Props) {
 
     // close the popup
     mapView?.popup.close();
+    sceneView?.popup.close();
 
     setSamplesToDelete(null);
-  }, [edits, setEdits, layers, mapView, samplesToDelete]);
+  }, [edits, setEdits, layers, mapView, sceneView, samplesToDelete]);
 
   const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
   useEffect(() => {
-    if (!mapView || !sketchVM || popupActionsInitialized) return;
+    if (!mapView || !sceneView || !sketchVM || popupActionsInitialized) return;
 
     setPopupActionsInitialized(true);
 
-    const tempMapView = mapView as any;
-    tempMapView.popup._displayActionTextLimit = 1;
+    function setupPopupWatchers(
+      view: __esri.MapView | __esri.SceneView,
+      sketchVM: SketchViewModel,
+    ) {
+      const tempMapView = view as any;
+      tempMapView.popup._displayActionTextLimit = 1;
 
-    mapView.popup.on('trigger-action', (event) => {
-      // Workaround for target not being on the PopupTriggerActionEvent
-      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
-        setSamplesToDelete([mapView.popup.selectedFeature]);
-      }
-      if (event.action.id === 'delete-multi') {
-        setSamplesToDelete(sketchVM.updateGraphics.toArray());
-      }
-      if (['table', 'table-multi'].includes(event.action.id)) {
-        setTablePanelExpanded(true);
-      }
-    });
+      view.popup.on('trigger-action', (event) => {
+        // Workaround for target not being on the PopupTriggerActionEvent
+        if (event.action.id === 'delete' && view?.popup?.selectedFeature) {
+          setSamplesToDelete([view.popup.selectedFeature]);
+        }
+        if (event.action.id === 'delete-multi') {
+          setSamplesToDelete(sketchVM.updateGraphics.toArray());
+        }
+        if (['table', 'table-multi'].includes(event.action.id)) {
+          setTablePanelExpanded(true);
+        }
+      });
 
-    mapView.popup.watch('selectedFeature', (graphic) => {
-      if (mapView.popup.title !== 'Edit Multiple') {
-        const deleteMultiAction = mapView.popup.actions.find(
-          (action) => action.id === 'delete-multi',
-        );
-        if (deleteMultiAction) mapView.popup.actions.remove(deleteMultiAction);
+      view.popup.watch('selectedFeature', (graphic) => {
+        if (view.popup.title !== 'Edit Multiple') {
+          const deleteMultiAction = view.popup.actions.find(
+            (action) => action.id === 'delete-multi',
+          );
+          if (deleteMultiAction) view.popup.actions.remove(deleteMultiAction);
 
-        const tableMultiAction = mapView.popup.actions.find(
-          (action) => action.id === 'table-multi',
-        );
-        if (tableMultiAction) mapView.popup.actions.remove(tableMultiAction);
-      }
-    });
-  }, [mapView, popupActionsInitialized, setTablePanelExpanded, sketchVM]);
+          const tableMultiAction = view.popup.actions.find(
+            (action) => action.id === 'table-multi',
+          );
+          if (tableMultiAction) view.popup.actions.remove(tableMultiAction);
+        }
+      });
+    }
+
+    setupPopupWatchers(mapView, sketchVM);
+    setupPopupWatchers(sceneView, sketchVM);
+  }, [
+    mapView,
+    popupActionsInitialized,
+    sceneView,
+    setTablePanelExpanded,
+    sketchVM,
+  ]);
 
   return null;
 }

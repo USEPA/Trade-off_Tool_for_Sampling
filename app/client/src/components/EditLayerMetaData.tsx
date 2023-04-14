@@ -270,6 +270,11 @@ function EditScenario({
         scenarioDescription: scenarioDescription,
         layers: newLayers,
         table: null,
+        referenceLayersTable: {
+          id: -1,
+          referenceLayers: [],
+        },
+        customAttributes: [],
       };
 
       // make a copy of the edits context variable

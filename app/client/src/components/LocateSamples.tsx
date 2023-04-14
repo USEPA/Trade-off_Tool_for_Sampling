@@ -60,6 +60,8 @@ import {
   getPointSymbol,
   getScenarios,
   getSketchableLayers,
+  removeZValues,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { geoprocessorFetch } from 'utils/fetchUtils';
@@ -342,12 +344,12 @@ function SketchButton({
 const headerContainer = css`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-evenly;
+`;
 
-  h2 {
-    margin: 0;
-    padding: 0;
-  }
+const headerStyles = css`
+  margin: 0;
+  padding: 0;
 `;
 
 const iconButtonContainerStyles = css`
@@ -387,15 +389,6 @@ const deleteButtonStyles = css`
   }
 `;
 
-const trainingStyles = css`
-  margin-left: 25px;
-  font-size: 0.875rem;
-
-  input {
-    margin-right: 5px;
-  }
-`;
-
 const lineSeparatorStyles = css`
   border-bottom: 1px solid #d8dfe2;
 `;
@@ -419,12 +412,10 @@ type GenerateRandomType = {
 function LocateSamples() {
   const { userInfo } = useContext(AuthenticationContext);
   const { setOptions } = useContext(DialogContext);
-  const { setGoTo, setGoToOptions, trainingMode, setTrainingMode } =
+  const { setGoTo, setGoToOptions, trainingMode } =
     useContext(NavigationContext);
   const { setSampleTypeSelections } = useContext(PublishContext);
   const {
-    autoZoom,
-    setAutoZoom,
     defaultSymbols,
     setDefaultSymbolSingle,
     edits,
@@ -448,7 +439,9 @@ function LocateSamples() {
     userDefinedAttributes,
     setUserDefinedAttributes,
     allSampleOptions,
-    showAsPoints,
+    displayGeometryType,
+    sceneView,
+    mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
   const { createBuffer } = useGeometryTools();
@@ -521,7 +514,7 @@ function LocateSamples() {
 
   // Handle a user clicking one of the sketch buttons
   function sketchButtonClick(label: string) {
-    if (!sketchVM || !map || !sketchLayer) return;
+    if (!sketchVM || !map || !sketchLayer || !sceneView || !mapView) return;
 
     // put the sketch layer on the map, if it isn't there already and
     // is not part of a group layer
@@ -547,6 +540,7 @@ function LocateSamples() {
     // update the sketchVM symbol
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
+
     sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
     sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
 
@@ -619,9 +613,16 @@ function LocateSamples() {
 
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
+        const originalValuesZ: number[] = [];
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
-          graphics = aoiMaskLayer.sketchLayer.graphics.toArray();
+          const fullGraphics = aoiMaskLayer.sketchLayer.graphics.clone();
+          fullGraphics.forEach((graphic) => {
+            const z = removeZValues(graphic);
+            originalValuesZ.push(z);
+          });
+
+          graphics = fullGraphics.toArray();
         }
 
         // create a feature set for communicating with the GPServer
@@ -663,8 +664,9 @@ function LocateSamples() {
         };
 
         // determine the number of service calls needed to satisfy the request
-        const intNumberRandomSamples = parseInt(numberRandomSamples);
-        const iterations = Math.ceil(intNumberRandomSamples / maxRecordCount);
+        const intNumberRandomSamples = parseInt(numberRandomSamples); // 7
+        const samplesPerCall = Math.floor(maxRecordCount / graphics.length);
+        const iterations = Math.ceil(intNumberRandomSamples / samplesPerCall);
 
         // fire off the generateRandom requests
         const requests = [];
@@ -673,7 +675,7 @@ function LocateSamples() {
         for (let i = 0; i < iterations; i++) {
           // determine the number of samples for this request
           numSamples =
-            numSamplesLeft > maxRecordCount ? maxRecordCount : numSamplesLeft;
+            numSamplesLeft > samplesPerCall ? samplesPerCall : numSamplesLeft;
 
           const props = {
             f: 'json',
@@ -694,12 +696,13 @@ function LocateSamples() {
           numSamplesLeft = numSamplesLeft - numSamples;
         }
         Promise.all(requests)
-          .then((responses: any) => {
+          .then(async (responses: any) => {
             let res;
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
+            const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -731,8 +734,16 @@ function LocateSamples() {
                 symbol = defaultSymbols.symbols[sampleType.value];
               }
 
+              let originalZIndex = 0;
+              const graphicsPerAoi = results.features.length / numberOfAois;
+
               // build an array of graphics to draw on the map
-              results.features.forEach((feature: any) => {
+              let index = 0;
+              for (const feature of results.features) {
+                if (index !== 0 && index % graphicsPerAoi === 0)
+                  originalZIndex += 1;
+
+                const originalZ = originalValuesZ[originalZIndex];
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[typeuuid],
@@ -756,9 +767,20 @@ function LocateSamples() {
                   popupTemplate,
                 });
 
+                await setZValues({
+                  map,
+                  graphic: poly,
+                  zOverride:
+                    generateRandomElevationMode === 'aoiElevation'
+                      ? originalZ
+                      : null,
+                });
+
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
-              });
+
+                index += 1;
+              }
             }
 
             // put the graphics on the map
@@ -1133,6 +1155,8 @@ function LocateSamples() {
   const [generateRandomMode, setGenerateRandomMode] = useState<
     'draw' | 'file' | ''
   >('');
+  const [generateRandomElevationMode, setGenerateRandomElevationMode] =
+    useState<'ground' | 'aoiElevation'>('aoiElevation');
   const [selectedAoiFile, setSelectedAoiFile] = useState<LayerType | null>(
     null,
   );
@@ -1177,32 +1201,13 @@ function LocateSamples() {
     <div css={panelContainer}>
       <div>
         <div css={sectionContainer}>
+          <h2 css={headerStyles}>Create Plan</h2>
           <div css={headerContainer}>
-            <h2>Create Plan</h2>
             <button css={deleteButtonStyles} onClick={startOver}>
               <i className="fas fa-redo-alt" />
               <br />
               Start Over
             </button>
-          </div>
-          <div css={headerContainer}>
-            <div css={trainingStyles}>
-              <input
-                id="training-mode-toggle"
-                type="checkbox"
-                checked={trainingMode}
-                onChange={(ev) => setTrainingMode(!trainingMode)}
-              />
-              <label htmlFor="training-mode-toggle">Training Mode</label>
-              <br />
-              <input
-                id="auto-zoom-toggle"
-                type="checkbox"
-                checked={autoZoom}
-                onChange={(ev) => setAutoZoom(!autoZoom)}
-              />
-              <label htmlFor="auto-zoom-toggle">Auto Zoom</label>
-            </div>
             <button
               css={deleteButtonStyles}
               onClick={() => {
@@ -1813,7 +1818,10 @@ function LocateSamples() {
                             }
 
                             // show the newly added layer
-                            if (showAsPoints && sketchLayer.pointsLayer) {
+                            if (
+                              displayGeometryType === 'points' &&
+                              sketchLayer.pointsLayer
+                            ) {
                               sketchLayer.pointsLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;
@@ -1893,8 +1901,13 @@ function LocateSamples() {
                           const clonedPointGraphics: __esri.Graphic[] = [];
                           sketchLayer.sketchLayer.graphics.forEach(
                             (graphic) => {
+                              const uuid = generateUUID();
                               const clonedGraphic = new Graphic({
-                                attributes: graphic.attributes,
+                                attributes: {
+                                  ...graphic.attributes,
+                                  GLOBALID: uuid,
+                                  PERMANENT_IDENTIFIER: uuid,
+                                },
                                 geometry: graphic.geometry,
                                 popupTemplate: graphic.popupTemplate,
                                 symbol: graphic.symbol,
@@ -2313,6 +2326,59 @@ function LocateSamples() {
                                     setNumberRandomSamples(ev.target.value)
                                   }
                                 />
+
+                                <div>
+                                  <input
+                                    id="use-aoi-elevation"
+                                    type="radio"
+                                    name="elevation-mode"
+                                    value="Use AOI Elevation"
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
+                                    checked={
+                                      generateRandomElevationMode ===
+                                      'aoiElevation'
+                                    }
+                                    onChange={(ev) => {
+                                      setGenerateRandomElevationMode(
+                                        'aoiElevation',
+                                      );
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor="use-aoi-elevation"
+                                    css={radioLabelStyles}
+                                  >
+                                    Use AOI Elevation
+                                  </label>
+                                </div>
+                                <div>
+                                  <input
+                                    id="snap-to-ground"
+                                    type="radio"
+                                    name="elevation-mode"
+                                    value="Snap to Ground"
+                                    disabled={
+                                      generateRandomResponse.status ===
+                                      'fetching'
+                                    }
+                                    checked={
+                                      generateRandomElevationMode === 'ground'
+                                    }
+                                    onChange={(ev) => {
+                                      setGenerateRandomElevationMode('ground');
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor="snap-to-ground"
+                                    css={radioLabelStyles}
+                                  >
+                                    Snap to Ground
+                                  </label>
+                                </div>
+
                                 {generateRandomResponse.status === 'success' &&
                                   sketchLayer &&
                                   generateRandomSuccessMessage(

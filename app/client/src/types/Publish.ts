@@ -1,3 +1,5 @@
+import { PortalLayerTypes, UrlLayerTypes } from 'types/Layer';
+
 export type SampleTypeOption = {
   label: string;
   value: string | null;
@@ -30,3 +32,33 @@ export type AttributesType = {
   length: null | number;
   domain: null | Domain;
 };
+
+export type ReferenceLayerSelections =
+  | {
+      id: string;
+      label: string;
+      layerType: PortalLayerTypes;
+      onWebMap: number;
+      onWebScene: number;
+      type: 'arcgis';
+      value: string;
+    }
+  | {
+      id: string;
+      label: string;
+      layerType: string;
+      onWebMap: number;
+      onWebScene: number;
+      type: 'url';
+      urlType: UrlLayerTypes;
+      value: string;
+    }
+  | {
+      id: string;
+      label: string;
+      layer: any;
+      onWebMap: number;
+      onWebScene: number;
+      type: 'file';
+      value: string;
+    };

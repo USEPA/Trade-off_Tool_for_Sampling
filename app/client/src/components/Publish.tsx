@@ -10,6 +10,7 @@ import React, {
 import { css } from '@emotion/react';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import Portal from '@arcgis/core/portal/Portal';
 // components
 import {
   EditCustomSampleTypesTable,
@@ -23,7 +24,7 @@ import ShowLessMore from 'components/ShowLessMore';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import { defaultPlanAttributes, PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -107,6 +108,10 @@ const layerInfo = css`
   padding-bottom: 0.5em;
 `;
 
+const totsOutputContainer = css`
+  padding-bottom: 1.5em;
+`;
+
 const checkedStyles = css`
   color: green;
   margin-right: 10px;
@@ -123,28 +128,28 @@ const webMapContainerCheckboxStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
-  const {
-    oAuthInfo,
-    portal,
-    signedIn, //
-  } = useContext(AuthenticationContext);
+  const { oAuthInfo, portal, setSignedIn, setPortal, signedIn } = useContext(
+    AuthenticationContext,
+  );
   const { goToOptions, setGoToOptions } = useContext(NavigationContext);
   const {
-    publishSamplesMode,
-    publishSampleTableMetaData,
-    sampleTableDescription,
-    setSampleTableDescription,
-    sampleTableName,
-    setSampleTableName,
-    sampleTypeSelections,
-    selectedService,
-    setSelectedService,
+    includeCustomSampleTypes,
     includeFullPlan,
     includeFullPlanWebMap,
     includePartialPlan,
     includePartialPlanWebMap,
-    includeCustomSampleTypes,
-    partialPlanAttributes,
+    includePartialPlanWebScene,
+    publishSamplesMode,
+    publishSampleTableMetaData,
+    sampleTableDescription,
+    sampleTableName,
+    sampleTypeSelections,
+    selectedService,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSelectedService,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
     defaultSymbols,
@@ -152,6 +157,7 @@ function Publish() {
     setEdits,
     layers,
     setLayers,
+    map,
     sampleAttributes,
     selectedScenario,
     setSelectedScenario,
@@ -190,9 +196,33 @@ function Publish() {
     // have the user login if necessary
     if (!portal || !signedIn) {
       setGoToOptions({ continuePublish: true });
-      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`, {
+        oAuthPopupConfirmation: false,
+      })
+        .then(() => {
+          setSignedIn(true);
+
+          const portal = new Portal();
+          portal.authMode = 'immediate';
+          portal.load().then(() => {
+            setPortal(portal);
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          setSignedIn(false);
+          setPortal(null);
+        });
     }
-  }, [setGoToOptions, portal, signedIn, oAuthInfo, publishButtonClicked]);
+  }, [
+    oAuthInfo,
+    portal,
+    publishButtonClicked,
+    setGoToOptions,
+    setPortal,
+    setSignedIn,
+    signedIn,
+  ]);
 
   // Check if the scenario name is available
   const [hasNameBeenChecked, setHasNameBeenChecked] = useState(false);
@@ -320,7 +350,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishFullPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -478,16 +508,23 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includeFullPlanWebMap,
-      table: editsScenario.table,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includeFullPlanWebMap,
+        createWebScene: false,
+        webMapReferenceLayerSelections: [],
+        webSceneReferenceLayerSelections: [],
       },
     })
       .then((res: any) => {
@@ -813,6 +850,7 @@ function Publish() {
     includeFullPlanWebMap,
     includePartialPlan,
     setLayers,
+    map,
     portal,
     layers,
     layerProps,
@@ -829,7 +867,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishPartialPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -927,6 +965,12 @@ function Publish() {
       published: [],
     };
 
+    // get the attributes to be published
+    const attributesToInclude = [
+      ...defaultPlanAttributes,
+      ...editsScenario.customAttributes,
+    ];
+
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
     editsScenario.layers.forEach((layer) => {
@@ -943,7 +987,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -958,7 +1003,9 @@ function Publish() {
           attributes,
         });
       });
-      layer.updates.forEach((item) => {
+
+      const combinedUpdates = [...layer.updates, ...layer.published];
+      combinedUpdates.forEach((item) => {
         let attributes: any = {};
         if (publishLayer?.sketchLayer.type === 'graphics') {
           const graphic = publishLayer.sketchLayer.graphics.find(
@@ -969,7 +1016,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -992,38 +1040,32 @@ function Publish() {
       });
     });
 
-    if (
-      layerEdits.adds.length === 0 &&
-      layerEdits.updates.length === 0 &&
-      layerEdits.deletes.length === 0
-    ) {
-      setPublishPartialResponse({
-        status: 'success',
-        summary: { success: '', failed: '' },
-        rawData: {},
-      });
-      return;
-    } else {
-      setPublishPartialResponse({
-        status: 'fetching',
-        summary: { success: '', failed: '' },
-        rawData: null,
-      });
-    }
+    setPublishPartialResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includePartialPlanWebMap,
-      table: editsScenario.table,
-      attributesToInclude: partialPlanAttributes,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
+      },
+      layerProps,
+      attributesToInclude,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includePartialPlanWebMap,
+        createWebScene: includePartialPlanWebScene,
+        webMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
       },
     })
       .then((res: any) => {
@@ -1038,11 +1080,8 @@ function Publish() {
         };
         const changes: PublishResults = {};
 
-        res.edits.forEach((layerRes: any, index: number) => {
-          // odd layers are points layers so ignore those
-          const isOdd = index % 2 === 1;
-          if (isOdd) return;
-          if (layerRes.id === res.table.id) return;
+        res.edits.forEach((layerRes: any) => {
+          if (layerRes.id !== 0) return;
 
           // need to loop through each array and check the success flag
           if (layerRes.addResults) {
@@ -1052,10 +1091,12 @@ function Publish() {
               // update the edits arrays
               const origItem = layerEdits.adds[index];
               const decisionUUID = origItem.attributes.DECISIONUNITUUID;
+              const permanentId = origItem.attributes.PERMANENT_IDENTIFIER;
               if (item.success) {
                 const type = origItem.attributes.TYPE;
                 origItem.attributes = { ...sampleAttributes[type] };
                 origItem.attributes.DECISIONUNITUUID = decisionUUID;
+                origItem.attributes.PERMANENT_IDENTIFIER = permanentId;
                 origItem.attributes.OBJECTID = item.objectId;
                 origItem.attributes.GLOBALID = item.globalId;
 
@@ -1350,16 +1391,19 @@ function Publish() {
       });
   }, [
     edits,
-    setEdits,
     includePartialPlanWebMap,
-    setLayers,
-    partialPlanAttributes,
-    portal,
+    includePartialPlanWebScene,
     layers,
     layerProps,
+    map,
+    portal,
     sampleAttributes,
     selectedScenario,
+    setEdits,
+    setLayers,
     setSelectedScenario,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   ]);
 
   const [publishSamplesResponse, setPublishSamplesResponse] =
@@ -1847,7 +1891,7 @@ function Publish() {
 
       <div>
         <h3>Publish Summary</h3>
-        <p>
+        <div css={totsOutputContainer}>
           <strong>
             {includePartialPlan ? (
               <i className="fas fa-check" css={checkedStyles}></i>
@@ -1857,19 +1901,55 @@ function Publish() {
             Include Tailored TOTS Output Files:
           </strong>
           {includePartialPlan && (
-            <Fragment>
-              <br />
-              <strong css={webMapContainerCheckboxStyles}>
-                {includePartialPlanWebMap ? (
-                  <i className="fas fa-check" css={checkedStyles}></i>
-                ) : (
-                  <i className="fas fa-times" css={unCheckedStyles}></i>
-                )}
-                Include Web Map:
-              </strong>
-            </Fragment>
+            <div>
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebMap ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Map:
+                </strong>
+              </div>
+              {webMapReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webMapReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebScene ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Scene:
+                </strong>
+              </div>
+              {webSceneReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webSceneReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
-        </p>
+        </div>
 
         {includeCustomSampleTypes && (
           <div>
