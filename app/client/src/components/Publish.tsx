@@ -1091,10 +1091,12 @@ function Publish() {
               // update the edits arrays
               const origItem = layerEdits.adds[index];
               const decisionUUID = origItem.attributes.DECISIONUNITUUID;
+              const permanentId = origItem.attributes.PERMANENT_IDENTIFIER;
               if (item.success) {
                 const type = origItem.attributes.TYPE;
                 origItem.attributes = { ...sampleAttributes[type] };
                 origItem.attributes.DECISIONUNITUUID = decisionUUID;
+                origItem.attributes.PERMANENT_IDENTIFIER = permanentId;
                 origItem.attributes.OBJECTID = item.objectId;
                 origItem.attributes.GLOBALID = item.globalId;
 

@@ -1736,7 +1736,10 @@ function buildTableEdits({
     // build the deletes array
     if (table?.sampleTypes) {
       Object.keys(table.sampleTypes).forEach((key) => {
-        if (!sampleTypes.hasOwnProperty(key)) {
+        if (
+          !sampleTypes.hasOwnProperty(key) &&
+          table.sampleTypes[key]?.OBJECTID
+        ) {
           deletes.push(table.sampleTypes[key].OBJECTID);
         }
       });
