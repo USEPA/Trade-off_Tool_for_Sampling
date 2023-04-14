@@ -1901,8 +1901,13 @@ function LocateSamples() {
                           const clonedPointGraphics: __esri.Graphic[] = [];
                           sketchLayer.sketchLayer.graphics.forEach(
                             (graphic) => {
+                              const uuid = generateUUID();
                               const clonedGraphic = new Graphic({
-                                attributes: graphic.attributes,
+                                attributes: {
+                                  ...graphic.attributes,
+                                  GLOBALID: uuid,
+                                  PERMANENT_IDENTIFIER: uuid,
+                                },
                                 geometry: graphic.geometry,
                                 popupTemplate: graphic.popupTemplate,
                                 symbol: graphic.symbol,
