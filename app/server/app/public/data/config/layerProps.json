@@ -115,6 +115,17 @@
       "defaultValue": null
     },
     {
+      "name": "AC",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Equivalent TOTS Samples",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
       "name": "TTPK",
       "type": "esriFieldTypeDouble",
       "actualType": "double",
@@ -370,6 +381,18 @@
       "editable": false,
       "domain": null,
       "defaultValue": 0
+    },
+    {
+      "name": "ID",
+      "type": "esriFieldTypeString",
+      "actualType": "nvarchar",
+      "alias": "ID",
+      "sqlType": "sqlTypeNVarchar",
+      "length": 5000,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
     }
   ],
   "additionalTableFields": [

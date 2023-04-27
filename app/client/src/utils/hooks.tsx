@@ -425,8 +425,13 @@ export function useGeometryTools() {
   const sampleValidation: (
     graphics: __esri.Graphic[],
     isFullGraphic?: boolean,
+    hasAllAttributes?: boolean,
   ) => SampleIssuesOutput = useCallback(
-    (graphics: __esri.Graphic[], isFullGraphic: boolean = false) => {
+    (
+      graphics: __esri.Graphic[],
+      isFullGraphic: boolean = false,
+      hasAllAttributes: boolean = true,
+    ) => {
       let areaOutOfTolerance = false;
       let attributeMismatch = false;
 
@@ -491,6 +496,8 @@ export function useGeometryTools() {
             ];
           Object.keys(predefinedAttributes).forEach((key) => {
             if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
+            if (!hasAllAttributes && !graphic.attributes.hasOwnProperty(key))
+              return;
             if (
               graphic.attributes.hasOwnProperty(key) &&
               predefinedAttributes[key] === graphic.attributes[key]
