@@ -1620,7 +1620,7 @@ function ResultCard({ result }: ResultCardProps) {
       // validate the area and attributes of features of the uploads. If there is an
       // issue, display a popup asking the user if they would like the samples to be updated.
       if (zoomToGraphics.length > 0) {
-        const output = sampleValidation(zoomToGraphics, true);
+        const output = sampleValidation(zoomToGraphics, true, false);
 
         if (output?.areaOutOfTolerance || output?.attributeMismatch) {
           setOptions({
