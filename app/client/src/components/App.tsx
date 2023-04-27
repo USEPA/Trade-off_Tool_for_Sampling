@@ -56,7 +56,7 @@ declare global {
   }
 }
 
-const gloablStyles = css`
+const globalStyles = (toolbarHeight: number) => css`
   html {
     /* overwrite EPA's html font-size so rem units are based on 16px */
     font-size: 100%;
@@ -99,6 +99,11 @@ const gloablStyles = css`
   .esri-popup__main-container {
     max-height: 465px !important;
     min-width: 460px !important;
+  }
+
+  .esri-attribution {
+    position: absolute;
+    bottom: ${toolbarHeight}px !important;
   }
 
   .esri-popup__action-text {
@@ -270,6 +275,7 @@ function App() {
   } = useContext(NavigationContext);
   const {
     displayDimensions,
+    displayDimensionsChanged,
     layers,
     mapView,
     sceneView,
@@ -478,7 +484,9 @@ function App() {
 
   return (
     <Fragment>
-      <Global styles={gloablStyles} />
+      <Global
+        styles={globalStyles(displayDimensionsChanged ? toolbarHeight : 0)}
+      />
 
       <div className="tots" ref={totsRef}>
         <ErrorBoundary>

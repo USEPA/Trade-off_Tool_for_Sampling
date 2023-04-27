@@ -2480,6 +2480,7 @@ function useDisplayModeStorage() {
   const {
     displayDimensions,
     setDisplayDimensions,
+    setDisplayDimensionsChanged,
     displayGeometryType,
     setDisplayGeometryType,
     terrain3dVisible,
@@ -2508,12 +2509,14 @@ function useDisplayModeStorage() {
     const displayMode = JSON.parse(displayModeStr);
 
     setDisplayDimensions(displayMode.dimensions);
+    if (displayMode.dimensions === '3d') setDisplayDimensionsChanged(true);
     setDisplayGeometryType(displayMode.geometryType);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
   }, [
     localDisplayModeInitialized,
     setDisplayDimensions,
+    setDisplayDimensionsChanged,
     setDisplayGeometryType,
     setTerrain3dVisible,
     setViewUnderground3d,
