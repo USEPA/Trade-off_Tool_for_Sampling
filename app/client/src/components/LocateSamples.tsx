@@ -1907,6 +1907,8 @@ function LocateSamples() {
                                   ...graphic.attributes,
                                   GLOBALID: uuid,
                                   PERMANENT_IDENTIFIER: uuid,
+                                  DECISIONUNIT: tempLayer.name,
+                                  DECISIONUNITUUID: tempLayer.uuid,
                                 },
                                 geometry: graphic.geometry,
                                 popupTemplate: graphic.popupTemplate,
