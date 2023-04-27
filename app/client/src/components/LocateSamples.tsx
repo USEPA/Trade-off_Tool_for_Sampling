@@ -149,6 +149,11 @@ function activateSketchButton(id: string) {
 }
 
 // --- styles (SketchButton) ---
+const buttonContainerStyles = css`
+  display: flex;
+  align-items: end;
+`;
+
 const panelContainer = css`
   display: flex;
   flex-direction: column;
@@ -1570,117 +1575,14 @@ function LocateSamples() {
               <div css={iconButtonContainerStyles}>
                 <div css={verticalCenterTextStyles}>
                   <label htmlFor="sampling-layer-select-input">
-                    Active Sampling Layer
+                    Active
+                    <br />
+                    Sampling Layer
                   </label>
                 </div>
-                <div>
+                <div css={buttonContainerStyles}>
                   {sketchLayer && (
                     <Fragment>
-                      <button
-                        css={iconButtonStyles}
-                        title="Delete Layer"
-                        onClick={() => {
-                          // remove the layer from layers
-                          setLayers((layers) => {
-                            return layers.filter(
-                              (layer) => layer.layerId !== sketchLayer.layerId,
-                            );
-                          });
-
-                          const parentLayer = sketchLayer.parentLayer;
-                          if (parentLayer) {
-                            // remove the scenario from edits
-                            setEdits((edits) => {
-                              const index = edits.edits.findIndex(
-                                (edit) => edit.layerId === parentLayer.id,
-                              );
-
-                              const editedScenario = edits.edits[
-                                index
-                              ] as ScenarioEditsType;
-                              editedScenario.layers =
-                                editedScenario.layers.filter(
-                                  (layer) =>
-                                    layer.layerId !== sketchLayer.layerId,
-                                );
-
-                              return {
-                                count: edits.count + 1,
-                                edits: [
-                                  ...edits.edits.slice(0, index),
-                                  editedScenario,
-                                  ...edits.edits.slice(index + 1),
-                                ],
-                              };
-                            });
-
-                            if (sketchLayer.sketchLayer)
-                              parentLayer.remove(sketchLayer.sketchLayer);
-                            if (sketchLayer.pointsLayer)
-                              parentLayer.remove(sketchLayer.pointsLayer);
-                          } else {
-                            // remove the scenario from edits
-                            setEdits((edits) => {
-                              return {
-                                count: edits.count + 1,
-                                edits: edits.edits.filter(
-                                  (item) =>
-                                    item.layerId !== sketchLayer.layerId,
-                                ),
-                              };
-                            });
-                          }
-
-                          // select the next available layer
-                          let newSketchLayerIndex: number = -1;
-
-                          // check in the selected scenario first, then in the root of edits
-                          if (selectedScenario) {
-                            const index = selectedScenario.layers.findIndex(
-                              (layer) => layer.layerId !== sketchLayer.layerId,
-                            );
-                            if (index > -1) {
-                              newSketchLayerIndex = layers.findIndex(
-                                (layer) =>
-                                  layer.layerId ===
-                                  selectedScenario.layers[index].layerId,
-                              );
-                            }
-                          }
-                          if (newSketchLayerIndex === -1) {
-                            const index = edits.edits.findIndex(
-                              (layer) =>
-                                layer.type === 'layer' &&
-                                (layer.layerType === 'Samples' ||
-                                  layer.layerType === 'VSP') &&
-                                layer.layerId !== sketchLayer.layerId,
-                            );
-                            if (index > -1) {
-                              newSketchLayerIndex = layers.findIndex(
-                                (layer) =>
-                                  layer.layerId === edits.edits[index].layerId,
-                              );
-                            }
-                          }
-
-                          setSketchLayer(
-                            newSketchLayerIndex > -1
-                              ? layers[newSketchLayerIndex]
-                              : null,
-                          );
-
-                          // remove the scenario from the map
-                          const parent = parentLayer
-                            ? parentLayer
-                            : map
-                            ? map
-                            : null;
-                          if (parent) parent.remove(sketchLayer.sketchLayer);
-                        }}
-                      >
-                        <i className="fas fa-trash-alt" />
-                        <span className="sr-only">Delete Layer</span>
-                      </button>
                       {sketchLayer.parentLayer ? (
                         <button
                           css={iconButtonStyles}
@@ -1875,6 +1777,111 @@ function LocateSamples() {
                       )}
                       <button
                         css={iconButtonStyles}
+                        title="Delete Layer"
+                        onClick={() => {
+                          // remove the layer from layers
+                          setLayers((layers) => {
+                            return layers.filter(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                          });
+
+                          const parentLayer = sketchLayer.parentLayer;
+                          if (parentLayer) {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              const index = edits.edits.findIndex(
+                                (edit) => edit.layerId === parentLayer.id,
+                              );
+
+                              const editedScenario = edits.edits[
+                                index
+                              ] as ScenarioEditsType;
+                              editedScenario.layers =
+                                editedScenario.layers.filter(
+                                  (layer) =>
+                                    layer.layerId !== sketchLayer.layerId,
+                                );
+
+                              return {
+                                count: edits.count + 1,
+                                edits: [
+                                  ...edits.edits.slice(0, index),
+                                  editedScenario,
+                                  ...edits.edits.slice(index + 1),
+                                ],
+                              };
+                            });
+
+                            if (sketchLayer.sketchLayer)
+                              parentLayer.remove(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer)
+                              parentLayer.remove(sketchLayer.pointsLayer);
+                          } else {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              return {
+                                count: edits.count + 1,
+                                edits: edits.edits.filter(
+                                  (item) =>
+                                    item.layerId !== sketchLayer.layerId,
+                                ),
+                              };
+                            });
+                          }
+
+                          // select the next available layer
+                          let newSketchLayerIndex: number = -1;
+
+                          // check in the selected scenario first, then in the root of edits
+                          if (selectedScenario) {
+                            const index = selectedScenario.layers.findIndex(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId ===
+                                  selectedScenario.layers[index].layerId,
+                              );
+                            }
+                          }
+                          if (newSketchLayerIndex === -1) {
+                            const index = edits.edits.findIndex(
+                              (layer) =>
+                                layer.type === 'layer' &&
+                                (layer.layerType === 'Samples' ||
+                                  layer.layerType === 'VSP') &&
+                                layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId === edits.edits[index].layerId,
+                              );
+                            }
+                          }
+
+                          setSketchLayer(
+                            newSketchLayerIndex > -1
+                              ? layers[newSketchLayerIndex]
+                              : null,
+                          );
+
+                          // remove the scenario from the map
+                          const parent = parentLayer
+                            ? parentLayer
+                            : map
+                            ? map
+                            : null;
+                          if (parent) parent.remove(sketchLayer.sketchLayer);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Layer</span>
+                      </button>
+                      <button
+                        css={iconButtonStyles}
                         title="Clone Layer"
                         onClick={(ev) => {
                           // get the name for the new layer
@@ -1981,8 +1988,6 @@ function LocateSamples() {
                         <i className="fas fa-clone" />
                         <span className="sr-only">Clone Layer</span>
                       </button>
-                      <br />
-                      <div />
                       <button
                         css={iconButtonStyles}
                         title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
