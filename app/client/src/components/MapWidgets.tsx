@@ -10,10 +10,12 @@ import {
   useState,
 } from 'react';
 import { render } from 'react-dom';
+import { css } from '@emotion/react';
 import Collection from '@arcgis/core/core/Collection';
 import Handles from '@arcgis/core/core/Handles';
 import Home from '@arcgis/core/widgets/Home';
 import Locate from '@arcgis/core/widgets/Locate';
+import Measurement from '@arcgis/core/widgets/Measurement';
 import Point from '@arcgis/core/geometry/Point';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
@@ -103,6 +105,59 @@ function getUpdateEventInfo(
   };
 }
 
+const buttonSharedStyles = css`
+  margin: 8.5px;
+  font-size: 15px;
+  text-align: center;
+  vertical-align: middle;
+`;
+
+const buttonStyle = css`
+  ${buttonSharedStyles}
+  background-color: white;
+  color: #6e6e6e;
+`;
+
+const buttonActiveStyle = css`
+  ${buttonSharedStyles}
+  background-color: #999696;
+  color: black;
+`;
+
+const buttonHoverStyle = css`
+  ${buttonSharedStyles}
+  background-color: #f0f0f0;
+  color: black;
+  cursor: pointer;
+`;
+
+const divSharedStyles = css`
+  height: 32px;
+  width: 32px;
+`;
+
+const divStyle = css`
+  ${divSharedStyles}
+  background-color: white;
+`;
+
+const divActiveStyle = css`
+  ${divSharedStyles}
+  background-color: #999696;
+  color: black;
+`;
+
+const divHoverStyle = css`
+  ${divSharedStyles}
+  background-color: #f0f0f0;
+  cursor: pointer;
+`;
+
+const measurementContainerStyles = css`
+  display: flex;
+  gap: 5px;
+`;
+
 // --- components (MapWidgets) ---
 type Props = {
   mapView: __esri.MapView;
@@ -157,6 +212,67 @@ function MapWidgets({ mapView, sceneView }: Props) {
       '3d': widget3d,
     });
   }, [mapView, homeWidget, setHomeWidget, sceneView]);
+
+  // Initialize the measurement widget
+  const [measurementWidget, setMeasurementWidget] =
+    useState<Measurement | null>(null);
+  useEffect(() => {
+    if (!mapView || !sceneView || measurementWidget) return;
+
+    const widget = new Measurement({
+      areaUnit: 'imperial',
+      linearUnit: 'imperial',
+      view: mapView,
+    });
+
+    setMeasurementWidget(widget);
+  }, [displayDimensions, mapView, measurementWidget, sceneView]);
+
+  // Display the measurement widget on the screen
+  useEffect(() => {
+    if (!mapView || !sceneView || !measurementWidget) return;
+
+    // sync the measurement widget settings to 2d/3d
+    measurementWidget.clear();
+    measurementWidget.view = displayDimensions === '3d' ? sceneView : mapView;
+    if (displayDimensions === '3d') {
+      mapView.ui.remove(measurementWidget);
+      sceneView.ui.add(measurementWidget, {
+        position: 'bottom-right',
+        index: 0,
+      });
+    } else {
+      sceneView.ui.remove(measurementWidget);
+      mapView.ui.add(measurementWidget, { position: 'bottom-right', index: 0 });
+    }
+
+    // add measurement widget to 2d view
+    const node2d = document.createElement('div');
+    mapView.ui.add(node2d, { position: 'top-right', index: 0 });
+    render(
+      <CustomMeasurementWidget
+        displayDimensions={displayDimensions}
+        measurementWidget={measurementWidget}
+      />,
+      node2d,
+    );
+
+    // add measurement widget to 3d view
+    const node3d = document.createElement('div');
+    sceneView.ui.add(node3d, { position: 'top-right', index: 0 });
+    render(
+      <CustomMeasurementWidget
+        displayDimensions={displayDimensions}
+        measurementWidget={measurementWidget}
+      />,
+      node3d,
+    );
+
+    return function cleanup() {
+      mapView?.ui.remove(node2d);
+      sceneView?.ui.remove(node3d);
+    };
+  }, [displayDimensions, mapView, measurementWidget, sceneView]);
 
   // Creates the sketch widget used for selecting/moving/deleting samples
   // Also creates an event handler for keeping track of changes
@@ -1319,6 +1435,91 @@ function MapWidgets({ mapView, sceneView }: Props) {
   ]);
 
   return null;
+}
+
+type CustomWidgetButtonProps = {
+  active: boolean;
+  iconClass: string;
+  onClick: Function;
+  title: string;
+};
+
+function CustomWidgetButton({
+  active,
+  iconClass,
+  onClick,
+  title,
+}: CustomWidgetButtonProps) {
+  const [hover, setHover] = useState(false);
+
+  return (
+    <div
+      title={title}
+      css={active ? divActiveStyle : hover ? divHoverStyle : divStyle}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onClick={() => onClick()}
+      onKeyDown={() => onClick()}
+      role="button"
+      tabIndex={0}
+    >
+      <span
+        aria-hidden="true"
+        className={iconClass}
+        css={
+          active ? buttonActiveStyle : hover ? buttonHoverStyle : buttonStyle
+        }
+      />
+    </div>
+  );
+}
+
+type CustomMeasurementWidgetProps = {
+  displayDimensions: '2d' | '3d';
+  measurementWidget: Measurement;
+};
+
+function CustomMeasurementWidget({
+  displayDimensions,
+  measurementWidget,
+}: CustomMeasurementWidgetProps) {
+  const [activeTool, setActiveTool] = useState<'area' | 'distance' | null>(
+    null,
+  );
+
+  return (
+    <div css={measurementContainerStyles}>
+      <CustomWidgetButton
+        active={activeTool === 'distance'}
+        iconClass="esri-icon esri-icon-measure-line"
+        title="Distance Measurement Tool"
+        onClick={() => {
+          setActiveTool('distance');
+
+          measurementWidget.activeTool =
+            displayDimensions === '2d' ? 'distance' : 'direct-line';
+        }}
+      />
+      <CustomWidgetButton
+        active={activeTool === 'area'}
+        iconClass="esri-icon esri-icon-measure-area"
+        title="Area Measurement Tool"
+        onClick={() => {
+          setActiveTool('area');
+          measurementWidget.activeTool = 'area';
+        }}
+      />
+      <CustomWidgetButton
+        active={false}
+        iconClass="esri-icon esri-icon-trash"
+        title="Clear Measurements"
+        onClick={() => {
+          setActiveTool(null);
+          measurementWidget.clear();
+        }}
+      />
+    </div>
+  );
 }
 
 export default MapWidgets;
