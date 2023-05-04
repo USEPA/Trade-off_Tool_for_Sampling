@@ -1511,7 +1511,7 @@ function CustomMeasurementWidget({
       />
       <CustomWidgetButton
         active={false}
-        iconClass="esri-icon esri-icon-trash"
+        iconClass="esri-icon esri-icon-close"
         title="Clear Measurements"
         onClick={() => {
           setActiveTool(null);
