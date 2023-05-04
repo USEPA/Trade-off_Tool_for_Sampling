@@ -1,6 +1,12 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
+
+var ctrl = false;
+var shift = false;
+var sketchVMG: __esri.SketchViewModel | null = null;
+var updateGraphics: __esri.Graphic[] = [];
 
 // Gets the graphic from the hittest
 function getGraphicFromResponse(res: any) {
@@ -23,7 +29,7 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView, sceneView }: Props) {
-  const { setSelectedSampleIds } = useContext(SketchContext);
+  const { setSelectedSampleIds, sketchVM } = useContext(SketchContext);
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {
@@ -80,11 +86,27 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
             }
           });
 
-          // get list of graphic ids currently in the popup
+          // get list of graphic ids currently in the popup and sketch widget
           const curIds: string[] = [];
-          view.popup.features.forEach((feature: any) => {
-            if (feature.attributes?.PERMANENT_IDENTIFIER) {
-              curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
+          const popupFeatures: __esri.Graphic[] = view.popup.features;
+          updateGraphics.forEach((g) => {
+            const popup = popupFeatures.find(
+              (f) =>
+                f.attributes.PERMANENT_IDENTIFIER ===
+                g.attributes.PERMANENT_IDENTIFIER,
+            );
+
+            if (!popup) popupFeatures.push(g);
+          });
+          popupFeatures.forEach((feature: any) => {
+            const permId = feature.attributes?.PERMANENT_IDENTIFIER;
+            if (permId) {
+              curIds.push(permId);
+
+              if ((ctrl || shift) && !newIds.includes(permId)) {
+                newIds.push(permId);
+                popupItems.push(feature);
+              }
             }
           });
 
@@ -97,6 +119,13 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
             popupItems.length > 0 &&
             curIds.toString() !== newIds.toString()
           ) {
+            // find these graphics in the sketchLayer and open them
+            const sketchPopupItems = sketchVMG?.layer.graphics.filter((g) =>
+              newIds.includes(g.attributes.PERMANENT_IDENTIFIER),
+            );
+            if (sketchPopupItems && sketchPopupItems.length > 0)
+              sketchVMG?.update(sketchPopupItems.toArray());
+
             const firstGeometry = popupItems[0].geometry as any;
             view.popup.open({
               location:
@@ -116,6 +145,16 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     [setSelectedSampleIds],
   );
 
+  const handleKeyDown = (event: __esri.ViewKeyDownEvent) => {
+    if (event.key === 'Control') ctrl = true;
+    else if (event.key === 'Shift') shift = true;
+  };
+
+  const handleKeyUp = (event: __esri.ViewKeyUpEvent) => {
+    if (event.key === 'Control') ctrl = false;
+    else if (event.key === 'Shift') shift = false;
+  };
+
   // Sets up the map mouse events when the component initializes
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
@@ -129,8 +168,47 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
       handleMapClick(event, sceneView);
     });
 
+    mapView.on('key-down', handleKeyDown);
+    sceneView.on('key-down', handleKeyDown);
+    mapView.on('key-up', handleKeyUp);
+    sceneView.on('key-up', handleKeyUp);
+
     setInitialized(true);
   }, [handleMapClick, initialized, mapView, sceneView]);
+
+  // syncs the sketchVMG variable with the sketchVM context value
+  useEffect(() => {
+    sketchVMG = sketchVM;
+  }, [sketchVM]);
+
+  // Sets up a watcher to sync the updateGraphics variable with the sketchVM.updateGraphics
+  // context value
+  const [handler, setHandler] = useState<IHandle | null>(null);
+  useEffect(() => {
+    if (!sketchVM || handler) return;
+
+    setHandler(
+      reactiveUtils.watch(
+        () => sketchVM.updateGraphics.length,
+        () => {
+          const updateGraphicsArray = sketchVM.updateGraphics.toArray();
+          if (sketchVM.updateGraphics.length === 0 && !ctrl && !shift) {
+            updateGraphics = [];
+          } else {
+            updateGraphicsArray.forEach((g) => {
+              const hasGraphic = updateGraphics.find(
+                (f) =>
+                  f.attributes.PERMANENT_IDENTIFIER ===
+                  g.attributes.PERMANENT_IDENTIFIER,
+              );
+
+              if (!hasGraphic) updateGraphics.push(g);
+            });
+          }
+        },
+      ),
+    );
+  }, [handler, sketchVM]);
 
   return null;
 }
