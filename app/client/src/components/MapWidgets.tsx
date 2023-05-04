@@ -312,7 +312,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     mapView.ui.add(widget2d, { position: 'top-right', index: 0 });
 
     const widget3d = buildWidget(sceneView, sketchLayer);
-    sceneView.ui.add(widget3d, { position: 'top-right', index: 0 });
 
     setSketchWidget({
       '2d': widget2d,
