@@ -756,7 +756,14 @@ function FilePanel() {
     // build the list of graphics to be validated
     const features: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
-      layer.featureSet.features.forEach((feature: any, index: number) => {
+      layer.featureSet.features.forEach((feature: any, _index: number) => {
+        Object.keys(feature.attributes).forEach((attribute) => {
+          if (attribute === attribute.toLocaleUpperCase()) return;
+          feature.attributes[attribute.toUpperCase()] =
+            feature.attributes[attribute]; // duplicate attribute with upper case key
+
+          delete feature.attributes[attribute]; // delete the non uppercased key
+        });
         features.push(feature);
       });
     });
