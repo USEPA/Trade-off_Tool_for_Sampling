@@ -23,7 +23,7 @@ import { getGraphicsArray } from 'utils/sketchUtils';
 // --- styles (Map) ---
 const mapStyles = (height: number) => {
   return css`
-    height: calc(100% - ${height}px);
+    height: ${height}px;
     background-color: whitesmoke;
   `;
 };

@@ -442,7 +442,6 @@ function Toolbar() {
     sceneView,
     displayDimensions,
     setDisplayDimensions,
-    setDisplayDimensionsChanged,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -864,10 +863,7 @@ function Toolbar() {
                 name="dimension"
                 value="2d"
                 checked={displayDimensions === '2d'}
-                onChange={(ev) => {
-                  setDisplayDimensions('2d');
-                  setDisplayDimensionsChanged(true);
-                }}
+                onChange={(ev) => setDisplayDimensions('2d')}
               />
               <label htmlFor="dimension-2d">2D</label>
               <br />
@@ -881,7 +877,6 @@ function Toolbar() {
                 onChange={(ev) => {
                   setDisplayDimensions('3d');
                   setDisplayGeometryType('points');
-                  setDisplayDimensionsChanged(true);
                 }}
               />
               <label htmlFor="dimension-3d">3D</label>
