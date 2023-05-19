@@ -145,24 +145,24 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     [setSelectedSampleIds],
   );
 
-  const handleKeyDown = (event: __esri.ViewKeyDownEvent) => {
-    if (event.key === 'Control') ctrl = true;
-    else if (event.key === 'Shift') shift = true;
-
-    if (event.key === 'Escape' && mapView.popup) {
-      mapView.popup.close();
-    }
-  };
-
-  const handleKeyUp = (event: __esri.ViewKeyUpEvent) => {
-    if (event.key === 'Control') ctrl = false;
-    else if (event.key === 'Shift') shift = false;
-  };
-
   // Sets up the map mouse events when the component initializes
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
     if (initialized) return;
+
+    const handleKeyDown = (event: __esri.ViewKeyDownEvent) => {
+      if (event.key === 'Control') ctrl = true;
+      else if (event.key === 'Shift') shift = true;
+
+      if (event.key === 'Escape' && mapView.popup) {
+        mapView.popup.close();
+      }
+    };
+
+    const handleKeyUp = (event: __esri.ViewKeyUpEvent) => {
+      if (event.key === 'Control') ctrl = false;
+      else if (event.key === 'Shift') shift = false;
+    };
 
     // setup the mouse click and mouse over events
     mapView.on('click', (event) => {
