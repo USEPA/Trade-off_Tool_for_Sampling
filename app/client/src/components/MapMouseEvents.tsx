@@ -148,6 +148,10 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
   const handleKeyDown = (event: __esri.ViewKeyDownEvent) => {
     if (event.key === 'Control') ctrl = true;
     else if (event.key === 'Shift') shift = true;
+
+    if (event.key === 'Escape' && mapView.popup) {
+      mapView.popup.close();
+    }
   };
 
   const handleKeyUp = (event: __esri.ViewKeyUpEvent) => {
