@@ -89,8 +89,6 @@ type SketchType = {
   setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
   displayDimensions: '2d' | '3d';
   setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
-  displayDimensionsChanged: boolean;
-  setDisplayDimensionsChanged: Dispatch<SetStateAction<boolean>>;
   terrain3dVisible: boolean;
   setTerrain3dVisible: Dispatch<SetStateAction<boolean>>;
   viewUnderground3d: boolean;
@@ -156,8 +154,6 @@ export const SketchContext = createContext<SketchType>({
   setDisplayGeometryType: () => {},
   displayDimensions: '2d',
   setDisplayDimensions: () => {},
-  displayDimensionsChanged: false,
-  setDisplayDimensionsChanged: () => {},
   terrain3dVisible: true,
   setTerrain3dVisible: () => {},
   viewUnderground3d: false,
@@ -237,8 +233,6 @@ export function SketchProvider({ children }: Props) {
     'points' | 'polygons'
   >('points');
   const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
-  const [displayDimensionsChanged, setDisplayDimensionsChanged] =
-    useState(false);
   const [terrain3dVisible, setTerrain3dVisible] = useState(true);
   const [viewUnderground3d, setViewUnderground3d] = useState(false);
 
@@ -400,8 +394,6 @@ export function SketchProvider({ children }: Props) {
         setDisplayGeometryType,
         displayDimensions,
         setDisplayDimensions,
-        displayDimensionsChanged,
-        setDisplayDimensionsChanged,
         terrain3dVisible,
         setTerrain3dVisible,
         viewUnderground3d,

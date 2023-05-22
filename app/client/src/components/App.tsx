@@ -56,7 +56,7 @@ declare global {
   }
 }
 
-const globalStyles = (toolbarHeight: number) => css`
+const globalStyles = css`
   html {
     /* overwrite EPA's html font-size so rem units are based on 16px */
     font-size: 100%;
@@ -101,11 +101,6 @@ const globalStyles = (toolbarHeight: number) => css`
     min-width: 460px !important;
   }
 
-  .esri-attribution {
-    position: absolute;
-    bottom: ${toolbarHeight}px !important;
-  }
-
   .esri-popup__action-text {
     display: none;
   }
@@ -125,18 +120,16 @@ const containerStyles = css`
   position: relative;
 `;
 
-const mapPanelStyles = css`
+const mapPanelStyles = (tableHeight: number) => css`
   float: right;
   position: relative;
-  height: 100%;
+  height: calc(100% - ${tableHeight}px);
   width: calc(100% - ${navPanelWidth});
 `;
 
-const mapHeightStyles = (tableHeight: number) => {
-  return css`
-    height: calc(100% - ${tableHeight}px);
-  `;
-};
+const mapHeightStyles = css`
+  height: 100%;
+`;
 
 const floatPanelStyles = ({
   width,
@@ -275,7 +268,6 @@ function App() {
   } = useContext(NavigationContext);
   const {
     displayDimensions,
-    displayDimensionsChanged,
     layers,
     mapView,
     sceneView,
@@ -295,9 +287,6 @@ function App() {
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!mapRef?.current) return;
-
-    const mapHeight = mapRef.current.getBoundingClientRect().height;
-    if (contentHeight !== mapHeight) setContentHeight(mapHeight);
 
     // adjust the table height if necessary
     const maxTableHeight =
@@ -349,8 +338,11 @@ function App() {
   useEffect(() => {
     if (!totsRef?.current) return;
 
-    setOffset(totsRef.current.offsetTop);
-  }, [totsRef]);
+    const offsetTop = totsRef.current.offsetTop;
+    const clientHeight = totsRef.current.clientHeight;
+    if (contentHeight !== clientHeight) setContentHeight(clientHeight);
+    if (offset !== offsetTop) setOffset(offsetTop);
+  }, [contentHeight, height, offset, totsRef, width]);
 
   // count the number of samples
   const sampleData: any[] = [];
@@ -484,9 +476,7 @@ function App() {
 
   return (
     <Fragment>
-      <Global
-        styles={globalStyles(displayDimensionsChanged ? toolbarHeight : 0)}
-      />
+      <Global styles={globalStyles} />
 
       <div className="tots" ref={totsRef}>
         <ErrorBoundary>
@@ -503,14 +493,22 @@ function App() {
                   <Toolbar />
                 </div>
                 <NavBar height={contentHeight - toolbarHeight} />
-                <div css={mapPanelStyles} ref={mapRef}>
-                  <div
-                    id="tots-map-div"
-                    css={mapHeightStyles(
-                      tablePanelExpanded ? tablePanelHeight : 0,
+                <div
+                  css={mapPanelStyles(
+                    toolbarHeight + (tablePanelExpanded ? tablePanelHeight : 0),
+                  )}
+                  ref={mapRef}
+                >
+                  <div id="tots-map-div" css={mapHeightStyles}>
+                    {toolbarHeight && (
+                      <Map
+                        height={
+                          contentHeight -
+                          (tablePanelExpanded ? tablePanelHeight : 0) -
+                          toolbarHeight
+                        }
+                      />
                     )}
-                  >
-                    {toolbarHeight && <Map height={toolbarHeight} />}
                   </div>
                 </div>
                 {sampleData.length > 0 && (
@@ -582,9 +580,6 @@ function App() {
                             document.onmouseup = null;
                             document.onmousemove = null;
 
-                            // set the table panel height
-                            setTablePanelHeight(tableDiv.clientHeight);
-
                             // clear the styles set
                             tableDiv.style.height = '';
                             mapDiv.style.height = '';
@@ -628,6 +623,8 @@ function App() {
                                 newTableHeight - resizerHeight - 30
                               }px`;
                             }
+
+                            setTablePanelHeight(tableDiv.clientHeight);
                           };
                         }}
                       >
