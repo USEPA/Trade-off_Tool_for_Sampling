@@ -37,15 +37,11 @@ describe("Add Data", function () {
 
   function enableTrainingMode() {
     cy.findByTestId("locateSamples").click();
-    cy.findByText("Training Mode").click();
+    cy.findByRole("button", { name: "Settings" }).click({ force: true });
+    cy.findAllByRole("switch").first().click({ force: true });
   }
 
-  beforeEach(function () {
-    // ensure the fixtures are loaded
-    expect(samplesFile).to.not.equal(undefined);
-    expect(contaminationMapFile).to.not.equal(undefined);
-    expect(aoiFile).to.not.equal(undefined);
-
+  beforeEach(function () {   
     // clear session storage and open the app
     sessionStorage.clear();
     cy.visit("/");
@@ -55,6 +51,12 @@ describe("Add Data", function () {
 
     goToFileUpload();
   });
+
+  it("ensure the fixtures are loaded", function () {
+    expect(samplesFile).to.not.equal(undefined);
+    expect(contaminationMapFile).to.not.equal(undefined);
+    expect(aoiFile).to.not.equal(undefined);
+  })
 
   it("test file upload error messages", function () {
     // select samples layer type, upload the contamination map file,

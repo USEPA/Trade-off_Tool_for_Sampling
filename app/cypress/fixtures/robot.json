@@ -1,0 +1,227 @@
+{
+  "count": 4,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1884fe1d450-layer-43",
+      "portalId": "",
+      "name": "demo",
+      "label": "demo",
+      "value": "1884fe1d450-layer-43",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "demo",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{C8381A08-8F94-43A3-AD45-8D8476EBE43F}",
+          "layerId": "{C8381A08-8F94-43A3-AD45-8D8476EBE43F}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{E3BC8C7A-F1CF-4E85-AC7B-831BADEF75A7}",
+                "GLOBALID": "{E3BC8C7A-F1CF-4E85-AC7B-831BADEF75A7}",
+                "TYPEUUID": "Robot",
+                "TYPE": "Robot",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "square",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.3,
+                "TTA": 0.7,
+                "TTPS": 1.12,
+                "LOD_P": 105,
+                "LOD_NON": 140,
+                "MCPS": 400,
+                "TCPS": 267,
+                "WVPS": 0.5,
+                "WWPS": 10.5,
+                "ALC": 200,
+                "AMC": 288,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 17:30:22.489",
+                "UPDATEDDATE": "2023/05/24 17:30:22.489",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{C8381A08-8F94-43A3-AD45-8D8476EBE43F}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10752881.927842785, 3874030.2928245235, 148.2664794921875
+                    ],
+                    [-10752506.90867275, 3874172.4179239953, 148.2664794921875],
+                    [-10752364.78357328, 3874027.90416739, 148.2664794921875],
+                    [-10752915.36904266, 3873806.953382497, 148.2664794921875],
+                    [-10752881.927842785, 3874030.2928245235, 148.2664794921875]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{9D6B9B8A-26B4-4ECC-BE51-A5817444AD1F}",
+                "GLOBALID": "{9D6B9B8A-26B4-4ECC-BE51-A5817444AD1F}",
+                "TYPEUUID": "Robot",
+                "TYPE": "Robot",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "square",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.3,
+                "TTA": 0.7,
+                "TTPS": 1.12,
+                "LOD_P": 105,
+                "LOD_NON": 140,
+                "MCPS": 400,
+                "TCPS": 267,
+                "WVPS": 0.5,
+                "WWPS": 10.5,
+                "ALC": 200,
+                "AMC": 288,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 17:30:59.503",
+                "UPDATEDDATE": "2023/05/24 17:30:59.503",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{C8381A08-8F94-43A3-AD45-8D8476EBE43F}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [-10755478.39814734, 3872219.6907170243, 162.8852996826172],
+                    [
+                      -10751732.983761372, 3872620.9851155207, 162.8852996826172
+                    ],
+                    [-10755459.288890269, 3870882.042722035, 162.8852996826172],
+                    [-10755478.39814734, 3872219.6907170243, 162.8852996826172]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{E2212351-4A43-4419-9E3A-15B67C2AAE71}",
+                "GLOBALID": "{E2212351-4A43-4419-9E3A-15B67C2AAE71}",
+                "TYPEUUID": "Robot",
+                "TYPE": "Robot",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "square",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.3,
+                "TTA": 0.7,
+                "TTPS": 1.12,
+                "LOD_P": 105,
+                "LOD_NON": 140,
+                "MCPS": 400,
+                "TCPS": 267,
+                "WVPS": 0.5,
+                "WWPS": 10.5,
+                "ALC": 200,
+                "AMC": 288,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 17:31:13.360",
+                "UPDATEDDATE": "2023/05/24 17:31:13.360",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{C8381A08-8F94-43A3-AD45-8D8476EBE43F}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10756089.894373622, 3874512.8015655763,
+                      155.91571044921875
+                    ],
+                    [
+                      -10754809.574149847, 3875907.777331779, 155.91571044921875
+                    ],
+                    [
+                      -10753452.816897787, 3875009.642249429, 155.91571044921875
+                    ],
+                    [
+                      -10754924.229692275, 3873385.3553983714,
+                      155.91571044921875
+                    ],
+                    [
+                      -10756089.894373622, 3874512.8015655763,
+                      155.91571044921875
+                    ]
+                  ]
+                ]
+              }
+            }
+          ],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": {
+        "id": -1,
+        "referenceLayers": []
+      },
+      "customAttributes": []
+    }
+  ]
+}
