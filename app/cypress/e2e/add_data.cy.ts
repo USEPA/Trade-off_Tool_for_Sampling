@@ -7,7 +7,7 @@ describe("Add Data", function () {
   const aoiType = "Area of Interest";
   const successText = "Upload Succeeded";
   const failureText = "Unknown Sample Type";
-  const timeout = 20000; // file upload timeout
+  const timeout = 120000; // file upload timeout
   const sampleName = "targeted_sampling.zip";
   const contaminationName = "Contamination.zip";
   const aoiName = "BOTE.zip";
@@ -41,7 +41,7 @@ describe("Add Data", function () {
     cy.findAllByRole("switch").first().click({ force: true });
   }
 
-  beforeEach(function () {   
+  beforeEach(function () {
     // clear session storage and open the app
     sessionStorage.clear();
     cy.visit("/");
@@ -56,7 +56,7 @@ describe("Add Data", function () {
     expect(samplesFile).to.not.equal(undefined);
     expect(contaminationMapFile).to.not.equal(undefined);
     expect(aoiFile).to.not.equal(undefined);
-  })
+  });
 
   it("test file upload error messages", function () {
     // select samples layer type, upload the contamination map file,
@@ -64,6 +64,7 @@ describe("Add Data", function () {
     cy.get(layerSelectId).click();
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, sampleName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(failureText).should("exist");
 
@@ -86,6 +87,7 @@ describe("Add Data", function () {
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(samplesFile, sampleName);
     cy.findByText("Continue").click();
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
 
@@ -96,6 +98,7 @@ describe("Add Data", function () {
     cy.get(layerSelectId).click();
     cy.findByText(contaminationType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, contaminationName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
 
@@ -104,6 +107,7 @@ describe("Add Data", function () {
     cy.get(layerSelectId).click();
     cy.findByText(aoiType).click();
     cy.findByTestId(dropzoneId).upload(aoiFile, aoiName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
   });
