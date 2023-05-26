@@ -32,7 +32,7 @@ import { SketchContext } from 'contexts/Sketch';
 // types
 import { EditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
-import { SelectedSampleType } from 'config/sampleAttributes';
+import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
 import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
 import {
@@ -40,6 +40,7 @@ import {
   deactivateButtons,
   generateUUID,
   getCurrentDateTime,
+  getPointSymbol,
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -901,16 +902,12 @@ function MapWidgets({ mapView, sceneView }: Props) {
             pointLayer.removeMany(graphicsToRemove);
 
             // Re-add the point version of the graphic
-            const symbol = graphic.symbol as __esri.SimpleFillSymbol;
+            const symbol = graphic.symbol as any as PolygonSymbol;
             (pointLayer as any).add({
               attributes: graphic.attributes,
               geometry: (graphic.geometry as __esri.Polygon).centroid,
               popupTemplate: graphic.popupTemplate,
-              symbol: {
-                color: symbol.color,
-                outline: symbol.outline,
-                type: 'simple-marker',
-              },
+              symbol: getPointSymbol(graphic, symbol),
             });
           });
         }
