@@ -11,8 +11,8 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      mapLoadDelay(): Chainable<Element>
       displayMode(shape: string): Chainable<Element>
+      mapLoadDelay(): Chainable<Element>
       matchSnapshot(name?: string, options?: Options): Chainable<Element>
       upload(file: any, fileName: string): Chainable<Element>
     }
@@ -53,10 +53,9 @@ Cypress.Commands.add(
 )
 
 /**
- * This enables mocking the geolocation api. The default coordinates are
- * for Washington DC.
+ * This enables performing snapshot comparisons to support visual testing.
  *
- * @param subject - The react-dropzone element to upload the file with
+ * @param subject - The element to take a snapshot of
  * @param name - Name of the snapshot to be taken
  * @param options (optional) - Additional options for the snapshot
  */
@@ -78,13 +77,12 @@ Cypress.Commands.add(
 // mapLoadDelay -> make delay for map load
 Cypress.Commands.add("mapLoadDelay", () => {
   cy.visit("/")
-  cy.wait(20000)
-  cy.findByRole("button", { name: "OK" }).click({ force: true })
+  cy.wait(30000)
+  cy.findByRole("button", { name: "OK" }).click({ force: true });
   cy.wait(500)
 });
 
 Cypress.Commands.add("displayMode", (shape: string) => {
-  console.log("shapeshapeshape", shape)
   sessionStorage.setItem(
     "tots_display_mode",
     JSON.stringify({
