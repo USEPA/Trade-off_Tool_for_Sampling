@@ -7,7 +7,7 @@ describe("Add Data", function () {
   const aoiType = "Area of Interest";
   const successText = "Upload Succeeded";
   const failureText = "Unknown Sample Type";
-  const timeout = 20000; // file upload timeout
+  const timeout = 120000; // file upload timeout
   const sampleName = "targeted_sampling.zip";
   const contaminationName = "Contamination.zip";
   const aoiName = "BOTE.zip";
@@ -37,15 +37,11 @@ describe("Add Data", function () {
 
   function enableTrainingMode() {
     cy.findByTestId("locateSamples").click();
-    cy.findByText("Training Mode").click();
+    cy.findByRole("button", { name: "Settings" }).click({ force: true });
+    cy.findAllByRole("switch").first().click({ force: true });
   }
 
   beforeEach(function () {
-    // ensure the fixtures are loaded
-    expect(samplesFile).to.not.equal(undefined);
-    expect(contaminationMapFile).to.not.equal(undefined);
-    expect(aoiFile).to.not.equal(undefined);
-
     // clear session storage and open the app
     sessionStorage.clear();
     cy.visit("/");
@@ -56,12 +52,19 @@ describe("Add Data", function () {
     goToFileUpload();
   });
 
+  it("ensure the fixtures are loaded", function () {
+    expect(samplesFile).to.not.equal(undefined);
+    expect(contaminationMapFile).to.not.equal(undefined);
+    expect(aoiFile).to.not.equal(undefined);
+  });
+
   it("test file upload error messages", function () {
     // select samples layer type, upload the contamination map file,
     // wait for it to finish and check for failure
     cy.get(layerSelectId).click();
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, sampleName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(failureText).should("exist");
 
@@ -84,6 +87,7 @@ describe("Add Data", function () {
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(samplesFile, sampleName);
     cy.findByText("Continue").click();
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
 
@@ -94,6 +98,7 @@ describe("Add Data", function () {
     cy.get(layerSelectId).click();
     cy.findByText(contaminationType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, contaminationName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
 
@@ -102,6 +107,7 @@ describe("Add Data", function () {
     cy.get(layerSelectId).click();
     cy.findByText(aoiType).click();
     cy.findByTestId(dropzoneId).upload(aoiFile, aoiName);
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
   });

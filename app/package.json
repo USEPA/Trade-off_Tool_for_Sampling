@@ -25,17 +25,19 @@
     "start": "concurrently --kc \"blue.dim,green.dim\" \"npm:server\" \"npm run client\"",
     "setup": "echo \"Installing project dependencies...\" && npm ci && echo \"Installing client dependencies...\" && cd client && npm ci --legacy-peer-deps && echo \"Installing server dependencies...\" && cd .. && cd server && npm ci",
     "cypress": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"cypress open --env coverage=false\"",
-    "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"npx rimraf .nyc_output/out.json && cypress run --browser edge\""
+    "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"npx rimraf .nyc_output/out.json && cypress run --browser electron\""
   },
   "devDependencies": {
     "@cypress/code-coverage": "3.10.0",
     "@testing-library/cypress": "8.0.3",
+    "@types/cypress-image-snapshot": "^3.1.6",
     "@types/jest": "28.1.6",
     "@types/mocha": "9.1.1",
     "@types/node": "18.6.1",
     "@types/testing-library__cypress": "5.0.9",
     "concurrently": "7.3.0",
     "cypress": "10.3.1",
+    "cypress-image-snapshot": "^4.0.1",
     "eslint-plugin-cypress": "2.12.1",
     "istanbul-lib-coverage": "3.2.0",
     "nyc": "15.1.0",

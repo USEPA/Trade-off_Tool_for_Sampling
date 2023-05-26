@@ -1,0 +1,152 @@
+{
+  "count": 3,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1884fca754b-layer-57",
+      "portalId": "",
+      "name": "demo",
+      "label": "demo",
+      "value": "1884fca754b-layer-57",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "demo",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{30CDEBDF-2FB0-437D-B8B8-A602339247E6}",
+          "layerId": "{30CDEBDF-2FB0-437D-B8B8-A602339247E6}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{C3A6251C-DB08-41D3-BC40-934F8A5E0448}",
+                "GLOBALID": "{C3A6251C-DB08-41D3-BC40-934F8A5E0448}",
+                "TYPEUUID": "Wet Vac",
+                "TYPE": "Wet Vac",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "diamond",
+                "SA": 28800,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.46,
+                "TTA": 0.8,
+                "TTPS": 1.07,
+                "LOD_P": 105,
+                "LOD_NON": 40,
+                "MCPS": 167,
+                "TCPS": 220,
+                "WVPS": 5,
+                "WWPS": 28.5,
+                "ALC": 151,
+                "AMC": 200,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 17:04:40.884",
+                "UPDATEDDATE": "2023/05/24 17:04:40.884",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{30CDEBDF-2FB0-437D-B8B8-A602339247E6}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": { "latestWkid": 3857, "wkid": 102100 },
+                "rings": [
+                  [
+                    [-7948975.333483039, 5220293.216324874, 294.3365281371333],
+                    [-7900055.63538054, 5233746.133303061, 294.3365281371333],
+                    [-7892106.184438884, 5169539.02954353, 294.3365281371333],
+                    [
+                      -7961205.2580086645, 5167704.5408646865, 294.3365281371333
+                    ],
+                    [-7948975.333483039, 5220293.216324874, 294.3365281371333]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{74C855C1-3D08-45C7-85FD-ED5B3DF315D6}",
+                "GLOBALID": "{74C855C1-3D08-45C7-85FD-ED5B3DF315D6}",
+                "TYPEUUID": "Wet Vac",
+                "TYPE": "Wet Vac",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "diamond",
+                "SA": 28800,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.46,
+                "TTA": 0.8,
+                "TTPS": 1.07,
+                "LOD_P": 105,
+                "LOD_NON": 40,
+                "MCPS": 167,
+                "TCPS": 220,
+                "WVPS": 5,
+                "WWPS": 28.5,
+                "ALC": 151,
+                "AMC": 200,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 17:05:05.228",
+                "UPDATEDDATE": "2023/05/24 17:05:05.228",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{30CDEBDF-2FB0-437D-B8B8-A602339247E6}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": { "latestWkid": 3857, "wkid": 102100 },
+                "rings": [
+                  [
+                    [-8018074.407052821, 5247199.050281249, 278.7135952900324],
+                    [-8063936.624023914, 5209286.284251812, 278.7135952900324],
+                    [-8103072.382505914, 5293061.267252343, 278.7135952900324],
+                    [-8021131.888184227, 5322413.086113842, 278.7135952900324],
+                    [-8018074.407052821, 5247199.050281249, 278.7135952900324]
+                  ]
+                ]
+              }
+            }
+          ],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": { "id": -1, "referenceLayers": [] },
+      "customAttributes": []
+    }
+  ]
+}

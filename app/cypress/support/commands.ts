@@ -1,4 +1,8 @@
 import "@testing-library/cypress/add-commands";
+import { Options } from "cypress-image-snapshot";
+import { addMatchImageSnapshotCommand } from "cypress-image-snapshot/command";
+
+addMatchImageSnapshotCommand()
 
 declare global {
   namespace Cypress {
@@ -7,7 +11,10 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      upload(file: any, fileName: string): Chainable<Element>;
+      displayMode(shape: string): Chainable<Element>
+      mapLoadDelay(): Chainable<Element>
+      matchSnapshot(name?: string, options?: Options): Chainable<Element>
+      upload(file: any, fileName: string): Chainable<Element>
     }
   }
 }
@@ -43,4 +50,46 @@ Cypress.Commands.add(
       cy.wrap(subject).trigger("change", { force: true });
     });
   }
+)
+
+/**
+ * This enables performing snapshot comparisons to support visual testing.
+ *
+ * @param subject - The element to take a snapshot of
+ * @param name - Name of the snapshot to be taken
+ * @param options (optional) - Additional options for the snapshot
+ */
+Cypress.Commands.add(
+  "matchSnapshot",
+  {
+    prevSubject: "element",
+  },
+  (subject, name: string, options: Options) => {
+    cy.wrap(subject).matchImageSnapshot(`${Cypress.browser.family}-${name}`, {
+      comparisonMethod: "ssim",
+      failureThresholdType: "percent",
+      failureThreshold: 0.01,
+      ...options,
+    })
+  }
 );
+
+// mapLoadDelay -> make delay for map load
+Cypress.Commands.add("mapLoadDelay", () => {
+  cy.visit("/")
+  cy.wait(30000)
+  cy.findByRole("button", { name: "OK" }).click({ force: true });
+  cy.wait(500)
+});
+
+Cypress.Commands.add("displayMode", (shape: string) => {
+  sessionStorage.setItem(
+    "tots_display_mode",
+    JSON.stringify({
+      dimensions: "2d",
+      geometryType: shape,
+      terrain3dVisible: true,
+      viewUnderground3d: false,
+    })
+  )
+});

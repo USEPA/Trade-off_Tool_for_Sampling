@@ -1,0 +1,227 @@
+{
+  "count": 4,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1884f9f7ac0-layer-43",
+      "portalId": "",
+      "name": "demo",
+      "label": "demo",
+      "value": "1884f9f7ac0-layer-43",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "demo",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{D47D4804-5583-4577-BDF4-CBAC92BF39D8}",
+          "layerId": "{D47D4804-5583-4577-BDF4-CBAC92BF39D8}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{03D8EE78-5673-47E8-998D-B7A29238DA2B}",
+                "GLOBALID": "{03D8EE78-5673-47E8-998D-B7A29238DA2B}",
+                "TYPEUUID": "Sponge",
+                "TYPE": "Sponge",
+                "ShapeType": "point",
+                "POINT_STYLE": "circle",
+                "SA": 100,
+                "AA": null,
+                "TTPK": 0.12,
+                "TTC": 0.09,
+                "TTA": 0.7,
+                "TTPS": 0.99,
+                "LOD_P": 14,
+                "LOD_NON": 0,
+                "MCPS": 46.87,
+                "TCPS": 343.03,
+                "WVPS": 0.1,
+                "WWPS": 4.3,
+                "ALC": 118,
+                "AMC": 239,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 16:17:33.643",
+                "UPDATEDDATE": "2023/05/24 16:17:33.643",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{D47D4804-5583-4577-BDF4-CBAC92BF39D8}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10034942.002273295, 4646250.976409742, 185.76089157474078
+                    ],
+                    [
+                      -10034941.992230639, 4646251.301481141, 185.76089157474078
+                    ],
+                    [
+                      -10034941.668496594, 4646251.291396994, 185.76089157474078
+                    ],
+                    [-10034941.67853926, 4646250.966325595, 185.76089157474078],
+                    [-10034942.002273295, 4646250.976409742, 185.76089157474078]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{EA7CF9FF-CE57-44E6-BA31-29A9924B7ABF}",
+                "GLOBALID": "{EA7CF9FF-CE57-44E6-BA31-29A9924B7ABF}",
+                "TYPEUUID": "Sponge",
+                "TYPE": "Sponge",
+                "ShapeType": "point",
+                "POINT_STYLE": "circle",
+                "SA": 100,
+                "AA": null,
+                "TTPK": 0.12,
+                "TTC": 0.09,
+                "TTA": 0.7,
+                "TTPS": 0.99,
+                "LOD_P": 14,
+                "LOD_NON": 0,
+                "MCPS": 46.87,
+                "TCPS": 343.03,
+                "WVPS": 0.1,
+                "WWPS": 4.3,
+                "ALC": 118,
+                "AMC": 239,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 16:23:11.134",
+                "UPDATEDDATE": "2023/05/24 16:23:11.135",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{D47D4804-5583-4577-BDF4-CBAC92BF39D8}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10074995.004705684, 4657869.403856785, 136.29430474104882
+                    ],
+                    [
+                      -10074994.995902317, 4657869.729388297, 136.29430474104882
+                    ],
+                    [-10074994.67170703, 4657869.720548637, 136.29430474104882],
+                    [-10074994.68051041, 4657869.395017127, 136.29430474104882],
+                    [-10074995.004705684, 4657869.403856785, 136.29430474104882]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{D0323CCB-E095-4F5F-8998-DD9AA378F691}",
+                "GLOBALID": "{D0323CCB-E095-4F5F-8998-DD9AA378F691}",
+                "TYPEUUID": "Sponge",
+                "TYPE": "Sponge",
+                "ShapeType": "point",
+                "POINT_STYLE": "circle",
+                "SA": 100,
+                "AA": null,
+                "TTPK": 0.12,
+                "TTC": 0.09,
+                "TTA": 0.7,
+                "TTPS": 0.99,
+                "LOD_P": 14,
+                "LOD_NON": 0,
+                "MCPS": 46.87,
+                "TCPS": 343.03,
+                "WVPS": 0.1,
+                "WWPS": 4.3,
+                "ALC": 118,
+                "AMC": 239,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 16:23:14.971",
+                "UPDATEDDATE": "2023/05/24 16:23:14.971",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{D47D4804-5583-4577-BDF4-CBAC92BF39D8}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10005895.921777766, 4670557.940858886, 158.61696858545537
+                    ],
+                    [
+                      -10005895.931987697, 4670558.266685294, 158.61696858545537
+                    ],
+                    [-10005895.60749542, 4670558.276937197, 158.61696858545537],
+                    [
+                      -10005895.597285498, 4670557.951110788, 158.61696858545537
+                    ],
+                    [-10005895.921777766, 4670557.940858886, 158.61696858545537]
+                  ]
+                ]
+              }
+            }
+          ],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": {
+        "id": -1,
+        "referenceLayers": []
+      },
+      "customAttributes": []
+    }
+  ]
+}
