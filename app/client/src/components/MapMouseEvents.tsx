@@ -3,10 +3,11 @@ import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
 
-var ctrl = false;
-var shift = false;
-var sketchVMG: __esri.SketchViewModel | null = null;
-var updateGraphics: __esri.Graphic[] = [];
+let ctrl = false;
+let shift = false;
+let sampleAttributesG: any[] = [];
+let sketchVMG: __esri.SketchViewModel | null = null;
+let updateGraphics: __esri.Graphic[] = [];
 
 // Gets the graphic from the hittest
 function getGraphicFromResponse(res: any) {
@@ -29,7 +30,8 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView, sceneView }: Props) {
-  const { setSelectedSampleIds, sketchVM } = useContext(SketchContext);
+  const { sampleAttributes, setSelectedSampleIds, sketchVM } =
+    useContext(SketchContext);
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {
@@ -156,6 +158,16 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
 
       if (event.key === 'Escape' && mapView.popup) {
         mapView.popup.close();
+
+        // re-activate sketch tools if necessary
+        const button = document.querySelector('.sketch-button-selected');
+        if (button?.id && sketchVMG) {
+          const id = button.id;
+
+          // determine whether the sketch button draws points or polygons
+          let shapeType = sampleAttributesG[id as any].ShapeType;
+          sketchVMG.create(shapeType);
+        }
       }
     };
 
@@ -179,6 +191,11 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
 
     setInitialized(true);
   }, [handleMapClick, initialized, mapView, sceneView]);
+
+  // syncs the sampleAttributesG variable with the sampleAttributes context value
+  useEffect(() => {
+    sampleAttributesG = sampleAttributes;
+  }, [sampleAttributes]);
 
   // syncs the sketchVMG variable with the sketchVM context value
   useEffect(() => {
