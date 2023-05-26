@@ -484,12 +484,12 @@ function App() {
             <SplashScreen />
             <AlertDialog />
             <AlertMessage />
-            {window.location.search.includes('devMode=true') && (
-              <TestingToolbar />
-            )}
             <div css={appStyles(offset)}>
               <div css={containerStyles}>
                 <div ref={toolbarRef}>
+                  {window.location.search.includes('devMode=true') && (
+                    <TestingToolbar />
+                  )}
                   <Toolbar />
                 </div>
                 <NavBar height={contentHeight - toolbarHeight} />
