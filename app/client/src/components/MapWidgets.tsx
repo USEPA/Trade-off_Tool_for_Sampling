@@ -927,7 +927,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         // prevent scale and reshape changes on the predefined graphics
         // allow moves and rotates
         if (isShapeChange && hasPredefinedBoxes) {
-          sketchViewModel.cancel();
+          sketchViewModel.undo();
         }
 
         setter(isActive);
