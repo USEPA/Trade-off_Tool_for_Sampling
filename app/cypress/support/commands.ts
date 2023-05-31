@@ -15,6 +15,7 @@ declare global {
       mapLoadDelay(): Chainable<Element>
       matchSnapshot(name?: string, options?: Options): Chainable<Element>
       upload(file: any, fileName: string): Chainable<Element>
+      validateSession(key: string, point: string | boolean, value: string | boolean): Chainable<Element>
     }
   }
 }
@@ -93,3 +94,13 @@ Cypress.Commands.add("displayMode", (shape: string) => {
     })
   )
 });
+
+Cypress.Commands.add('validateSession', (key: string, point: string | boolean, value: string | boolean) => {
+  const keyObject = sessionStorage.getItem(key)
+  if (typeof (point) === 'string') {
+    cy.wrap(JSON.parse(keyObject)[point]).should('equal', value);
+  } else {
+    cy.wrap(JSON.parse(keyObject)).should('equal', value);
+  }
+
+})
