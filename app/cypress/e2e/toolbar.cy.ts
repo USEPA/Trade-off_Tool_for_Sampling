@@ -4,8 +4,17 @@ describe("Toolbar tests", () => {
         sessionStorage.clear();
     });
 
-    it.skip("Verify Settings", () => {
-        cy.visit('/')
+    it("Verify toolbar items", () => {
+        cy.visit('/');
+        cy.findByRole('button', { name: 'OK' }).click();
+        const toolbarItems = ['Trade-off Tool for Sampling (TOTS)', 'Settings', 'Basemap', 'Login', 'Contact Us'];
+        toolbarItems.map((item) => {
+            cy.get('[data-testid="tots-toolbar"]').contains(item).should('exist');
+        });
+    });
+
+    it("Verify Settings", () => {
+        cy.visit('/');
         cy.findByRole('button', { name: 'OK' }).click();
 
         cy.findByRole('button', { name: 'Settings' }).should('exist').click({ force: true });
@@ -34,7 +43,7 @@ describe("Toolbar tests", () => {
     it("Verify Legend", () => {
         cy.fixture("micro-vac.json").then((file) => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
-        })
+        });
         cy.mapLoadDelay();
 
         cy.findByRole('button', { name: 'Legend' }).should('exist').click({ force: true });
