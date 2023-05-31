@@ -239,4 +239,52 @@ describe("Visual Testing", () => {
     cy.mapLoadDelay()
     cy.get(mapId).matchSnapshot("verify-established-sample-types-point")
   })
+
+  it("Verify location from Locate", () => {
+    cy.mapLoadDelay()
+    cy.findByRole('button', { name: 'Locate' }).click({ force: true })
+    cy.get('#esri-search-component').type('dallas{enter}')
+
+    //need for map load from given input
+    cy.wait(10000)
+
+    cy.get(mapId).matchSnapshot("verify-location-from-locate")
+  })
+
+  it("Verify portal layers", () => {
+    const cc = [
+      {
+        "id": "ef4b445a53c1406892257fe63129a8ea",
+        "label": "RKI Corona Bundesländer",
+        "layerType": "Feature Service",
+        "type": "arcgis",
+        "url": "https://services7.arcgis.com/mOBPykOjAyBO2ZKk/arcgis/rest/services/Coronafälle_in_den_Bundesländern/FeatureServer"
+      }
+    ]
+    sessionStorage.setItem("tots_portal_layers", JSON.stringify(cc))
+    sessionStorage.setItem("tots_map_scene_position", JSON.stringify({
+      "position": {
+        "spatialReference": {
+          "latestWkid": 3857,
+          "wkid": 102100
+        },
+        "x": 904780.4922169957,
+        "y": 6679741.275850002
+      }
+    }))
+    sessionStorage.setItem("tots_map_2d_extent", JSON.stringify({
+      "spatialReference": {
+        "latestWkid": 3857,
+        "wkid": 102100
+      },
+      "xmin": -1239125.277125058,
+      "ymin": 5903141.068472818,
+      "xmax": 3048686.2615590496,
+      "ymax": 7456341.483227186
+    }))
+
+    cy.mapLoadDelay()
+    cy.get(mapId).matchSnapshot("verify-portal-layers")
+  })
+
 })

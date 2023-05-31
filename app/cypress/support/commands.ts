@@ -71,16 +71,16 @@ Cypress.Commands.add(
       failureThresholdType: "percent",
       failureThreshold: 0.01,
       ...options,
-    })
+    });
   }
 );
 
 // mapLoadDelay -> make delay for map load
 Cypress.Commands.add("mapLoadDelay", () => {
-  cy.visit("/")
-  cy.wait(30000)
+  cy.visit("/");
+  cy.wait(30000);
   cy.findByRole("button", { name: "OK" }).click({ force: true });
-  cy.wait(500)
+  cy.wait(500);
 });
 
 Cypress.Commands.add("displayMode", (shape: string) => {
@@ -92,15 +92,14 @@ Cypress.Commands.add("displayMode", (shape: string) => {
       terrain3dVisible: true,
       viewUnderground3d: false,
     })
-  )
+  );
 });
 
 Cypress.Commands.add('validateSession', (key: string, point: string | boolean, value: string | boolean) => {
-  const keyObject = sessionStorage.getItem(key)
+  const keyObject = sessionStorage.getItem(key);
   if (typeof (point) === 'string') {
     cy.wrap(JSON.parse(keyObject)[point]).should('equal', value);
   } else {
     cy.wrap(JSON.parse(keyObject)).should('equal', value);
   }
-
-})
+});
