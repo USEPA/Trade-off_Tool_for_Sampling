@@ -526,6 +526,7 @@ function Publish() {
         webMapReferenceLayerSelections: [],
         webSceneReferenceLayerSelections: [],
       },
+      calculateSettings: editsScenario.calculateSettings,
     })
       .then((res: any) => {
         const portalId = res.portalId;
@@ -791,6 +792,22 @@ function Publish() {
           });
           editsScenario.table = res.table;
 
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            editsScenario.calculateSettings.current = {
+              ...editsScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          editsScenario.calculateSettings.published =
+            editsScenario.calculateSettings.current;
+
           return {
             count: edits.count + 1,
             edits: [
@@ -827,6 +844,23 @@ function Publish() {
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
+
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            selectedScenario.calculateSettings.current = {
+              ...selectedScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          selectedScenario.calculateSettings.published =
+            selectedScenario.calculateSettings.current;
+
           return selectedScenario;
         });
       })
@@ -1067,6 +1101,7 @@ function Publish() {
         webMapReferenceLayerSelections,
         webSceneReferenceLayerSelections,
       },
+      calculateSettings: editsScenario.calculateSettings,
     })
       .then((res: any) => {
         const portalId = res.portalId;
@@ -1336,6 +1371,22 @@ function Publish() {
           });
           editsScenario.table = res.table;
 
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            editsScenario.calculateSettings.current = {
+              ...editsScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          editsScenario.calculateSettings.published =
+            editsScenario.calculateSettings.current;
+
           return {
             count: edits.count + 1,
             edits: [
@@ -1372,6 +1423,23 @@ function Publish() {
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
+
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            selectedScenario.calculateSettings.current = {
+              ...selectedScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          selectedScenario.calculateSettings.published =
+            selectedScenario.calculateSettings.current;
+
           return selectedScenario;
         });
       })

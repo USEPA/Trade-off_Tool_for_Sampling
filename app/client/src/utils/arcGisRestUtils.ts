@@ -1,5 +1,6 @@
 // types
 import {
+  CalculateSettingsType,
   FeatureEditsType,
   LayerEditsType,
   ReferenceLayersTableType,
@@ -752,6 +753,22 @@ function createFeatureLayers(
       });
     }
 
+    // add the calculate-settings table if it hasn't already been added
+    const calculateResultsTableName = `${serviceMetaData.label}-calculate-settings`;
+    const hasCalculateResultsTable =
+      service.featureService.tables.findIndex(
+        (t: any) => t.name === calculateResultsTableName,
+      ) > -1;
+    if (!hasCalculateResultsTable) {
+      tablesOut.push({
+        ...layerProps.data.defaultTableProps,
+        fields: layerProps.data.defaultCalculateResultsTableFields,
+        type: 'Table',
+        name: calculateResultsTableName,
+        description: `Calculate settings for "${serviceMetaData.label}".`,
+      });
+    }
+
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
     const data = {
@@ -1493,6 +1510,7 @@ function findLayerId({
  * @param attributesToInclude The attributes to include with each graphic
  * @param referenceLayersTable Reference layers that were previously published
  * @param referenceMaterials Reference layers to store in reference layers table
+ * @param calculateSettings Calculate settings to be stored
  * @returns A promise that resolves to the successfully saved objects
  */
 async function applyEdits({
@@ -1508,6 +1526,7 @@ async function applyEdits({
   attributesToInclude,
   referenceLayersTable,
   referenceMaterials,
+  calculateSettings,
 }: {
   portal: __esri.Portal;
   service: any;
@@ -1526,6 +1545,7 @@ async function applyEdits({
     webMapReferenceLayerSelections: ReferenceLayerSelections[];
     webSceneReferenceLayerSelections: ReferenceLayerSelections[];
   };
+  calculateSettings: CalculateSettingsType;
 }) {
   try {
     const changes: any[] = [];
@@ -1678,6 +1698,18 @@ async function applyEdits({
     changes.push(refOutput.edits);
     refLayerTableOut = refOutput.table;
 
+    let calculateSettingsTableOut: any | null = null;
+    const calculateSettingsOutput = await buildCalculateResultsTableEdits({
+      id: findLayerId({
+        service,
+        layersResponse,
+        name: `${scenarioName}-calculate-settings`,
+      }),
+      calculateSettings,
+    });
+    changes.push(calculateSettingsOutput.edits);
+    calculateSettingsTableOut = calculateSettingsOutput.edits;
+
     // Workaround for esri.Portal not having credential
     const tempPortal: any = portal;
 
@@ -1697,6 +1729,7 @@ async function applyEdits({
       response: res,
       table: tableOut,
       refLayerTableOut,
+      calculateSettingsTableOut,
     };
   } catch (err) {
     window.logErrorToGa(err);
@@ -1895,6 +1928,54 @@ async function buildReferenceLayerTableEdits({
       adds,
       updates,
       deletes,
+    },
+  };
+}
+
+/**
+ * Builds the edits arrays for publishing the calculate settings table of
+ * the sampling plan feature service.
+ *
+ * @param id Id of the layer
+ * @param calculateSettings Calculate Settings both current and already published
+ * @returns An object containing the edits arrays
+ */
+async function buildCalculateResultsTableEdits({
+  id,
+  calculateSettings,
+}: {
+  id: number;
+  calculateSettings: CalculateSettingsType;
+}) {
+  const adds: any[] = [];
+  const updates: any[] = [];
+  const timestamp = getCurrentDateTime();
+
+  if (!calculateSettings.published) {
+    adds.push({
+      attributes: {
+        ...calculateSettings.current,
+        GLOBALID: generateUUID(),
+        CREATEDDATE: timestamp,
+        UPDATEDDATE: timestamp,
+      },
+    });
+  } else {
+    updates.push({
+      attributes: {
+        ...calculateSettings.published,
+        ...calculateSettings.current,
+        UPDATEDDATE: timestamp,
+      },
+    });
+  }
+
+  return {
+    edits: {
+      id,
+      adds,
+      updates,
+      deletes: [],
     },
   };
 }
@@ -2439,6 +2520,7 @@ function applyEditsTable({
  * @param table Table of custom sample types
  * @param referenceLayersTable Reference layers that were previously published
  * @param referenceMaterials Reference layers to apply to web map
+ * @param calculateSettings Calculate settings to be stored
  * @returns A promise that resolves to the successfully published data
  */
 function publish({
@@ -2452,6 +2534,7 @@ function publish({
   table = null,
   referenceLayersTable,
   referenceMaterials,
+  calculateSettings,
 }: {
   portal: __esri.Portal;
   map: __esri.Map;
@@ -2468,6 +2551,7 @@ function publish({
     webMapReferenceLayerSelections: ReferenceLayerSelections[];
     webSceneReferenceLayerSelections: ReferenceLayerSelections[];
   };
+  calculateSettings: CalculateSettingsType;
 }) {
   return new Promise((resolve, reject) => {
     if (layers.length === 0) {
@@ -2574,6 +2658,7 @@ function publish({
                   attributesToInclude,
                   referenceLayersTable,
                   referenceMaterials,
+                  calculateSettings,
                 })
                   .then(async (editsRes: any) => {
                     try {
@@ -2624,6 +2709,7 @@ function publish({
                         idMapping,
                         edits: editsRes.response,
                         table: editsRes.table,
+                        calculateSettings: editsRes.calculateSettingsTableOut,
                       });
                     } catch (err) {
                       window.logErrorToGa(err);

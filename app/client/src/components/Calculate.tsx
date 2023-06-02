@@ -154,14 +154,6 @@ function Calculate() {
     setContaminationMap,
     calculateResults,
     setCalculateResults,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
     inputNumLabs,
     setInputNumLabs,
     inputNumLabHours,
@@ -251,6 +243,17 @@ function Calculate() {
       });
       return;
     }
+
+    const {
+      NUM_LABS: numLabs,
+      NUM_LAB_HOURS: numLabHours,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
 
     // if the inputs are the same as context
     // fake a loading spinner and open the panel

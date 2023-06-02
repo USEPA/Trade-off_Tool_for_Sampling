@@ -1188,6 +1188,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       const resSampleTypes: any[] = [];
       const resRefLayersTypes: any[] = [];
+      const resCalculateSettings: any[] = [];
       featureLayersRes.tables.forEach((table: any) => {
         if (table.name.endsWith('-sample-types')) {
           resSampleTypes.push(table);
@@ -1195,10 +1196,14 @@ function ResultCard({ result }: ResultCardProps) {
         if (table.name.endsWith('-reference-layers')) {
           resRefLayersTypes.push(table);
         }
+        if (table.name.endsWith('-calculate-settings')) {
+          resCalculateSettings.push(table);
+        }
       });
 
       // fire off the calls with the points layers last
       const resCombined = [
+        ...resCalculateSettings,
         ...resRefLayersTypes,
         ...resSampleTypes,
         ...resPolys,
@@ -1230,6 +1235,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       // define items used for updating states
       let editsCopy: EditsType = deepCopyObject(edits);
+      let calcSettings: any = {};
       const mapLayersToAdd: __esri.Layer[] = [];
       const newAttributes: Attributes = {};
       const newCustomAttributes: AttributesType[] = [];
@@ -1336,6 +1342,14 @@ function ResultCard({ result }: ResultCardProps) {
 
           if (newPortalLayers.length > 0) setPortalLayers(newPortalLayers);
           if (newUrlLayers.length > 0) setUrlLayers(newUrlLayers);
+        } else if (
+          layerDetails.type === 'Table' &&
+          layerDetails.name.endsWith('-calculate-settings') &&
+          layerFeatures.features.length > 0
+        ) {
+          calcSettings = {
+            ...layerFeatures.features[0].attributes,
+          };
         } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
           if (layerFeatures.features?.length > 0) {
             updatePointIds(layerFeatures, layerDetails, layersToAdd, editsCopy);
@@ -1482,6 +1496,10 @@ function ResultCard({ result }: ResultCardProps) {
             table,
             referenceLayersTable,
             customAttributes: newCustomAttributes,
+            calculateSettings: {
+              current: calcSettings,
+              published: calcSettings,
+            },
           };
 
           // make a copy of the edits context variable
