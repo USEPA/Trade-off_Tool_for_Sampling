@@ -1985,6 +1985,11 @@ function ResultCard({ result }: ResultCardProps) {
   function removeTotsLayer() {
     if (!map) return;
 
+    const newEdits = {
+      count: edits.count + 1,
+      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
+    };
+
     setLayers((layers) => {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
@@ -2011,20 +2016,26 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
+      const newLayers = layers.filter((layer) => layer.portalId !== result.id);
+
       // select the next scenario and active sampling layer
       const { nextScenario, nextLayer } = getNextScenarioLayer(
-        edits,
-        layers,
+        newEdits,
+        newLayers,
         null,
         null,
       );
+
       if (nextScenario) setSelectedScenario(nextScenario);
+      else setSelectedScenario(null);
+
       if (nextLayer) setSketchLayer(nextLayer);
+      else setSketchLayer(null);
 
       map.removeMany(mapLayersToRemove);
 
       // set the state
-      return layers.filter((layer) => layer.portalId !== result.id);
+      return newLayers;
     });
 
     setReferenceLayers((layers) => {
@@ -2047,10 +2058,7 @@ function ResultCard({ result }: ResultCardProps) {
     });
 
     // remove the layer from edits
-    setEdits({
-      count: edits.count + 1,
-      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
-    });
+    setEdits(newEdits);
 
     // remove the layer from portal layers
     setPortalLayers((portalLayers) =>

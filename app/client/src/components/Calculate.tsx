@@ -150,31 +150,72 @@ function Calculate() {
     getGpMaxRecordCount,
   } = useContext(SketchContext);
   const {
-    contaminationMap,
-    setContaminationMap,
     calculateResults,
-    setCalculateResults,
-    inputNumLabs,
-    setInputNumLabs,
+    contaminationMap,
     inputNumLabHours,
-    setInputNumLabHours,
+    inputNumLabs,
     inputNumSamplingHours,
-    setInputNumSamplingHours,
     inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
     inputNumSamplingShifts,
-    setInputNumSamplingShifts,
     inputNumSamplingTeams,
-    setInputNumSamplingTeams,
     inputSamplingLaborCost,
-    setInputSamplingLaborCost,
     inputSurfaceArea,
+    resetCalculateContext,
+    setCalculateResults,
+    setContaminationMap,
+    setInputNumLabHours,
+    setInputNumLabs,
+    setInputNumSamplingHours,
+    setInputNumSamplingPersonnel,
+    setInputNumSamplingShifts,
+    setInputNumSamplingTeams,
+    setInputSamplingLaborCost,
     setInputSurfaceArea,
     setUpdateContextValues,
   } = useContext(CalculateContext);
 
   const getPopupTemplate = useDynamicPopup();
   const services = useServicesContext();
+
+  // sync the inputs with settings pulled from AGO
+  const [pageInitialized, setPageInitialized] = useState(false);
+  useEffect(() => {
+    if (!selectedScenario || pageInitialized) return;
+    setPageInitialized(true);
+
+    const {
+      NUM_LAB_HOURS: numLabHours,
+      NUM_LABS: numLabs,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
+
+    setInputNumLabHours(numLabHours);
+    setInputNumLabs(numLabs);
+    setInputNumSamplingHours(numSamplingHours);
+    setInputNumSamplingPersonnel(numSamplingPersonnel);
+    setInputNumSamplingShifts(numSamplingShifts);
+    setInputNumSamplingTeams(numSamplingTeams);
+    setInputSamplingLaborCost(samplingLaborCost);
+    setInputSurfaceArea(surfaceArea);
+  }, [
+    edits,
+    pageInitialized,
+    resetCalculateContext,
+    selectedScenario,
+    setInputNumLabHours,
+    setInputNumLabs,
+    setInputNumSamplingHours,
+    setInputNumSamplingPersonnel,
+    setInputNumSamplingShifts,
+    setInputNumSamplingTeams,
+    setInputSamplingLaborCost,
+    setInputSurfaceArea,
+  ]);
 
   // callback for closing the results panel when leaving this tab
   const closePanel = useCallback(() => {
