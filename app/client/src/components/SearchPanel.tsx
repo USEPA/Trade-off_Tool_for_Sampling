@@ -18,6 +18,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { settingDefaults } from 'contexts/Calculate';
 import { DialogContext } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
@@ -42,12 +43,13 @@ import {
 } from 'utils/sketchUtils';
 import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
-import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
+  CalculateSettingsBaseType,
   EditsType,
   ReferenceLayersTableType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 import { AttributesType } from 'types/Publish';
 import {
@@ -1235,7 +1237,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       // define items used for updating states
       let editsCopy: EditsType = deepCopyObject(edits);
-      let calcSettings: any = {};
+      let calcSettings: CalculateSettingsBaseType | null = null;
       const mapLayersToAdd: __esri.Layer[] = [];
       const newAttributes: Attributes = {};
       const newCustomAttributes: AttributesType[] = [];
@@ -1344,12 +1346,13 @@ function ResultCard({ result }: ResultCardProps) {
           if (newUrlLayers.length > 0) setUrlLayers(newUrlLayers);
         } else if (
           layerDetails.type === 'Table' &&
-          layerDetails.name.endsWith('-calculate-settings') &&
-          layerFeatures.features.length > 0
+          layerDetails.name.endsWith('-calculate-settings')
         ) {
-          calcSettings = {
-            ...layerFeatures.features[0].attributes,
-          };
+          if (layerFeatures.features.length > 0) {
+            calcSettings = {
+              ...layerFeatures.features[0].attributes,
+            };
+          }
         } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
           if (layerFeatures.features?.length > 0) {
             updatePointIds(layerFeatures, layerDetails, layersToAdd, editsCopy);
@@ -1497,8 +1500,8 @@ function ResultCard({ result }: ResultCardProps) {
             referenceLayersTable,
             customAttributes: newCustomAttributes,
             calculateSettings: {
-              current: calcSettings,
-              published: calcSettings,
+              current: calcSettings || settingDefaults,
+              published: calcSettings || undefined,
             },
           };
 

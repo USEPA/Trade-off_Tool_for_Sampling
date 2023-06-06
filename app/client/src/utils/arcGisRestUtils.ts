@@ -588,12 +588,6 @@ function createFeatureLayers(
 
     const layerIds: string[] = [];
     layers.forEach((layer) => {
-      // don't duplicate existing layers
-      const layerFromService = service.featureService.layers.find(
-        (l: any) => l.id === layer.id && l.name === layer.label,
-      );
-      if (layerFromService) return;
-
       const {
         graphicsExtent,
         templatesPoints,
@@ -639,22 +633,27 @@ function createFeatureLayers(
       });
 
       // add the polygon representation
-      layerIds.push(layer.sketchLayer.id);
-      layersParams.push({
-        ...layerProps.data.defaultLayerProps,
-        fields,
-        name: serviceMetaData.label,
-        description: serviceMetaData.description,
-        extent: graphicsExtent,
-        drawingInfo: {
-          renderer: {
-            type: 'uniqueValue',
-            field1: 'TYPEUUID',
-            uniqueValueInfos: uniqueValueInfosPolygons,
+      const polyLayerFromService = service.featureService.layers.find(
+        (l: any) => l.id === layer.id && l.name === layer.label,
+      );
+      if (!polyLayerFromService) {
+        layerIds.push(layer.sketchLayer.id);
+        layersParams.push({
+          ...layerProps.data.defaultLayerProps,
+          fields,
+          name: serviceMetaData.label,
+          description: serviceMetaData.description,
+          extent: graphicsExtent,
+          drawingInfo: {
+            renderer: {
+              type: 'uniqueValue',
+              field1: 'TYPEUUID',
+              uniqueValueInfos: uniqueValueInfosPolygons,
+            },
           },
-        },
-        types: templatesPolygons,
-      });
+          types: templatesPolygons,
+        });
+      }
 
       // add a custom type for determining which layers in a feature service
       // are the sample layers. All feature services made through TOTS should only
@@ -673,23 +672,29 @@ function createFeatureLayers(
       }
 
       // add the point representation
-      layerIds.push(layer.pointsLayer?.id || '');
-      layersParams.push({
-        ...layerProps.data.defaultLayerProps,
-        fields,
-        geometryType: 'esriGeometryPoint',
-        name: serviceMetaData.label + '-points',
-        description: serviceMetaData.description,
-        extent: graphicsExtent,
-        drawingInfo: {
-          renderer: {
-            type: 'uniqueValue',
-            field1: 'TYPEUUID',
-            uniqueValueInfos: uniqueValueInfosPoints,
+      const pointLayerFromService = service.featureService.layers.find(
+        (l: any) =>
+          l.id === layer.pointsId && l.name === layer.pointsLayer?.title,
+      );
+      if (!pointLayerFromService) {
+        layerIds.push(layer.pointsLayer?.id || '');
+        layersParams.push({
+          ...layerProps.data.defaultLayerProps,
+          fields,
+          geometryType: 'esriGeometryPoint',
+          name: serviceMetaData.label + '-points',
+          description: serviceMetaData.description,
+          extent: graphicsExtent,
+          drawingInfo: {
+            renderer: {
+              type: 'uniqueValue',
+              field1: 'TYPEUUID',
+              uniqueValueInfos: uniqueValueInfosPoints,
+            },
           },
-        },
-        types: templatesPoints,
-      });
+          types: templatesPoints,
+        });
+      }
     });
 
     const refIdsAdded: string[] = [];
@@ -781,7 +786,7 @@ function createFeatureLayers(
     };
     appendEnvironmentObjectParam(data);
 
-    if (layersParams.length === 0) {
+    if (layersParams.length === 0 && tablesOut.length === 0) {
       resolve({
         success: true,
         layers: [],
@@ -1006,6 +1011,7 @@ function getNewFields(
   const layerDefinition = service.layerDefinitions.find(
     (def: any) => def.id === id,
   );
+  if (!layerDefinition) return [];
 
   // check fields
   const newFields: any[] = [];
@@ -1586,19 +1592,26 @@ async function applyEdits({
         addPointFeatures(mapLayer, pointsAdds, item, attributesToInclude);
       });
       layerEdits.updates.forEach((item) => {
-        addPointFeatures(mapLayer, pointsUpdates, item, attributesToInclude);
-      });
-      layerEdits.deletes.forEach((item) => {
         addPointFeatures(
           mapLayer,
-          pointsDeletes,
-          {
-            attributes: item,
-            geometry: {},
-          },
+          layerEdits.pointsId === -1 ? pointsAdds : pointsUpdates,
+          item,
           attributesToInclude,
         );
       });
+      if (layerEdits.pointsId !== -1) {
+        layerEdits.deletes.forEach((item) => {
+          addPointFeatures(
+            mapLayer,
+            pointsDeletes,
+            {
+              attributes: item,
+              geometry: {},
+            },
+            attributesToInclude,
+          );
+        });
+      }
 
       // Push the points version into the changes array
       if (
@@ -1780,7 +1793,7 @@ function buildTableEdits({
 
     // build the adds and updates arrays
     Object.keys(sampleTypes).forEach((key) => {
-      if (table?.sampleTypes.hasOwnProperty(key)) {
+      if (table?.sampleTypes?.hasOwnProperty(key)) {
         updates.push(sampleTypes[key]);
         sampleTypesOut[key] = sampleTypes[key];
       } else {
