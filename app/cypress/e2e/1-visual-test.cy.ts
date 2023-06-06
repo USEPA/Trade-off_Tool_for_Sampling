@@ -133,7 +133,7 @@ describe("Visual Testing", () => {
     cy.fixture("wet-vac.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file))
     })
-    cy.displayMode("polygons")
+    cy.displayMode("2d", "polygons");
     cy.mapLoadDelay()
 
     cy.get(mapId).matchSnapshot("verify-wet-vac")
@@ -164,7 +164,7 @@ describe("Visual Testing", () => {
     cy.fixture("robot.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file))
     })
-    cy.displayMode("polygons")
+    cy.displayMode("2d", "polygons");
     cy.mapLoadDelay()
 
     cy.get(mapId).matchSnapshot("verify-robot")
@@ -191,7 +191,7 @@ describe("Visual Testing", () => {
         ymax: 4747071.574211497,
       })
     )
-    cy.displayMode("polygons")
+    cy.displayMode("2d", "polygons");
 
     cy.fixture("aggressive-air.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file))
@@ -285,6 +285,38 @@ describe("Visual Testing", () => {
 
     cy.mapLoadDelay()
     cy.get(mapId).matchSnapshot("verify-portal-layers")
+  })
+
+  it("Verify 3d", () => {
+    cy.displayMode("3d", "polygons");
+
+    sessionStorage.setItem("tots_map_3d_extent", JSON.stringify({
+      "spatialReference": {
+        "latestWkid": 3857,
+        "wkid": 102100
+      },
+      "xmin": -19770869.537082013,
+      "ymin": -1230433.3885384633,
+      "xmax": 266638.8057068905,
+      "ymax": 7268225.16362042
+    }))
+
+    sessionStorage.setItem("tots_map_scene_position", JSON.stringify({
+      "fov": 55,
+      "heading": 359.98720300386617,
+      "position": {
+        "spatialReference": {
+          "latestWkid": 3857,
+          "wkid": 102100
+        },
+        "x": -9752105.039835732,
+        "y": 2972737.185802346,
+        "z": 18678169.896921813
+      },
+      "tilt": 0.12728932598295026
+    }))
+    cy.mapLoadDelay()
+    cy.get(mapId).matchSnapshot("verify-3d")
   })
 
 })

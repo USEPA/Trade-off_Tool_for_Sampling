@@ -11,7 +11,7 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      displayMode(shape: string): Chainable<Element>
+      displayMode(dimensions: string, shape: string): Chainable<Element>
       mapLoadDelay(): Chainable<Element>
       matchSnapshot(name?: string, options?: Options): Chainable<Element>
       upload(file: any, fileName: string): Chainable<Element>
@@ -83,11 +83,11 @@ Cypress.Commands.add("mapLoadDelay", () => {
   cy.wait(500);
 });
 
-Cypress.Commands.add("displayMode", (shape: string) => {
+Cypress.Commands.add("displayMode", (dimensions: string, shape: string) => {
   sessionStorage.setItem(
     "tots_display_mode",
     JSON.stringify({
-      dimensions: "2d",
+      dimensions: dimensions,
       geometryType: shape,
       terrain3dVisible: true,
       viewUnderground3d: false,

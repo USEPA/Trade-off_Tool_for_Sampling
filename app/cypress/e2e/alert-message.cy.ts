@@ -1,5 +1,5 @@
 describe("Alert message tests", () => {
-  beforeEach(() => {});
+  beforeEach(() => { });
 
   const notificationMessage =
     "There will be scheduled maintenance on the geopub.epa.gov services on Thursday, July 16th starting at 8am and ending at 11am.";
@@ -35,5 +35,17 @@ describe("Alert message tests", () => {
     cy.findByTestId("all-pages-notifications-banner")
       .should("exist")
       .contains(notificationMessage);
+  });
+
+  it('Verify Error message', () => {
+    sessionStorage.clear();
+    cy.visit("/");
+    cy.findByRole('button', { name: 'OK' }).click({ force: true });
+
+    cy.findByRole('button', { name: 'Add Data' }).click({ force: true });
+    cy.get('#add-data-select').type('Add Layer from Web{enter}');
+    cy.get('#url-type-select').type('An ArcGIS Server{enter}');
+    cy.findByRole('button', { name: 'ADD' }).click({ force: true });
+    cy.findByText('Failed to Add Layer');
   });
 });

@@ -3,6 +3,7 @@ describe("Calculate results tests", () => {
         sessionStorage.clear();
     });
 
+    const loadingSpinnerId = "tots-loading-spinner";
     const planName = 'Test Plan';
     const planDescription = 'test description';
 
@@ -21,13 +22,10 @@ describe("Calculate results tests", () => {
         cy.fixture("wet-vac.json").then((file) => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
         })
-        cy.displayMode("polygons");
+        cy.displayMode("2d", "polygons");
         cy.visit('/');
         cy.findByRole("button", { name: "OK" }).click({ force: true });
         cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
-
-        // needed for calculate
-        cy.wait(1000);
 
         //Nav bar
         cy.findByText('Resource Tally').should('exist');
@@ -38,14 +36,16 @@ describe("Calculate results tests", () => {
         cy.findByRole('button', { name: 'Calculate Resources' }).click({ force: true });
         cy.findByRole('button', { name: 'View Detailed Results' }).click({ force: true });
 
-        // needed for calculate
-        cy.wait(1000);
+        cy.findAllByTestId(loadingSpinnerId).should("exist");
+        cy.findAllByTestId(loadingSpinnerId).should("not.exist");
 
         //Calculate details
-        cy.findByText('Summary').should('exist');
-        cy.findByText('Sampling Plan').should('exist');
-        cy.findByText('Details').should('exist');
-        cy.findByText('Analysis').should('exist');
+        const summarys = ['Summary', 'Sampling Plan', 'Total Number of User-Defined Samples:', 'Total Number of Samples:', 'Total Time (days):', 'Limiting Time Factor:', 'Sampling Operation', 'Total Required Sampling Time (team hrs):', 'Total Sampling Material Cost ($):', 'Analysis Operation', 'Total Required Analysis Time (lab hrs):', 'Total Analysis Labor Cost ($):', 'Total Analysis Material Cost ($):', 'Details', 'Spatial Information', 'Percent of Area Sampled:', 'Sampling Hours per Day:', 'Sampling Personnel Hours per Day:', 'User Specified Sampling Team Labor Cost ($):', 'Time to Prepare Kits (person hours):', 'Time to Collect (person hours):', 'Sampling Material Cost ($):', 'Sampling Personnel Labor Cost ($):', 'Analysis', 'Time to Analyze (person hours):', 'Analysis Labor Cost ($):', 'Analysis Material Cost ($):', 'Total Waste Volume (L):', 'Total Waste Weight (lbs):'];
+        summarys.map((item) => {
+            cy.findByText(item).should('exist');
+        });
+
+        // 'Total Cost ($)' 'Plan Name:', 'Plan Description:' ,'Time to Complete Sampling (days):' ,'Total Sampling Labor Cost ($):','Time to Complete Analyses (days):,'Sampling'
     });
 
     it("Calculate wet-vac download file", () => {
@@ -59,8 +59,9 @@ describe("Calculate results tests", () => {
         cy.findByRole('button', { name: 'View Detailed Results' }).click({ force: true });
         cy.findByRole('button', { name: 'Download' }).click();
 
-        // needed for calculate
-        cy.wait(20000);
+        cy.findAllByTestId(loadingSpinnerId).should("exist");
+        cy.findAllByTestId(loadingSpinnerId).should("not.exist");
+
         cy.readFile("cypress/downloads/tots_demo.xlsx").should("exist");
 
         cy.findByText('Success').should('exist');
@@ -79,4 +80,4 @@ describe("Calculate results tests", () => {
         cy.contains(planName).should('exist');
         cy.contains(planDescription).should('exist');
     });
-})
+});

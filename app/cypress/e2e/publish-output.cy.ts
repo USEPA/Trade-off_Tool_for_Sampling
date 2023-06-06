@@ -41,26 +41,24 @@ describe("Publish output tests", () => {
         cy.get('#add-data-select').type('Add Layer from Web{enter}');
         cy.get('#url-type-select').type('An ArcGIS Server{enter}');
         cy.get('#url-upload-input').type('https://maps7.arcgisonline.com/arcgis/rest/services/EPA_Regions/MapServer{enter}');
-
-        //needed for map load 
-        cy.wait(3000);
-
+        cy.findByText('The layer was successfully added to the map');
         cy.findByRole('button', { name: 'Next' }).click({ force: true });
+
         cy.findByPlaceholderText("Enter Plan Name").type(planName);
         cy.get('#scenario-description-input').type(planDescription);
         cy.findByRole('button', { name: 'Save' }).click({ force: true });
+
         cy.findByRole('button', { name: 'Configure Output' }).click({ force: true });
-
-        // needed wait for next page
-        cy.wait(3000);
-
+        cy.findByRole("heading", { name: "Configure Output" });
+        cy.findByText('Include Web Map').parent().parent().click();
+        cy.findByText('Reference Layers to Include with web map');
         cy.findByRole('button', { name: 'Next' }).click({ force: true });
+
         cy.findByText('Include Tailored TOTS Output Files:').should('exist');
         cy.findByText('Include Web Map:').should('exist');
         cy.findAllByText('Reference layers to include:').should('have.length', 2);
         cy.findByText('Include Web Scene:').should('exist');
         cy.get('#tots-panel-scroll-container').find('li').should('have.length', 2);
         cy.get('#tots-panel-scroll-container').contains('EPA Regions').should('exist');
-
-    })
-})
+    });
+});

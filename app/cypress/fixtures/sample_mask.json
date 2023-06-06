@@ -1,0 +1,103 @@
+{
+  "count": 2,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1888d45f122-layer-43",
+      "portalId": "",
+      "name": "Test Plan",
+      "label": "Test Plan",
+      "value": "1888d45f122-layer-43",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "Test Plan",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{5B0963A0-0C65-4A52-8A23-104BD6562034}",
+          "layerId": "{5B0963A0-0C65-4A52-8A23-104BD6562034}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": {
+        "id": -1,
+        "referenceLayers": []
+      },
+      "customAttributes": []
+    },
+    {
+      "type": "layer",
+      "id": -1,
+      "pointsId": -1,
+      "uuid": "{4382786D-315B-4AD4-9A07-FE93C2073B0D}",
+      "layerId": "{4382786D-315B-4AD4-9A07-FE93C2073B0D}",
+      "portalId": "",
+      "name": "Sketched Sampling Mask",
+      "label": "Sketched Sampling Mask",
+      "layerType": "Sampling Mask",
+      "hasContaminationRan": false,
+      "addedFrom": "sketch",
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "hide",
+      "sort": 0,
+      "adds": [
+        {
+          "attributes": {
+            "DECISIONUNITUUID": "{4382786D-315B-4AD4-9A07-FE93C2073B0D}",
+            "DECISIONUNIT": "Sketched Sampling Mask",
+            "DECISIONUNITSORT": 0,
+            "PERMANENT_IDENTIFIER": "{117FF9E9-86B0-441F-BD02-73631FF840CB}",
+            "GLOBALID": "{117FF9E9-86B0-441F-BD02-73631FF840CB}",
+            "OBJECTID": -1,
+            "TYPE": "Sampling Mask"
+          },
+          "geometry": {
+            "hasZ": true,
+            "spatialReference": {
+              "latestWkid": 3857,
+              "wkid": 102100
+            },
+            "rings": [
+              [
+                [-11323823.006329238, 4412200.95329421, 1026.5776176281227],
+                [-11235767.54974474, 4030627.308094711, 1026.5776176281227],
+                [-11773884.228872236, 3991491.5496127116, 1026.5776176281227],
+                [-11323823.006329238, 4412200.95329421, 1026.5776176281227]
+              ]
+            ]
+          }
+        }
+      ],
+      "updates": [],
+      "deletes": [],
+      "published": []
+    }
+  ]
+}
