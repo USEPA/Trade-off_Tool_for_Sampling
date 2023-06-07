@@ -40,9 +40,9 @@ describe("Alert message tests", () => {
   it('Verify Error message', () => {
     sessionStorage.clear();
     cy.visit("/");
-    cy.findByRole('button', { name: 'OK' }).click({ force: true });
+    cy.findByRole('button', { name: 'OK' }).should('exist').click({ force: true });
 
-    cy.findByRole('button', { name: 'Add Data' }).click({ force: true });
+    cy.findByRole('button', { name: 'Add Data' }).should('exist').click({ force: true });
     cy.get('#add-data-select').type('Add Layer from Web{enter}');
     cy.get('#url-type-select').type('An ArcGIS Server{enter}');
     cy.findByRole('button', { name: 'ADD' }).click({ force: true });

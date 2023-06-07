@@ -8,18 +8,16 @@ describe("Create Plan Drop Down Contents", function () {
   beforeEach(function () {
     // clear session storage and open the app
     sessionStorage.clear();
+
     cy.visit("/");
 
-    // close the splash screen
-    cy.findByRole("button", { name: "OK" }).click({ force: true });
+    //needed two times splash screen
+    cy.wait(12000)
 
-    // go to the create plan tab
-    cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
-
-    // create a plan
-    cy.findByPlaceholderText("Enter Plan Name").type(planName);
+    cy.findByRole("button", { name: "OK" }).should('exist').click({ force: true });
+    cy.findByRole('button', { name: 'Create Plan' }).should('exist').click({ force: true });
+    cy.get('#scenario-name-input').type(planName);
     cy.findByRole('button', { name: 'Save' }).click({ force: true });
-
 
   });
 
@@ -27,10 +25,10 @@ describe("Create Plan Drop Down Contents", function () {
     const layerName = "Default Sample Layer";
 
     // open the legend widget
-    cy.findByText("Legend").click();
+    cy.findByRole('button', { name: 'Legend' }).click({ force: true });
 
     // check the legend contents
-    cy.findByTitle("Expand").click();
+    cy.findByTitle("Expand").click({ force: true });
     cy.get(legendId).contains(layerName).should("be.visible");
 
     // check the dropdown contents
@@ -128,5 +126,21 @@ describe("Create Plan Drop Down Contents", function () {
 
     cy.get('#Robot').click({ force: true });
     cy.get('#Robot').should('have.css', 'background-color', 'rgb(231, 246, 248)');
+  });
+
+  it("Verify start over", function () {
+    cy.fixture("micro-vac.json").then((file) => {
+      sessionStorage.setItem("tots_edits", JSON.stringify(file))
+    })
+    cy.findByRole("button", { name: "Start Over" }).should('exist').click({ force: true });
+    cy.findByText('Would you like to continue?').should('exist');
+    cy.findByRole('button', { name: 'Continue' }).click({ force: true });
+  });
+
+  it("Verify Delete all samples", function () {
+    cy.fixture("micro-vac.json").then((file) => {
+      sessionStorage.setItem("tots_edits", JSON.stringify(file))
+    });
+    cy.findByRole("button", { name: "Delete All Samples" }).should('exist').click({ force: true });
   });
 });

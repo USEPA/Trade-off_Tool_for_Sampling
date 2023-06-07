@@ -10,7 +10,7 @@ describe('Homepage', function () {
   });
 
   it('verify help', function () {
-    cy.findByRole('button', { name: 'OK' }).click();
+    cy.findByRole('button', { name: 'OK' }).should('exist').click();
     cy.findByRole('button', { name: 'Help' }).should('exist').click();
     cy.findByRole('dialog').should('be.visible');
     cy.findByText('Getting Started').should('exist');
@@ -25,6 +25,23 @@ describe('Homepage', function () {
     cy.findByRole('button', { name: 'OK' }).click();
     cy.visit('/');
     cy.findByRole('dialog').should('not.exist');
+  });
+
+  it('Verify Expand Table Panel', function () {
+
+    cy.fixture("swab.json").then((file) => {
+      sessionStorage.setItem("tots_edits", JSON.stringify(file))
+    });
+    sessionStorage.setItem('tots_table_panel', JSON.stringify({
+      "expanded": true,
+      "height": 200
+    }));
+    cy.visit('/');
+
+    cy.findByRole('button', { name: 'OK' }).should('exist').click();
+    cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();
+    cy.get('#tots-table-div').children('div').children('div').first().click();
+    cy.get('[aria-label="Collapse Table Panel"]').click({ force: true });
   });
 
 });

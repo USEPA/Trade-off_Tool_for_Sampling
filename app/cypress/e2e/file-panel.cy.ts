@@ -1,12 +1,15 @@
 describe("File Panel", () => {
-    beforeEach(() => { sessionStorage.clear(); });
+    beforeEach(() => {
+        sessionStorage.clear();
+        cy.visit("/");
+
+        //needed two times splash screen
+        cy.wait(12000)
+    });
 
     it('Verify AlertDialog Sample Issues', () => {
-
-        cy.visit("/");
-        cy.findByRole('button', { name: 'OK' }).click({ force: true });
-
-        cy.findByRole('button', { name: 'Add Data' }).click({ force: true });
+        cy.findByRole('button', { name: 'OK' }).should('exist').click({ force: true });
+        cy.findByRole('button', { name: 'Add Data' }).should('exist').click({ force: true });
         cy.get('#add-data-select').type('Add Layer from File{enter}');
         cy.get('#layer-type-select-input').type('Samples{enter}');
         cy.fixture('targeted_sampling.zip').then((file) => {

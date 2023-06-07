@@ -44,14 +44,12 @@ describe("Calculate results tests", () => {
         summarys.map((item) => {
             cy.findByText(item).should('exist');
         });
-
-        // 'Total Cost ($)' 'Plan Name:', 'Plan Description:' ,'Time to Complete Sampling (days):' ,'Total Sampling Labor Cost ($):','Time to Complete Analyses (days):,'Sampling'
     });
 
     it("Calculate wet-vac download file", () => {
         cy.fixture("wet-vac.json").then((file) => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
-        })
+        });
         cy.visit('/');
         cy.findByRole("button", { name: "OK" }).click({ force: true });
         cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
@@ -66,7 +64,7 @@ describe("Calculate results tests", () => {
 
         cy.findByText('Success').should('exist');
         cy.findByText('The file was successfully downloaded.').should('exist');
-    })
+    });
 
     it("Verify Name and Description", () => {
         cy.mapLoadDelay();
@@ -79,5 +77,20 @@ describe("Calculate results tests", () => {
         cy.findByRole('button', { name: 'Next' }).should('exist').click();
         cy.contains(planName).should('exist');
         cy.contains(planDescription).should('exist');
+    });
+
+    it("Verify traning-mode View Contamination Hits", () => {
+        sessionStorage.setItem("tots_training_mode", 'true');
+
+        cy.visit('/');
+        cy.findByRole("button", { name: "OK" }).should('exist').click({ force: true });
+
+        cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();
+        cy.get('#scenario-name-input').type(planName);
+        cy.findByRole('button', { name: 'Save' }).click({ force: true });
+        cy.findByRole('button', { name: 'Calculate Resources' }).should('exist').click({ force: true });
+        cy.findByText('Include Contamination Map (Optional)').should('exist').click({ force: true });
+        cy.findByRole('button', { name: 'View Contamination Hits' }).should('exist').click({ force: true });
+        cy.findByRole('button', { name: 'Add' }).should('exist').click({ force: true });
     });
 });

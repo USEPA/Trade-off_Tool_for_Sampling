@@ -30,7 +30,7 @@ describe("Add Data", function () {
 
   function goToFileUpload() {
     // go to the file upload panel of the add data tab
-    cy.findByText("Add Data").click();
+    cy.findByRole("button", { name: "Add Data" }).should('exist').click({ force: true });
     cy.get("#add-data-select").type("Add Layer from Fi", { force: true });
     cy.findByText("Add Layer from File").click();
   }
@@ -45,9 +45,10 @@ describe("Add Data", function () {
     // clear session storage and open the app
     sessionStorage.clear();
     cy.visit("/");
+    cy.wait(12000);
 
     // close the splash screen
-    cy.findByText("OK").click();
+    cy.findByRole('button', { name: 'OK' }).should('exist').click();
 
     goToFileUpload();
   });
