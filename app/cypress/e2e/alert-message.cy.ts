@@ -38,8 +38,7 @@ describe("Alert message tests", () => {
   });
 
   it('Verify Error message', () => {
-    sessionStorage.clear();
-    cy.visit("/");
+    cy.loadPage(true);
     cy.findByRole('button', { name: 'OK' }).should('exist').click({ force: true });
 
     cy.findByRole('button', { name: 'Add Data' }).should('exist').click({ force: true });

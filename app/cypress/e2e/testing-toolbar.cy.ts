@@ -1,14 +1,12 @@
 describe("Testing Tools", function () {
     beforeEach(function () {
-        sessionStorage.clear();
         const location = window.location;
         const origin =
             location.hostname === 'localhost'
                 ? `${location.protocol}//${location.hostname}:3000`
                 : window.location.origin;
 
-        cy.visit(`${origin}?devMode=true`);
-        cy.wait(12000);
+        cy.loadPage(true, `${origin}?devMode=true`);
     });
 
     it("Verify buttons", function () {

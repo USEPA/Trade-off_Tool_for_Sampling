@@ -42,10 +42,7 @@ describe("Add Data", function () {
   }
 
   beforeEach(function () {
-    // clear session storage and open the app
-    sessionStorage.clear();
-    cy.visit("/");
-    cy.wait(12000);
+    cy.loadPage(true);
 
     // close the splash screen
     cy.findByRole('button', { name: 'OK' }).should('exist').click();

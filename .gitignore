@@ -17,6 +17,7 @@ coverage/
 app/cypress/screenshots/
 app/cypress/videos/
 app/cypress/downloads/
+cypress.env.json
 
 # production
 /build

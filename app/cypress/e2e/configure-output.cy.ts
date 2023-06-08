@@ -55,7 +55,7 @@ describe("Configure output tests", () => {
     });
 
     it("Verify add new attribute", () => {
-        cy.visit('/')
+        cy.loadPage();
         cy.findByRole("button", { name: "OK" }).click({ force: true });
         cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();
         cy.findByPlaceholderText("Enter Plan Name").type(planName);

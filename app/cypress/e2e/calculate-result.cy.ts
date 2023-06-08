@@ -23,7 +23,7 @@ describe("Calculate results tests", () => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
         })
         cy.displayMode("2d", "polygons");
-        cy.visit('/');
+        cy.loadPage();
         cy.findByRole("button", { name: "OK" }).click({ force: true });
         cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
 
@@ -50,7 +50,7 @@ describe("Calculate results tests", () => {
         cy.fixture("wet-vac.json").then((file) => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
         });
-        cy.visit('/');
+        cy.loadPage();
         cy.findByRole("button", { name: "OK" }).click({ force: true });
         cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
         cy.findByRole('button', { name: 'Calculate Resources' }).click({ force: true });
@@ -82,7 +82,7 @@ describe("Calculate results tests", () => {
     it("Verify traning-mode View Contamination Hits", () => {
         sessionStorage.setItem("tots_training_mode", 'true');
 
-        cy.visit('/');
+        cy.loadPage();
         cy.findByRole("button", { name: "OK" }).should('exist').click({ force: true });
 
         cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();

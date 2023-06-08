@@ -1,10 +1,6 @@
 describe("File Panel", () => {
     beforeEach(() => {
-        sessionStorage.clear();
-        cy.visit("/");
-
-        //needed two times splash screen
-        cy.wait(12000)
+        cy.loadPage(true);
     });
 
     it('Verify AlertDialog Sample Issues', () => {

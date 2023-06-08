@@ -1,8 +1,6 @@
 describe('Homepage', function () {
   beforeEach(function () {
-    // clear session storage and open the app
-    sessionStorage.clear();
-    cy.visit('/');
+    cy.loadPage(true);
   });
 
   it('contains placeholder text', function () {
@@ -36,7 +34,7 @@ describe('Homepage', function () {
       "expanded": true,
       "height": 200
     }));
-    cy.visit('/');
+    cy.loadPage();
 
     cy.findByRole('button', { name: 'OK' }).should('exist').click();
     cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();

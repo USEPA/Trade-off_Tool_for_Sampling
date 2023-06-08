@@ -6,13 +6,7 @@ describe("Create Plan Drop Down Contents", function () {
   const planName = "Test Plan";
 
   beforeEach(function () {
-    // clear session storage and open the app
-    sessionStorage.clear();
-
-    cy.visit("/");
-
-    //needed two times splash screen
-    cy.wait(12000)
+    cy.loadPage(true);
 
     cy.findByRole("button", { name: "OK" }).should('exist').click({ force: true });
     cy.findByRole('button', { name: 'Create Plan' }).should('exist').click({ force: true });

@@ -7,7 +7,7 @@ describe("Publish output tests", () => {
     const planDescription = 'test description';
 
     it("Verify URLs", () => {
-        cy.visit('/');
+        cy.loadPage();
         cy.findByRole('button', { name: 'OK' }).click();
 
         cy.findByRole('button', { name: 'Publish Output' }).should('exist').click();
@@ -22,7 +22,7 @@ describe("Publish output tests", () => {
     });
 
     it("Verify Name and Description", () => {
-        cy.visit('/');
+        cy.loadPage();
         cy.findByRole('button', { name: 'OK' }).click();
         cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();
 

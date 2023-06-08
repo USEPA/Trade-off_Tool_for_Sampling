@@ -12,9 +12,11 @@ declare global {
        * @example cy.dataCy('greeting')
        */
       displayMode(dimensions: string, shape: string): Chainable<Element>
+      loadPage(initial?: boolean, url?: string): Chainable<Element>
+      login(): Chainable<Element>
       mapLoadDelay(): Chainable<Element>
       matchSnapshot(name?: string, options?: Options): Chainable<Element>
-      upload(file: any, fileName: string): Chainable<Element>
+      upload(file: any, fileName: string, type?: string): Chainable<Element>
       validateSession(key: string, point: string | boolean, value: string | boolean): Chainable<Element>
     }
   }
@@ -28,30 +30,34 @@ declare global {
  * @param fileName - The name of the file being uploaded
  */
 Cypress.Commands.add(
-  "upload",
+  'upload',
   {
-    prevSubject: "element",
+    prevSubject: 'element',
   },
-  (subject, file: any, fileName: string) => {
+  (subject, file: any, fileName: string, type: string) => {
     // we need access window to create a file below
     cy.window().then((window) => {
-      // Convert the file to a blob and upload
-      const contents = Cypress.Blob.base64StringToBlob(file);
+      // Convert the file to a blob (if necessary) and upload
+      let contents = file;
+      if (type === 'blob' || !type) {
+        contents = Cypress.Blob.base64StringToBlob(file);
+      }
+      if (type === 'json') {
+        contents = JSON.stringify(file);
+      }
 
       // Please note that we need to create a file using window.File,
       // cypress overwrites File and this is not compatible with our change handlers in React Code
       const testFile = new window.File([contents], fileName);
-      const dataTransfer = new DataTransfer();
 
-      dataTransfer.items.add(testFile);
-      const el = subject[0] as any;
-      el.files = dataTransfer.files;
-
-      // trigger the drop event on the file input component
-      cy.wrap(subject).trigger("change", { force: true });
+      // trigger the drop event on the react-dropzone component
+      cy.wrap(subject).trigger('drop', {
+        force: true,
+        dataTransfer: { files: [testFile], types: ['Files'] },
+      });
     });
-  }
-)
+  },
+);
 
 /**
  * This enables performing snapshot comparisons to support visual testing.
@@ -102,4 +108,16 @@ Cypress.Commands.add('validateSession', (key: string, point: string | boolean, v
   } else {
     cy.wrap(JSON.parse(keyObject)).should('equal', value);
   }
+});
+
+Cypress.Commands.add('loadPage', (initial: boolean, url: string) => {
+  if (initial) {
+    sessionStorage.clear();
+  }
+  cy.visit(url ? url : '/');
+  cy.wait(10000);
+});
+
+Cypress.Commands.add('login', () => {
+  sessionStorage.setItem('esriJSAPIOAuth', JSON.stringify(Cypress.env()));
 });
