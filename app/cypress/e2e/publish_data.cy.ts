@@ -271,7 +271,9 @@ describe("Add data from file uploads", function () {
       .should("exist")
       .click({ force: true });
   });
+});
 
+describe("REMINDER: Manually delete ‘CYPRESS - TEST’ items from AGO", () => {
   it("REMINDER: Manually delete ‘CYPRESS - TEST’ items from AGO", function () {
     // Empty test that just serves as a reminder to clean up AGO after publishing tests
   });
