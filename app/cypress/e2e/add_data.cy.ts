@@ -30,7 +30,9 @@ describe("Add Data", function () {
 
   function goToFileUpload() {
     // go to the file upload panel of the add data tab
-    cy.findByText("Add Data").click();
+    cy.findByRole("button", { name: "Add Data" })
+      .should("exist")
+      .click({ force: true });
     cy.get("#add-data-select").type("Add Layer from Fi", { force: true });
     cy.findByText("Add Layer from File").click();
   }
@@ -42,12 +44,10 @@ describe("Add Data", function () {
   }
 
   beforeEach(function () {
-    // clear session storage and open the app
-    sessionStorage.clear();
-    cy.visit("/");
+    cy.loadPage(true);
 
     // close the splash screen
-    cy.findByText("OK").click();
+    cy.findByRole("button", { name: "OK" }).should("exist").click();
 
     goToFileUpload();
   });
@@ -110,5 +110,53 @@ describe("Add Data", function () {
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     cy.findByText(successText).should("exist");
+  });
+
+  it("Verify geo.json file upload", function () {
+    cy.get("#layer-type-select-input").type("Reference{enter}");
+
+    const fileName = "testing_geojson.geo.json";
+    cy.fixture(fileName).then((file) => {
+      cy.findByTestId("tots-dropzone").upload(file, fileName, "json");
+    });
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+    cy.findByText(`"${fileName}" was successfully uploaded`).should("exist");
+  });
+
+  it("Verify geojson file upload", function () {
+    cy.get("#layer-type-select-input").type("Reference{enter}");
+
+    const fileName = "testing_geojson.geojson";
+    cy.fixture(fileName).then((file) => {
+      cy.findByTestId("tots-dropzone").upload(file, fileName, "geojson");
+    });
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+    cy.findByText(`"${fileName}" was successfully uploaded`).should("exist");
+  });
+
+  it("Verify kml file upload", function () {
+    cy.get("#layer-type-select-input").type("Reference{enter}");
+
+    const fileName = "2.5_month_age_animated.kml";
+    cy.fixture(fileName).then((file) => {
+      cy.findByTestId("tots-dropzone").upload(file, fileName, "kml");
+    });
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+    cy.findByText(`"${fileName}" was successfully uploaded`).should("exist");
+  });
+
+  it("Verify .gpx file upload", function () {
+    cy.get("#layer-type-select-input").type("Reference{enter}");
+
+    const fileName = "testing_gpx.gpx";
+    cy.fixture(fileName).then((file) => {
+      cy.findByTestId("tots-dropzone").upload(file, fileName, "gpx");
+    });
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+    cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+    cy.findByText(`"${fileName}" was successfully uploaded`).should("exist");
   });
 });

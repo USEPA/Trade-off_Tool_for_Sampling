@@ -5,11 +5,11 @@
       "type": "scenario",
       "id": -1,
       "pointsId": -1,
-      "layerId": "1884e996f6a-layer-43",
+      "layerId": "1889ba8b469-layer-69",
       "portalId": "",
-      "name": "demo",
-      "label": "demo",
-      "value": "1884e996f6a-layer-43",
+      "name": "CYPRESS-TEST-PLAN-123",
+      "label": "CYPRESS-TEST-PLAN-123",
+      "value": "1889ba8b469-layer-69",
       "layerType": "Samples",
       "addedFrom": "sketch",
       "hasContaminationRan": false,
@@ -17,15 +17,15 @@
       "editType": "add",
       "visible": true,
       "listMode": "show",
-      "scenarioName": "demo",
+      "scenarioName": "CYPRESS-TEST-PLAN-123",
       "scenarioDescription": "",
       "layers": [
         {
           "type": "layer",
           "id": -1,
           "pointsId": -1,
-          "uuid": "{76A22E23-F75F-4736-B275-0252140F6F19}",
-          "layerId": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "uuid": "{53E629E8-3181-4266-9D9F-D0EDA636C800}",
+          "layerId": "{53E629E8-3181-4266-9D9F-D0EDA636C800}",
           "portalId": "",
           "name": "Default Sample Layer",
           "label": "Default Sample Layer",
@@ -41,35 +41,35 @@
             {
               "attributes": {
                 "OBJECTID": -1,
-                "PERMANENT_IDENTIFIER": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
-                "GLOBALID": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
-                "TYPEUUID": "Aggressive Air",
-                "TYPE": "Aggressive Air",
+                "PERMANENT_IDENTIFIER": "{9797B51D-030F-4CDB-835A-E7584901AB83}",
+                "GLOBALID": "{9797B51D-030F-4CDB-835A-E7584901AB83}",
+                "TYPEUUID": "Robot",
+                "TYPE": "Robot",
                 "ShapeType": "polygon",
-                "POINT_STYLE": "triangle",
+                "POINT_STYLE": "square",
                 "SA": 144000,
                 "AA": null,
                 "TTPK": 0.33,
-                "TTC": 0.5,
-                "TTA": 0.5,
+                "TTC": 0.3,
+                "TTA": 0.7,
                 "TTPS": 1.12,
-                "LOD_P": 0,
-                "LOD_NON": 0,
-                "MCPS": 207,
+                "LOD_P": 105,
+                "LOD_NON": 140,
+                "MCPS": 400,
                 "TCPS": 267,
-                "WVPS": 0.1,
-                "WWPS": 5,
-                "ALC": 118,
-                "AMC": 200,
+                "WVPS": 0.5,
+                "WWPS": 10.5,
+                "ALC": 200,
+                "AMC": 288,
                 "Notes": "",
                 "CONTAMTYPE": null,
                 "CONTAMVAL": null,
                 "CONTAMUNIT": null,
-                "CREATEDDATE": "2023/05/24 11:31:37.274",
-                "UPDATEDDATE": "2023/05/24 11:31:37.274",
-                "USERNAME": "",
-                "ORGANIZATION": "",
-                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "CREATEDDATE": "2023/06/08 10:49:48.481",
+                "UPDATEDDATE": "2023/06/08 10:49:48.481",
+                "USERNAME": "joseph.justin_EPAEXT",
+                "ORGANIZATION": "cJ9YHowT8TU7DUyn",
+                "DECISIONUNITUUID": "{53E629E8-3181-4266-9D9F-D0EDA636C800}",
                 "DECISIONUNIT": "Default Sample Layer",
                 "DECISIONUNITSORT": 0
               },
@@ -82,29 +82,29 @@
                 "rings": [
                   [
                     [
-                      -11620704.42418879,
-                      4690737.4843653245,
-                      1788.8169694010046
+                      -11852155.745836236,
+                      4930749.753180707,
+                      2642.039582288158
                     ],
                     [
-                      -11655253.96097369,
-                      4646709.756073065,
-                      1788.8169694010046
+                      -10668299.051755741,
+                      5057940.968247207,
+                      2642.039582288158
                     ],
                     [
-                      -11719461.064733233,
-                      4692266.224931029,
-                      1788.8169694010046
+                      -10697650.870617243,
+                      4196954.28164321,
+                      2642.039582288158
                     ],
                     [
-                      -11660451.678897081,
-                      4729261.746621052,
-                      1788.8169694010046
+                      -11949995.142041236,
+                      4255657.919366211,
+                      2642.039582288158
                     ],
                     [
-                      -11620704.42418879,
-                      4690737.4843653245,
-                      1788.8169694010046
+                      -11852155.745836236,
+                      4930749.753180707,
+                      2642.039582288158
                     ]
                   ]
                 ]

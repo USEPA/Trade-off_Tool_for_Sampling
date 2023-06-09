@@ -5,11 +5,11 @@
       "type": "scenario",
       "id": -1,
       "pointsId": -1,
-      "layerId": "1884e996f6a-layer-43",
+      "layerId": "18892c9cee5-layer-43",
       "portalId": "",
-      "name": "demo",
-      "label": "demo",
-      "value": "1884e996f6a-layer-43",
+      "name": "Test Plan",
+      "label": "Test Plan",
+      "value": "18892c9cee5-layer-43",
       "layerType": "Samples",
       "addedFrom": "sketch",
       "hasContaminationRan": false,
@@ -17,15 +17,15 @@
       "editType": "add",
       "visible": true,
       "listMode": "show",
-      "scenarioName": "demo",
+      "scenarioName": "Test Plan",
       "scenarioDescription": "",
       "layers": [
         {
           "type": "layer",
           "id": -1,
           "pointsId": -1,
-          "uuid": "{76A22E23-F75F-4736-B275-0252140F6F19}",
-          "layerId": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "uuid": "{C501873A-ED67-4BEB-8A18-4F55F8785E99}",
+          "layerId": "{C501873A-ED67-4BEB-8A18-4F55F8785E99}",
           "portalId": "",
           "name": "Default Sample Layer",
           "label": "Default Sample Layer",
@@ -41,8 +41,8 @@
             {
               "attributes": {
                 "OBJECTID": -1,
-                "PERMANENT_IDENTIFIER": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
-                "GLOBALID": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
+                "PERMANENT_IDENTIFIER": "{41CEB098-9A7E-45DB-902B-08714B357FC3}",
+                "GLOBALID": "{41CEB098-9A7E-45DB-902B-08714B357FC3}",
                 "TYPEUUID": "Aggressive Air",
                 "TYPE": "Aggressive Air",
                 "ShapeType": "polygon",
@@ -65,11 +65,11 @@
                 "CONTAMTYPE": null,
                 "CONTAMVAL": null,
                 "CONTAMUNIT": null,
-                "CREATEDDATE": "2023/05/24 11:31:37.274",
-                "UPDATEDDATE": "2023/05/24 11:31:37.274",
+                "CREATEDDATE": "2023/06/06 17:18:23.663",
+                "UPDATEDDATE": "2023/06/06 17:18:23.663",
                 "USERNAME": "",
                 "ORGANIZATION": "",
-                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNITUUID": "{C501873A-ED67-4BEB-8A18-4F55F8785E99}",
                 "DECISIONUNIT": "Default Sample Layer",
                 "DECISIONUNITSORT": 0
               },
@@ -82,29 +82,29 @@
                 "rings": [
                   [
                     [
-                      -11620704.42418879,
-                      4690737.4843653245,
-                      1788.8169694010046
+                      -10754147.791991748,
+                      3877919.313954549,
+                      164.79561087975526
                     ],
                     [
-                      -11655253.96097369,
-                      4646709.756073065,
-                      1788.8169694010046
+                      -10752081.60357086,
+                      3877915.730968848,
+                      164.79561087975526
                     ],
                     [
-                      -11719461.064733233,
-                      4692266.224931029,
-                      1788.8169694010046
+                      -10752080.409242293,
+                      3877030.73350071,
+                      164.79561087975526
                     ],
                     [
-                      -11660451.678897081,
-                      4729261.746621052,
-                      1788.8169694010046
+                      -10754158.540948851,
+                      3877025.9561864426,
+                      164.79561087975526
                     ],
                     [
-                      -11620704.42418879,
-                      4690737.4843653245,
-                      1788.8169694010046
+                      -10754147.791991748,
+                      3877919.313954549,
+                      164.79561087975526
                     ]
                   ]
                 ]

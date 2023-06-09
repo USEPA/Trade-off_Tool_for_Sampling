@@ -4,9 +4,7 @@ describe("Links", () => {
     "https://www.epa.gov/homeland-security-research/forms/contact-us-about-homeland-security-research";
 
   beforeEach(function () {
-    // clear session storage and open the app
-    sessionStorage.clear();
-    cy.visit("/");
+    cy.loadPage(true);
   });
 
   it('Clicking the "Contact Us" toolbar button opens a new tab with the contact us page.', () => {

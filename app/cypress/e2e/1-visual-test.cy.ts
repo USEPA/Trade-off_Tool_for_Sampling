@@ -1,15 +1,15 @@
 describe("Visual Testing", () => {
   beforeEach(() => {
     // clear session storage and open the app
-    sessionStorage.clear()
-  })
-  const mapId = "#tots-map-div"
+    sessionStorage.clear();
+  });
+  const mapId = "#tots-map-div";
 
   it("Verify Arc GIS map displays correctly", () => {
-    cy.mapLoadDelay()
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-arc-gis-display")
-  })
+    cy.get(mapId).matchSnapshot("verify-arc-gis-display");
+  });
 
   it("Verify zoom to Colorado Springs", () => {
     sessionStorage.setItem(
@@ -21,7 +21,7 @@ describe("Visual Testing", () => {
           y: 4649996.548289328,
         },
       })
-    )
+    );
 
     sessionStorage.setItem(
       "tots_map_2d_extent",
@@ -32,12 +32,12 @@ describe("Visual Testing", () => {
         xmax: -11288356.225204863,
         ymax: 4747071.574211497,
       })
-    )
+    );
 
-    cy.mapLoadDelay()
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-zoom-colorado-springs")
-  })
+    cy.get(mapId).matchSnapshot("verify-zoom-colorado-springs");
+  });
 
   it("Verify sponge", () => {
     sessionStorage.setItem(
@@ -55,7 +55,7 @@ describe("Visual Testing", () => {
         },
         tilt: 0,
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -68,15 +68,15 @@ describe("Visual Testing", () => {
         xmax: -9892768.962774588,
         ymax: 4698266.531651406,
       })
-    )
+    );
 
     cy.fixture("sponge.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
-    cy.mapLoadDelay()
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-sponge")
-  })
+    cy.get(mapId).matchSnapshot("verify-sponge");
+  });
 
   it("Verify Micro Vac", () => {
     sessionStorage.setItem(
@@ -88,7 +88,7 @@ describe("Visual Testing", () => {
           y: 3863306.6531785084,
         },
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -98,15 +98,15 @@ describe("Visual Testing", () => {
         xmax: -10473231.755571969,
         ymax: 3960381.6791006774,
       })
-    )
+    );
 
     cy.fixture("micro-vac.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
-    cy.mapLoadDelay()
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-micro-vac")
-  })
+    cy.get(mapId).matchSnapshot("verify-micro-vac");
+  });
 
   it("Verify Wet Vac", () => {
     sessionStorage.setItem(
@@ -118,7 +118,7 @@ describe("Visual Testing", () => {
           y: 5165105.681902991,
         },
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -128,16 +128,16 @@ describe("Visual Testing", () => {
         xmax: -7440821.969443323,
         ymax: 5359255.733747287,
       })
-    )
+    );
 
     cy.fixture("wet-vac.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
-    cy.displayMode("polygons")
-    cy.mapLoadDelay()
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+    cy.displayMode("2d", "polygons");
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-wet-vac")
-  })
+    cy.get(mapId).matchSnapshot("verify-wet-vac");
+  });
 
   it("Verify Robot", () => {
     sessionStorage.setItem(
@@ -149,7 +149,7 @@ describe("Visual Testing", () => {
           y: 3871393.215348695,
         },
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -159,16 +159,16 @@ describe("Visual Testing", () => {
         xmax: -10736636.670675078,
         ymax: 3877460.4044688228,
       })
-    )
+    );
 
     cy.fixture("robot.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
-    cy.displayMode("polygons")
-    cy.mapLoadDelay()
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+    cy.displayMode("2d", "polygons");
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-robot")
-  })
+    cy.get(mapId).matchSnapshot("verify-robot");
+  });
 
   it("Verify aggressive-air", () => {
     sessionStorage.setItem(
@@ -180,7 +180,7 @@ describe("Visual Testing", () => {
           y: 4649996.548289328,
         },
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -190,17 +190,17 @@ describe("Visual Testing", () => {
         xmax: -11288356.225204863,
         ymax: 4747071.574211497,
       })
-    )
-    cy.displayMode("polygons")
+    );
+    cy.displayMode("2d", "polygons");
 
     cy.fixture("aggressive-air.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
 
-    cy.mapLoadDelay()
+    cy.mapLoadDelay();
 
-    cy.get(mapId).matchSnapshot("verify-aggressive-air")
-  })
+    cy.get(mapId).matchSnapshot("verify-aggressive-air");
+  });
 
   it("Verify Swab", () => {
     sessionStorage.setItem(
@@ -212,7 +212,7 @@ describe("Visual Testing", () => {
           y: 5028436.275329143,
         },
       })
-    )
+    );
     sessionStorage.setItem(
       "tots_map_2d_extent",
       JSON.stringify({
@@ -222,21 +222,70 @@ describe("Visual Testing", () => {
         xmax: -11723130.042090893,
         ymax: 5222586.327173439,
       })
-    )
+    );
 
     cy.fixture("swab.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
 
-    cy.get(mapId).matchSnapshot("verify-swab")
-  })
+    cy.get(mapId).matchSnapshot("verify-swab");
+  });
 
   it("Verify All established sample types with shape point", () => {
     cy.fixture("all_established_sample_types.json").then((file) => {
-      sessionStorage.setItem("tots_edits", JSON.stringify(file))
-    })
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
 
-    cy.mapLoadDelay()
-    cy.get(mapId).matchSnapshot("verify-established-sample-types-point")
-  })
-})
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-established-sample-types-point");
+  });
+
+  it("Verify location from Locate", () => {
+    cy.mapLoadDelay();
+    cy.findByRole("button", { name: "Locate" }).click({ force: true });
+    cy.get("#esri-search-component").type("dallas{enter}");
+
+    //need for map load from given input
+    cy.wait(10000);
+
+    cy.get(mapId).matchSnapshot("verify-location-from-locate");
+  });
+
+  it("Verify 3d", () => {
+    cy.displayMode("3d", "polygons");
+
+    sessionStorage.setItem(
+      "tots_map_3d_extent",
+      JSON.stringify({
+        spatialReference: {
+          latestWkid: 3857,
+          wkid: 102100,
+        },
+        xmin: -19770869.537082013,
+        ymin: -1230433.3885384633,
+        xmax: 266638.8057068905,
+        ymax: 7268225.16362042,
+      })
+    );
+
+    sessionStorage.setItem(
+      "tots_map_scene_position",
+      JSON.stringify({
+        fov: 55,
+        heading: 359.98720300386617,
+        position: {
+          spatialReference: {
+            latestWkid: 3857,
+            wkid: 102100,
+          },
+          x: -9752105.039835732,
+          y: 2972737.185802346,
+          z: 18678169.896921813,
+        },
+        tilt: 0.12728932598295026,
+      })
+    );
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-3d");
+  });
+});
