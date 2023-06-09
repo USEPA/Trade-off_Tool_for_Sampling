@@ -545,17 +545,20 @@ export function useGeometryTools() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { edits, layers, selectedScenario } = useContext(SketchContext);
+  const { edits, layers, selectedScenario, setEdits, setSelectedScenario } =
+    useContext(SketchContext);
   const {
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
+    inputNumLabs,
+    inputNumLabHours,
+    inputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    inputNumSamplingTeams,
+    inputSamplingLaborCost,
+    inputSurfaceArea,
     setCalculateResults,
+    setUpdateContextValues,
+    updateContextValues,
   } = useContext(CalculateContext);
 
   const { calculateArea, loadedProjection } = useGeometryTools();
@@ -598,20 +601,7 @@ export function useCalculatePlan() {
         data: null,
       };
     });
-  }, [
-    edits,
-    layers,
-    selectedScenario,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  ]);
+  }, [edits, layers, selectedScenario, setCalculateResults]);
 
   const [totals, setTotals] = useState({
     ttpk: 0,
@@ -790,10 +780,22 @@ export function useCalculatePlan() {
   // perform non-geospatial calculations
   useEffect(() => {
     // exit early checks
+    if (!selectedScenario) return;
     if (calcGraphics.length === 0 || totalArea === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       return;
     }
+
+    const {
+      NUM_LABS: numLabs,
+      NUM_LAB_HOURS: numLabHours,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
 
     // calculate spatial items
     let userSpecifiedAOI = null;
@@ -901,19 +903,67 @@ export function useCalculatePlan() {
         data: resultObject,
       };
     });
+  }, [calcGraphics, selectedScenario, setCalculateResults, totals, totalArea]);
+
+  // Updates the calculation context values with the inputs.
+  // The intention is to update these values whenever the user navigates away from
+  // the calculate resources tab or when they click the View Detailed Results button.
+  useEffect(() => {
+    if (!selectedScenario || !updateContextValues) return;
+    setUpdateContextValues(false);
+
+    const newSettings = {
+      NUM_LABS: inputNumLabs,
+      NUM_LAB_HOURS: inputNumLabHours,
+      NUM_SAMPLING_HOURS: inputNumSamplingHours,
+      NUM_SAMPLING_PERSONNEL: inputNumSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: inputNumSamplingShifts,
+      NUM_SAMPLING_TEAMS: inputNumSamplingTeams,
+      SAMPLING_LABOR_COST: inputSamplingLaborCost,
+      SURFACE_AREA: inputSurfaceArea,
+    };
+
+    setSelectedScenario((selectedScenario) => {
+      if (selectedScenario) {
+        selectedScenario.calculateSettings.current = {
+          ...selectedScenario.calculateSettings.current,
+          ...newSettings,
+        };
+      }
+
+      return selectedScenario;
+    });
+
+    setEdits((edits) => {
+      const selScenario = edits.edits.find(
+        (e) => e.type === 'scenario' && e.value === selectedScenario.value,
+      );
+      if (!selScenario || selScenario.type !== 'scenario') return edits;
+
+      selScenario.calculateSettings.current = {
+        ...selScenario.calculateSettings.current,
+        ...newSettings,
+      };
+
+      return {
+        count: edits.count + 1,
+        edits: edits.edits,
+      };
+    });
   }, [
-    calcGraphics,
-    totals,
-    totalArea,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
+    inputNumLabs,
+    inputNumLabHours,
+    inputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    inputNumSamplingTeams,
+    inputSamplingLaborCost,
+    inputSurfaceArea,
+    selectedScenario,
+    setEdits,
+    setSelectedScenario,
+    setUpdateContextValues,
+    updateContextValues,
   ]);
 }
 
@@ -1899,14 +1949,6 @@ function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
   const { setOptions } = useContext(DialogContext);
   const {
-    setNumLabs,
-    setNumLabHours,
-    setNumSamplingHours,
-    setNumSamplingPersonnel,
-    setNumSamplingShifts,
-    setNumSamplingTeams,
-    setSamplingLaborCost,
-    setSurfaceArea,
     inputNumLabs,
     setInputNumLabs,
     inputNumLabHours,
@@ -1947,14 +1989,6 @@ function useCalculateSettingsStorage() {
     if (!settingsStr) return;
     const settings: CalculateSettingsType = JSON.parse(settingsStr);
 
-    setNumLabs(settings.numLabs);
-    setNumLabHours(settings.numLabHours);
-    setNumSamplingHours(settings.numSamplingHours);
-    setNumSamplingPersonnel(settings.numSamplingPersonnel);
-    setNumSamplingShifts(settings.numSamplingShifts);
-    setNumSamplingTeams(settings.numSamplingTeams);
-    setSamplingLaborCost(settings.samplingLaborCost);
-    setSurfaceArea(settings.surfaceArea);
     setInputNumLabs(settings.numLabs);
     setInputNumLabHours(settings.numLabHours);
     setInputNumSamplingHours(settings.numSamplingHours);
@@ -1964,14 +1998,6 @@ function useCalculateSettingsStorage() {
     setInputSamplingLaborCost(settings.samplingLaborCost);
     setInputSurfaceArea(settings.surfaceArea);
   }, [
-    setNumLabs,
-    setNumLabHours,
-    setNumSamplingHours,
-    setNumSamplingPersonnel,
-    setNumSamplingShifts,
-    setNumSamplingTeams,
-    setSamplingLaborCost,
-    setSurfaceArea,
     setInputNumLabs,
     setInputNumLabHours,
     setInputNumSamplingHours,

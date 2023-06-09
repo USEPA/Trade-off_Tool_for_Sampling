@@ -9,6 +9,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { settingDefaults } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
@@ -275,6 +276,7 @@ function EditScenario({
           referenceLayers: [],
         },
         customAttributes: [],
+        calculateSettings: { current: settingDefaults },
       };
 
       // make a copy of the edits context variable

@@ -18,6 +18,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { settingDefaults } from 'contexts/Calculate';
 import { DialogContext } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
@@ -42,12 +43,13 @@ import {
 } from 'utils/sketchUtils';
 import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
-import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
+  CalculateSettingsBaseType,
   EditsType,
   ReferenceLayersTableType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 import { AttributesType } from 'types/Publish';
 import {
@@ -1188,6 +1190,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       const resSampleTypes: any[] = [];
       const resRefLayersTypes: any[] = [];
+      const resCalculateSettings: any[] = [];
       featureLayersRes.tables.forEach((table: any) => {
         if (table.name.endsWith('-sample-types')) {
           resSampleTypes.push(table);
@@ -1195,10 +1198,14 @@ function ResultCard({ result }: ResultCardProps) {
         if (table.name.endsWith('-reference-layers')) {
           resRefLayersTypes.push(table);
         }
+        if (table.name.endsWith('-calculate-settings')) {
+          resCalculateSettings.push(table);
+        }
       });
 
       // fire off the calls with the points layers last
       const resCombined = [
+        ...resCalculateSettings,
         ...resRefLayersTypes,
         ...resSampleTypes,
         ...resPolys,
@@ -1230,6 +1237,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       // define items used for updating states
       let editsCopy: EditsType = deepCopyObject(edits);
+      let calcSettings: CalculateSettingsBaseType | null = null;
       const mapLayersToAdd: __esri.Layer[] = [];
       const newAttributes: Attributes = {};
       const newCustomAttributes: AttributesType[] = [];
@@ -1336,6 +1344,15 @@ function ResultCard({ result }: ResultCardProps) {
 
           if (newPortalLayers.length > 0) setPortalLayers(newPortalLayers);
           if (newUrlLayers.length > 0) setUrlLayers(newUrlLayers);
+        } else if (
+          layerDetails.type === 'Table' &&
+          layerDetails.name.endsWith('-calculate-settings')
+        ) {
+          if (layerFeatures.features.length > 0) {
+            calcSettings = {
+              ...layerFeatures.features[0].attributes,
+            };
+          }
         } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
           if (layerFeatures.features?.length > 0) {
             updatePointIds(layerFeatures, layerDetails, layersToAdd, editsCopy);
@@ -1482,6 +1499,10 @@ function ResultCard({ result }: ResultCardProps) {
             table,
             referenceLayersTable,
             customAttributes: newCustomAttributes,
+            calculateSettings: {
+              current: calcSettings || settingDefaults,
+              published: calcSettings || undefined,
+            },
           };
 
           // make a copy of the edits context variable
@@ -1967,6 +1988,11 @@ function ResultCard({ result }: ResultCardProps) {
   function removeTotsLayer() {
     if (!map) return;
 
+    const newEdits = {
+      count: edits.count + 1,
+      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
+    };
+
     setLayers((layers) => {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
@@ -1993,20 +2019,26 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
+      const newLayers = layers.filter((layer) => layer.portalId !== result.id);
+
       // select the next scenario and active sampling layer
       const { nextScenario, nextLayer } = getNextScenarioLayer(
-        edits,
-        layers,
+        newEdits,
+        newLayers,
         null,
         null,
       );
+
       if (nextScenario) setSelectedScenario(nextScenario);
+      else setSelectedScenario(null);
+
       if (nextLayer) setSketchLayer(nextLayer);
+      else setSketchLayer(null);
 
       map.removeMany(mapLayersToRemove);
 
       // set the state
-      return layers.filter((layer) => layer.portalId !== result.id);
+      return newLayers;
     });
 
     setReferenceLayers((layers) => {
@@ -2029,10 +2061,7 @@ function ResultCard({ result }: ResultCardProps) {
     });
 
     // remove the layer from edits
-    setEdits({
-      count: edits.count + 1,
-      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
-    });
+    setEdits(newEdits);
 
     // remove the layer from portal layers
     setPortalLayers((portalLayers) =>
