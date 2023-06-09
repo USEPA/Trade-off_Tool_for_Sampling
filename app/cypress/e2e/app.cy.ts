@@ -42,4 +42,14 @@ describe('Homepage', function () {
     cy.get('[aria-label="Collapse Table Panel"]').click({ force: true });
   });
 
+  it("Verify Accordion toggle", function () {
+    cy.findByRole('button', { name: 'OK' }).should('exist').click();
+    cy.findByRole('button', { name: 'Create Plan' }).should('exist').click();
+    cy.get('#scenario-name-input').type('CYPRESS-TEST-PLAN');
+    cy.findByRole('button', { name: 'Save' }).click({ force: true });
+    cy.findByText('Add Multiple Random Samples').should('exist').click({ force: true });
+    cy.findByText('Draw Sampling Mask').should('exist')
+    cy.findByText('Add Multiple Random Samples').trigger('keyup', { keyCode: 13 });
+    cy.findByText('Draw Sampling Mask').should('not.exist')
+  });
 });

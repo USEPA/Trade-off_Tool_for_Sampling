@@ -9,7 +9,7 @@ describe("Toolbar tests", () => {
         cy.loadPage(true);
     });
 
-    it.skip("Verify toolbar items", () => {
+    it("Verify toolbar items", () => {
         cy.findByRole('button', { name: 'OK' }).click();
         const toolbarItems = ['Trade-off Tool for Sampling (TOTS)', 'Settings', 'Basemap', 'Login', 'Contact Us'];
         toolbarItems.map((item) => {
@@ -43,7 +43,7 @@ describe("Toolbar tests", () => {
         cy.validateSession('tots_training_mode', false, false);
     });
 
-    it.skip("Verify Legend", () => {
+    it("Verify Legend", () => {
         cy.fixture("micro-vac.json").then((file) => {
             sessionStorage.setItem("tots_edits", JSON.stringify(file));
         });
@@ -58,6 +58,18 @@ describe("Toolbar tests", () => {
         sampleTypes.map((item) => {
             cy.get('#legend-container').contains(item).should('exist');
         });
+        cy.findByTitle('Zoom to Layer').click({ force: true });
+        cy.findByTitle('Delete Layer').click({ force: true });
     });
 
+    it("Verify Basemap ", () => {
+        cy.findByRole('button', { name: 'OK' }).click();
+        cy.findByRole('button', { name: 'Basemap' }).click({ force: true });
+        cy.get('#basemap-container').find('li').each(($el, index) => {
+            if (index === 2) {
+                cy.wrap($el).click({ force: true })
+            }
+        });
+        cy.findByRole('button', { name: 'Basemap' }).click({ force: true });
+    });
 });

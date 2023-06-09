@@ -6,6 +6,7 @@ describe("Calculate results tests", () => {
     const loadingSpinnerId = "tots-loading-spinner";
     const planName = 'Test Plan';
     const planDescription = 'test description';
+    const timeout = 200000;
 
     it("Verify empty samples", () => {
         cy.mapLoadDelay();
@@ -79,7 +80,7 @@ describe("Calculate results tests", () => {
         cy.contains(planDescription).should('exist');
     });
 
-    it("Verify traning-mode View Contamination Hits", () => {
+    it("Verify traning-mode View Contamination Hits without file", () => {
         sessionStorage.setItem("tots_training_mode", 'true');
 
         cy.loadPage();
@@ -92,5 +93,63 @@ describe("Calculate results tests", () => {
         cy.findByText('Include Contamination Map (Optional)').should('exist').click({ force: true });
         cy.findByRole('button', { name: 'View Contamination Hits' }).should('exist').click({ force: true });
         cy.findByRole('button', { name: 'Add' }).should('exist').click({ force: true });
+    });
+
+    it("Verify traning-mode View Contamination Hits with file", () => {
+        sessionStorage.setItem("tots_training_mode", 'true');
+        cy.fixture("wet-vac.json").then((file) => {
+            sessionStorage.setItem("tots_edits", JSON.stringify(file));
+        });
+
+        cy.loadPage();
+        cy.findByRole("button", { name: "OK" }).should('exist').click({ force: true });
+        cy.findByRole('button', { name: 'Add Data' }).should('exist').click();
+        cy.get('#add-data-select').type('Add Layer from file{enter}');
+        cy.get('#layer-type-select-input').type('Contamination{enter}');
+
+        const fileName = 'Contamination.zip';
+        cy.fixture(fileName).then((file) => {
+            cy.findByTestId('tots-dropzone').upload(file, fileName);
+        });
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+        cy.findByText('Upload Succeeded').should('exist');
+
+
+        cy.findByRole('button', { name: 'Next' }).should('exist').click();
+        cy.findByRole('button', { name: 'Next' }).click({ force: true });
+        cy.findByText('Include Contamination Map (Optional)').should('exist').click({ force: true });
+        cy.findByRole('button', { name: 'View Contamination Hits' }).should('exist').click({ force: true });
+
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
+
+        cy.findByText('Contamination Hits').should('exist');
+    });
+
+    it("Verify Calculate Resources", () => {
+        cy.fixture("wet-vac.json").then((file) => {
+            sessionStorage.setItem("tots_edits", JSON.stringify(file));
+        });
+        cy.displayMode("2d", "polygons");
+        cy.loadPage();
+        cy.findByRole("button", { name: "OK" }).click({ force: true });
+        cy.findByRole('button', { name: 'Create Plan' }).click({ force: true });
+        cy.findByRole('button', { name: 'Calculate Resources' }).click({ force: true });
+
+        cy.get('#number-teams-input').clear().type('123');
+
+        cy.get('#personnel-per-team-input').clear().type('6');
+        cy.get('#sampling-hours-input').clear().type('8');
+        cy.get('#shifts-per-input').clear().type('1');
+        cy.get('#labor-cost-input').clear().type('450');
+        cy.get('#number-of-labs-input').clear().type('55');
+        cy.get('#lab-hours-input').clear().type('25');
+        cy.get('#surface-area-input').clear().type('2');
+
+        cy.findByRole('button', { name: 'View Detailed Results' }).click({ force: true });
+
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
+        cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
     });
 });
