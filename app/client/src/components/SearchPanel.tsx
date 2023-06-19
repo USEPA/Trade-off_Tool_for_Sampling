@@ -68,6 +68,16 @@ type LayerGraphics = {
   [key: string]: __esri.Graphic[];
 };
 
+const layerTypeOptions = [
+  { label: 'Feature Service', value: 'Feature Service' },
+  { label: 'Image Service', value: 'Image Service' },
+  { label: 'KML', value: 'KML' },
+  { label: 'Map Service', value: 'Map Service' },
+  { label: 'Scene Service (3D)', value: 'Scene Service' },
+  { label: 'Vector Tile Service', value: 'Vector Tile Service' },
+  { label: 'WMS', value: 'WMS' },
+];
+
 // --- styles (SearchPanel) ---
 const searchContainerStyles = css`
   border: 1px solid #ccc;
@@ -119,20 +129,6 @@ const filterContainerStyles = css`
   }
 `;
 
-const typeSelectStyles = css`
-  position: absolute;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  z-index: 2;
-
-  ul {
-    padding: 0.5em;
-    list-style-type: none;
-  }
-`;
-
 const sortContainerStyles = css`
   display: flex;
 `;
@@ -157,6 +153,16 @@ const sortOrderStyles = css`
 const footerBar = css`
   display: flex;
   align-items: center;
+`;
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
+const multiSelectStyles = css`
+  ${fullWidthSelectStyles}
+  margin-bottom: 10px;
 `;
 
 const pageControlStyles = css`
@@ -242,13 +248,6 @@ function SearchPanel() {
   const [search, setSearch] = useState('');
   const [searchText, setSearchText] = useState('');
   const [withinMap, setWithinMap] = useState(false);
-  const [mapService, setMapService] = useState(false);
-  const [featureService, setFeatureService] = useState(false);
-  const [imageService, setImageService] = useState(false);
-  const [vectorTileService, setVectorTileService] = useState(false);
-  const [kml, setKml] = useState(false);
-  const [wms, setWms] = useState(false);
-  const [sceneService, setSceneService] = useState(false);
 
   const [
     searchResults,
@@ -264,6 +263,10 @@ function SearchPanel() {
     defaultSort: 'desc',
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const [layerTypeSelections, setLayerTypeSelections] = useState<
+    typeof layerTypeOptions | null
+  >(null);
 
   // Initializes the group selection
   useEffect(() => {
@@ -339,27 +342,9 @@ function SearchPanel() {
     const defaultTypePart =
       'type:"Map Service" OR type:"Feature Service" OR type:"Image Service" ' +
       'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS" OR type:"Scene Service"';
-    if (mapService) {
-      typePart = appendToQuery(typePart, 'type:"Map Service"', 'OR');
-    }
-    if (featureService) {
-      typePart = appendToQuery(typePart, 'type:"Feature Service"', 'OR');
-    }
-    if (imageService) {
-      typePart = appendToQuery(typePart, 'type:"Image Service"', 'OR');
-    }
-    if (vectorTileService) {
-      typePart = appendToQuery(typePart, 'type:"Vector Tile Service"', 'OR');
-    }
-    if (kml) {
-      typePart = appendToQuery(typePart, 'type:"KML"', 'OR');
-    }
-    if (wms) {
-      typePart = appendToQuery(typePart, 'type:"WMS"', 'OR');
-    }
-    if (sceneService) {
-      typePart = appendToQuery(typePart, 'type:"Scene Service"', 'OR');
-    }
+    layerTypeSelections?.forEach((layerType) => {
+      typePart = appendToQuery(typePart, `type:"${layerType.value}"`, 'OR');
+    });
 
     // add the type selection to the query, use all types if all types are set to false
     if (typePart.length > 0) query = appendToQuery(query, typePart);
@@ -419,22 +404,16 @@ function SearchPanel() {
   }, [
     currentExtent,
     group,
-    portal,
     layerTypeFilter,
+    layerTypeSelections,
     location,
+    portal,
     search,
     setSearchResults,
-    withinMap,
-    mapService,
-    featureService,
-    imageService,
-    vectorTileService,
-    kml,
-    wms,
-    sceneService,
     sortBy,
     sortOrder,
     userInfo,
+    withinMap,
   ]);
 
   // Runs the query for changing pages of the result set
@@ -509,8 +488,6 @@ function SearchPanel() {
       watchEvent3d.remove();
     };
   }, [mapView, sceneView, watchViewInitialized]);
-
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
 
   return (
     <Fragment>
@@ -595,90 +572,18 @@ function SearchPanel() {
           />{' '}
           <label htmlFor="within_map_filter">Within map...</label>
         </div>
-        <div>
-          <span onClick={() => setShowFilterOptions(!showFilterOptions)}>
-            Type <i className="fas fa-caret-down"></i>
-          </span>
-          {showFilterOptions && (
-            <div css={typeSelectStyles}>
-              <ul>
-                <li>
-                  <input
-                    id="map_service_filter"
-                    type="checkbox"
-                    checked={mapService}
-                    onChange={(ev) => setMapService(!mapService)}
-                  />
-                  <label htmlFor="map_service_filter">Map Service</label>
-                </li>
-
-                <li>
-                  <input
-                    id="feature_service_filter"
-                    type="checkbox"
-                    checked={featureService}
-                    onChange={(ev) => setFeatureService(!featureService)}
-                  />
-                  <label htmlFor="feature_service_filter">
-                    Feature Service
-                  </label>
-                </li>
-
-                <li>
-                  <input
-                    id="image_service_filter"
-                    type="checkbox"
-                    checked={imageService}
-                    onChange={(ev) => setImageService(!imageService)}
-                  />
-                  <label htmlFor="image_service_filter">Image Service</label>
-                </li>
-
-                <li>
-                  <input
-                    id="vector_tile_service_filter"
-                    type="checkbox"
-                    checked={vectorTileService}
-                    onChange={(ev) => setVectorTileService(!vectorTileService)}
-                  />
-                  <label htmlFor="vector_tile_service_filter">
-                    Vector Tile Service
-                  </label>
-                </li>
-
-                <li>
-                  <input
-                    id="kml_filter"
-                    type="checkbox"
-                    checked={kml}
-                    onChange={(ev) => setKml(!kml)}
-                  />
-                  <label htmlFor="kml_filter">KML</label>
-                </li>
-
-                <li>
-                  <input
-                    id="wms_filter"
-                    type="checkbox"
-                    checked={wms}
-                    onChange={(ev) => setWms(!wms)}
-                  />
-                  <label htmlFor="wms_filter">WMS</label>
-                </li>
-
-                <li>
-                  <input
-                    id="scene_service_filter"
-                    type="checkbox"
-                    checked={sceneService}
-                    onChange={(ev) => setSceneService(!sceneService)}
-                  />
-                  <label htmlFor="scene_service_filter">Scene Service</label>
-                </li>
-              </ul>
-            </div>
-          )}
-        </div>
+      </div>
+      <div>
+        <label htmlFor="layer-type-select">Layer Type</label>
+        <Select
+          inputId="layer-type-select"
+          isMulti={true}
+          isSearchable={false}
+          options={layerTypeOptions}
+          value={layerTypeSelections}
+          onChange={(ev) => setLayerTypeSelections(ev as any)}
+          css={multiSelectStyles}
+        />
       </div>
       <label htmlFor="sort-by-select">Sort By</label>
       <div css={sortContainerStyles}>
