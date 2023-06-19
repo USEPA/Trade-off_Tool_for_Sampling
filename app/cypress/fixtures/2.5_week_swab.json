@@ -121,7 +121,19 @@
         "id": -1,
         "referenceLayers": []
       },
-      "customAttributes": []
+      "customAttributes": [],
+      "calculateSettings": {
+        "current": {
+          "NUM_LABS": 1,
+          "NUM_LAB_HOURS": 24,
+          "NUM_SAMPLING_HOURS": 5,
+          "NUM_SAMPLING_PERSONNEL": 3,
+          "NUM_SAMPLING_SHIFTS": 1,
+          "NUM_SAMPLING_TEAMS": 1,
+          "SAMPLING_LABOR_COST": 420,
+          "SURFACE_AREA": 0
+        }
+      }
     }
   ]
 }
