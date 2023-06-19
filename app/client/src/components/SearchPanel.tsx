@@ -69,12 +69,25 @@ type LayerGraphics = {
 };
 
 const layerTypeOptions = [
+  {
+    label: 'TOTS Sampling Plans',
+    type: 'category',
+    value: 'contains-epa-tots-sample-layer',
+  },
+  {
+    label: 'TOTS Custom Sample Types',
+    type: 'category',
+    value: 'contains-epa-tots-user-defined-sample-types',
+  },
   { label: 'Feature Service', value: 'Feature Service' },
   { label: 'Image Service', value: 'Image Service' },
   { label: 'KML', value: 'KML' },
   { label: 'Map Service', value: 'Map Service' },
   { label: 'Scene Service (3D)', value: 'Scene Service' },
-  { label: 'Vector Tile Service', value: 'Vector Tile Service' },
+  {
+    label: 'Vector Tile Service',
+    value: 'Vector Tile Service',
+  },
   { label: 'WMS', value: 'WMS' },
 ];
 
@@ -203,11 +216,6 @@ type LocationType =
   | { value: 'My Organization'; label: 'My Organization' }
   | { value: 'My Groups'; label: 'My Groups' };
 
-type LayerTypeFilter =
-  | { value: 'All'; label: 'All' }
-  | { value: 'Sampling Plans'; label: 'TOTS Sampling Plans' }
-  | { value: 'Custom Sample Types'; label: 'TOTS Custom Sample Types' };
-
 type GroupType = {
   value: string;
   label: string;
@@ -236,13 +244,6 @@ function SearchPanel() {
   ] = useState<LocationType>({
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
-  });
-  const [
-    layerTypeFilter,
-    setLayerTypeFilter, //
-  ] = useState<LayerTypeFilter>({
-    value: 'All',
-    label: 'All',
   });
   const [group, setGroup] = useState<GroupType | null>(null);
   const [search, setSearch] = useState('');
@@ -338,31 +339,28 @@ function SearchPanel() {
     }
 
     // type selection
+    const categories: string[] = [];
     let typePart = '';
     const defaultTypePart =
       'type:"Map Service" OR type:"Feature Service" OR type:"Image Service" ' +
       'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS" OR type:"Scene Service"';
     layerTypeSelections?.forEach((layerType) => {
-      typePart = appendToQuery(typePart, `type:"${layerType.value}"`, 'OR');
+      if (layerType?.type === 'category') {
+        categories.push(layerType.value);
+      } else {
+        typePart = appendToQuery(typePart, `type:"${layerType.value}"`, 'OR');
+      }
     });
 
     // add the type selection to the query, use all types if all types are set to false
     if (typePart.length > 0) query = appendToQuery(query, typePart);
     else query = appendToQuery(query, defaultTypePart);
 
-    const categories: string[] = [];
-    if (layerTypeFilter.value === 'Custom Sample Types') {
-      categories.push('contains-epa-tots-user-defined-sample-types');
-    }
-    if (layerTypeFilter.value === 'Sampling Plans') {
-      categories.push('contains-epa-tots-sample-layer');
-    }
-
     // build the query parameters
     let queryParams = {
       query,
       sortOrder,
-      categories,
+      categories: [categories],
     } as __esri.PortalQueryParams;
 
     if (withinMap && currentExtent) queryParams.extent = currentExtent;
@@ -404,7 +402,6 @@ function SearchPanel() {
   }, [
     currentExtent,
     group,
-    layerTypeFilter,
     layerTypeSelections,
     location,
     portal,
@@ -525,17 +522,29 @@ function SearchPanel() {
           />
         </Fragment>
       )}
-      <label htmlFor="layer-type-select">Type</label>
-      <Select
-        inputId="layer-type-select"
-        value={layerTypeFilter}
-        onChange={(ev) => setLayerTypeFilter(ev as LayerTypeFilter)}
-        options={[
-          { value: 'All', label: 'All' },
-          { value: 'Sampling Plans', label: 'TOTS Sampling Plans' },
-          { value: 'Custom Sample Types', label: 'TOTS Custom Sample Types' },
-        ]}
-      />
+      <div css={filterContainerStyles}>
+        <div>
+          <input
+            id="within_map_filter"
+            type="checkbox"
+            checked={withinMap}
+            onChange={(ev) => setWithinMap(!withinMap)}
+          />{' '}
+          <label htmlFor="within_map_filter">Within map...</label>
+        </div>
+      </div>
+      <div>
+        <label htmlFor="layer-type-select">Type</label>
+        <Select
+          inputId="layer-type-select"
+          isMulti={true}
+          isSearchable={false}
+          options={layerTypeOptions}
+          value={layerTypeSelections}
+          onChange={(ev) => setLayerTypeSelections(ev as any)}
+          css={multiSelectStyles}
+        />
+      </div>
       <label htmlFor="search-input">Search</label>
       <form
         css={searchContainerStyles}
@@ -562,29 +571,6 @@ function SearchPanel() {
           </span>
         </button>
       </form>
-      <div css={filterContainerStyles}>
-        <div>
-          <input
-            id="within_map_filter"
-            type="checkbox"
-            checked={withinMap}
-            onChange={(ev) => setWithinMap(!withinMap)}
-          />{' '}
-          <label htmlFor="within_map_filter">Within map...</label>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="layer-type-select">Layer Type</label>
-        <Select
-          inputId="layer-type-select"
-          isMulti={true}
-          isSearchable={false}
-          options={layerTypeOptions}
-          value={layerTypeSelections}
-          onChange={(ev) => setLayerTypeSelections(ev as any)}
-          css={multiSelectStyles}
-        />
-      </div>
       <label htmlFor="sort-by-select">Sort By</label>
       <div css={sortContainerStyles}>
         <Select
