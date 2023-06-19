@@ -852,7 +852,9 @@ function Toolbar() {
                 <InfoIcon
                   cssStyles={infoIconStyles}
                   id="3d-view-switch"
-                  tooltip={'3D view. Tooltip placeholder...'}
+                  tooltip={
+                    'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
+                  }
                   place="bottom"
                   type="info"
                 />
