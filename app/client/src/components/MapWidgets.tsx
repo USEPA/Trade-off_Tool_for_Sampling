@@ -19,6 +19,7 @@ import Measurement from '@arcgis/core/widgets/Measurement';
 import Point from '@arcgis/core/geometry/Point';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import Popup from '@arcgis/core/widgets/Popup';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
 import Sketch from '@arcgis/core/widgets/Sketch';
 import SketchViewModel from '@arcgis/core/widgets/Sketch/SketchViewModel';
@@ -451,7 +452,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
 
     // get list of graphic ids currently in the popup
     const curIds: string[] = [];
-    view.popup.features.forEach((feature: any) => {
+    view.popup?.features?.forEach((feature: any) => {
       if (feature.attributes?.PERMANENT_IDENTIFIER) {
         curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
       }
@@ -465,13 +466,18 @@ function MapWidgets({ mapView, sceneView }: Props) {
     if (popupItems.length > 0 && curIds.toString() !== newIds.toString()) {
       const firstGeometry = popupItems[0].geometry as any;
       if (popupItems.length === 1) {
-        view.popup.open({
+        const popupProps = {
           location:
             firstGeometry.type === 'point'
               ? firstGeometry
               : firstGeometry.centroid,
           features: popupItems,
-        });
+        };
+        if (!view.popup?.open) {
+          view.popup = new Popup(popupProps);
+        } else {
+          view.popup.open(popupProps);
+        }
       } else {
         const content = (
           <MapPopup
@@ -1221,12 +1227,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
         // Highlight the graphics with a contam value
         if (highlightGraphics.length === 0) return;
 
-        mapView.whenLayerView(tempLayer).then((layerView) => {
-          const handle = layerView.highlight(highlightGraphics);
-          handles.add(handle, group);
-        });
-
-        sceneView.whenLayerView(tempLayer).then((layerView) => {
+        const view = displayDimensions === '3d' ? sceneView : mapView;
+        view.whenLayerView(tempLayer).then((layerView) => {
           const handle = layerView.highlight(highlightGraphics);
           handles.add(handle, group);
         });
@@ -1272,15 +1274,14 @@ function MapWidgets({ mapView, sceneView }: Props) {
       // Highlight the graphics with a contam value
       if (itemsToHighlight.length === 0) return;
 
-      mapView.whenLayerView(tempLayer).then((layerView) => {
-        const handle = layerView.highlight(itemsToHighlight);
-        handles.add(handle, group);
-      });
-
-      sceneView.whenLayerView(tempLayer).then((layerView) => {
-        const handle = layerView.highlight(itemsToHighlight);
-        handles.add(handle, group);
-      });
+      const view = displayDimensions === '3d' ? sceneView : mapView;
+      view
+        .whenLayerView(tempLayer)
+        .then((layerView) => {
+          const handle = layerView.highlight(itemsToHighlight);
+          handles.add(handle, group);
+        })
+        .catch((err) => console.error(err));
     }
 
     const samples: any = {};
@@ -1309,6 +1310,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     mapView,
     sceneView,
     selectedSampleIds,
+    displayDimensions,
     displayGeometryType,
   ]);
 
@@ -1390,32 +1392,37 @@ function MapWidgets({ mapView, sceneView }: Props) {
       const tempMapView = view as any;
       tempMapView.popup._displayActionTextLimit = 1;
 
-      view.popup.on('trigger-action', (event) => {
-        // Workaround for target not being on the PopupTriggerActionEvent
-        if (event.action.id === 'delete' && view?.popup?.selectedFeature) {
-          setSamplesToDelete([view.popup.selectedFeature]);
-        }
-        if (event.action.id === 'delete-multi') {
-          setSamplesToDelete(sketchVM.updateGraphics.toArray());
-        }
-        if (['table', 'table-multi'].includes(event.action.id)) {
-          setTablePanelExpanded(true);
-        }
-      });
+      reactiveUtils
+        .once(() => view.popup)
+        .then(() => {
+          view.popup.on('trigger-action', (event) => {
+            // Workaround for target not being on the PopupTriggerActionEvent
+            if (event.action.id === 'delete' && view?.popup?.selectedFeature) {
+              setSamplesToDelete([view.popup.selectedFeature]);
+            }
+            if (event.action.id === 'delete-multi') {
+              setSamplesToDelete(sketchVM.updateGraphics.toArray());
+            }
+            if (['table', 'table-multi'].includes(event.action.id)) {
+              setTablePanelExpanded(true);
+            }
+          });
 
-      view.popup.watch('selectedFeature', (graphic) => {
-        if (view.popup.title !== 'Edit Multiple') {
-          const deleteMultiAction = view.popup.actions.find(
-            (action) => action.id === 'delete-multi',
-          );
-          if (deleteMultiAction) view.popup.actions.remove(deleteMultiAction);
+          view.popup.watch('selectedFeature', (graphic) => {
+            if (view.popup.title !== 'Edit Multiple') {
+              const deleteMultiAction = view.popup.actions.find(
+                (action) => action.id === 'delete-multi',
+              );
+              if (deleteMultiAction)
+                view.popup.actions.remove(deleteMultiAction);
 
-          const tableMultiAction = view.popup.actions.find(
-            (action) => action.id === 'table-multi',
-          );
-          if (tableMultiAction) view.popup.actions.remove(tableMultiAction);
-        }
-      });
+              const tableMultiAction = view.popup.actions.find(
+                (action) => action.id === 'table-multi',
+              );
+              if (tableMultiAction) view.popup.actions.remove(tableMultiAction);
+            }
+          });
+        });
     }
 
     setupPopupWatchers(mapView, sketchVM);
