@@ -9,7 +9,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import Collection from '@arcgis/core/core/Collection';
 import Handles from '@arcgis/core/core/Handles';
@@ -250,23 +250,21 @@ function MapWidgets({ mapView, sceneView }: Props) {
     // add measurement widget to 2d view
     const node2d = document.createElement('div');
     mapView.ui.add(node2d, { position: 'top-right', index: 0 });
-    render(
+    createRoot(node2d).render(
       <CustomMeasurementWidget
         displayDimensions={displayDimensions}
         measurementWidget={measurementWidget}
       />,
-      node2d,
     );
 
     // add measurement widget to 3d view
     const node3d = document.createElement('div');
     sceneView.ui.add(node3d, { position: 'top-right', index: 0 });
-    render(
+    createRoot(node3d).render(
       <CustomMeasurementWidget
         displayDimensions={displayDimensions}
         measurementWidget={measurementWidget}
       />,
-      node3d,
     );
 
     return function cleanup() {
@@ -492,7 +490,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
 
         // wrap the content for esri
         const contentContainer = document.createElement('div');
-        render(content, contentContainer);
+        createRoot(contentContainer).render(content);
 
         view.popup.open({
           location:
