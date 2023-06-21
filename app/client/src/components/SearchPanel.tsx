@@ -534,7 +534,7 @@ function SearchPanel() {
         </div>
       </div>
       <div>
-        <label htmlFor="layer-type-select">Type</label>
+        <label htmlFor="layer-type-select">Layer Type</label>
         <Select
           inputId="layer-type-select"
           isMulti={true}
@@ -609,19 +609,20 @@ function SearchPanel() {
           </button>
         )}
       </div>
-      {searchResults?.data?.results && searchResults.data.results.length > 0 && (
-        <span className="disclaimer" css={exitDisclaimerStyles}>
-          The following links exit the site{' '}
-          <a
-            className="exit-disclaimer"
-            href="https://www.epa.gov/home/exit-epa"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Exit
-          </a>
-        </span>
-      )}
+      {searchResults?.data?.results &&
+        searchResults.data.results.length > 0 && (
+          <span className="disclaimer" css={exitDisclaimerStyles}>
+            The following links exit the site{' '}
+            <a
+              className="exit-disclaimer"
+              href="https://www.epa.gov/home/exit-epa"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Exit
+            </a>
+          </span>
+        )}
       <hr />
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
