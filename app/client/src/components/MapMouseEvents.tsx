@@ -156,8 +156,9 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
       if (event.key === 'Control') ctrl = true;
       else if (event.key === 'Shift') shift = true;
 
-      if (event.key === 'Escape' && mapView.popup) {
-        mapView.popup.close();
+      if (event.key === 'Escape') {
+        if (mapView.popup) mapView.popup.close();
+        if (sceneView.popup) sceneView.popup.close();
 
         // re-activate sketch tools if necessary
         const button = document.querySelector('.sketch-button-selected');
