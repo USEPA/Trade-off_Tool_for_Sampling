@@ -1,6 +1,6 @@
 {
   "name": "epa-hsrp-tots-server",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.",
   "keywords": [
@@ -14,30 +14,31 @@
   "contributors": [
     "Caleb Schwind <caleb.schwind@erg.com>",
     "Courtney Myers <courtney.myers@erg.com>",
+    "Justin Joseph <justin.joseph@erg.com>",
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "main": "app/server.js",
   "scripts": {
     "start": "nodemon -r dotenv/config --inspect app/server.js dotenv_config_path=./.env.local"
   },
   "dependencies": {
-    "axios": "0.27.2",
-    "dotenv": "16.0.1",
-    "express": "4.18.1",
+    "axios": "1.4.0",
+    "dotenv": "16.3.1",
+    "express": "4.18.2",
     "express-basic-auth": "1.2.1",
-    "helmet": "5.1.1",
-    "log4js": "6.6.1",
+    "helmet": "7.0.0",
+    "log4js": "6.9.1",
     "serve-favicon": "2.5.0"
   },
   "devDependencies": {
-    "browser-sync": "2.27.10",
-    "husky": "8.0.1",
-    "lint-staged": "13.0.3",
-    "nodemon": "2.0.19",
-    "prettier": "2.7.1"
+    "browser-sync": "2.29.3",
+    "husky": "8.0.3",
+    "lint-staged": "13.2.2",
+    "nodemon": "2.0.22",
+    "prettier": "2.8.8"
   },
   "husky": {
     "hooks": {

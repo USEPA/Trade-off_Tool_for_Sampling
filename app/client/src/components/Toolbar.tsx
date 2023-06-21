@@ -856,7 +856,6 @@ function Toolbar() {
                     'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
                   }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input
@@ -894,7 +893,6 @@ function Toolbar() {
                     'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
                   }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input
