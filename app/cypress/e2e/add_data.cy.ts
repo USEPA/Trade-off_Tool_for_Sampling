@@ -61,7 +61,7 @@ describe("Add Data", function () {
   it("test file upload error messages", function () {
     // select samples layer type, upload the contamination map file,
     // wait for it to finish and check for failure
-    cy.get(layerSelectId).click();
+    cy.findByRole("combobox", { name: "Layer Type" }).click();
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, sampleName);
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
@@ -72,7 +72,7 @@ describe("Add Data", function () {
     // wait for it to finish and check for failure
     enableTrainingMode();
     goToFileUpload();
-    cy.get(layerSelectId).click();
+    cy.findByRole("combobox", { name: "Layer Type" }).click();
     cy.findByText(contaminationType).click();
     cy.findByTestId(dropzoneId).upload(samplesFile, sampleName);
     cy.findByText("Cancel").click();
@@ -83,7 +83,7 @@ describe("Add Data", function () {
   it("test uploading multiple files of different layer types", function () {
     // select samples layer type, upload the sample file,
     // wait for it to finish and check for success
-    cy.get(layerSelectId).click();
+    cy.findByRole("combobox", { name: "Layer Type" }).click();
     cy.findByText(sampleType).click();
     cy.findByTestId(dropzoneId).upload(samplesFile, sampleName);
     cy.findByText("Continue").click();
@@ -95,7 +95,7 @@ describe("Add Data", function () {
     // wait for it to finish and check for success
     enableTrainingMode();
     goToFileUpload();
-    cy.get(layerSelectId).click();
+    cy.findByRole("combobox", { name: "Layer Type" }).click();
     cy.findByText(contaminationType).click();
     cy.findByTestId(dropzoneId).upload(contaminationMapFile, contaminationName);
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
@@ -104,7 +104,7 @@ describe("Add Data", function () {
 
     // select area of interest layer type, upload the aoi file,
     // wait for it to finish and check for success
-    cy.get(layerSelectId).click();
+    cy.findByRole("combobox", { name: "Layer Type" }).click();
     cy.findByText(aoiType).click();
     cy.findByTestId(dropzoneId).upload(aoiFile, aoiName);
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
@@ -113,7 +113,8 @@ describe("Add Data", function () {
   });
 
   it("Verify geo.json file upload", function () {
-    cy.get("#layer-type-select-input").type("Reference{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
+    cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
     const fileName = "testing_geojson.geo.json";
     cy.fixture(fileName).then((file) => {
@@ -125,7 +126,8 @@ describe("Add Data", function () {
   });
 
   it("Verify geojson file upload", function () {
-    cy.get("#layer-type-select-input").type("Reference{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
+    cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
     const fileName = "testing_geojson.geojson";
     cy.fixture(fileName).then((file) => {
@@ -137,7 +139,8 @@ describe("Add Data", function () {
   });
 
   it("Verify kml file upload", function () {
-    cy.get("#layer-type-select-input").type("Reference{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
+    cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
     const fileName = "2.5_month_age_animated.kml";
     cy.fixture(fileName).then((file) => {
@@ -149,7 +152,8 @@ describe("Add Data", function () {
   });
 
   it("Verify .gpx file upload", function () {
-    cy.get("#layer-type-select-input").type("Reference{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
+    cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
     const fileName = "testing_gpx.gpx";
     cy.fixture(fileName).then((file) => {

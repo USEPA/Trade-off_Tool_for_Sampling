@@ -2,6 +2,7 @@ describe("Add data from file uploads", function () {
   beforeEach(function () {
     cy.loadPage(true);
   });
+  const layerSelectId = "#layer-type-select";
   const loadingSpinnerId = "tots-loading-spinner";
   const planName = "CYPRESS-TEST-PLAN";
 
@@ -14,7 +15,10 @@ describe("Add data from file uploads", function () {
       .should("exist")
       .click({ force: true });
     cy.get("#add-data-select").type("Add Layer from file{enter}");
-    cy.get("#layer-type-select-input").type("Reference layer{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" })
+      .parent()
+      .should("be.visible");
+    cy.get(`${layerSelectId}-input`).type("Reference layer{enter}");
 
     const fileName = "2.5_week.csv";
     cy.fixture(fileName).then((file) => {
@@ -104,7 +108,10 @@ describe("Add data from file uploads", function () {
     cy.findByRole("button", { name: "Add Data" })
       .should("exist")
       .click({ force: true });
-    cy.get("#layer-type-select").type("TOTS Sampling Plans{enter}");
+    cy.findByRole("combobox", { name: "Layer Type" })
+      .parent()
+      .should("be.visible");
+    cy.get(layerSelectId).type("TOTS Sampling Plans{enter}", { force: true });
 
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should(
