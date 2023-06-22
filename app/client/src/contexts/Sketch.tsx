@@ -33,6 +33,11 @@ type HomeWidgetType = {
   '3d': __esri.Home;
 };
 
+export type SketchViewModelType = {
+  '2d': __esri.SketchViewModel;
+  '3d': __esri.SketchViewModel;
+};
+
 type SketchType = {
   autoZoom: boolean;
   setAutoZoom: Dispatch<SetStateAction<boolean>>;
@@ -72,8 +77,8 @@ type SketchType = {
   setSelectedSampleIds: Dispatch<SetStateAction<SelectedSampleType[]>>;
   selectedScenario: ScenarioEditsType | null;
   setSelectedScenario: Dispatch<SetStateAction<ScenarioEditsType | null>>;
-  sketchVM: __esri.SketchViewModel | null;
-  setSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
+  sketchVM: SketchViewModelType | null;
+  setSketchVM: Dispatch<SetStateAction<SketchViewModelType | null>>;
   aoiSketchVM: __esri.SketchViewModel | null;
   setAoiSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
   getGpMaxRecordCount: (() => Promise<number>) | null;
@@ -215,7 +220,7 @@ export function SketchProvider({ children }: Props) {
   const [
     sketchVM,
     setSketchVM, //
-  ] = useState<__esri.SketchViewModel | null>(null);
+  ] = useState<SketchViewModelType | null>(null);
   const [
     aoiSketchVM,
     setAoiSketchVM, //
