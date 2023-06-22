@@ -11,6 +11,7 @@ import Legend from '@arcgis/core/widgets/Legend';
 import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
 import Portal from '@arcgis/core/portal/Portal';
 import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
@@ -807,15 +808,37 @@ function Toolbar() {
     }
   }, [mapView, sceneView, displayDimensions]);
 
+  // Get the elevation layer
+  const [elevLayer, setElevLayer] = useState<__esri.ElevationLayer | null>(
+    null,
+  );
+  const [elevLayerWatcher, setElevLayerWatcher] = useState<IHandle | null>(
+    null,
+  );
+  useEffect(() => {
+    if (elevLayerWatcher || !map) return;
+
+    const handle = reactiveUtils.watch(
+      () => map.ground.loaded,
+      () => {
+        if (!map.ground.loaded) return;
+
+        const elevationLayer = getElevationLayer(map);
+        if (!elevationLayer) return;
+
+        setElevLayer(elevationLayer);
+        handle.remove();
+      },
+    );
+    setElevLayerWatcher(handle);
+  }, [elevLayerWatcher, map]);
+
   // Toggle the 3D terrain visibility
   useEffect(() => {
-    if (!map) return;
+    if (!elevLayer || !map) return;
 
-    const elevationLayer = getElevationLayer(map);
-    if (!elevationLayer) return;
-
-    elevationLayer.visible = terrain3dVisible;
-  }, [map, terrain3dVisible]);
+    elevLayer.visible = terrain3dVisible;
+  }, [elevLayer, map, terrain3dVisible]);
 
   // Toggle the 3D view underground feature
   useEffect(() => {
