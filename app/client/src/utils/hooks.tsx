@@ -240,7 +240,7 @@ export function useStartOver() {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
       mapView.rotation = 0;
-      if (mapView?.popup?.close) mapView.popup.close();
+      if (mapView) mapView.closePopup();
     }
     if (sceneView) {
       if (sceneView.camera) {
@@ -253,7 +253,7 @@ export function useStartOver() {
         });
       }
       sceneView.zoom = 4;
-      if (sceneView?.popup?.close) sceneView.popup.close();
+      if (sceneView) sceneView.closePopup();
     }
 
     if (homeWidget && mapView && sceneView) {

@@ -1427,8 +1427,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
     layer.pointsLayer.removeMany(graphicsToRemove);
 
     // close the popup
-    if (mapView?.popup?.close) mapView.popup.close();
-    if (sceneView?.popup?.close) sceneView.popup.close();
+    if (mapView) mapView.closePopup();
+    if (sceneView) sceneView.closePopup();
 
     setSamplesToDelete(null);
   }, [edits, setEdits, layers, mapView, sceneView, samplesToDelete]);
