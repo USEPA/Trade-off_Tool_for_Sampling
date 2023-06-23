@@ -62,7 +62,7 @@ function Map({ height }: Props) {
     });
     setMap(newMap);
 
-    const viewParams = {
+    const viewParams: any = {
       container: mapRef.current,
       map: newMap,
       center: [-95, 37],

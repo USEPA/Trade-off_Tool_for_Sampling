@@ -88,7 +88,7 @@ const inputStyles = css`
   width: 100%;
   height: 36px;
   margin: 0 0 10px 0;
-  padding-left: 8px;
+  padding: 0;
   border: 1px solid #ccc;
   border-radius: 4px;
 `;
@@ -205,8 +205,6 @@ function ConfigureOutput() {
       id={id}
       cssStyles={infoIconStyles}
       tooltip="A web map is used with Field Maps and supports field data collection activities."
-      place="right"
-      type="info"
     />
   );
 
@@ -215,8 +213,6 @@ function ConfigureOutput() {
       id={id}
       cssStyles={infoIconStyles}
       tooltip="A web scene is used for viewing TOTS sampling plans in ArcGIS Online with 3D."
-      place="right"
-      type="info"
     />
   );
 
@@ -866,7 +862,7 @@ const codedContainerStyles = css`
 // allow the required attribute to be passed in.
 const hiddenInput = css`
   opacity: 0;
-  width: 100%;
+  width: 0;
   height: 0;
   position: absolute;
   margin-top: -15px;
@@ -1116,9 +1112,7 @@ function EditAttributePopup({
             <InfoIcon
               id="field-name-input-icon"
               cssStyles={infoIconStyles}
-              tooltip="Field names should not contain special characters, such as spaces, hyphens, parentheses, brackets, or characters such as $, %, and #."
-              place="right"
-              type="info"
+              tooltip="Field names should not contain<br/>special characters, such as spaces,<br/>hyphens, parentheses, brackets, or<br/>characters such as $, %, and #."
             />
             <input
               id="attribute-name-input"
@@ -1134,9 +1128,7 @@ function EditAttributePopup({
             <InfoIcon
               id="display-name-input-icon"
               cssStyles={infoIconStyles}
-              tooltip="An alternative name or alias for a field that is more descriptive and user-friendly than the name."
-              place="right"
-              type="info"
+              tooltip="An alternative name or alias for<br/>a field that is more descriptive<br/>and user-friendly than the name."
             />
             <input
               id="attribute-label-input"
@@ -1197,9 +1189,8 @@ function EditAttributePopup({
               <InfoIcon
                 id="domain-type-input-icon"
                 cssStyles={infoIconStyles}
-                tooltip="Used for limiting the values users can input into this field. This can either be a predefined list of values (Coded Values) or a numerical range (Range). The Coded Values option allows for drop-down, radio button, and switch options when creating surveys in Esri Field Maps."
-                place="right"
-                type="info"
+                tooltip="Used for limiting the values users can input into this field.<br/>This can either be a predefined list of values (Coded Values) or<br/>a numerical range (Range). The Coded Values option allows<br/>for drop-down, radio button, and switch options when creating<br/>surveys in Esri Field Maps."
+                place="top"
               />
               <Select
                 id="domain-type-select"

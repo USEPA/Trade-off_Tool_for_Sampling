@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 // contexts
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
 
 let ctrl = false;
 let shift = false;
@@ -30,8 +30,12 @@ type Props = {
 };
 
 function MapMouseEvents({ mapView, sceneView }: Props) {
-  const { sampleAttributes, setSelectedSampleIds, sketchVM } =
-    useContext(SketchContext);
+  const {
+    displayDimensions,
+    sampleAttributes,
+    setSelectedSampleIds,
+    sketchVM,
+  } = useContext(SketchContext);
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {
@@ -156,8 +160,9 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
       if (event.key === 'Control') ctrl = true;
       else if (event.key === 'Shift') shift = true;
 
-      if (event.key === 'Escape' && mapView.popup) {
-        mapView.popup.close();
+      if (event.key === 'Escape') {
+        if (mapView) mapView.closePopup();
+        if (sceneView) sceneView.closePopup();
 
         // re-activate sketch tools if necessary
         const button = document.querySelector('.sketch-button-selected');
@@ -199,21 +204,32 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
 
   // syncs the sketchVMG variable with the sketchVM context value
   useEffect(() => {
-    sketchVMG = sketchVM;
-  }, [sketchVM]);
+    sketchVMG = !sketchVM ? sketchVM : sketchVM[displayDimensions];
+  }, [displayDimensions, sketchVM]);
 
   // Sets up a watcher to sync the updateGraphics variable with the sketchVM.updateGraphics
   // context value
-  const [handler, setHandler] = useState<IHandle | null>(null);
+  const [handler, setHandler] = useState<{
+    '2d': IHandle;
+    '3d': IHandle;
+  } | null>(null);
   useEffect(() => {
     if (!sketchVM || handler) return;
 
-    setHandler(
-      reactiveUtils.watch(
-        () => sketchVM.updateGraphics.length,
+    function setupWatcher(
+      sketchVM: SketchViewModelType,
+      dimensions: '2d' | '3d',
+    ) {
+      return reactiveUtils.watch(
+        () => sketchVM[dimensions].updateGraphics.length,
         () => {
-          const updateGraphicsArray = sketchVM.updateGraphics.toArray();
-          if (sketchVM.updateGraphics.length === 0 && !ctrl && !shift) {
+          const updateGraphicsArray =
+            sketchVM[dimensions].updateGraphics.toArray();
+          if (
+            sketchVM[dimensions].updateGraphics.length === 0 &&
+            !ctrl &&
+            !shift
+          ) {
             updateGraphics = [];
           } else {
             updateGraphicsArray.forEach((g) => {
@@ -227,8 +243,13 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
             });
           }
         },
-      ),
-    );
+      );
+    }
+
+    setHandler({
+      '2d': setupWatcher(sketchVM, '2d'),
+      '3d': setupWatcher(sketchVM, '3d'),
+    });
   }, [handler, sketchVM]);
 
   return null;

@@ -733,6 +733,8 @@ function CalculateResults() {
 
       // setup column widths
       samplesSheet.columns = [
+        { width: 26.71 },
+        { width: 47.71 },
         { width: 47.71 },
         { width: 15.43 },
         { width: 26.71 },
@@ -746,45 +748,57 @@ function CalculateResults() {
 
       // add in column headers
       samplesSheet.getCell(3, 1).font = labelFont;
-      samplesSheet.getCell(3, 1).value = 'Sample ID';
+      samplesSheet.getCell(3, 1).value = 'Layer Name';
       samplesSheet.getCell(3, 2).font = labelFont;
-      samplesSheet.getCell(3, 2).value = 'Sample Type';
+      samplesSheet.getCell(3, 2).value = 'Layer ID';
       samplesSheet.getCell(3, 3).font = labelFont;
-      samplesSheet.getCell(3, 3).value = 'Measured Contamination';
+      samplesSheet.getCell(3, 3).value = 'Sample ID';
       samplesSheet.getCell(3, 4).font = labelFont;
-      samplesSheet.getCell(3, 4).value = 'Units';
+      samplesSheet.getCell(3, 4).value = 'Sample Type';
       samplesSheet.getCell(3, 5).font = labelFont;
-      samplesSheet.getCell(3, 5).value = 'Notes';
+      samplesSheet.getCell(3, 5).value = 'Measured Contamination';
+      samplesSheet.getCell(3, 6).font = labelFont;
+      samplesSheet.getCell(3, 6).value = 'Units';
+      samplesSheet.getCell(3, 7).font = labelFont;
+      samplesSheet.getCell(3, 7).value = 'Notes';
 
       // add in the rows
       let currentRow = 4;
       scenarioGroupLayer.layers.forEach((layer) => {
-        if (layer.type !== 'graphics') return;
+        if (layer.type !== 'graphics' || layer.id.endsWith('-points')) return;
 
         const graphicsLayer = layer as __esri.GraphicsLayer;
         graphicsLayer.graphics.forEach((graphic) => {
           const { PERMANENT_IDENTIFIER, TYPE, CONTAMVAL, CONTAMUNIT, Notes } =
             graphic.attributes;
 
-          if (PERMANENT_IDENTIFIER) {
+          if (layer.title) {
             samplesSheet.getCell(currentRow, 1).font = defaultFont;
-            samplesSheet.getCell(currentRow, 1).value = PERMANENT_IDENTIFIER;
+            samplesSheet.getCell(currentRow, 1).value = layer.title;
+          }
+          if (layer.id) {
+            samplesSheet.getCell(currentRow, 2).font = defaultFont;
+            samplesSheet.getCell(currentRow, 2).value = layer.id;
+          }
+          if (PERMANENT_IDENTIFIER) {
+            samplesSheet.getCell(currentRow, 3).font = defaultFont;
+            samplesSheet.getCell(currentRow, 3).value = PERMANENT_IDENTIFIER;
           }
           if (TYPE) {
-            samplesSheet.getCell(currentRow, 2).font = defaultFont;
-            samplesSheet.getCell(currentRow, 2).value = TYPE;
+            samplesSheet.getCell(currentRow, 4).font = defaultFont;
+            samplesSheet.getCell(currentRow, 4).value = TYPE;
           }
           if (CONTAMVAL) {
-            samplesSheet.getCell(currentRow, 3).font = defaultFont;
-            samplesSheet.getCell(currentRow, 3).value = CONTAMVAL;
+            samplesSheet.getCell(currentRow, 5).font = defaultFont;
+            samplesSheet.getCell(currentRow, 5).value = CONTAMVAL;
           }
           if (CONTAMUNIT) {
-            samplesSheet.getCell(currentRow, 4).font = defaultFont;
-            samplesSheet.getCell(currentRow, 4).value = CONTAMUNIT;
+            samplesSheet.getCell(currentRow, 6).font = defaultFont;
+            samplesSheet.getCell(currentRow, 6).value = CONTAMUNIT;
           }
           if (Notes) {
-            samplesSheet.getCell(currentRow, 5).font = defaultFont;
-            samplesSheet.getCell(currentRow, 5).value = Notes;
+            samplesSheet.getCell(currentRow, 7).font = defaultFont;
+            samplesSheet.getCell(currentRow, 7).value = Notes;
           }
 
           currentRow += 1;

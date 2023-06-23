@@ -11,6 +11,7 @@ import Legend from '@arcgis/core/widgets/Legend';
 import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
 import Portal from '@arcgis/core/portal/Portal';
 import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
@@ -807,15 +808,37 @@ function Toolbar() {
     }
   }, [mapView, sceneView, displayDimensions]);
 
+  // Get the elevation layer
+  const [elevLayer, setElevLayer] = useState<__esri.ElevationLayer | null>(
+    null,
+  );
+  const [elevLayerWatcher, setElevLayerWatcher] = useState<IHandle | null>(
+    null,
+  );
+  useEffect(() => {
+    if (elevLayerWatcher || !map) return;
+
+    const handle = reactiveUtils.watch(
+      () => map.ground.loaded,
+      () => {
+        if (!map.ground.loaded) return;
+
+        const elevationLayer = getElevationLayer(map);
+        if (!elevationLayer) return;
+
+        setElevLayer(elevationLayer);
+        handle.remove();
+      },
+    );
+    setElevLayerWatcher(handle);
+  }, [elevLayerWatcher, map]);
+
   // Toggle the 3D terrain visibility
   useEffect(() => {
-    if (!map) return;
+    if (!elevLayer || !map) return;
 
-    const elevationLayer = getElevationLayer(map);
-    if (!elevationLayer) return;
-
-    elevationLayer.visible = terrain3dVisible;
-  }, [map, terrain3dVisible]);
+    elevLayer.visible = terrain3dVisible;
+  }, [elevLayer, map, terrain3dVisible]);
 
   // Toggle the 3D view underground feature
   useEffect(() => {
@@ -856,7 +879,6 @@ function Toolbar() {
                     'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
                   }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input
@@ -894,7 +916,6 @@ function Toolbar() {
                     'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
                   }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input

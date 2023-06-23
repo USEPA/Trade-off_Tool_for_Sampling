@@ -228,6 +228,8 @@ describe("Visual Testing", () => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 
+    cy.mapLoadDelay();
+
     cy.get(mapId).matchSnapshot("verify-swab");
   });
 

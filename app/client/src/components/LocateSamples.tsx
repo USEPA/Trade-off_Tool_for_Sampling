@@ -7,6 +7,7 @@ import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import Graphic from '@arcgis/core/Graphic';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -423,6 +424,7 @@ function LocateSamples() {
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
+    displayDimensions,
     edits,
     setEdits,
     layersInitialized,
@@ -537,7 +539,8 @@ function LocateSamples() {
     }
 
     // determine whether the sketch button draws points or polygons
-    let shapeType = sampleAttributes[label as any].ShapeType;
+    const attributes = sampleAttributes[label as any];
+    let shapeType = attributes.ShapeType;
 
     // make the style of the button active
     const wasSet = activateSketchButton(label);
@@ -546,15 +549,22 @@ function LocateSamples() {
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
 
-    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
-    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
+    const isPath = attributes.POINT_STYLE.includes('path|');
+    const pointProps = {
+      color: defaultSymbols.symbols[symbolType].color,
+      outline: defaultSymbols.symbols[symbolType].outline,
+      style: isPath ? 'path' : attributes.POINT_STYLE,
+    } as any;
+    if (isPath) pointProps.path = attributes.POINT_STYLE.replace('path|', '');
 
-    if (wasSet) {
-      // let the user draw/place the shape
-      sketchVM.create(shapeType);
-    } else {
-      sketchVM.cancel();
-    }
+    sketchVM['2d'].polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM['2d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
+    sketchVM['3d'].polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
+
+    // let the user draw/place the shape
+    if (wasSet) sketchVM[displayDimensions].create(shapeType);
+    else sketchVM[displayDimensions].cancel();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -584,7 +594,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (sketchVM) {
-      sketchVM.cancel();
+      sketchVM[displayDimensions].cancel();
     }
 
     // make the style of the button active
@@ -603,7 +613,7 @@ function LocateSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
 
     activateSketchButton('disable-all-buttons');
-    sketchVM?.cancel();
+    sketchVM?.[displayDimensions].cancel();
     aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
@@ -1223,14 +1233,19 @@ function LocateSamples() {
                   edits,
                   layer: sketchLayer,
                   type: 'delete',
-                  changes: sketchVM.layer.graphics,
+                  changes: sketchVM[displayDimensions].layer.graphics,
                 });
 
                 setEdits(editsCopy);
 
-                sketchVM.layer.removeAll();
-                (sketchVM.layer as any).parent.layers.forEach((layer: any) => {
-                  if (layer.id === sketchVM.layer.id + '-points') {
+                sketchVM[displayDimensions].layer.removeAll();
+                (
+                  sketchVM[displayDimensions].layer as any
+                ).parent.layers.forEach((layer: any) => {
+                  if (
+                    layer.id ===
+                    sketchVM[displayDimensions].layer.id + '-points'
+                  ) {
                     layer.removeAll();
                   }
                 });
