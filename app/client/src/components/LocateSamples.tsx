@@ -716,6 +716,7 @@ function LocateSamples() {
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
+            const hybridGraphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
             const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
@@ -793,6 +794,11 @@ function LocateSamples() {
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
+                hybridGraphicsToAdd.push(
+                  poly.attributes.ShapeType === 'point'
+                    ? convertToPoint(poly)
+                    : poly.clone(),
+                );
 
                 index += 1;
               }
@@ -806,6 +812,7 @@ function LocateSamples() {
               sketchLayer.sketchLayer.graphics.addMany(collection);
 
               sketchLayer.pointsLayer?.addMany(pointsToAdd);
+              sketchLayer.hybridLayer?.addMany(hybridGraphicsToAdd);
 
               let editsCopy = updateLayerEdits({
                 edits,
@@ -1248,6 +1255,12 @@ function LocateSamples() {
                   ) {
                     layer.removeAll();
                   }
+                  if (
+                    layer.id ===
+                    sketchVM[displayDimensions].layer.id + '-hybrid'
+                  ) {
+                    layer.removeAll();
+                  }
                 });
               }}
             >
@@ -1659,6 +1672,13 @@ function LocateSamples() {
                               );
                               map.add(sketchLayer.pointsLayer);
                             }
+                            if (sketchLayer.hybridLayer) {
+                              sketchLayer.hybridLayer.visible = false;
+                              sketchLayer.parentLayer?.remove(
+                                sketchLayer.hybridLayer,
+                              );
+                              map.add(sketchLayer.hybridLayer);
+                            }
 
                             // update layers (clear parent layer)
                             setLayers((layers) => {
@@ -1733,6 +1753,9 @@ function LocateSamples() {
                             if (sketchLayer.pointsLayer) {
                               groupLayer.add(sketchLayer.pointsLayer);
                             }
+                            if (sketchLayer.hybridLayer) {
+                              groupLayer.add(sketchLayer.hybridLayer);
+                            }
 
                             // show the newly added layer
                             if (
@@ -1740,6 +1763,11 @@ function LocateSamples() {
                               sketchLayer.pointsLayer
                             ) {
                               sketchLayer.pointsLayer.visible = true;
+                            } else if (
+                              displayGeometryType === 'hybrid' &&
+                              sketchLayer.hybridLayer
+                            ) {
+                              sketchLayer.hybridLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;
                             }
@@ -1832,6 +1860,8 @@ function LocateSamples() {
                               parentLayer.remove(sketchLayer.sketchLayer);
                             if (sketchLayer.pointsLayer)
                               parentLayer.remove(sketchLayer.pointsLayer);
+                            if (sketchLayer.hybridLayer)
+                              parentLayer.remove(sketchLayer.hybridLayer);
                           } else {
                             // remove the scenario from edits
                             setEdits((edits) => {
@@ -1915,12 +1945,15 @@ function LocateSamples() {
                             sketchLayer.sketchLayer.type !== 'graphics' ||
                             tempLayer.sketchLayer.type !== 'graphics' ||
                             !tempLayer.pointsLayer ||
-                            tempLayer.pointsLayer.type !== 'graphics'
+                            tempLayer.pointsLayer.type !== 'graphics' ||
+                            !tempLayer.hybridLayer ||
+                            tempLayer.hybridLayer.type !== 'graphics'
                           )
                             return;
 
                           const clonedGraphics: __esri.Graphic[] = [];
                           const clonedPointGraphics: __esri.Graphic[] = [];
+                          const clonedHybridGraphics: __esri.Graphic[] = [];
                           sketchLayer.sketchLayer.graphics.forEach(
                             (graphic) => {
                               const uuid = generateUUID();
@@ -1941,11 +1974,17 @@ function LocateSamples() {
                               clonedPointGraphics.push(
                                 convertToPoint(clonedGraphic),
                               );
+                              clonedHybridGraphics.push(
+                                clonedGraphic.attributes.ShapeType === 'point'
+                                  ? convertToPoint(clonedGraphic)
+                                  : clonedGraphic.clone(),
+                              );
                             },
                           );
 
                           tempLayer.sketchLayer.addMany(clonedGraphics);
                           tempLayer.pointsLayer.addMany(clonedPointGraphics);
+                          tempLayer.hybridLayer.addMany(clonedHybridGraphics);
 
                           // add the new layer to layers
                           setLayers((layers) => {
@@ -1973,6 +2012,9 @@ function LocateSamples() {
                             tempGroupLayer.add(tempLayer.sketchLayer);
                             if (tempLayer.pointsLayer) {
                               tempGroupLayer.add(tempLayer.pointsLayer);
+                            }
+                            if (tempLayer.hybridLayer) {
+                              tempGroupLayer.add(tempLayer.hybridLayer);
                             }
                           }
 
@@ -3133,6 +3175,15 @@ function LocateSamples() {
                                       updateAttributes({
                                         graphics:
                                           layer.pointsLayer.graphics.toArray(),
+                                        newAttributes,
+                                        oldType,
+                                        symbol: udtSymbol,
+                                      });
+                                    }
+                                    if (layer.hybridLayer) {
+                                      updateAttributes({
+                                        graphics:
+                                          layer.hybridLayer.graphics.toArray(),
                                         newAttributes,
                                         oldType,
                                         symbol: udtSymbol,

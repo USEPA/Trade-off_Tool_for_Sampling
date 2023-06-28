@@ -393,7 +393,9 @@ function MapWidgets({ mapView, sceneView }: Props) {
         const tempGraphic = feature.graphic;
         const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
         const tempSketchLayer = layers.find(
-          (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
+          (layer) =>
+            layer.layerId ===
+            tempLayer.id.replace('-points', '').replace('-hybrid', ''),
         );
         if (
           !tempSketchLayer ||
@@ -418,6 +420,14 @@ function MapWidgets({ mapView, sceneView }: Props) {
               graphic.attributes.PERMANENT_IDENTIFIER,
           );
         if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+        const hybridGraphic: __esri.Graphic | undefined =
+          tempSketchLayer.hybridLayer?.graphics.find(
+            (item) =>
+              item.attributes.PERMANENT_IDENTIFIER ===
+              graphic.attributes.PERMANENT_IDENTIFIER,
+          );
+        if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
 
         if (type === 'Save') {
           changes.add(graphic);
@@ -467,6 +477,16 @@ function MapWidgets({ mapView, sceneView }: Props) {
               newLayer.pointsLayer as __esri.GraphicsLayer;
             tempNewPointsLayer.add(pointGraphic);
             tempSketchLayer.pointsLayer.remove(pointGraphic);
+          }
+
+          if (hybridGraphic && tempSketchLayer.hybridLayer) {
+            hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
+            hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+            const tempNewHybridLayer =
+              newLayer.hybridLayer as __esri.GraphicsLayer;
+            tempNewHybridLayer.add(hybridGraphic);
+            tempSketchLayer.hybridLayer.remove(hybridGraphic);
           }
         }
       });
@@ -890,6 +910,17 @@ function MapWidgets({ mapView, sceneView }: Props) {
             if (pointLayer) {
               pointLayer.add(convertToPoint(graphic));
             }
+
+            const hybridLayer = (graphic.layer as any).parent.layers.find(
+              (layer: any) => `${layerId}-hybrid` === layer.id,
+            );
+            if (hybridLayer) {
+              hybridLayer.add(
+                graphic.attributes.ShapeType === 'point'
+                  ? convertToPoint(graphic)
+                  : graphic.clone(),
+              );
+            }
           }
 
           // save the graphic
@@ -942,28 +973,60 @@ function MapWidgets({ mapView, sceneView }: Props) {
             )?.parent?.layers?.find(
               (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
             );
-            if (!pointLayer) return;
+            if (pointLayer) {
+              // Find the original point graphic and remove it
+              const graphicsToRemove: __esri.Graphic[] = [];
+              pointLayer.graphics.forEach((pointVersion) => {
+                if (
+                  graphic.attributes.PERMANENT_IDENTIFIER ===
+                  pointVersion.attributes.PERMANENT_IDENTIFIER
+                ) {
+                  graphicsToRemove.push(pointVersion);
+                }
+              });
+              pointLayer.removeMany(graphicsToRemove);
 
-            // Find the original point graphic and remove it
-            const graphicsToRemove: __esri.Graphic[] = [];
-            pointLayer.graphics.forEach((pointVersion) => {
-              if (
-                graphic.attributes.PERMANENT_IDENTIFIER ===
-                pointVersion.attributes.PERMANENT_IDENTIFIER
-              ) {
-                graphicsToRemove.push(pointVersion);
+              // Re-add the point version of the graphic
+              const symbol = graphic.symbol as any as PolygonSymbol;
+              (pointLayer as any).add({
+                attributes: graphic.attributes,
+                geometry: (graphic.geometry as __esri.Polygon).centroid,
+                popupTemplate: graphic.popupTemplate,
+                symbol: getPointSymbol(graphic, symbol),
+              });
+            }
+
+            const hybridLayer: __esri.GraphicsLayer = (
+              graphic.layer as any
+            )?.parent?.layers?.find(
+              (layer: __esri.GraphicsLayer) => `${layerId}-hybrid` === layer.id,
+            );
+            if (hybridLayer) {
+              // Find the original point graphic and remove it
+              const graphicsToRemove: __esri.Graphic[] = [];
+              hybridLayer.graphics.forEach((hybridVersion) => {
+                if (
+                  graphic.attributes.PERMANENT_IDENTIFIER ===
+                  hybridVersion.attributes.PERMANENT_IDENTIFIER
+                ) {
+                  graphicsToRemove.push(hybridVersion);
+                }
+              });
+              hybridLayer.removeMany(graphicsToRemove);
+
+              // Re-add the point version of the graphic
+              const symbol = graphic.symbol as any as PolygonSymbol;
+              if (graphic.attributes.ShapeType === 'point') {
+                (hybridLayer as any).add({
+                  attributes: graphic.attributes,
+                  geometry: (graphic.geometry as __esri.Polygon).centroid,
+                  popupTemplate: graphic.popupTemplate,
+                  symbol: getPointSymbol(graphic, symbol),
+                });
+              } else {
+                (hybridLayer as any).add(graphic.clone());
               }
-            });
-            pointLayer.removeMany(graphicsToRemove);
-
-            // Re-add the point version of the graphic
-            const symbol = graphic.symbol as any as PolygonSymbol;
-            (pointLayer as any).add({
-              attributes: graphic.attributes,
-              geometry: (graphic.geometry as __esri.Polygon).centroid,
-              popupTemplate: graphic.popupTemplate,
-              symbol: getPointSymbol(graphic, symbol),
-            });
+            }
           });
         }
 
@@ -1003,19 +1066,38 @@ function MapWidgets({ mapView, sceneView }: Props) {
           ).parent.layers.find(
             (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
           );
-          if (!pointLayer) return;
+          if (pointLayer) {
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            pointLayer.graphics.forEach((pointVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                pointVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(pointVersion);
+              }
+            });
+            pointLayer.removeMany(graphicsToRemove);
+          }
 
-          // Find the original point graphic and remove it
-          const graphicsToRemove: __esri.Graphic[] = [];
-          pointLayer.graphics.forEach((pointVersion) => {
-            if (
-              graphic.attributes.PERMANENT_IDENTIFIER ===
-              pointVersion.attributes.PERMANENT_IDENTIFIER
-            ) {
-              graphicsToRemove.push(pointVersion);
-            }
-          });
-          pointLayer.removeMany(graphicsToRemove);
+          const hybridLayer: __esri.GraphicsLayer = (
+            tempSketchVM.layer as any
+          ).parent.layers.find(
+            (layer: __esri.GraphicsLayer) => `${layerId}-hybrid` === layer.id,
+          );
+          if (hybridLayer) {
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            hybridLayer.graphics.forEach((hybridVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                hybridVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(hybridVersion);
+              }
+            });
+            hybridLayer.removeMany(graphicsToRemove);
+          }
         });
 
         sketchEventSetter(event);
@@ -1244,6 +1326,11 @@ function MapWidgets({ mapView, sceneView }: Props) {
             graphic.popupTemplate = popupTemplate;
           });
         }
+        if (layer.hybridLayer?.type === 'graphics') {
+          layer.hybridLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
       }
     });
   }, [getPopupTemplate, trainingMode, layers]);
@@ -1356,6 +1443,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
 
       highlightGraphics(layer.sketchLayer, sampleUuids);
       highlightGraphics(layer.pointsLayer, sampleUuids);
+      highlightGraphics(layer.hybridLayer, sampleUuids);
     });
   }, [
     map,
@@ -1382,7 +1470,10 @@ function MapWidgets({ mapView, sceneView }: Props) {
     // find the layer
     const layer = layers.find(
       (layer) =>
-        layer.layerId === samplesToDelete[0].layer.id.replace('-points', ''),
+        layer.layerId ===
+        samplesToDelete[0].layer.id
+          .replace('-points', '')
+          .replace('-hybrid', ''),
     );
     if (!layer || layer.sketchLayer.type !== 'graphics') return;
 
@@ -1404,7 +1495,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     let graphicsToRemove: __esri.Graphic[] = [];
     layer.sketchLayer.graphics.forEach((polygonVersion) => {
       if (
-        // samplesToDelete.attributes.PERMANENT_IDENTIFIER ===
         idsToDelete.includes(polygonVersion.attributes.PERMANENT_IDENTIFIER)
       ) {
         graphicsToRemove.push(polygonVersion);
@@ -1412,19 +1502,23 @@ function MapWidgets({ mapView, sceneView }: Props) {
     });
     layer.sketchLayer.removeMany(graphicsToRemove);
 
-    if (!layer.pointsLayer) return;
+    if (!layer.pointsLayer || !layer.hybridLayer) return;
 
     // Find the original point graphic and remove it
     graphicsToRemove = [];
     layer.pointsLayer.graphics.forEach((pointVersion) => {
-      if (
-        // sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
-        idsToDelete.includes(pointVersion.attributes.PERMANENT_IDENTIFIER)
-      ) {
+      if (idsToDelete.includes(pointVersion.attributes.PERMANENT_IDENTIFIER)) {
         graphicsToRemove.push(pointVersion);
       }
     });
     layer.pointsLayer.removeMany(graphicsToRemove);
+
+    layer.hybridLayer.graphics.forEach((hybridVersion) => {
+      if (idsToDelete.includes(hybridVersion.attributes.PERMANENT_IDENTIFIER)) {
+        graphicsToRemove.push(hybridVersion);
+      }
+    });
+    layer.hybridLayer.removeMany(graphicsToRemove);
 
     // close the popup
     if (mapView) mapView.closePopup();

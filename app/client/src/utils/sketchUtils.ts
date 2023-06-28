@@ -431,6 +431,12 @@ export function createSampleLayer(
     visible: false,
     listMode: 'hide',
   });
+  const hybridLayer = new GraphicsLayer({
+    id: layerUuid + '-hybrid',
+    title: name,
+    visible: false,
+    listMode: 'hide',
+  });
 
   return {
     id: -1,
@@ -450,7 +456,8 @@ export function createSampleLayer(
     addedFrom: 'sketch',
     status: 'added',
     sketchLayer: graphicsLayer,
-    pointsLayer: pointsLayer,
+    pointsLayer,
+    hybridLayer,
     parentLayer,
   } as LayerType;
 }
@@ -489,6 +496,7 @@ export function getDefaultSamplingMaskLayer() {
     status: 'added',
     sketchLayer: graphicsLayer,
     pointsLayer: null,
+    hybridLayer: null,
     parentLayer: null,
   } as LayerType;
 }
@@ -537,9 +545,30 @@ export function updatePointSymbol(
   defaultSymbols: DefaultSymbolsType,
 ) {
   layers.forEach((layer) => {
-    if (layer.pointsLayer?.type !== 'graphics') return;
+    if (
+      layer.pointsLayer?.type !== 'graphics' ||
+      layer.hybridLayer?.type !== 'graphics'
+    )
+      return;
 
     layer.pointsLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'point') return;
+
+      let layerType = layer.layerType;
+      if (layerType === 'VSP') layerType = 'Samples';
+      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+      // set the symbol based on sample/layer type
+      let udtSymbol: PolygonSymbol | null = null;
+      udtSymbol = defaultSymbols.symbols[layerType] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+        udtSymbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID] as any;
+      }
+
+      graphic.symbol = getPointSymbol(graphic, udtSymbol);
+    });
+
+    layer.hybridLayer.graphics.forEach((graphic) => {
       if (graphic.geometry.type !== 'point') return;
 
       let layerType = layer.layerType;
@@ -995,6 +1024,12 @@ export function createLayer({
     visible: false,
     listMode: 'hide',
   });
+  const hybridLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid + '-hybrid',
+    visible: false,
+    listMode: 'hide',
+  });
 
   const popupTemplate = getPopupTemplate(
     editsLayer.layerType,
@@ -1002,6 +1037,7 @@ export function createLayer({
   );
   const polyFeatures: __esri.Graphic[] = [];
   const pointFeatures: __esri.Graphic[] = [];
+  const hybridFeatures: __esri.Graphic[] = [];
   const idsUsed: string[] = [];
   const displayedFeatures: FeatureEditsType[] = [];
 
@@ -1056,10 +1092,16 @@ export function createLayer({
 
     polyFeatures.push(poly);
     pointFeatures.push(convertToPoint(poly));
+    hybridFeatures.push(
+      poly.attributes.ShapeType === 'point'
+        ? convertToPoint(poly)
+        : poly.clone(),
+    );
   });
   sketchLayer.addMany(polyFeatures);
   if (editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP') {
     pointsLayer.addMany(pointFeatures);
+    hybridLayer.addMany(hybridFeatures);
   }
 
   newLayers.push({
@@ -1084,10 +1126,14 @@ export function createLayer({
       editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
         ? pointsLayer
         : null,
+    hybridLayer:
+      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+        ? hybridLayer
+        : null,
     parentLayer,
   });
 
-  return [sketchLayer, pointsLayer];
+  return [sketchLayer, pointsLayer, hybridLayer];
 }
 
 /**

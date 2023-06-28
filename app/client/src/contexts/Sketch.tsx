@@ -90,8 +90,10 @@ type SketchType = {
   setSampleAttributes: Dispatch<SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
-  displayGeometryType: 'points' | 'polygons';
-  setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
+  displayGeometryType: 'hybrid' | 'points' | 'polygons';
+  setDisplayGeometryType: Dispatch<
+    SetStateAction<'hybrid' | 'points' | 'polygons'>
+  >;
   displayDimensions: '2d' | '3d';
   setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
   terrain3dVisible: boolean;
@@ -235,7 +237,7 @@ export function SketchProvider({ children }: Props) {
     [],
   );
   const [displayGeometryType, setDisplayGeometryType] = useState<
-    'points' | 'polygons'
+    'hybrid' | 'points' | 'polygons'
   >('points');
   const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
   const [terrain3dVisible, setTerrain3dVisible] = useState(true);

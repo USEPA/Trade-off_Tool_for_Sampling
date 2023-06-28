@@ -992,7 +992,9 @@ export function useDynamicPopup() {
     const tempGraphic = feature.graphic;
     const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
     const tempSketchLayer = layers.find(
-      (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
+      (layer) =>
+        layer.layerId ===
+        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
     );
     if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
       return;
@@ -1013,6 +1015,14 @@ export function useDynamicPopup() {
           graphic.attributes.PERMANENT_IDENTIFIER,
       );
     if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+    const hybridGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.hybridLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
 
     if (type === 'Save') {
       changes.add(graphic);
@@ -1064,6 +1074,14 @@ export function useDynamicPopup() {
         const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
         tempNewPointsLayer.add(pointGraphic);
         tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
+        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
+        tempNewHybridLayer.add(hybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
       }
     }
   };
