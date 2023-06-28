@@ -290,4 +290,82 @@ describe("Visual Testing", () => {
     cy.mapLoadDelay();
     cy.get(mapId).matchSnapshot("verify-3d");
   });
+
+  it("Verify various sample types 2d", () => {
+    sessionStorage.setItem(
+      "tots_map_scene_position",
+      JSON.stringify({
+        position: {
+          spatialReference: { latestWkid: 3857, wkid: 102100 },
+          x: -8574154.489479987,
+          y: 4705946.126231769,
+        },
+      })
+    );
+    sessionStorage.setItem(
+      "tots_map_2d_extent",
+      JSON.stringify({
+        spatialReference: { latestWkid: 3857, wkid: 102100 },
+        xmin: -8576046.305930095,
+        ymin: 4704572.648379734,
+        xmax: -8572262.67302988,
+        ymax: 4707319.604083804,
+      })
+    );
+
+    cy.fixture("various_sample_types.json").then((file) => {
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+
+    cy.displayMode("2d", "points");
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-2d-points");
+    cy.displayMode("2d", "polygons");
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-2d-polygons");
+    cy.displayMode("2d", "hybrid");
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-2d-hybrid");
+  });
+
+  it("Verify various sample types 3d", () => {
+    sessionStorage.setItem(
+      "tots_map_3d_extent",
+      JSON.stringify({
+        spatialReference: { latestWkid: 3857, wkid: 102100 },
+        xmin: -8575458.210635686,
+        ymin: 4704934.285308629,
+        xmax: -8572766.689907813,
+        ymax: 4706889.036217,
+      })
+    );
+    sessionStorage.setItem(
+      "tots_map_scene_position",
+      JSON.stringify({
+        fov: 55,
+        heading: 1.1564560067040883,
+        position: {
+          spatialReference: { latestWkid: 3857, wkid: 102100 },
+          x: -8574113.012785569,
+          y: 4705883.795251237,
+          z: 2492.916601365432,
+        },
+        tilt: 0.4998147141320164,
+      })
+    );
+
+    cy.fixture("various_sample_types.json").then((file) => {
+      sessionStorage.setItem("tots_edits", JSON.stringify(file));
+    });
+
+    cy.displayMode("3d", "points", false);
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-3d-points");
+    cy.displayMode("3d", "polygons", false);
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-3d-polygons");
+    cy.displayMode("3d", "hybrid", false);
+    cy.mapLoadDelay();
+    cy.get(mapId).matchSnapshot("verify-various-sample-types-3d-hybrid");
+  });
 });

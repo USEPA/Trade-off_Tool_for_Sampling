@@ -11,7 +11,11 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      displayMode(dimensions: string, shape: string): Chainable<Element>;
+      displayMode(
+        dimensions: string,
+        shape: string,
+        terrain3d?: boolean
+      ): Chainable<Element>;
       loadPage(initial?: boolean, url?: string): Chainable<Element>;
       login(): Chainable<Element>;
       mapLoadDelay(): Chainable<Element>;
@@ -93,17 +97,20 @@ Cypress.Commands.add("mapLoadDelay", () => {
   cy.wait(500);
 });
 
-Cypress.Commands.add("displayMode", (dimensions: string, shape: string) => {
-  sessionStorage.setItem(
-    "tots_display_mode",
-    JSON.stringify({
-      dimensions: dimensions,
-      geometryType: shape,
-      terrain3dVisible: true,
-      viewUnderground3d: false,
-    })
-  );
-});
+Cypress.Commands.add(
+  "displayMode",
+  (dimensions: string, shape: string, terrain3d: boolean = true) => {
+    sessionStorage.setItem(
+      "tots_display_mode",
+      JSON.stringify({
+        dimensions,
+        geometryType: shape,
+        terrain3dVisible: terrain3d,
+        viewUnderground3d: false,
+      })
+    );
+  }
+);
 
 Cypress.Commands.add(
   "validateSession",
