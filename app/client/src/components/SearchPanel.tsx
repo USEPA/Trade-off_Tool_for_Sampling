@@ -1424,7 +1424,8 @@ function ResultCard({ result }: ResultCardProps) {
             // convert the polygon graphics into points
             let pointGraphics: __esri.Graphic[] = [];
             let hybridGraphics: __esri.Graphic[] = [];
-            graphicsList.forEach((graphic) => {
+            graphicsList.forEach((graphicParams) => {
+              const graphic = new Graphic(graphicParams);
               pointGraphics.push(convertToPoint(graphic));
               hybridGraphics.push(
                 graphic.attributes.ShapeType === 'point'
