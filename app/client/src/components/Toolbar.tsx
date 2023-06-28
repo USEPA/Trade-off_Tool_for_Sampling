@@ -665,8 +665,8 @@ function Toolbar() {
           null,
           null,
         );
-        if (nextScenario) setSelectedScenario(nextScenario);
-        if (nextLayer) setSketchLayer(nextLayer);
+        setSelectedScenario(nextScenario ?? null);
+        setSketchLayer(nextLayer ?? null);
       }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
@@ -678,9 +678,14 @@ function Toolbar() {
       }
 
       // remove from layers
-      setLayers((layers) =>
-        layers.filter((layer) => layer.layerId !== layerToRemove.id),
-      );
+      setLayers((layers) => {
+        const newLayers = layers.filter(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.parentLayer?.id !== layerToRemove.id,
+        );
+        return newLayers;
+      });
 
       // also remove the layer from portalLayers if this layer was added
       // from arcgis online
