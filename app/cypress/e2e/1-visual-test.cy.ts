@@ -234,7 +234,7 @@ describe("Visual Testing", () => {
   });
 
   it("Verify All established sample types with shape point", () => {
-    cy.fixture("all_established_sample_types.json").then((file) => {
+    cy.fixture("all-established-sample-types.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 
@@ -313,7 +313,7 @@ describe("Visual Testing", () => {
       })
     );
 
-    cy.fixture("various_sample_types.json").then((file) => {
+    cy.fixture("various-sample-types.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 
@@ -354,7 +354,7 @@ describe("Visual Testing", () => {
       })
     );
 
-    cy.fixture("various_sample_types.json").then((file) => {
+    cy.fixture("various-sample-types.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 

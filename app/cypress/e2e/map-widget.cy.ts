@@ -41,7 +41,7 @@ describe("Map Widget", function () {
       })
     );
 
-    cy.fixture("map_popup.json").then((file) => {
+    cy.fixture("map-popup.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 

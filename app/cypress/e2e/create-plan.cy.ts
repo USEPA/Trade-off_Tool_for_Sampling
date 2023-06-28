@@ -92,7 +92,7 @@ describe("Create Plan Drop Down Contents", function () {
   });
 
   it("Verify Add Multiple Random Samples", function () {
-    cy.fixture("sample_mask.json").then((file) => {
+    cy.fixture("sample-mask.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 
