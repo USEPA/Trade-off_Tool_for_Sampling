@@ -913,7 +913,7 @@ function FilePanel() {
           const timestamp = getCurrentDateTime();
           let uuid = generateUUID();
           if (layerType.value === 'Samples') {
-            const { TYPE } = graphic.attributes;
+            const { NOTES, TYPE } = graphic.attributes;
             if (!sampleAttributes.hasOwnProperty(TYPE)) {
               unknownSampleTypes = true;
             } else {
@@ -927,6 +927,7 @@ function FilePanel() {
               graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
               graphic.attributes['DECISIONUNITSORT'] = 0;
               graphic.attributes['GLOBALID'] = uuid;
+              if (NOTES) graphic.attributes['Notes'] = NOTES;
             }
           }
           if (layerType.value === 'VSP') {
