@@ -544,7 +544,7 @@ function FilePanel() {
           return;
         }
 
-        if (['Contamination Map', 'Samples', 'VSP'].includes(layerType.value)) {
+        if (['Contamination Map', 'Samples'].includes(layerType.value)) {
           // exceptions: Notes, ShapeType
           const exceptions = ['Notes', 'ShapeType'];
           res.featureCollection.layers.forEach((layer: any) => {
