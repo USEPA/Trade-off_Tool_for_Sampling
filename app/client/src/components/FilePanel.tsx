@@ -543,6 +543,46 @@ function FilePanel() {
           });
           return;
         }
+
+        if (['Contamination Map', 'Samples'].includes(layerType.value)) {
+          // exceptions: Notes, ShapeType
+          const exceptions = ['Notes', 'ShapeType'];
+          res.featureCollection.layers.forEach((layer: any) => {
+            layer.featureSet.features.forEach(
+              (feature: any, _index: number) => {
+                Object.keys(feature.attributes).forEach((attribute) => {
+                  if (
+                    attribute === attribute.toLocaleUpperCase() ||
+                    exceptions.includes(attribute)
+                  )
+                    return;
+
+                  // check if this attribute is an exception
+                  let isException = false;
+                  exceptions.forEach((exception) => {
+                    if (
+                      exception.toLocaleUpperCase() !==
+                      attribute.toLocaleUpperCase()
+                    )
+                      return;
+
+                    isException = true;
+                    feature.attributes[exception] =
+                      feature.attributes[attribute];
+                  });
+
+                  if (!isException) {
+                    feature.attributes[attribute.toUpperCase()] =
+                      feature.attributes[attribute]; // duplicate attribute with upper case key
+                  }
+
+                  delete feature.attributes[attribute]; // delete the non uppercased key
+                });
+              },
+            );
+          });
+        }
+
         if (layerType.value !== 'VSP') {
           setGenerateResponse(res);
           return;
@@ -757,13 +797,6 @@ function FilePanel() {
     const features: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
       layer.featureSet.features.forEach((feature: any, _index: number) => {
-        Object.keys(feature.attributes).forEach((attribute) => {
-          if (attribute === attribute.toLocaleUpperCase()) return;
-          feature.attributes[attribute.toUpperCase()] =
-            feature.attributes[attribute]; // duplicate attribute with upper case key
-
-          delete feature.attributes[attribute]; // delete the non uppercased key
-        });
         features.push(feature);
       });
     });
@@ -913,7 +946,7 @@ function FilePanel() {
           const timestamp = getCurrentDateTime();
           let uuid = generateUUID();
           if (layerType.value === 'Samples') {
-            const { TYPE } = graphic.attributes;
+            const { Notes, TYPE } = graphic.attributes;
             if (!sampleAttributes.hasOwnProperty(TYPE)) {
               unknownSampleTypes = true;
             } else {
@@ -927,6 +960,7 @@ function FilePanel() {
               graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
               graphic.attributes['DECISIONUNITSORT'] = 0;
               graphic.attributes['GLOBALID'] = uuid;
+              graphic.attributes['Notes'] = Notes;
             }
           }
           if (layerType.value === 'VSP') {
