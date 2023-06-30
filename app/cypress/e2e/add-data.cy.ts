@@ -8,7 +8,7 @@ describe("Add Data", function () {
   const successText = "Upload Succeeded";
   const failureText = "Unknown Sample Type";
   const timeout = 120000; // file upload timeout
-  const sampleName = "targeted_sampling.zip";
+  const sampleName = "targeted-sampling.zip";
   const contaminationName = "Contamination.zip";
   const aoiName = "BOTE.zip";
   let samplesFile, contaminationMapFile, aoiFile;
@@ -116,7 +116,7 @@ describe("Add Data", function () {
     cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
     cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
-    const fileName = "testing_geojson.geo.json";
+    const fileName = "testing-geojson.geo.json";
     cy.fixture(fileName).then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, fileName, "json");
     });
@@ -129,7 +129,7 @@ describe("Add Data", function () {
     cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
     cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
-    const fileName = "testing_geojson.geojson";
+    const fileName = "testing-geojson.geojson";
     cy.fixture(fileName).then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, fileName, "geojson");
     });
@@ -142,7 +142,7 @@ describe("Add Data", function () {
     cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
     cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
-    const fileName = "2.5_month_age_animated.kml";
+    const fileName = "2.5-month-age-animated.kml";
     cy.fixture(fileName).then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, fileName, "kml");
     });
@@ -155,7 +155,7 @@ describe("Add Data", function () {
     cy.findByRole("combobox", { name: "Layer Type" }).should("be.visible");
     cy.get(`${layerSelectId}-input`).type("Reference{enter}");
 
-    const fileName = "testing_gpx.gpx";
+    const fileName = "testing-gpx.gpx";
     cy.fixture(fileName).then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, fileName, "gpx");
     });

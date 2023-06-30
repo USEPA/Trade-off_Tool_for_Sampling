@@ -128,7 +128,9 @@ function MapPopup({
     if (layerInitialized) return;
 
     if (features.length === 1 && features[0].graphic?.layer) {
-      const activeLayerId = features[0].graphic.layer.id.replace('-points', '');
+      const activeLayerId = features[0].graphic.layer.id
+        .replace('-points', '')
+        .replace('-hybrid', '');
       // find the layer
       const sketchLayer = layers.find(
         (layer) => layer.layerId === activeLayerId,
@@ -145,9 +147,13 @@ function MapPopup({
       setLayerInitialized(true);
     } else if (features.length > 1) {
       let allSameLayer = true;
-      let firstLayerId = features[0].graphic.layer.id.replace('-points', '');
+      let firstLayerId = features[0].graphic.layer.id
+        .replace('-points', '')
+        .replace('-hybrid', '');
       features.forEach((feature) => {
-        const layerId = feature.graphic.layer.id.replace('-points', '');
+        const layerId = feature.graphic.layer.id
+          .replace('-points', '')
+          .replace('-hybrid', '');
         if (firstLayerId !== layerId) allSameLayer = false;
       });
 
@@ -289,15 +295,17 @@ function MapPopup({
               {note.length} / {notesCharacterLimit} characters
             </span>
           </div>
-          {!allNotesEmpty && graphicNote !== note && fieldInfos.length === 0 && (
-            <div>
-              <MessageBox
-                severity="warning"
-                title="Notes will be overwritten"
-                message="Some selected samples already have notes. Saving will overwrite those existing notes."
-              />
-            </div>
-          )}
+          {!allNotesEmpty &&
+            graphicNote !== note &&
+            fieldInfos.length === 0 && (
+              <div>
+                <MessageBox
+                  severity="warning"
+                  title="Notes will be overwritten"
+                  message="Some selected samples already have notes. Saving will overwrite those existing notes."
+                />
+              </div>
+            )}
           <div css={saveButtonContainerStyles}>
             <button
               css={saveButtonStyles(saveStatus)}
@@ -316,8 +324,12 @@ function MapPopup({
 
                   // move the graphic if it is on a different layer
                   if (
-                    activeLayerId.replace('-points', '') !==
-                    selectedLayer?.layerId.replace('-points', '')
+                    activeLayerId
+                      .replace('-points', '')
+                      .replace('-hybrid', '') !==
+                    selectedLayer?.layerId
+                      .replace('-points', '')
+                      .replace('-hybrid', '')
                   ) {
                     onClick(ev, features, 'Move', selectedLayer);
                   } else {

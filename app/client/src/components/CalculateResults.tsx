@@ -765,7 +765,11 @@ function CalculateResults() {
       // add in the rows
       let currentRow = 4;
       scenarioGroupLayer.layers.forEach((layer) => {
-        if (layer.type !== 'graphics' || layer.id.endsWith('-points')) return;
+        if (
+          layer.type !== 'graphics' ||
+          layer.id.endsWith('-points' || layer.id.endsWith('-hybrid'))
+        )
+          return;
 
         const graphicsLayer = layer as __esri.GraphicsLayer;
         graphicsLayer.graphics.forEach((graphic) => {

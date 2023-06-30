@@ -71,10 +71,12 @@ function buildLegendListItem(event: any) {
   const layer = (window as any).totsLayers?.find(
     (layer: LayerType) =>
       layer.layerId === item?.layer?.id ||
-      layer.pointsLayer?.id === item?.layer?.id,
+      layer.pointsLayer?.id === item?.layer?.id ||
+      layer.hybridLayer?.id === item?.layer?.id,
   );
 
   const isPoints = item.layer.id?.toString().includes('-points');
+  const isHybrid = item.layer.id?.toString().includes('-hybrid');
 
   const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
 
@@ -103,10 +105,11 @@ function buildLegendListItem(event: any) {
 
     (window as any).totsAllSampleOptions?.forEach(
       (option: SampleSelectType) => {
-        const style = isPoints
-          ? (window as any).totsSampleAttributes[option.value]?.POINT_STYLE ||
-            null
-          : null;
+        const attributes = (window as any).totsSampleAttributes[option.value];
+        const style =
+          isPoints || (isHybrid && attributes.ShapeType === 'point')
+            ? attributes?.POINT_STYLE || null
+            : null;
         if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
           legendItems.push({
             value: option.value,
@@ -604,8 +607,17 @@ function Toolbar() {
 
     setLayerToRemove(null);
 
+    // gather each layer type
+    const layersToRemove = map.layers
+      .filter(
+        (l) =>
+          l.id.replace('-points', '').replace('-hybrid', '') ===
+          layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
+      )
+      .toArray();
+
     // remove it from the map
-    map.remove(layerToRemove);
+    map.removeMany(layersToRemove);
 
     // Workaround for layer type specific properties
     const tempLayerToRemove = layerToRemove as any;
@@ -625,7 +637,9 @@ function Toolbar() {
       const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
-          (layer) => layer.layerId !== layerToRemove.id.replace('-points', ''),
+          (layer) =>
+            layer.layerId !==
+            layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
         ),
       };
 
@@ -651,8 +665,8 @@ function Toolbar() {
           null,
           null,
         );
-        if (nextScenario) setSelectedScenario(nextScenario);
-        if (nextLayer) setSketchLayer(nextLayer);
+        setSelectedScenario(nextScenario ?? null);
+        setSketchLayer(nextLayer ?? null);
       }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
@@ -664,9 +678,14 @@ function Toolbar() {
       }
 
       // remove from layers
-      setLayers((layers) =>
-        layers.filter((layer) => layer.layerId !== layerToRemove.id),
-      );
+      setLayers((layers) => {
+        const newLayers = layers.filter(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.parentLayer?.id !== layerToRemove.id,
+        );
+        return newLayers;
+      });
 
       // also remove the layer from portalLayers if this layer was added
       // from arcgis online
@@ -762,21 +781,55 @@ function Toolbar() {
       if (
         displayGeometryType === 'points' &&
         layer.pointsLayer &&
-        layer.sketchLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make points layers visible
-        layer.pointsLayer.listMode = layer.sketchLayer.listMode;
-        layer.pointsLayer.visible = layer.sketchLayer.visible;
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.sketchLayer.listMode;
+          layer.pointsLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.hybridLayer.listMode;
+          layer.pointsLayer.visible = layer.hybridLayer.visible;
+        }
         layer.sketchLayer.listMode = 'hide';
         layer.sketchLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
       } else if (
         displayGeometryType === 'polygons' &&
         layer.pointsLayer &&
-        layer.pointsLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make polygons layer visible
-        layer.sketchLayer.listMode = layer.pointsLayer.listMode;
-        layer.sketchLayer.visible = layer.pointsLayer.visible;
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.pointsLayer.listMode;
+          layer.sketchLayer.visible = layer.pointsLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.hybridLayer.listMode;
+          layer.sketchLayer.visible = layer.hybridLayer.visible;
+        }
+        layer.pointsLayer.listMode = 'hide';
+        layer.pointsLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
+      } else if (
+        displayGeometryType === 'hybrid' &&
+        layer.pointsLayer &&
+        layer.hybridLayer
+      ) {
+        // make points layers visible
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.sketchLayer.listMode;
+          layer.hybridLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.pointsLayer.listMode;
+          layer.hybridLayer.visible = layer.pointsLayer.visible;
+        }
+        layer.sketchLayer.listMode = 'hide';
+        layer.sketchLayer.visible = false;
         layer.pointsLayer.listMode = 'hide';
         layer.pointsLayer.visible = false;
       }
@@ -913,7 +966,7 @@ function Toolbar() {
                   cssStyles={infoIconStyles}
                   id="poly-points-switch"
                   tooltip={
-                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
                   }
                   place="bottom"
                 />
@@ -938,6 +991,17 @@ function Toolbar() {
                 onChange={(ev) => setDisplayGeometryType('polygons')}
               />
               <label htmlFor="shape-polygons">Polygons</label>
+              <br />
+
+              <input
+                id="shape-hybrid"
+                type="radio"
+                name="shape"
+                value="hybrid"
+                checked={displayGeometryType === 'hybrid'}
+                onChange={(ev) => setDisplayGeometryType('hybrid')}
+              />
+              <label htmlFor="shape-hybrid">Hybrid</label>
             </fieldset>
 
             {displayDimensions === '3d' && (

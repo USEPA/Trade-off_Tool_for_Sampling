@@ -20,7 +20,7 @@ describe("Add data from file uploads", function () {
       .should("be.visible");
     cy.get(`${layerSelectId}-input`).type("Reference layer{enter}");
 
-    const fileName = "2.5_week.csv";
+    const fileName = "2.5-week.csv";
     cy.fixture(fileName).then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, fileName, "csv");
     });
@@ -43,7 +43,7 @@ describe("Add data from file uploads", function () {
       .should("exist")
       .click({ force: true });
 
-    cy.fixture("2.5_week_swab.json").then((file) => {
+    cy.fixture("2.5-week-swab.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
     cy.findByRole("button", { name: "Next" })
@@ -197,7 +197,7 @@ describe("Add data from file uploads", function () {
 
     cy.findByRole("button", { name: "Save" }).click({ force: true });
 
-    cy.fixture("custom_sample_type.json").then((file) => {
+    cy.fixture("custom-sample-type.json").then((file) => {
       sessionStorage.setItem("tots_edits", JSON.stringify(file));
     });
 

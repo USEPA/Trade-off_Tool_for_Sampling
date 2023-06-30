@@ -12,7 +12,7 @@ describe("File Panel", () => {
       .click({ force: true });
     cy.get("#add-data-select").type("Add Layer from File{enter}");
     cy.get("#layer-type-select-input").type("Samples{enter}");
-    cy.fixture("targeted_sampling.zip").then((file) => {
+    cy.fixture("targeted-sampling.zip").then((file) => {
       cy.findByTestId("tots-dropzone").upload(file, "targeted_sampling.zip");
     });
 

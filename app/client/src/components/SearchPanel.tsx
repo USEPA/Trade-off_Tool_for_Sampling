@@ -1423,8 +1423,15 @@ function ResultCard({ result }: ResultCardProps) {
 
             // convert the polygon graphics into points
             let pointGraphics: __esri.Graphic[] = [];
-            graphicsList.forEach((graphic) => {
+            let hybridGraphics: __esri.Graphic[] = [];
+            graphicsList.forEach((graphicParams) => {
+              const graphic = new Graphic(graphicParams);
               pointGraphics.push(convertToPoint(graphic));
+              hybridGraphics.push(
+                graphic.attributes.ShapeType === 'point'
+                  ? convertToPoint(graphic)
+                  : graphic.clone(),
+              );
             });
 
             const pointsLayer = new GraphicsLayer({
@@ -1434,7 +1441,16 @@ function ResultCard({ result }: ResultCardProps) {
               visible: false,
               listMode: 'hide',
             });
-            groupLayer.addMany([graphicsLayer, pointsLayer]);
+
+            const hybridLayer = new GraphicsLayer({
+              id: firstAttributes.DECISIONUNITUUID + '-hybrid',
+              graphics: hybridGraphics,
+              title: layerName,
+              visible: false,
+              listMode: 'hide',
+            });
+
+            groupLayer.addMany([graphicsLayer, pointsLayer, hybridLayer]);
 
             // build the layer
             const layerToAdd: LayerType = {
@@ -1456,6 +1472,7 @@ function ResultCard({ result }: ResultCardProps) {
               status: 'published',
               sketchLayer: graphicsLayer,
               pointsLayer,
+              hybridLayer,
               parentLayer: groupLayer,
             };
             layersToAdd.push(layerToAdd);
@@ -1977,6 +1994,7 @@ function ResultCard({ result }: ResultCardProps) {
       layer: LayerType;
       graphics: __esri.Graphic[];
       pointsGraphics: __esri.Graphic[];
+      hybridGraphics: __esri.Graphic[];
     };
     const removalObject: RemovalObject[] = [];
 
@@ -2005,11 +2023,25 @@ function ResultCard({ result }: ResultCardProps) {
         });
       }
 
-      if (graphicsToRemove.length > 0 || pointsGraphicsToRemove.length > 0) {
+      const hybridGraphicsToRemove: __esri.Graphic[] = [];
+      if (layer.hybridLayer) {
+        layer.hybridLayer.graphics.forEach((graphic) => {
+          if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+            hybridGraphicsToRemove.push(graphic);
+          }
+        });
+      }
+
+      if (
+        graphicsToRemove.length > 0 ||
+        pointsGraphicsToRemove.length > 0 ||
+        hybridGraphicsToRemove.length > 0
+      ) {
         removalObject.push({
           layer: layer,
           graphics: graphicsToRemove,
           pointsGraphics: pointsGraphicsToRemove,
+          hybridGraphics: hybridGraphicsToRemove,
         });
       }
     });
@@ -2057,6 +2089,8 @@ function ResultCard({ result }: ResultCardProps) {
             object.layer.sketchLayer.removeMany(object.graphics);
             if (object.layer.pointsLayer)
               object.layer.pointsLayer.removeMany(object.pointsGraphics);
+            if (object.layer.hybridLayer)
+              object.layer.hybridLayer.removeMany(object.hybridGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);
