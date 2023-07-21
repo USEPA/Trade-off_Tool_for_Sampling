@@ -52,6 +52,8 @@ type SketchWidgetType = {
   '3d': Sketch;
 };
 
+let terrain3dUseElevationGlobal = true;
+
 // Replaces the prevClassName with nextClassName for all elements with
 // prevClassName on the DOM.
 function replaceClassName(prevClassName: string, nextClassName: string) {
@@ -194,10 +196,17 @@ function MapWidgets({ mapView, sceneView }: Props) {
     map,
     setSelectedSampleIds,
     displayDimensions,
+    terrain3dUseElevation,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
+
+  // Workaround for esri not recognizing React context.
+  // Syncs a global variable with React context.
+  useEffect(() => {
+    terrain3dUseElevationGlobal = terrain3dUseElevation;
+  }, [terrain3dUseElevation]);
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
@@ -891,6 +900,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
             map: sketchViewModel.view.map,
             graphic,
             zRefParam: firstPoint,
+            zOverride: terrain3dUseElevationGlobal ? null : 0,
           });
 
           // predefined boxes (sponge, micro vac and swab) need to be

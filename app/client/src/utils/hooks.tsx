@@ -176,6 +176,7 @@ export function useStartOver() {
     setReferenceLayers,
     setSelectedScenario,
     setSketchLayer,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setUrlLayers,
     setUserDefinedAttributes,
@@ -215,6 +216,7 @@ export function useStartOver() {
     setGettingStartedOpen(false);
     setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setTerrain3dUseElevation(true);
     setTerrain3dVisible(true);
     setViewUnderground3d(false);
 
@@ -2526,6 +2528,8 @@ function useDisplayModeStorage() {
     setDisplayDimensions,
     displayGeometryType,
     setDisplayGeometryType,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -2544,6 +2548,7 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setTerrain3dUseElevation(true);
       setTerrain3dVisible(true);
       setViewUnderground3d(false);
       return;
@@ -2553,12 +2558,14 @@ function useDisplayModeStorage() {
 
     setDisplayDimensions(displayMode.dimensions);
     setDisplayGeometryType(displayMode.geometryType);
+    setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
   }, [
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setViewUnderground3d,
   ]);
@@ -2569,6 +2576,7 @@ function useDisplayModeStorage() {
     const displayMode: object = {
       dimensions: displayDimensions,
       geometryType: displayGeometryType,
+      terrain3dUseElevation,
       terrain3dVisible,
       viewUnderground3d,
     };
@@ -2578,6 +2586,7 @@ function useDisplayModeStorage() {
     displayGeometryType,
     localDisplayModeInitialized,
     setOptions,
+    terrain3dUseElevation,
     terrain3dVisible,
     viewUnderground3d,
   ]);

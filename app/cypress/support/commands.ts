@@ -106,6 +106,7 @@ Cypress.Commands.add(
         dimensions,
         geometryType: shape,
         terrain3dVisible: terrain3d,
+        terrain3dUseElevation: true,
         viewUnderground3d: false,
       })
     );

@@ -446,6 +446,8 @@ function Toolbar() {
     sceneView,
     displayDimensions,
     setDisplayDimensions,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -1012,6 +1014,17 @@ function Toolbar() {
                     checked={terrain3dVisible}
                     onChange={(checked) => setTerrain3dVisible(checked)}
                     ariaLabel="3D Terrain Visible"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </label>
+
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Use Terrain Elevation</span>
+                  <Switch
+                    checked={terrain3dUseElevation}
+                    onChange={(checked) => setTerrain3dUseElevation(checked)}
+                    ariaLabel="3D Use Terrain Elevation"
                     onColor="#90ee90"
                     onHandleColor="#129c12"
                   />
