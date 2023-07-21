@@ -1006,10 +1006,8 @@ function Toolbar() {
 
             {displayDimensions === '3d' && (
               <Fragment>
-                <div css={switchLabelContainer}>
-                  <label htmlFor="terrain-3d-toggle" css={switchLabel}>
-                    3D Terrain Visible
-                  </label>
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Terrain Visible</span>
                   <Switch
                     checked={terrain3dVisible}
                     onChange={(checked) => setTerrain3dVisible(checked)}
@@ -1017,12 +1015,10 @@ function Toolbar() {
                     onColor="#90ee90"
                     onHandleColor="#129c12"
                   />
-                </div>
+                </label>
 
-                <div css={switchLabelContainer}>
-                  <label htmlFor="view-underground-3d-toggle" css={switchLabel}>
-                    3D View Underground
-                  </label>
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D View Underground</span>
                   <Switch
                     checked={viewUnderground3d}
                     onChange={(checked) => setViewUnderground3d(checked)}
@@ -1030,14 +1026,12 @@ function Toolbar() {
                     onColor="#90ee90"
                     onHandleColor="#129c12"
                   />
-                </div>
+                </label>
               </Fragment>
             )}
 
-            <div css={switchLabelContainer}>
-              <label htmlFor="training-mode-toggle" css={switchLabel}>
-                Training Mode
-              </label>
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Training Mode</span>
               <Switch
                 checked={trainingMode}
                 onChange={(checked) => setTrainingMode(checked)}
@@ -1045,12 +1039,10 @@ function Toolbar() {
                 onColor="#90ee90"
                 onHandleColor="#129c12"
               />
-            </div>
+            </label>
 
-            <div css={switchLabelContainer}>
-              <label htmlFor="auto-zoom-toggle" css={switchLabel}>
-                Auto Zoom
-              </label>
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Auto Zoom</span>
               <Switch
                 checked={autoZoom}
                 onChange={(checked) => setAutoZoom(checked)}
@@ -1058,7 +1050,7 @@ function Toolbar() {
                 onColor="#90ee90"
                 onHandleColor="#129c12"
               />
-            </div>
+            </label>
           </div>
         </div>
         <div>
