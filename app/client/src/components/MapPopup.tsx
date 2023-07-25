@@ -1,8 +1,9 @@
 /** @jsxImportSource @emotion/react */
 
 import React, {
+  Dispatch,
   Fragment,
-  MouseEvent as ReactMouseEvent,
+  SetStateAction,
   useEffect,
   useState,
 } from 'react';
@@ -71,11 +72,14 @@ const saveButtonStyles = (status: SaveStatusType) => css`
 type Props = {
   features: any[];
   edits: EditsType;
+  setEdits: Dispatch<SetStateAction<EditsType>>;
   layers: LayerType[];
   fieldInfos: FieldInfos;
   layerProps: LookupFile;
   onClick: (
-    ev: ReactMouseEvent<HTMLElement>,
+    edits: EditsType,
+    setEdits: Dispatch<SetStateAction<EditsType>>,
+    layers: LayerType[],
     features: any[],
     type: string,
     newLayer?: LayerType | null,
@@ -85,6 +89,7 @@ type Props = {
 function MapPopup({
   features,
   edits,
+  setEdits,
   layers,
   fieldInfos,
   layerProps,
@@ -331,13 +336,21 @@ function MapPopup({
                       .replace('-points', '')
                       .replace('-hybrid', '')
                   ) {
-                    onClick(ev, features, 'Move', selectedLayer);
+                    onClick(
+                      edits,
+                      setEdits,
+                      layers,
+                      features,
+                      'Move',
+                      selectedLayer,
+                    );
                   } else {
-                    onClick(ev, features, 'Save');
+                    onClick(edits, setEdits, layers, features, 'Save');
                   }
 
                   setSaveStatus('success');
                 } catch (ex) {
+                  console.error(ex);
                   setSaveStatus('failure');
                 }
               }}

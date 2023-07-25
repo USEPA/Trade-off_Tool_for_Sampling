@@ -1,9 +1,11 @@
 /** @jsxImportSource @emotion/react */
 
 import { v4 as uuidv4 } from 'uuid';
+import Collection from '@arcgis/core/core/Collection';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import { Dispatch, SetStateAction } from 'react';
 // types
 import {
   EditsType,
@@ -1283,4 +1285,130 @@ export function removeZValues(graphic: __esri.Graphic) {
   poly.hasZ = false;
 
   return z;
+}
+
+/**
+ * Handles saving changes to samples from the popups.
+ *
+ * @param edits Edits to be updated.
+ * @param setEdits React state setter for edits.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param features Features to save changes too from the Popups.
+ * @param type Type of change either Save or Move.
+ * @param newLayer The new layer to move samples to. Only for "Move" type
+ */
+export function handlePopupClick(
+  edits: EditsType,
+  setEdits: Dispatch<SetStateAction<EditsType>>,
+  layers: LayerType[],
+  features: any[],
+  type: string,
+  newLayer: LayerType | null = null,
+) {
+  if (features?.length > 0 && !features[0].graphic) return;
+
+  // set the clicked button as active until the drawing is complete
+  deactivateButtons();
+
+  let editsCopy: EditsType = edits;
+
+  // find the layer
+  features.forEach((feature) => {
+    const changes = new Collection<__esri.Graphic>();
+    const tempGraphic = feature.graphic;
+    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
+    const tempSketchLayer = layers.find(
+      (layer) =>
+        layer.layerId ===
+        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
+    );
+    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
+      return;
+    }
+
+    // find the graphic
+    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        tempGraphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    graphic.attributes = tempGraphic.attributes;
+
+    const pointGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.pointsLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+    const hybridGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.hybridLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
+
+    if (type === 'Save') {
+      changes.add(graphic);
+
+      // make a copy of the edits context variable
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+    }
+    if (type === 'Move' && newLayer) {
+      // get items from sketch view model
+      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+      graphic.attributes.DECISIONUNIT = newLayer.label;
+      changes.add(graphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: newLayer,
+        type: 'add',
+        changes,
+      });
+
+      // remove the graphics from the old layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'delete',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = newLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
+        tempNewPointsLayer.add(pointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
+        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
+        tempNewHybridLayer.add(hybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    }
+  });
+
+  setEdits(editsCopy);
 }
