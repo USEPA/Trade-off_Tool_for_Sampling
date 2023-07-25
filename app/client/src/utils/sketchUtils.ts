@@ -1150,19 +1150,33 @@ export function getElevationLayer(map: __esri.Map) {
 }
 
 /**
+ * Updates the z value of the provided geometry.
+ *
+ * @param geometry geometry to set the z value on
+ * @param z The z value to apply to the geometry
+ */
+export function setGeometryZValues(
+  geometry: __esri.Polygon | __esri.Point,
+  z: number,
+) {
+  if (geometry.type === 'point') geometry.z = z;
+  else setPolygonZValues(geometry, z);
+}
+
+/**
  * Adds z value to every coordinate in a polygon, if necessary.
  *
  * @param poly Polygon to add z value to
  * @param z The value for z
  */
-function setPolygonZValues(poly: __esri.Polygon, z: number) {
+export function setPolygonZValues(poly: __esri.Polygon, z: number) {
   const newRings: number[][][] = [];
   poly.rings.forEach((ring) => {
     const newCoords: number[][] = [];
     ring.forEach((coord) => {
       if (coord.length === 2) {
         newCoords.push([...coord, z]);
-      } else if (coord.length === 3 && !coord[2]) {
+      } else if (coord.length === 3) {
         newCoords.push([coord[0], coord[1], z]);
       } else {
         newCoords.push(coord);
@@ -1172,6 +1186,33 @@ function setPolygonZValues(poly: __esri.Polygon, z: number) {
   });
   poly.rings = newRings;
   poly.hasZ = true;
+}
+
+/**
+ * Gets the z value from the provided graphic.
+ *
+ * @param graphic Graphic to get z value from.
+ * @returns z value of the graphic
+ */
+export function getZValue(graphic: __esri.Graphic) {
+  let z: number = 0;
+  if (!graphic) return z;
+
+  // get the z value from a point
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return 0;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  return z;
 }
 
 /**
@@ -1362,10 +1403,16 @@ export function handlePopupClick(
       });
     }
     if (type === 'Move' && newLayer) {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+
       // get items from sketch view model
       graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
       graphic.attributes.DECISIONUNIT = newLayer.label;
-      changes.add(graphic);
+      changes.add(clonedGraphic);
 
       // add the graphics to move to the new layer
       editsCopy = updateLayerEdits({
@@ -1391,20 +1438,74 @@ export function handlePopupClick(
       feature.graphic.layer = newLayer.sketchLayer;
 
       if (pointGraphic && tempSketchLayer.pointsLayer) {
-        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
-        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
+        clonedPointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        clonedPointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
 
         const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
-        tempNewPointsLayer.add(pointGraphic);
+        tempNewPointsLayer.add(clonedPointGraphic);
         tempSketchLayer.pointsLayer.remove(pointGraphic);
       }
 
       if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
         hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
         hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
 
         const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
-        tempNewHybridLayer.add(hybridGraphic);
+        tempNewHybridLayer.add(clonedHybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    } else if (type === 'Update') {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+      changes.add(clonedGraphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = tempSketchLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = tempSketchLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.pointsLayer.add(clonedPointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.hybridLayer.add(clonedHybridGraphic);
         tempSketchLayer.hybridLayer.remove(hybridGraphic);
       }
     }

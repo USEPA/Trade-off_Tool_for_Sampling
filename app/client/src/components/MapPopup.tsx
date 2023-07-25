@@ -16,7 +16,11 @@ import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
 import { LookupFile } from 'types/Misc';
 // utils
-import { getSketchableLayers } from 'utils/sketchUtils';
+import {
+  getSketchableLayers,
+  getZValue,
+  setGeometryZValues,
+} from 'utils/sketchUtils';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -189,6 +193,35 @@ function MapPopup({
     if (graphicNote !== note && saveStatus === 'success') setSaveStatus('none');
   }, [graphicNote, note, saveStatus]);
 
+  const [graphicElevation, setGraphicElevation] = useState(0);
+  const [elevation, setElevation] = useState(0);
+  useEffect(() => {
+    // Get the note from the graphics attributes
+    let allSameZ = true;
+    let firstZ = getZValue(features?.[0]?.graphic);
+    features.forEach((feature) => {
+      const tempZ = getZValue(feature?.graphic);
+      if (firstZ !== tempZ) allSameZ = false;
+    });
+
+    if (allSameZ && graphicElevation !== firstZ) {
+      setGraphicElevation(firstZ);
+      setElevation(firstZ);
+      setSaveStatus('none');
+    }
+  }, [graphicElevation, features]);
+
+  // Reset the note, in the textbox, when the user selects a different sample.
+  useEffect(() => {
+    setElevation(graphicElevation);
+  }, [features, graphicElevation]);
+
+  // Resets the save status if the user changes the note
+  useEffect(() => {
+    if (graphicElevation !== elevation && saveStatus === 'success')
+      setSaveStatus('none');
+  }, [graphicElevation, elevation, saveStatus]);
+
   const [showMore, setShowMore] = useState(false);
 
   if (features?.length === 0) return null;
@@ -278,6 +311,20 @@ function MapPopup({
             />
           </div>
           <div>
+            <label htmlFor="graphic-elevation">Elevation: </label>
+            <br />
+            <input
+              id="graphic-elevation"
+              type="number"
+              css={noteStyles}
+              value={elevation}
+              onChange={(ev) => {
+                setSaveStatus('none');
+                setElevation(ev.target.valueAsNumber);
+              }}
+            />
+          </div>
+          <div>
             <label htmlFor="graphic-note">Note: </label>
             <br />
             <textarea
@@ -315,9 +362,11 @@ function MapPopup({
             <button
               css={saveButtonStyles(saveStatus)}
               disabled={
-                graphicNote === note && activeLayerId === selectedLayer?.layerId
+                graphicNote === note &&
+                activeLayerId === selectedLayer?.layerId &&
+                graphicElevation === elevation
               }
-              onClick={(ev) => {
+              onClick={async (ev) => {
                 // set the notes
                 try {
                   if (graphicNote !== note) {
@@ -325,6 +374,13 @@ function MapPopup({
                       feature.graphic.attributes['Notes'] = note;
                     });
                     setGraphicNote(note);
+                  }
+
+                  if (graphicElevation !== elevation) {
+                    features.forEach((feature) => {
+                      setGeometryZValues(feature.graphic.geometry, elevation);
+                    });
+                    setGraphicElevation(elevation);
                   }
 
                   // move the graphic if it is on a different layer
@@ -342,6 +398,15 @@ function MapPopup({
                       layers,
                       features,
                       'Move',
+                      selectedLayer,
+                    );
+                  } else if (graphicElevation !== elevation) {
+                    onClick(
+                      edits,
+                      setEdits,
+                      layers,
+                      features,
+                      'Update',
                       selectedLayer,
                     );
                   } else {
