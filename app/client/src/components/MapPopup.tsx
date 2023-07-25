@@ -311,7 +311,7 @@ function MapPopup({
             />
           </div>
           <div>
-            <label htmlFor="graphic-elevation">Elevation: </label>
+            <label htmlFor="graphic-elevation">Elevation (m): </label>
             <br />
             <input
               id="graphic-elevation"
