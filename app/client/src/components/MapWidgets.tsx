@@ -2,7 +2,6 @@
 
 import {
   Dispatch,
-  MouseEvent as ReactMouseEvent,
   SetStateAction,
   useCallback,
   useContext,
@@ -31,7 +30,6 @@ import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
-import { EditsType } from 'types/Edits';
 import { LayerType, LayerTypeName } from 'types/Layer';
 import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
@@ -42,6 +40,7 @@ import {
   generateUUID,
   getCurrentDateTime,
   getPointSymbol,
+  handlePopupClick,
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -51,6 +50,8 @@ type SketchWidgetType = {
   '2d': Sketch;
   '3d': Sketch;
 };
+
+let terrain3dUseElevationGlobal = true;
 
 // Replaces the prevClassName with nextClassName for all elements with
 // prevClassName on the DOM.
@@ -194,10 +195,17 @@ function MapWidgets({ mapView, sceneView }: Props) {
     map,
     setSelectedSampleIds,
     displayDimensions,
+    terrain3dUseElevation,
   } = useContext(SketchContext);
   const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
+
+  // Workaround for esri not recognizing React context.
+  // Syncs a global variable with React context.
+  useEffect(() => {
+    terrain3dUseElevationGlobal = terrain3dUseElevation;
+  }, [terrain3dUseElevation]);
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
@@ -374,126 +382,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
 
     const sketchWidgetLocal = sketchWidget[displayDimensions];
 
-    const handleClick = (
-      ev: ReactMouseEvent<HTMLElement>,
-      features: any[],
-      type: string,
-      newLayer: LayerType | null = null,
-    ) => {
-      if (features?.length > 0 && !features[0].graphic) return;
-
-      // set the clicked button as active until the drawing is complete
-      deactivateButtons();
-
-      let editsCopy: EditsType = edits;
-
-      // find the layer
-      features.forEach((feature) => {
-        const changes = new Collection<__esri.Graphic>();
-        const tempGraphic = feature.graphic;
-        const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
-        const tempSketchLayer = layers.find(
-          (layer) =>
-            layer.layerId ===
-            tempLayer.id.replace('-points', '').replace('-hybrid', ''),
-        );
-        if (
-          !tempSketchLayer ||
-          tempSketchLayer.sketchLayer.type !== 'graphics'
-        ) {
-          return;
-        }
-
-        // find the graphic
-        const graphic: __esri.Graphic =
-          tempSketchLayer.sketchLayer.graphics.find(
-            (item) =>
-              item.attributes.PERMANENT_IDENTIFIER ===
-              tempGraphic.attributes.PERMANENT_IDENTIFIER,
-          );
-        graphic.attributes = tempGraphic.attributes;
-
-        const pointGraphic: __esri.Graphic | undefined =
-          tempSketchLayer.pointsLayer?.graphics.find(
-            (item) =>
-              item.attributes.PERMANENT_IDENTIFIER ===
-              graphic.attributes.PERMANENT_IDENTIFIER,
-          );
-        if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
-
-        const hybridGraphic: __esri.Graphic | undefined =
-          tempSketchLayer.hybridLayer?.graphics.find(
-            (item) =>
-              item.attributes.PERMANENT_IDENTIFIER ===
-              graphic.attributes.PERMANENT_IDENTIFIER,
-          );
-        if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
-
-        if (type === 'Save') {
-          changes.add(graphic);
-
-          // make a copy of the edits context variable
-          editsCopy = updateLayerEdits({
-            edits: editsCopy,
-            layer: tempSketchLayer,
-            type: 'update',
-            changes,
-          });
-        }
-        if (type === 'Move' && newLayer) {
-          // get items from sketch view model
-          graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-          graphic.attributes.DECISIONUNIT = newLayer.label;
-          changes.add(graphic);
-
-          // add the graphics to move to the new layer
-          editsCopy = updateLayerEdits({
-            edits: editsCopy,
-            layer: newLayer,
-            type: 'add',
-            changes,
-          });
-
-          // remove the graphics from the old layer
-          editsCopy = updateLayerEdits({
-            edits: editsCopy,
-            layer: tempSketchLayer,
-            type: 'delete',
-            changes,
-          });
-
-          // move between layers on map
-          const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
-          tempNewLayer.addMany(changes.toArray());
-          tempSketchLayer.sketchLayer.remove(graphic);
-
-          feature.graphic.layer = newLayer.sketchLayer;
-
-          if (pointGraphic && tempSketchLayer.pointsLayer) {
-            pointGraphic.attributes.DECISIONUNIT = newLayer.label;
-            pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-            const tempNewPointsLayer =
-              newLayer.pointsLayer as __esri.GraphicsLayer;
-            tempNewPointsLayer.add(pointGraphic);
-            tempSketchLayer.pointsLayer.remove(pointGraphic);
-          }
-
-          if (hybridGraphic && tempSketchLayer.hybridLayer) {
-            hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
-            hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-            const tempNewHybridLayer =
-              newLayer.hybridLayer as __esri.GraphicsLayer;
-            tempNewHybridLayer.add(hybridGraphic);
-            tempSketchLayer.hybridLayer.remove(hybridGraphic);
-          }
-        }
-      });
-
-      setEdits(editsCopy);
-    };
-
     const newSelectedSampleIds = updateGraphics.map((feature) => {
       return {
         PERMANENT_IDENTIFIER: feature.attributes.PERMANENT_IDENTIFIER,
@@ -555,10 +443,11 @@ function MapWidgets({ mapView, sceneView }: Props) {
               };
             })}
             edits={edits}
+            setEdits={setEdits}
             layers={layers}
             fieldInfos={[]}
             layerProps={layerProps}
-            onClick={handleClick}
+            onClick={handlePopupClick}
           />
         );
 
@@ -891,6 +780,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
             map: sketchViewModel.view.map,
             graphic,
             zRefParam: firstPoint,
+            zOverride: terrain3dUseElevationGlobal ? null : 0,
           });
 
           // predefined boxes (sponge, micro vac and swab) need to be

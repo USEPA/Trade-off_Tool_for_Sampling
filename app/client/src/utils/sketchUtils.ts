@@ -1,9 +1,11 @@
 /** @jsxImportSource @emotion/react */
 
 import { v4 as uuidv4 } from 'uuid';
+import Collection from '@arcgis/core/core/Collection';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import { Dispatch, SetStateAction } from 'react';
 // types
 import {
   EditsType,
@@ -1148,19 +1150,33 @@ export function getElevationLayer(map: __esri.Map) {
 }
 
 /**
+ * Updates the z value of the provided geometry.
+ *
+ * @param geometry geometry to set the z value on
+ * @param z The z value to apply to the geometry
+ */
+export function setGeometryZValues(
+  geometry: __esri.Polygon | __esri.Point,
+  z: number,
+) {
+  if (geometry.type === 'point') geometry.z = z;
+  else setPolygonZValues(geometry, z);
+}
+
+/**
  * Adds z value to every coordinate in a polygon, if necessary.
  *
  * @param poly Polygon to add z value to
  * @param z The value for z
  */
-function setPolygonZValues(poly: __esri.Polygon, z: number) {
+export function setPolygonZValues(poly: __esri.Polygon, z: number) {
   const newRings: number[][][] = [];
   poly.rings.forEach((ring) => {
     const newCoords: number[][] = [];
     ring.forEach((coord) => {
       if (coord.length === 2) {
         newCoords.push([...coord, z]);
-      } else if (coord.length === 3 && !coord[2]) {
+      } else if (coord.length === 3) {
         newCoords.push([coord[0], coord[1], z]);
       } else {
         newCoords.push(coord);
@@ -1170,6 +1186,33 @@ function setPolygonZValues(poly: __esri.Polygon, z: number) {
   });
   poly.rings = newRings;
   poly.hasZ = true;
+}
+
+/**
+ * Gets the z value from the provided graphic.
+ *
+ * @param graphic Graphic to get z value from.
+ * @returns z value of the graphic
+ */
+export function getZValue(graphic: __esri.Graphic) {
+  let z: number = 0;
+  if (!graphic) return z;
+
+  // get the z value from a point
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return 0;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  return z;
 }
 
 /**
@@ -1283,4 +1326,190 @@ export function removeZValues(graphic: __esri.Graphic) {
   poly.hasZ = false;
 
   return z;
+}
+
+/**
+ * Handles saving changes to samples from the popups.
+ *
+ * @param edits Edits to be updated.
+ * @param setEdits React state setter for edits.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param features Features to save changes too from the Popups.
+ * @param type Type of change either Save or Move.
+ * @param newLayer The new layer to move samples to. Only for "Move" type
+ */
+export function handlePopupClick(
+  edits: EditsType,
+  setEdits: Dispatch<SetStateAction<EditsType>>,
+  layers: LayerType[],
+  features: any[],
+  type: string,
+  newLayer: LayerType | null = null,
+) {
+  if (features?.length > 0 && !features[0].graphic) return;
+
+  // set the clicked button as active until the drawing is complete
+  deactivateButtons();
+
+  let editsCopy: EditsType = edits;
+
+  // find the layer
+  features.forEach((feature) => {
+    const changes = new Collection<__esri.Graphic>();
+    const tempGraphic = feature.graphic;
+    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
+    const tempSketchLayer = layers.find(
+      (layer) =>
+        layer.layerId ===
+        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
+    );
+    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
+      return;
+    }
+
+    // find the graphic
+    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        tempGraphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    graphic.attributes = tempGraphic.attributes;
+
+    const pointGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.pointsLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+    const hybridGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.hybridLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
+
+    if (type === 'Save') {
+      changes.add(graphic);
+
+      // make a copy of the edits context variable
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+    }
+    if (type === 'Move' && newLayer) {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+
+      // get items from sketch view model
+      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+      graphic.attributes.DECISIONUNIT = newLayer.label;
+      changes.add(clonedGraphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: newLayer,
+        type: 'add',
+        changes,
+      });
+
+      // remove the graphics from the old layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'delete',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = newLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
+        clonedPointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        clonedPointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
+        tempNewPointsLayer.add(clonedPointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
+        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
+        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
+        tempNewHybridLayer.add(clonedHybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    } else if (type === 'Update') {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+      changes.add(clonedGraphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = tempSketchLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = tempSketchLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.pointsLayer.add(clonedPointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.hybridLayer.add(clonedHybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    }
+  });
+
+  setEdits(editsCopy);
 }

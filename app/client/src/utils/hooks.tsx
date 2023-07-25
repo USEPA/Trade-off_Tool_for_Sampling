@@ -2,7 +2,6 @@
 
 import React, {
   Dispatch,
-  MouseEvent as ReactMouseEvent,
   SetStateAction,
   useCallback,
   useContext,
@@ -60,9 +59,8 @@ import { PanelValueType } from 'config/navigation';
 // utils
 import {
   createLayer,
-  deactivateButtons,
   findLayerInEdits,
-  updateLayerEdits,
+  handlePopupClick,
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
@@ -176,6 +174,7 @@ export function useStartOver() {
     setReferenceLayers,
     setSelectedScenario,
     setSketchLayer,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setUrlLayers,
     setUserDefinedAttributes,
@@ -215,6 +214,7 @@ export function useStartOver() {
     setGettingStartedOpen(false);
     setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setTerrain3dUseElevation(true);
     setTerrain3dVisible(true);
     setViewUnderground3d(false);
 
@@ -973,129 +973,16 @@ export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
   const layerProps = useLayerProps();
 
-  // handles the sketch button clicks
-  const handleClick = (
-    ev: ReactMouseEvent<HTMLElement>,
-    features: any[],
-    type: string,
-    newLayer: LayerType | null = null,
-  ) => {
-    if (features?.length > 0 && !features[0].graphic) return;
-
-    // set the clicked button as active until the drawing is complete
-    deactivateButtons();
-
-    const changes = new Collection<__esri.Graphic>();
-
-    // find the layer
-    const feature = features[0];
-    const tempGraphic = feature.graphic;
-    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
-    const tempSketchLayer = layers.find(
-      (layer) =>
-        layer.layerId ===
-        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
-    );
-    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
-      return;
-    }
-
-    // find the graphic
-    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
-      (item) =>
-        item.attributes.PERMANENT_IDENTIFIER ===
-        tempGraphic.attributes.PERMANENT_IDENTIFIER,
-    );
-    graphic.attributes = tempGraphic.attributes;
-
-    const pointGraphic: __esri.Graphic | undefined =
-      tempSketchLayer.pointsLayer?.graphics.find(
-        (item) =>
-          item.attributes.PERMANENT_IDENTIFIER ===
-          graphic.attributes.PERMANENT_IDENTIFIER,
-      );
-    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
-
-    const hybridGraphic: __esri.Graphic | undefined =
-      tempSketchLayer.hybridLayer?.graphics.find(
-        (item) =>
-          item.attributes.PERMANENT_IDENTIFIER ===
-          graphic.attributes.PERMANENT_IDENTIFIER,
-      );
-    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
-
-    if (type === 'Save') {
-      changes.add(graphic);
-
-      // make a copy of the edits context variable
-      const editsCopy = updateLayerEdits({
-        edits,
-        layer: tempSketchLayer,
-        type: 'update',
-        changes,
-      });
-
-      setEdits(editsCopy);
-    }
-    if (type === 'Move' && newLayer) {
-      // get items from sketch view model
-      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-      graphic.attributes.DECISIONUNIT = newLayer.label;
-      changes.add(graphic);
-
-      // add the graphics to move to the new layer
-      let editsCopy = updateLayerEdits({
-        edits,
-        layer: newLayer,
-        type: 'add',
-        changes,
-      });
-
-      // remove the graphics from the old layer
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: tempSketchLayer,
-        type: 'delete',
-        changes,
-      });
-      setEdits(editsCopy);
-
-      // move between layers on map
-      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
-      tempNewLayer.addMany(changes.toArray());
-      tempSketchLayer.sketchLayer.remove(graphic);
-
-      feature.graphic.layer = newLayer.sketchLayer;
-
-      if (pointGraphic && tempSketchLayer.pointsLayer) {
-        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
-        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
-        tempNewPointsLayer.add(pointGraphic);
-        tempSketchLayer.pointsLayer.remove(pointGraphic);
-      }
-      if (hybridGraphic && tempSketchLayer.hybridLayer) {
-        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
-        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
-        tempNewHybridLayer.add(hybridGraphic);
-        tempSketchLayer.hybridLayer.remove(hybridGraphic);
-      }
-    }
-  };
-
-  // Gets the sample popup with controls
   const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
     const content = (
       <MapPopup
         features={[feature]}
         edits={edits}
+        setEdits={setEdits}
         layers={layers}
         fieldInfos={fieldInfos}
         layerProps={layerProps}
-        onClick={handleClick}
+        onClick={handlePopupClick}
       />
     );
 
@@ -2526,6 +2413,8 @@ function useDisplayModeStorage() {
     setDisplayDimensions,
     displayGeometryType,
     setDisplayGeometryType,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -2544,6 +2433,7 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setTerrain3dUseElevation(true);
       setTerrain3dVisible(true);
       setViewUnderground3d(false);
       return;
@@ -2553,12 +2443,14 @@ function useDisplayModeStorage() {
 
     setDisplayDimensions(displayMode.dimensions);
     setDisplayGeometryType(displayMode.geometryType);
+    setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
   }, [
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setViewUnderground3d,
   ]);
@@ -2569,6 +2461,7 @@ function useDisplayModeStorage() {
     const displayMode: object = {
       dimensions: displayDimensions,
       geometryType: displayGeometryType,
+      terrain3dUseElevation,
       terrain3dVisible,
       viewUnderground3d,
     };
@@ -2578,6 +2471,7 @@ function useDisplayModeStorage() {
     displayGeometryType,
     localDisplayModeInitialized,
     setOptions,
+    terrain3dUseElevation,
     terrain3dVisible,
     viewUnderground3d,
   ]);
