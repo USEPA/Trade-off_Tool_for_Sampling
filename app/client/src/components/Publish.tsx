@@ -234,11 +234,19 @@ function Publish() {
       !includeFullPlan ||
       selectedScenario?.status === 'edited' ||
       selectedScenario?.status === 'published';
+    const partialPlanNameChecked =
+      !includePartialPlan ||
+      selectedScenario?.status === 'edited' ||
+      selectedScenario?.status === 'published';
     const sampleTypesNameChecked =
       !includeCustomSampleTypes ||
       (publishSamplesMode === 'existing' && publishSampleTableMetaData?.value);
 
-    if (fullPlanNameChecked && sampleTypesNameChecked) {
+    if (
+      fullPlanNameChecked &&
+      partialPlanNameChecked &&
+      sampleTypesNameChecked
+    ) {
       setHasNameBeenChecked(true);
       return;
     }
@@ -246,6 +254,7 @@ function Publish() {
     // fire off requests to check if service names are available
     const requests = [];
     let fullPlanIndex = -1,
+      partialPlanIndex = -1,
       sampleTypesIndex = -1;
     if (!fullPlanNameChecked && selectedScenario) {
       setPublishResponse({
@@ -259,6 +268,19 @@ function Publish() {
       );
       requests.push(request);
       fullPlanIndex = requests.length - 1;
+    }
+    if (!partialPlanNameChecked && selectedScenario) {
+      setPublishPartialResponse({
+        status: 'fetching',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+      const request = isServiceNameAvailable(
+        portal,
+        selectedScenario.scenarioName,
+      );
+      requests.push(request);
+      partialPlanIndex = requests.length - 1;
     }
     if (!sampleTypesNameChecked && publishSampleTableMetaData) {
       setPublishSamplesResponse({
@@ -307,6 +329,9 @@ function Publish() {
         if (fullPlanIndex > -1) {
           checkResponse(responses[fullPlanIndex], setPublishResponse);
         }
+        if (partialPlanIndex > -1) {
+          checkResponse(responses[partialPlanIndex], setPublishPartialResponse);
+        }
         if (sampleTypesIndex > -1) {
           checkResponse(responses[sampleTypesIndex], setPublishSamplesResponse);
         }
@@ -332,6 +357,7 @@ function Publish() {
   }, [
     includeCustomSampleTypes,
     includeFullPlan,
+    includePartialPlan,
     portal,
     selectedScenario,
     sketchLayer,
@@ -1788,6 +1814,12 @@ function Publish() {
     ) {
       return;
     }
+    if (
+      includePartialPlan &&
+      (!layers || layers.length === 0 || !selectedScenario)
+    ) {
+      return;
+    }
 
     if (
       includeCustomSampleTypes &&
@@ -1864,6 +1896,17 @@ function Publish() {
       (publishNameCheck.status === 'none' ||
         publishNameCheck.status === 'success'));
 
+  const isPublishPartialPlanReady =
+    (!includeFullPlan && !includePartialPlan) ||
+    // verify the service name is available
+    ((publishPartialResponse.status !== 'name-not-available' ||
+      (publishPartialResponse.status === 'name-not-available' &&
+        publishNameCheck.status === 'success')) &&
+      sampleCount !== 0 && // verify there are samples to publish
+      // verify service name availbility if changed
+      (publishNameCheck.status === 'none' ||
+        publishNameCheck.status === 'success'));
+
   const isPublishSamplesReady =
     !includeCustomSampleTypes ||
     // verify the service name is available
@@ -1929,7 +1972,8 @@ function Publish() {
             EXIT
           </a>
         </p>
-        {publishResponse.status === 'name-not-available' && (
+        {(publishResponse.status === 'name-not-available' ||
+          publishPartialResponse.status === 'name-not-available') && (
           <EditScenario
             initialScenario={selectedScenario}
             initialStatus="name-not-available"
@@ -1940,21 +1984,22 @@ function Publish() {
             }}
           />
         )}
-        {publishResponse.status !== 'name-not-available' && (
-          <Fragment>
-            <p css={layerInfo}>
-              <strong>Plan Name: </strong>
-              {selectedScenario?.scenarioName}
-            </p>
-            <p css={layerInfo}>
-              <strong>Plan Description: </strong>
-              <ShowLessMore
-                text={selectedScenario?.scenarioDescription}
-                charLimit={20}
-              />
-            </p>
-          </Fragment>
-        )}
+        {publishResponse.status !== 'name-not-available' &&
+          publishPartialResponse.status !== 'name-not-available' && (
+            <Fragment>
+              <p css={layerInfo}>
+                <strong>Plan Name: </strong>
+                {selectedScenario?.scenarioName}
+              </p>
+              <p css={layerInfo}>
+                <strong>Plan Description: </strong>
+                <ShowLessMore
+                  text={selectedScenario?.scenarioDescription}
+                  charLimit={20}
+                />
+              </p>
+            </Fragment>
+          )}
       </div>
 
       <div>
@@ -2127,6 +2172,7 @@ function Publish() {
         )}
       {(includeFullPlan || includePartialPlan || includeCustomSampleTypes) &&
         isPublishPlanReady &&
+        isPublishPartialPlanReady &&
         isPublishSamplesReady && (
           <div css={publishButtonContainerStyles}>
             <button
