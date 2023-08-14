@@ -2500,7 +2500,7 @@ function LocateSamples() {
                 <div css={sectionContainer}>
                   <p>
                     Choose an existing sample type from the menu or click + to
-                    add a new sample type from scratch. You have the option
+                    add a new sample type from scratch. You have the option to
                     clone or view an existing sample type. Populate or edit the
                     parameter fields and click Save. Once you have saved a
                     custom sample type you can edit and/or delete the parameters
