@@ -1,8 +1,9 @@
 /** @jsxImportSource @emotion/react */
 
 import React, {
+  Dispatch,
   Fragment,
-  MouseEvent as ReactMouseEvent,
+  SetStateAction,
   useEffect,
   useState,
 } from 'react';
@@ -15,7 +16,11 @@ import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
 import { LookupFile } from 'types/Misc';
 // utils
-import { getSketchableLayers } from 'utils/sketchUtils';
+import {
+  getSketchableLayers,
+  getZValue,
+  setGeometryZValues,
+} from 'utils/sketchUtils';
 // styles
 import { colors, linkButtonStyles } from 'styles';
 
@@ -71,11 +76,14 @@ const saveButtonStyles = (status: SaveStatusType) => css`
 type Props = {
   features: any[];
   edits: EditsType;
+  setEdits: Dispatch<SetStateAction<EditsType>>;
   layers: LayerType[];
   fieldInfos: FieldInfos;
   layerProps: LookupFile;
   onClick: (
-    ev: ReactMouseEvent<HTMLElement>,
+    edits: EditsType,
+    setEdits: Dispatch<SetStateAction<EditsType>>,
+    layers: LayerType[],
     features: any[],
     type: string,
     newLayer?: LayerType | null,
@@ -85,6 +93,7 @@ type Props = {
 function MapPopup({
   features,
   edits,
+  setEdits,
   layers,
   fieldInfos,
   layerProps,
@@ -128,7 +137,9 @@ function MapPopup({
     if (layerInitialized) return;
 
     if (features.length === 1 && features[0].graphic?.layer) {
-      const activeLayerId = features[0].graphic.layer.id.replace('-points', '');
+      const activeLayerId = features[0].graphic.layer.id
+        .replace('-points', '')
+        .replace('-hybrid', '');
       // find the layer
       const sketchLayer = layers.find(
         (layer) => layer.layerId === activeLayerId,
@@ -145,9 +156,13 @@ function MapPopup({
       setLayerInitialized(true);
     } else if (features.length > 1) {
       let allSameLayer = true;
-      let firstLayerId = features[0].graphic.layer.id.replace('-points', '');
+      let firstLayerId = features[0].graphic.layer.id
+        .replace('-points', '')
+        .replace('-hybrid', '');
       features.forEach((feature) => {
-        const layerId = feature.graphic.layer.id.replace('-points', '');
+        const layerId = feature.graphic.layer.id
+          .replace('-points', '')
+          .replace('-hybrid', '');
         if (firstLayerId !== layerId) allSameLayer = false;
       });
 
@@ -177,6 +192,35 @@ function MapPopup({
   useEffect(() => {
     if (graphicNote !== note && saveStatus === 'success') setSaveStatus('none');
   }, [graphicNote, note, saveStatus]);
+
+  const [graphicElevation, setGraphicElevation] = useState(0);
+  const [elevation, setElevation] = useState(0);
+  useEffect(() => {
+    // Get the note from the graphics attributes
+    let allSameZ = true;
+    let firstZ = getZValue(features?.[0]?.graphic);
+    features.forEach((feature) => {
+      const tempZ = getZValue(feature?.graphic);
+      if (firstZ !== tempZ) allSameZ = false;
+    });
+
+    if (allSameZ && graphicElevation !== firstZ) {
+      setGraphicElevation(firstZ);
+      setElevation(firstZ);
+      setSaveStatus('none');
+    }
+  }, [graphicElevation, features]);
+
+  // Reset the note, in the textbox, when the user selects a different sample.
+  useEffect(() => {
+    setElevation(graphicElevation);
+  }, [features, graphicElevation]);
+
+  // Resets the save status if the user changes the note
+  useEffect(() => {
+    if (graphicElevation !== elevation && saveStatus === 'success')
+      setSaveStatus('none');
+  }, [graphicElevation, elevation, saveStatus]);
 
   const [showMore, setShowMore] = useState(false);
 
@@ -267,6 +311,20 @@ function MapPopup({
             />
           </div>
           <div>
+            <label htmlFor="graphic-elevation">Elevation (m): </label>
+            <br />
+            <input
+              id="graphic-elevation"
+              type="number"
+              css={noteStyles}
+              value={elevation}
+              onChange={(ev) => {
+                setSaveStatus('none');
+                setElevation(ev.target.valueAsNumber);
+              }}
+            />
+          </div>
+          <div>
             <label htmlFor="graphic-note">Note: </label>
             <br />
             <textarea
@@ -289,22 +347,26 @@ function MapPopup({
               {note.length} / {notesCharacterLimit} characters
             </span>
           </div>
-          {!allNotesEmpty && graphicNote !== note && fieldInfos.length === 0 && (
-            <div>
-              <MessageBox
-                severity="warning"
-                title="Notes will be overwritten"
-                message="Some selected samples already have notes. Saving will overwrite those existing notes."
-              />
-            </div>
-          )}
+          {!allNotesEmpty &&
+            graphicNote !== note &&
+            fieldInfos.length === 0 && (
+              <div>
+                <MessageBox
+                  severity="warning"
+                  title="Notes will be overwritten"
+                  message="Some selected samples already have notes. Saving will overwrite those existing notes."
+                />
+              </div>
+            )}
           <div css={saveButtonContainerStyles}>
             <button
               css={saveButtonStyles(saveStatus)}
               disabled={
-                graphicNote === note && activeLayerId === selectedLayer?.layerId
+                graphicNote === note &&
+                activeLayerId === selectedLayer?.layerId &&
+                graphicElevation === elevation
               }
-              onClick={(ev) => {
+              onClick={async (ev) => {
                 // set the notes
                 try {
                   if (graphicNote !== note) {
@@ -314,18 +376,46 @@ function MapPopup({
                     setGraphicNote(note);
                   }
 
+                  if (graphicElevation !== elevation) {
+                    features.forEach((feature) => {
+                      setGeometryZValues(feature.graphic.geometry, elevation);
+                    });
+                    setGraphicElevation(elevation);
+                  }
+
                   // move the graphic if it is on a different layer
                   if (
-                    activeLayerId.replace('-points', '') !==
-                    selectedLayer?.layerId.replace('-points', '')
+                    activeLayerId
+                      .replace('-points', '')
+                      .replace('-hybrid', '') !==
+                    selectedLayer?.layerId
+                      .replace('-points', '')
+                      .replace('-hybrid', '')
                   ) {
-                    onClick(ev, features, 'Move', selectedLayer);
+                    onClick(
+                      edits,
+                      setEdits,
+                      layers,
+                      features,
+                      'Move',
+                      selectedLayer,
+                    );
+                  } else if (graphicElevation !== elevation) {
+                    onClick(
+                      edits,
+                      setEdits,
+                      layers,
+                      features,
+                      'Update',
+                      selectedLayer,
+                    );
                   } else {
-                    onClick(ev, features, 'Save');
+                    onClick(edits, setEdits, layers, features, 'Save');
                   }
 
                   setSaveStatus('success');
                 } catch (ex) {
+                  console.error(ex);
                   setSaveStatus('failure');
                 }
               }}

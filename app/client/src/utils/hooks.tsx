@@ -2,7 +2,6 @@
 
 import React, {
   Dispatch,
-  MouseEvent as ReactMouseEvent,
   SetStateAction,
   useCallback,
   useContext,
@@ -60,9 +59,8 @@ import { PanelValueType } from 'config/navigation';
 // utils
 import {
   createLayer,
-  deactivateButtons,
   findLayerInEdits,
-  updateLayerEdits,
+  handlePopupClick,
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
@@ -176,6 +174,7 @@ export function useStartOver() {
     setReferenceLayers,
     setSelectedScenario,
     setSketchLayer,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setUrlLayers,
     setUserDefinedAttributes,
@@ -215,6 +214,7 @@ export function useStartOver() {
     setGettingStartedOpen(false);
     setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setTerrain3dUseElevation(true);
     setTerrain3dVisible(true);
     setViewUnderground3d(false);
 
@@ -240,7 +240,7 @@ export function useStartOver() {
       mapView.center = new Point({ longitude: -95, latitude: 37 });
       mapView.zoom = 3;
       mapView.rotation = 0;
-      mapView.popup?.close();
+      if (mapView) mapView.closePopup();
     }
     if (sceneView) {
       if (sceneView.camera) {
@@ -253,7 +253,7 @@ export function useStartOver() {
         });
       }
       sceneView.zoom = 4;
-      sceneView.popup?.close();
+      if (sceneView) sceneView.closePopup();
     }
 
     if (homeWidget && mapView && sceneView) {
@@ -425,8 +425,13 @@ export function useGeometryTools() {
   const sampleValidation: (
     graphics: __esri.Graphic[],
     isFullGraphic?: boolean,
+    hasAllAttributes?: boolean,
   ) => SampleIssuesOutput = useCallback(
-    (graphics: __esri.Graphic[], isFullGraphic: boolean = false) => {
+    (
+      graphics: __esri.Graphic[],
+      isFullGraphic: boolean = false,
+      hasAllAttributes: boolean = true,
+    ) => {
       let areaOutOfTolerance = false;
       let attributeMismatch = false;
 
@@ -491,6 +496,8 @@ export function useGeometryTools() {
             ];
           Object.keys(predefinedAttributes).forEach((key) => {
             if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
+            if (!hasAllAttributes && !graphic.attributes.hasOwnProperty(key))
+              return;
             if (
               graphic.attributes.hasOwnProperty(key) &&
               predefinedAttributes[key] === graphic.attributes[key]
@@ -538,17 +545,20 @@ export function useGeometryTools() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { edits, layers, selectedScenario } = useContext(SketchContext);
+  const { edits, layers, selectedScenario, setEdits, setSelectedScenario } =
+    useContext(SketchContext);
   const {
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
+    inputNumLabs,
+    inputNumLabHours,
+    inputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    inputNumSamplingTeams,
+    inputSamplingLaborCost,
+    inputSurfaceArea,
     setCalculateResults,
+    setUpdateContextValues,
+    updateContextValues,
   } = useContext(CalculateContext);
 
   const { calculateArea, loadedProjection } = useGeometryTools();
@@ -591,20 +601,7 @@ export function useCalculatePlan() {
         data: null,
       };
     });
-  }, [
-    edits,
-    layers,
-    selectedScenario,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
-  ]);
+  }, [edits, layers, selectedScenario, setCalculateResults]);
 
   const [totals, setTotals] = useState({
     ttpk: 0,
@@ -783,10 +780,22 @@ export function useCalculatePlan() {
   // perform non-geospatial calculations
   useEffect(() => {
     // exit early checks
+    if (!selectedScenario) return;
     if (calcGraphics.length === 0 || totalArea === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       return;
     }
+
+    const {
+      NUM_LABS: numLabs,
+      NUM_LAB_HOURS: numLabHours,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
 
     // calculate spatial items
     let userSpecifiedAOI = null;
@@ -894,19 +903,67 @@ export function useCalculatePlan() {
         data: resultObject,
       };
     });
+  }, [calcGraphics, selectedScenario, setCalculateResults, totals, totalArea]);
+
+  // Updates the calculation context values with the inputs.
+  // The intention is to update these values whenever the user navigates away from
+  // the calculate resources tab or when they click the View Detailed Results button.
+  useEffect(() => {
+    if (!selectedScenario || !updateContextValues) return;
+    setUpdateContextValues(false);
+
+    const newSettings = {
+      NUM_LABS: inputNumLabs,
+      NUM_LAB_HOURS: inputNumLabHours,
+      NUM_SAMPLING_HOURS: inputNumSamplingHours,
+      NUM_SAMPLING_PERSONNEL: inputNumSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: inputNumSamplingShifts,
+      NUM_SAMPLING_TEAMS: inputNumSamplingTeams,
+      SAMPLING_LABOR_COST: inputSamplingLaborCost,
+      SURFACE_AREA: inputSurfaceArea,
+    };
+
+    setSelectedScenario((selectedScenario) => {
+      if (selectedScenario) {
+        selectedScenario.calculateSettings.current = {
+          ...selectedScenario.calculateSettings.current,
+          ...newSettings,
+        };
+      }
+
+      return selectedScenario;
+    });
+
+    setEdits((edits) => {
+      const selScenario = edits.edits.find(
+        (e) => e.type === 'scenario' && e.value === selectedScenario.value,
+      );
+      if (!selScenario || selScenario.type !== 'scenario') return edits;
+
+      selScenario.calculateSettings.current = {
+        ...selScenario.calculateSettings.current,
+        ...newSettings,
+      };
+
+      return {
+        count: edits.count + 1,
+        edits: edits.edits,
+      };
+    });
   }, [
-    calcGraphics,
-    totals,
-    totalArea,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    setCalculateResults,
+    inputNumLabs,
+    inputNumLabHours,
+    inputNumSamplingHours,
+    inputNumSamplingPersonnel,
+    inputNumSamplingShifts,
+    inputNumSamplingTeams,
+    inputSamplingLaborCost,
+    inputSurfaceArea,
+    selectedScenario,
+    setEdits,
+    setSelectedScenario,
+    setUpdateContextValues,
+    updateContextValues,
   ]);
 }
 
@@ -916,111 +973,16 @@ export function useDynamicPopup() {
   const { edits, setEdits, layers } = useContext(SketchContext);
   const layerProps = useLayerProps();
 
-  // handles the sketch button clicks
-  const handleClick = (
-    ev: ReactMouseEvent<HTMLElement>,
-    features: any[],
-    type: string,
-    newLayer: LayerType | null = null,
-  ) => {
-    if (features?.length > 0 && !features[0].graphic) return;
-
-    // set the clicked button as active until the drawing is complete
-    deactivateButtons();
-
-    const changes = new Collection<__esri.Graphic>();
-
-    // find the layer
-    const feature = features[0];
-    const tempGraphic = feature.graphic;
-    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
-    const tempSketchLayer = layers.find(
-      (layer) => layer.layerId === tempLayer.id.replace('-points', ''),
-    );
-    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
-      return;
-    }
-
-    // find the graphic
-    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
-      (item) =>
-        item.attributes.PERMANENT_IDENTIFIER ===
-        tempGraphic.attributes.PERMANENT_IDENTIFIER,
-    );
-    graphic.attributes = tempGraphic.attributes;
-
-    const pointGraphic: __esri.Graphic | undefined =
-      tempSketchLayer.pointsLayer?.graphics.find(
-        (item) =>
-          item.attributes.PERMANENT_IDENTIFIER ===
-          graphic.attributes.PERMANENT_IDENTIFIER,
-      );
-    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
-
-    if (type === 'Save') {
-      changes.add(graphic);
-
-      // make a copy of the edits context variable
-      const editsCopy = updateLayerEdits({
-        edits,
-        layer: tempSketchLayer,
-        type: 'update',
-        changes,
-      });
-
-      setEdits(editsCopy);
-    }
-    if (type === 'Move' && newLayer) {
-      // get items from sketch view model
-      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-      graphic.attributes.DECISIONUNIT = newLayer.label;
-      changes.add(graphic);
-
-      // add the graphics to move to the new layer
-      let editsCopy = updateLayerEdits({
-        edits,
-        layer: newLayer,
-        type: 'add',
-        changes,
-      });
-
-      // remove the graphics from the old layer
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: tempSketchLayer,
-        type: 'delete',
-        changes,
-      });
-      setEdits(editsCopy);
-
-      // move between layers on map
-      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
-      tempNewLayer.addMany(changes.toArray());
-      tempSketchLayer.sketchLayer.remove(graphic);
-
-      feature.graphic.layer = newLayer.sketchLayer;
-
-      if (pointGraphic && tempSketchLayer.pointsLayer) {
-        pointGraphic.attributes.DECISIONUNIT = newLayer.label;
-        pointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
-        tempNewPointsLayer.add(pointGraphic);
-        tempSketchLayer.pointsLayer.remove(pointGraphic);
-      }
-    }
-  };
-
-  // Gets the sample popup with controls
   const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
     const content = (
       <MapPopup
         features={[feature]}
         edits={edits}
+        setEdits={setEdits}
         layers={layers}
         fieldInfos={fieldInfos}
         layerProps={layerProps}
-        onClick={handleClick}
+        onClick={handlePopupClick}
       />
     );
 
@@ -1892,14 +1854,6 @@ function useCalculateSettingsStorage() {
   const key = 'tots_calculate_settings';
   const { setOptions } = useContext(DialogContext);
   const {
-    setNumLabs,
-    setNumLabHours,
-    setNumSamplingHours,
-    setNumSamplingPersonnel,
-    setNumSamplingShifts,
-    setNumSamplingTeams,
-    setSamplingLaborCost,
-    setSurfaceArea,
     inputNumLabs,
     setInputNumLabs,
     inputNumLabHours,
@@ -1940,14 +1894,6 @@ function useCalculateSettingsStorage() {
     if (!settingsStr) return;
     const settings: CalculateSettingsType = JSON.parse(settingsStr);
 
-    setNumLabs(settings.numLabs);
-    setNumLabHours(settings.numLabHours);
-    setNumSamplingHours(settings.numSamplingHours);
-    setNumSamplingPersonnel(settings.numSamplingPersonnel);
-    setNumSamplingShifts(settings.numSamplingShifts);
-    setNumSamplingTeams(settings.numSamplingTeams);
-    setSamplingLaborCost(settings.samplingLaborCost);
-    setSurfaceArea(settings.surfaceArea);
     setInputNumLabs(settings.numLabs);
     setInputNumLabHours(settings.numLabHours);
     setInputNumSamplingHours(settings.numSamplingHours);
@@ -1957,14 +1903,6 @@ function useCalculateSettingsStorage() {
     setInputSamplingLaborCost(settings.samplingLaborCost);
     setInputSurfaceArea(settings.surfaceArea);
   }, [
-    setNumLabs,
-    setNumLabHours,
-    setNumSamplingHours,
-    setNumSamplingPersonnel,
-    setNumSamplingShifts,
-    setNumSamplingTeams,
-    setSamplingLaborCost,
-    setSurfaceArea,
     setInputNumLabs,
     setInputNumLabHours,
     setInputNumSamplingHours,
@@ -2475,6 +2413,8 @@ function useDisplayModeStorage() {
     setDisplayDimensions,
     displayGeometryType,
     setDisplayGeometryType,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -2493,6 +2433,7 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setTerrain3dUseElevation(true);
       setTerrain3dVisible(true);
       setViewUnderground3d(false);
       return;
@@ -2502,12 +2443,14 @@ function useDisplayModeStorage() {
 
     setDisplayDimensions(displayMode.dimensions);
     setDisplayGeometryType(displayMode.geometryType);
+    setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
   }, [
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setTerrain3dUseElevation,
     setTerrain3dVisible,
     setViewUnderground3d,
   ]);
@@ -2518,6 +2461,7 @@ function useDisplayModeStorage() {
     const displayMode: object = {
       dimensions: displayDimensions,
       geometryType: displayGeometryType,
+      terrain3dUseElevation,
       terrain3dVisible,
       viewUnderground3d,
     };
@@ -2527,6 +2471,7 @@ function useDisplayModeStorage() {
     displayGeometryType,
     localDisplayModeInitialized,
     setOptions,
+    terrain3dUseElevation,
     terrain3dVisible,
     viewUnderground3d,
   ]);

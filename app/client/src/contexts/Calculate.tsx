@@ -5,34 +5,17 @@ import React, {
   Dispatch,
   ReactNode,
   SetStateAction,
-  useEffect,
   useState,
 } from 'react';
 // types
 import { CalculateResultsType } from 'types/CalculateResults';
 import { LayerType } from 'types/Layer';
 
-type CalculateType = {
+export type CalculateType = {
   calculateResults: CalculateResultsType;
   setCalculateResults: Dispatch<SetStateAction<CalculateResultsType>>;
   contaminationMap: LayerType | null;
   setContaminationMap: Dispatch<SetStateAction<LayerType | null>>;
-  numLabs: number;
-  setNumLabs: Dispatch<SetStateAction<number>>;
-  numLabHours: number;
-  setNumLabHours: Dispatch<SetStateAction<number>>;
-  numSamplingHours: number;
-  setNumSamplingHours: Dispatch<SetStateAction<number>>;
-  numSamplingPersonnel: number;
-  setNumSamplingPersonnel: Dispatch<SetStateAction<number>>;
-  numSamplingShifts: number;
-  setNumSamplingShifts: Dispatch<SetStateAction<number>>;
-  numSamplingTeams: number;
-  setNumSamplingTeams: Dispatch<SetStateAction<number>>;
-  samplingLaborCost: number;
-  setSamplingLaborCost: Dispatch<SetStateAction<number>>;
-  surfaceArea: number;
-  setSurfaceArea: Dispatch<SetStateAction<number>>;
   inputNumLabs: number;
   setInputNumLabs: Dispatch<SetStateAction<number>>;
   inputNumLabHours: number;
@@ -54,42 +37,37 @@ type CalculateType = {
   resetCalculateContext: Function;
 };
 
+export const settingDefaults = {
+  NUM_LABS: 1,
+  NUM_LAB_HOURS: 24,
+  NUM_SAMPLING_HOURS: 5,
+  NUM_SAMPLING_PERSONNEL: 3,
+  NUM_SAMPLING_SHIFTS: 1,
+  NUM_SAMPLING_TEAMS: 1,
+  SAMPLING_LABOR_COST: 420,
+  SURFACE_AREA: 0,
+};
+
 export const CalculateContext = createContext<CalculateType>({
   calculateResults: { status: 'none', panelOpen: false, data: null },
   setCalculateResults: () => {},
   contaminationMap: null,
   setContaminationMap: () => {},
-  numLabs: 1,
-  setNumLabs: () => {},
-  numLabHours: 24,
-  setNumLabHours: () => {},
-  numSamplingHours: 5,
-  setNumSamplingHours: () => {},
-  numSamplingPersonnel: 3,
-  setNumSamplingPersonnel: () => {},
-  numSamplingShifts: 1,
-  setNumSamplingShifts: () => {},
-  numSamplingTeams: 1,
-  setNumSamplingTeams: () => {},
-  samplingLaborCost: 420,
-  setSamplingLaborCost: () => {},
-  surfaceArea: 0,
-  setSurfaceArea: () => {},
-  inputNumLabs: 1,
+  inputNumLabs: settingDefaults.NUM_LABS,
   setInputNumLabs: () => {},
-  inputNumLabHours: 24,
+  inputNumLabHours: settingDefaults.NUM_LAB_HOURS,
   setInputNumLabHours: () => {},
-  inputNumSamplingHours: 5,
+  inputNumSamplingHours: settingDefaults.NUM_SAMPLING_HOURS,
   setInputNumSamplingHours: () => {},
-  inputNumSamplingPersonnel: 3,
+  inputNumSamplingPersonnel: settingDefaults.NUM_SAMPLING_PERSONNEL,
   setInputNumSamplingPersonnel: () => {},
-  inputNumSamplingShifts: 1,
+  inputNumSamplingShifts: settingDefaults.NUM_SAMPLING_SHIFTS,
   setInputNumSamplingShifts: () => {},
-  inputNumSamplingTeams: 1,
+  inputNumSamplingTeams: settingDefaults.NUM_SAMPLING_TEAMS,
   setInputNumSamplingTeams: () => {},
-  inputSamplingLaborCost: 420,
+  inputSamplingLaborCost: settingDefaults.SAMPLING_LABOR_COST,
   setInputSamplingLaborCost: () => {},
-  inputSurfaceArea: 0,
+  inputSurfaceArea: settingDefaults.SURFACE_AREA,
   setInputSurfaceArea: () => {},
   updateContextValues: false,
   setUpdateContextValues: () => {},
@@ -99,79 +77,41 @@ export const CalculateContext = createContext<CalculateType>({
 type Props = { children: ReactNode };
 
 export function CalculateProvider({ children }: Props) {
-  const [
-    calculateResults,
-    setCalculateResults, //
-  ] = useState<CalculateResultsType>({
-    status: 'none',
-    panelOpen: false,
-    data: null,
-  });
-  const [
-    contaminationMap,
-    setContaminationMap, //
-  ] = useState<LayerType | null>(null);
-  const [numLabs, setNumLabs] = useState(1);
-  const [numLabHours, setNumLabHours] = useState(24);
-  const [numSamplingHours, setNumSamplingHours] = useState(5);
-  const [numSamplingPersonnel, setNumSamplingPersonnel] = useState(3);
-  const [numSamplingShifts, setNumSamplingShifts] = useState(1);
-  const [numSamplingTeams, setNumSamplingTeams] = useState(1);
-  const [samplingLaborCost, setSamplingLaborCost] = useState(420);
-  const [surfaceArea, setSurfaceArea] = useState(0);
+  const [calculateResults, setCalculateResults] =
+    useState<CalculateResultsType>({
+      status: 'none',
+      panelOpen: false,
+      data: null,
+    });
+  const [contaminationMap, setContaminationMap] = useState<LayerType | null>(
+    null,
+  );
 
   // input states
-  const [inputNumLabs, setInputNumLabs] = useState(numLabs);
-  const [inputNumLabHours, setInputNumLabHours] = useState(numLabHours);
-  const [inputSurfaceArea, setInputSurfaceArea] = useState(surfaceArea);
-  const [
-    inputNumSamplingHours,
-    setInputNumSamplingHours, //
-  ] = useState(numSamplingHours);
-  const [inputNumSamplingPersonnel, setInputNumSamplingPersonnel] =
-    useState(numSamplingPersonnel);
-  const [
-    inputNumSamplingShifts,
-    setInputNumSamplingShifts, //
-  ] = useState(numSamplingShifts);
-  const [
-    inputNumSamplingTeams,
-    setInputNumSamplingTeams, //
-  ] = useState(numSamplingTeams);
-  const [
-    inputSamplingLaborCost,
-    setInputSamplingLaborCost, //
-  ] = useState(samplingLaborCost);
+  const [inputNumLabs, setInputNumLabs] = useState(settingDefaults.NUM_LABS);
+  const [inputNumLabHours, setInputNumLabHours] = useState(
+    settingDefaults.NUM_LAB_HOURS,
+  );
+  const [inputSurfaceArea, setInputSurfaceArea] = useState(
+    settingDefaults.SURFACE_AREA,
+  );
+  const [inputNumSamplingHours, setInputNumSamplingHours] = useState(
+    settingDefaults.NUM_SAMPLING_HOURS,
+  );
+  const [inputNumSamplingPersonnel, setInputNumSamplingPersonnel] = useState(
+    settingDefaults.NUM_SAMPLING_PERSONNEL,
+  );
+  const [inputNumSamplingShifts, setInputNumSamplingShifts] = useState(
+    settingDefaults.NUM_SAMPLING_SHIFTS,
+  );
+  const [inputNumSamplingTeams, setInputNumSamplingTeams] = useState(
+    settingDefaults.NUM_SAMPLING_TEAMS,
+  );
+  const [inputSamplingLaborCost, setInputSamplingLaborCost] = useState(
+    settingDefaults.SAMPLING_LABOR_COST,
+  );
 
   const [updateContextValues, setUpdateContextValues] = useState(false);
-
-  // Updates the calculation context values with the inputs.
-  // The intention is to update these values whenever the user navigates away from
-  // the calculate resources tab or when they click the View Detailed Results button.
-  useEffect(() => {
-    if (!updateContextValues) return;
-
-    setUpdateContextValues(false);
-
-    setNumLabs(inputNumLabs);
-    setNumLabHours(inputNumLabHours);
-    setNumSamplingHours(inputNumSamplingHours);
-    setNumSamplingPersonnel(inputNumSamplingPersonnel);
-    setNumSamplingShifts(inputNumSamplingShifts);
-    setNumSamplingTeams(inputNumSamplingTeams);
-    setSamplingLaborCost(inputSamplingLaborCost);
-    setSurfaceArea(inputSurfaceArea);
-  }, [
-    inputNumLabs,
-    inputNumLabHours,
-    inputNumSamplingHours,
-    inputNumSamplingPersonnel,
-    inputNumSamplingShifts,
-    inputNumSamplingTeams,
-    inputSamplingLaborCost,
-    inputSurfaceArea,
-    updateContextValues,
-  ]);
 
   return (
     <CalculateContext.Provider
@@ -180,22 +120,6 @@ export function CalculateProvider({ children }: Props) {
         setCalculateResults,
         contaminationMap,
         setContaminationMap,
-        numLabs,
-        setNumLabs,
-        numLabHours,
-        setNumLabHours,
-        numSamplingHours,
-        setNumSamplingHours,
-        numSamplingPersonnel,
-        setNumSamplingPersonnel,
-        numSamplingShifts,
-        setNumSamplingShifts,
-        numSamplingTeams,
-        setNumSamplingTeams,
-        samplingLaborCost,
-        setSamplingLaborCost,
-        surfaceArea,
-        setSurfaceArea,
         inputNumLabs,
         setInputNumLabs,
         inputNumLabHours,
@@ -222,23 +146,14 @@ export function CalculateProvider({ children }: Props) {
           });
           setContaminationMap(null);
 
-          setNumLabs(1);
-          setNumLabHours(24);
-          setNumSamplingHours(5);
-          setNumSamplingPersonnel(3);
-          setNumSamplingShifts(1);
-          setNumSamplingTeams(1);
-          setSamplingLaborCost(420);
-          setSurfaceArea(0);
-
-          setInputNumLabs(1);
-          setInputNumLabHours(24);
-          setInputNumSamplingHours(5);
-          setInputNumSamplingPersonnel(3);
-          setInputNumSamplingShifts(1);
-          setInputNumSamplingTeams(1);
-          setInputSamplingLaborCost(420);
-          setInputSurfaceArea(0);
+          setInputNumLabs(settingDefaults.NUM_LABS);
+          setInputNumLabHours(settingDefaults.NUM_LAB_HOURS);
+          setInputNumSamplingHours(settingDefaults.NUM_SAMPLING_HOURS);
+          setInputNumSamplingPersonnel(settingDefaults.NUM_SAMPLING_PERSONNEL);
+          setInputNumSamplingShifts(settingDefaults.NUM_SAMPLING_SHIFTS);
+          setInputNumSamplingTeams(settingDefaults.NUM_SAMPLING_TEAMS);
+          setInputSamplingLaborCost(settingDefaults.SAMPLING_LABOR_COST);
+          setInputSurfaceArea(settingDefaults.SURFACE_AREA);
         },
       }}
     >

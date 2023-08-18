@@ -11,6 +11,7 @@ import Legend from '@arcgis/core/widgets/Legend';
 import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
 import Portal from '@arcgis/core/portal/Portal';
 import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
@@ -70,10 +71,12 @@ function buildLegendListItem(event: any) {
   const layer = (window as any).totsLayers?.find(
     (layer: LayerType) =>
       layer.layerId === item?.layer?.id ||
-      layer.pointsLayer?.id === item?.layer?.id,
+      layer.pointsLayer?.id === item?.layer?.id ||
+      layer.hybridLayer?.id === item?.layer?.id,
   );
 
   const isPoints = item.layer.id?.toString().includes('-points');
+  const isHybrid = item.layer.id?.toString().includes('-hybrid');
 
   const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
 
@@ -102,10 +105,11 @@ function buildLegendListItem(event: any) {
 
     (window as any).totsAllSampleOptions?.forEach(
       (option: SampleSelectType) => {
-        const style = isPoints
-          ? (window as any).totsSampleAttributes[option.value]?.POINT_STYLE ||
-            null
-          : null;
+        const attributes = (window as any).totsSampleAttributes[option.value];
+        const style =
+          isPoints || (isHybrid && attributes.ShapeType === 'point')
+            ? attributes?.POINT_STYLE || null
+            : null;
         if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
           legendItems.push({
             value: option.value,
@@ -442,6 +446,8 @@ function Toolbar() {
     sceneView,
     displayDimensions,
     setDisplayDimensions,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
     terrain3dVisible,
     setTerrain3dVisible,
     viewUnderground3d,
@@ -603,8 +609,17 @@ function Toolbar() {
 
     setLayerToRemove(null);
 
+    // gather each layer type
+    const layersToRemove = map.layers
+      .filter(
+        (l) =>
+          l.id.replace('-points', '').replace('-hybrid', '') ===
+          layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
+      )
+      .toArray();
+
     // remove it from the map
-    map.remove(layerToRemove);
+    map.removeMany(layersToRemove);
 
     // Workaround for layer type specific properties
     const tempLayerToRemove = layerToRemove as any;
@@ -624,7 +639,9 @@ function Toolbar() {
       const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
-          (layer) => layer.layerId !== layerToRemove.id.replace('-points', ''),
+          (layer) =>
+            layer.layerId !==
+            layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
         ),
       };
 
@@ -650,8 +667,8 @@ function Toolbar() {
           null,
           null,
         );
-        if (nextScenario) setSelectedScenario(nextScenario);
-        if (nextLayer) setSketchLayer(nextLayer);
+        setSelectedScenario(nextScenario ?? null);
+        setSketchLayer(nextLayer ?? null);
       }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
@@ -663,9 +680,14 @@ function Toolbar() {
       }
 
       // remove from layers
-      setLayers((layers) =>
-        layers.filter((layer) => layer.layerId !== layerToRemove.id),
-      );
+      setLayers((layers) => {
+        const newLayers = layers.filter(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.parentLayer?.id !== layerToRemove.id,
+        );
+        return newLayers;
+      });
 
       // also remove the layer from portalLayers if this layer was added
       // from arcgis online
@@ -761,21 +783,55 @@ function Toolbar() {
       if (
         displayGeometryType === 'points' &&
         layer.pointsLayer &&
-        layer.sketchLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make points layers visible
-        layer.pointsLayer.listMode = layer.sketchLayer.listMode;
-        layer.pointsLayer.visible = layer.sketchLayer.visible;
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.sketchLayer.listMode;
+          layer.pointsLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.hybridLayer.listMode;
+          layer.pointsLayer.visible = layer.hybridLayer.visible;
+        }
         layer.sketchLayer.listMode = 'hide';
         layer.sketchLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
       } else if (
         displayGeometryType === 'polygons' &&
         layer.pointsLayer &&
-        layer.pointsLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make polygons layer visible
-        layer.sketchLayer.listMode = layer.pointsLayer.listMode;
-        layer.sketchLayer.visible = layer.pointsLayer.visible;
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.pointsLayer.listMode;
+          layer.sketchLayer.visible = layer.pointsLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.hybridLayer.listMode;
+          layer.sketchLayer.visible = layer.hybridLayer.visible;
+        }
+        layer.pointsLayer.listMode = 'hide';
+        layer.pointsLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
+      } else if (
+        displayGeometryType === 'hybrid' &&
+        layer.pointsLayer &&
+        layer.hybridLayer
+      ) {
+        // make points layers visible
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.sketchLayer.listMode;
+          layer.hybridLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.pointsLayer.listMode;
+          layer.hybridLayer.visible = layer.pointsLayer.visible;
+        }
+        layer.sketchLayer.listMode = 'hide';
+        layer.sketchLayer.visible = false;
         layer.pointsLayer.listMode = 'hide';
         layer.pointsLayer.visible = false;
       }
@@ -807,15 +863,37 @@ function Toolbar() {
     }
   }, [mapView, sceneView, displayDimensions]);
 
+  // Get the elevation layer
+  const [elevLayer, setElevLayer] = useState<__esri.ElevationLayer | null>(
+    null,
+  );
+  const [elevLayerWatcher, setElevLayerWatcher] = useState<IHandle | null>(
+    null,
+  );
+  useEffect(() => {
+    if (elevLayerWatcher || !map) return;
+
+    const handle = reactiveUtils.watch(
+      () => map.ground.loaded,
+      () => {
+        if (!map.ground.loaded) return;
+
+        const elevationLayer = getElevationLayer(map);
+        if (!elevationLayer) return;
+
+        setElevLayer(elevationLayer);
+        handle.remove();
+      },
+    );
+    setElevLayerWatcher(handle);
+  }, [elevLayerWatcher, map]);
+
   // Toggle the 3D terrain visibility
   useEffect(() => {
-    if (!map) return;
+    if (!elevLayer || !map) return;
 
-    const elevationLayer = getElevationLayer(map);
-    if (!elevationLayer) return;
-
-    elevationLayer.visible = terrain3dVisible;
-  }, [map, terrain3dVisible]);
+    elevLayer.visible = terrain3dVisible;
+  }, [elevLayer, map, terrain3dVisible]);
 
   // Toggle the 3D view underground feature
   useEffect(() => {
@@ -852,9 +930,10 @@ function Toolbar() {
                 <InfoIcon
                   cssStyles={infoIconStyles}
                   id="3d-view-switch"
-                  tooltip={'3D view. Tooltip placeholder...'}
+                  tooltip={
+                    'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
+                  }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input
@@ -889,10 +968,9 @@ function Toolbar() {
                   cssStyles={infoIconStyles}
                   id="poly-points-switch"
                   tooltip={
-                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
+                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
                   }
                   place="bottom"
-                  type="info"
                 />
               </legend>
               <input
@@ -915,14 +993,23 @@ function Toolbar() {
                 onChange={(ev) => setDisplayGeometryType('polygons')}
               />
               <label htmlFor="shape-polygons">Polygons</label>
+              <br />
+
+              <input
+                id="shape-hybrid"
+                type="radio"
+                name="shape"
+                value="hybrid"
+                checked={displayGeometryType === 'hybrid'}
+                onChange={(ev) => setDisplayGeometryType('hybrid')}
+              />
+              <label htmlFor="shape-hybrid">Hybrid</label>
             </fieldset>
 
             {displayDimensions === '3d' && (
               <Fragment>
-                <div css={switchLabelContainer}>
-                  <label htmlFor="terrain-3d-toggle" css={switchLabel}>
-                    3D Terrain Visible
-                  </label>
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Terrain Visible</span>
                   <Switch
                     checked={terrain3dVisible}
                     onChange={(checked) => setTerrain3dVisible(checked)}
@@ -930,12 +1017,21 @@ function Toolbar() {
                     onColor="#90ee90"
                     onHandleColor="#129c12"
                   />
-                </div>
+                </label>
 
-                <div css={switchLabelContainer}>
-                  <label htmlFor="view-underground-3d-toggle" css={switchLabel}>
-                    3D View Underground
-                  </label>
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Use Terrain Elevation</span>
+                  <Switch
+                    checked={terrain3dUseElevation}
+                    onChange={(checked) => setTerrain3dUseElevation(checked)}
+                    ariaLabel="3D Use Terrain Elevation"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </label>
+
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D View Underground</span>
                   <Switch
                     checked={viewUnderground3d}
                     onChange={(checked) => setViewUnderground3d(checked)}
@@ -943,14 +1039,12 @@ function Toolbar() {
                     onColor="#90ee90"
                     onHandleColor="#129c12"
                   />
-                </div>
+                </label>
               </Fragment>
             )}
 
-            <div css={switchLabelContainer}>
-              <label htmlFor="training-mode-toggle" css={switchLabel}>
-                Training Mode
-              </label>
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Training Mode</span>
               <Switch
                 checked={trainingMode}
                 onChange={(checked) => setTrainingMode(checked)}
@@ -958,12 +1052,10 @@ function Toolbar() {
                 onColor="#90ee90"
                 onHandleColor="#129c12"
               />
-            </div>
+            </label>
 
-            <div css={switchLabelContainer}>
-              <label htmlFor="auto-zoom-toggle" css={switchLabel}>
-                Auto Zoom
-              </label>
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Auto Zoom</span>
               <Switch
                 checked={autoZoom}
                 onChange={(checked) => setAutoZoom(checked)}
@@ -971,7 +1063,7 @@ function Toolbar() {
                 onColor="#90ee90"
                 onHandleColor="#129c12"
               />
-            </div>
+            </label>
           </div>
         </div>
         <div>

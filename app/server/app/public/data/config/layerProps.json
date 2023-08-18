@@ -115,6 +115,17 @@
       "defaultValue": null
     },
     {
+      "name": "AC",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Equivalent TOTS Samples",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
       "name": "TTPK",
       "type": "esriFieldTypeDouble",
       "actualType": "double",
@@ -370,6 +381,18 @@
       "editable": false,
       "domain": null,
       "defaultValue": 0
+    },
+    {
+      "name": "ID",
+      "type": "esriFieldTypeString",
+      "actualType": "nvarchar",
+      "alias": "ID",
+      "sqlType": "sqlTypeNVarchar",
+      "length": 5000,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
     }
   ],
   "additionalTableFields": [
@@ -525,6 +548,150 @@
       "alias": "ONWEBSCENE",
       "sqlType": "sqlTypeInteger",
       "length": 1,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "CREATEDDATE",
+      "type": "esriFieldTypeDate",
+      "alias": "CREATEDDATE",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "USERNAME",
+      "type": "esriFieldTypeString",
+      "alias": "USERNAME",
+      "sqlType": "sqlTypeOther",
+      "length": 255,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "UPDATEDDATE",
+      "type": "esriFieldTypeDate",
+      "alias": "UPDATEDDATE",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    }
+  ],
+  "defaultCalculateResultsTableFields": [
+    {
+      "name": "OBJECTID",
+      "type": "esriFieldTypeOID",
+      "actualType": "int",
+      "alias": "OBJECTID",
+      "sqlType": "sqlTypeInteger",
+      "length": 4,
+      "nullable": false,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "GLOBALID",
+      "type": "esriFieldTypeGlobalID",
+      "alias": "GlobalID",
+      "sqlType": "sqlTypeOther",
+      "length": 38,
+      "nullable": false,
+      "editable": false,
+      "domain": null,
+      "defaultValue": "NEWID() WITH VALUES"
+    },
+    {
+      "name": "NUM_LAB_HOURS",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Analysis Lab Hours per Day",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "NUM_LABS",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Number of Available Labs for Analysis",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "NUM_SAMPLING_HOURS",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Sampling Team Hours per Shift",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "NUM_SAMPLING_PERSONNEL",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Personnel per Sampling Team",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "NUM_SAMPLING_SHIFTS",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Sampling Team Shifts per Day",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "NUM_SAMPLING_TEAMS",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Number of Available Teams for Sampling",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "SAMPLING_LABOR_COST",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Sampling Team Labor Cost ($)",
+      "sqlType": "sqlTypeInteger",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "SURFACE_AREA",
+      "type": "esriFieldTypeInteger",
+      "actualType": "int",
+      "alias": "Area of Interest Surface Area (ft2)",
+      "sqlType": "sqlTypeInteger",
       "nullable": true,
       "editable": true,
       "domain": null,

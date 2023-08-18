@@ -1,0 +1,715 @@
+{
+    "count": 10,
+    "edits": [
+        {
+            "type": "scenario",
+            "id": -1,
+            "pointsId": -1,
+            "layerId": "189028a9a72-layer-23",
+            "portalId": "",
+            "name": "TestVarious",
+            "label": "TestVarious",
+            "value": "189028a9a72-layer-23",
+            "layerType": "Samples",
+            "addedFrom": "sketch",
+            "hasContaminationRan": false,
+            "status": "added",
+            "editType": "add",
+            "visible": true,
+            "listMode": "show",
+            "scenarioName": "TestVarious",
+            "scenarioDescription": "",
+            "layers": [
+                {
+                    "type": "layer",
+                    "id": -1,
+                    "pointsId": -1,
+                    "uuid": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                    "layerId": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                    "portalId": "",
+                    "name": "Default Sample Layer",
+                    "label": "Default Sample Layer",
+                    "layerType": "Samples",
+                    "hasContaminationRan": false,
+                    "addedFrom": "sketch",
+                    "status": "added",
+                    "editType": "add",
+                    "visible": true,
+                    "listMode": "show",
+                    "sort": 0,
+                    "adds": [
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{FB3FB9E9-B75E-4A7F-B731-1898E82FCAF8}",
+                                "GLOBALID": "{FB3FB9E9-B75E-4A7F-B731-1898E82FCAF8}",
+                                "TYPEUUID": "Sponge",
+                                "TYPE": "Sponge",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "circle",
+                                "SA": 100,
+                                "AA": null,
+                                "TTPK": 0.12,
+                                "TTC": 0.09,
+                                "TTA": 0.7,
+                                "TTPS": 0.99,
+                                "LOD_P": 14,
+                                "LOD_NON": 0,
+                                "MCPS": 46.87,
+                                "TCPS": 343.03,
+                                "WVPS": 0.1,
+                                "WWPS": 4.3,
+                                "ALC": 118,
+                                "AMC": 239,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:06:50.72",
+                                "UPDATEDDATE": "2023/06/28 11:06:50.72",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8574896.932874067,
+                                            4706083.459320226,
+                                            9.96308708190918
+                                        ],
+                                        [
+                                            -8574896.940123681,
+                                            4706083.786480939,
+                                            9.96308708190918
+                                        ],
+                                        [
+                                            -8574896.61429329,
+                                            4706083.793760151,
+                                            9.96308708190918
+                                        ],
+                                        [
+                                            -8574896.607043684,
+                                            4706083.4665994365,
+                                            9.96308708190918
+                                        ],
+                                        [
+                                            -8574896.932874067,
+                                            4706083.459320226,
+                                            9.96308708190918
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{A0469592-E00E-4C70-B2DF-41DBD529C468}",
+                                "GLOBALID": "{A0469592-E00E-4C70-B2DF-41DBD529C468}",
+                                "TYPEUUID": "Sponge",
+                                "TYPE": "Sponge",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "circle",
+                                "SA": 100,
+                                "AA": null,
+                                "TTPK": 0.12,
+                                "TTC": 0.09,
+                                "TTA": 0.7,
+                                "TTPS": 0.99,
+                                "LOD_P": 14,
+                                "LOD_NON": 0,
+                                "MCPS": 46.87,
+                                "TCPS": 343.03,
+                                "WVPS": 0.1,
+                                "WWPS": 4.3,
+                                "ALC": 118,
+                                "AMC": 239,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:06:51.287",
+                                "UPDATEDDATE": "2023/06/28 11:06:51.287",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8574468.885640593,
+                                            4706152.25335083,
+                                            3.192699062951951
+                                        ],
+                                        [
+                                            -8574468.8928766,
+                                            4706152.58051451,
+                                            3.192699062951951
+                                        ],
+                                        [
+                                            -8574468.567043237,
+                                            4706152.587780059,
+                                            3.192699062951951
+                                        ],
+                                        [
+                                            -8574468.559807237,
+                                            4706152.260616379,
+                                            3.192699062951951
+                                        ],
+                                        [
+                                            -8574468.885640593,
+                                            4706152.25335083,
+                                            3.192699062951951
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{61BF20D4-6275-4872-83F2-CD96167F6C23}",
+                                "GLOBALID": "{61BF20D4-6275-4872-83F2-CD96167F6C23}",
+                                "TYPEUUID": "Micro Vac",
+                                "TYPE": "Micro Vac",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "cross",
+                                "SA": 144,
+                                "AA": null,
+                                "TTPK": 0.18,
+                                "TTC": 0.15,
+                                "TTA": 0.8,
+                                "TTPS": 1.21,
+                                "LOD_P": 105,
+                                "LOD_NON": 0,
+                                "MCPS": 34.28,
+                                "TCPS": 395.84,
+                                "WVPS": 0.02,
+                                "WWPS": 4.3,
+                                "ALC": 151,
+                                "AMC": 288,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:06:55.643",
+                                "UPDATEDDATE": "2023/06/28 11:06:55.643",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8574094.375952296,
+                                            4706129.288573447,
+                                            3.0603116516184667
+                                        ],
+                                        [
+                                            -8574094.384621043,
+                                            4706129.681169805,
+                                            3.0603116516184667
+                                        ],
+                                        [
+                                            -8574093.993621068,
+                                            4706129.68987394,
+                                            3.0603116516184667
+                                        ],
+                                        [
+                                            -8574093.984952334,
+                                            4706129.29727758,
+                                            3.0603116516184667
+                                        ],
+                                        [
+                                            -8574094.375952296,
+                                            4706129.288573447,
+                                            3.0603116516184667
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{24903902-B438-4714-8880-3EC09920E4A2}",
+                                "GLOBALID": "{24903902-B438-4714-8880-3EC09920E4A2}",
+                                "TYPEUUID": "Micro Vac",
+                                "TYPE": "Micro Vac",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "cross",
+                                "SA": 144,
+                                "AA": null,
+                                "TTPK": 0.18,
+                                "TTC": 0.15,
+                                "TTA": 0.8,
+                                "TTPS": 1.21,
+                                "LOD_P": 105,
+                                "LOD_NON": 0,
+                                "MCPS": 34.28,
+                                "TCPS": 395.84,
+                                "WVPS": 0.02,
+                                "WWPS": 4.3,
+                                "ALC": 151,
+                                "AMC": 288,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:06:56.372",
+                                "UPDATEDDATE": "2023/06/28 11:06:56.372",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8573612.822450757,
+                                            4706136.932459852,
+                                            3.264209747314453
+                                        ],
+                                        [
+                                            -8573612.83110099,
+                                            4706137.32505755,
+                                            3.264209747314453
+                                        ],
+                                        [
+                                            -8573612.440099677,
+                                            4706137.333743093,
+                                            3.264209747314453
+                                        ],
+                                        [
+                                            -8573612.431449462,
+                                            4706136.941145391,
+                                            3.264209747314453
+                                        ],
+                                        [
+                                            -8573612.822450757,
+                                            4706136.932459852,
+                                            3.264209747314453
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{FFC8BC86-78A2-4996-981F-2867E1CA4C96}",
+                                "GLOBALID": "{FFC8BC86-78A2-4996-981F-2867E1CA4C96}",
+                                "TYPEUUID": "Wet Vac",
+                                "TYPE": "Wet Vac",
+                                "ShapeType": "polygon",
+                                "POINT_STYLE": "diamond",
+                                "SA": 28800,
+                                "AA": null,
+                                "TTPK": 0.33,
+                                "TTC": 0.46,
+                                "TTA": 0.8,
+                                "TTPS": 1.07,
+                                "LOD_P": 105,
+                                "LOD_NON": 40,
+                                "MCPS": 167,
+                                "TCPS": 220,
+                                "WVPS": 5,
+                                "WWPS": 28.5,
+                                "ALC": 151,
+                                "AMC": 200,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:07:02.39",
+                                "UPDATEDDATE": "2023/06/28 11:07:02.39",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8572710.67469136,
+                                            4706068.339659382,
+                                            2.5898317144961718
+                                        ],
+                                        [
+                                            -8572649.524835464,
+                                            4705709.085568124,
+                                            2.5898317144961718
+                                        ],
+                                        [
+                                            -8572886.479506515,
+                                            4705724.373032099,
+                                            2.5898317144961718
+                                        ],
+                                        [
+                                            -8572970.560704162,
+                                            4706053.052195407,
+                                            2.5898317144961718
+                                        ],
+                                        [
+                                            -8572710.67469136,
+                                            4706068.339659382,
+                                            2.5898317144961718
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{898E451D-4D50-49B2-BEEA-07F3AE2ADD96}",
+                                "GLOBALID": "{898E451D-4D50-49B2-BEEA-07F3AE2ADD96}",
+                                "TYPEUUID": "Swab",
+                                "TYPE": "Swab",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "x",
+                                "SA": 4,
+                                "AA": null,
+                                "TTPK": 0.12,
+                                "TTC": 0.07,
+                                "TTA": 0.7,
+                                "TTPS": 0.89,
+                                "LOD_P": 25,
+                                "LOD_NON": 0,
+                                "MCPS": 21,
+                                "TCPS": 219,
+                                "WVPS": 0.01,
+                                "WWPS": 2,
+                                "ALC": 118,
+                                "AMC": 239,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:07:09.551",
+                                "UPDATEDDATE": "2023/06/28 11:07:09.551",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8573383.352053711,
+                                            4706129.455784145,
+                                            3.32020902633667
+                                        ],
+                                        [
+                                            -8573383.35349394,
+                                            4706129.521217129,
+                                            3.32020902633667
+                                        ],
+                                        [
+                                            -8573383.288327023,
+                                            4706129.522663241,
+                                            3.32020902633667
+                                        ],
+                                        [
+                                            -8573383.286886794,
+                                            4706129.457230256,
+                                            3.32020902633667
+                                        ],
+                                        [
+                                            -8573383.352053711,
+                                            4706129.455784145,
+                                            3.32020902633667
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{BB51BA2B-B03B-4ABB-96D3-D09C07B24F29}",
+                                "GLOBALID": "{BB51BA2B-B03B-4ABB-96D3-D09C07B24F29}",
+                                "TYPEUUID": "Swab",
+                                "TYPE": "Swab",
+                                "ShapeType": "point",
+                                "POINT_STYLE": "x",
+                                "SA": 4,
+                                "AA": null,
+                                "TTPK": 0.12,
+                                "TTC": 0.07,
+                                "TTA": 0.7,
+                                "TTPS": 0.89,
+                                "LOD_P": 25,
+                                "LOD_NON": 0,
+                                "MCPS": 21,
+                                "TCPS": 219,
+                                "WVPS": 0.01,
+                                "WWPS": 2,
+                                "ALC": 118,
+                                "AMC": 239,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:07:10.954",
+                                "UPDATEDDATE": "2023/06/28 11:07:10.954",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8573383.352053044,
+                                            4705907.788577814,
+                                            2.990351946031356
+                                        ],
+                                        [
+                                            -8573383.353493195,
+                                            4705907.854009389,
+                                            2.990351946031356
+                                        ],
+                                        [
+                                            -8573383.28832769,
+                                            4705907.855455419,
+                                            2.990351946031356
+                                        ],
+                                        [
+                                            -8573383.286887541,
+                                            4705907.790023844,
+                                            2.990351946031356
+                                        ],
+                                        [
+                                            -8573383.352053044,
+                                            4705907.788577814,
+                                            2.990351946031356
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{FFB6B2EA-985B-450F-ACE2-EDF0EF118566}",
+                                "GLOBALID": "{FFB6B2EA-985B-450F-ACE2-EDF0EF118566}",
+                                "TYPEUUID": "Aggressive Air",
+                                "TYPE": "Aggressive Air",
+                                "ShapeType": "polygon",
+                                "POINT_STYLE": "triangle",
+                                "SA": 144000,
+                                "AA": null,
+                                "TTPK": 0.33,
+                                "TTC": 0.5,
+                                "TTA": 0.5,
+                                "TTPS": 1.12,
+                                "LOD_P": 0,
+                                "LOD_NON": 0,
+                                "MCPS": 207,
+                                "TCPS": 267,
+                                "WVPS": 0.1,
+                                "WWPS": 5,
+                                "ALC": 118,
+                                "AMC": 200,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:07:19.74",
+                                "UPDATEDDATE": "2023/06/28 11:07:19.74",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8573719.643231455,
+                                            4705915.465602811,
+                                            2.936103582382202
+                                        ],
+                                        [
+                                            -8573375.676604172,
+                                            4705647.9360038135,
+                                            2.936103582382202
+                                        ],
+                                        [
+                                            -8573803.723845934,
+                                            4705625.004370476,
+                                            2.936103582382202
+                                        ],
+                                        [
+                                            -8573918.379388362,
+                                            4705900.178138837,
+                                            2.936103582382202
+                                        ],
+                                        [
+                                            -8573719.643231455,
+                                            4705915.465602811,
+                                            2.936103582382202
+                                        ]
+                                    ]
+                                ]
+                            }
+                        },
+                        {
+                            "attributes": {
+                                "OBJECTID": -1,
+                                "PERMANENT_IDENTIFIER": "{03D07819-8342-4E89-BE04-C2B3C6C1626D}",
+                                "GLOBALID": "{03D07819-8342-4E89-BE04-C2B3C6C1626D}",
+                                "TYPEUUID": "Robot",
+                                "TYPE": "Robot",
+                                "ShapeType": "polygon",
+                                "POINT_STYLE": "square",
+                                "SA": 144000,
+                                "AA": null,
+                                "TTPK": 0.33,
+                                "TTC": 0.3,
+                                "TTA": 0.7,
+                                "TTPS": 1.12,
+                                "LOD_P": 105,
+                                "LOD_NON": 140,
+                                "MCPS": 400,
+                                "TCPS": 267,
+                                "WVPS": 0.5,
+                                "WWPS": 10.5,
+                                "ALC": 200,
+                                "AMC": 288,
+                                "Notes": "",
+                                "CONTAMTYPE": null,
+                                "CONTAMVAL": null,
+                                "CONTAMUNIT": null,
+                                "CREATEDDATE": "2023/06/28 11:07:26.245",
+                                "UPDATEDDATE": "2023/06/28 11:07:26.245",
+                                "USERNAME": "cschwind_erg",
+                                "ORGANIZATION": "63lsBuaN5wrBFwtC",
+                                "DECISIONUNITUUID": "{3DFE701F-791E-4A2C-935B-E60BAC257CB2}",
+                                "DECISIONUNIT": "Default Sample Layer",
+                                "DECISIONUNITSORT": 0
+                            },
+                            "geometry": {
+                                "hasZ": true,
+                                "spatialReference": {
+                                    "latestWkid": 3857,
+                                    "wkid": 102100
+                                },
+                                "rings": [
+                                    [
+                                        [
+                                            -8574782.11804125,
+                                            4705716.729445904,
+                                            9.52431583404541
+                                        ],
+                                        [
+                                            -8574728.61235472,
+                                            4705946.040530759,
+                                            9.52431583404541
+                                        ],
+                                        [
+                                            -8574300.564529788,
+                                            4705961.327994733,
+                                            9.52431583404541
+                                        ],
+                                        [
+                                            -8574300.564529788,
+                                            4705701.441398761,
+                                            9.52431583404541
+                                        ],
+                                        [
+                                            -8574782.11804125,
+                                            4705716.729445904,
+                                            9.52431583404541
+                                        ]
+                                    ]
+                                ]
+                            }
+                        }
+                    ],
+                    "updates": [],
+                    "deletes": [],
+                    "published": []
+                }
+            ],
+            "table": null,
+            "referenceLayersTable": {
+                "id": -1,
+                "referenceLayers": []
+            },
+            "customAttributes": [],
+            "calculateSettings": {
+                "current": {
+                    "NUM_LABS": 1,
+                    "NUM_LAB_HOURS": 24,
+                    "NUM_SAMPLING_HOURS": 5,
+                    "NUM_SAMPLING_PERSONNEL": 3,
+                    "NUM_SAMPLING_SHIFTS": 1,
+                    "NUM_SAMPLING_TEAMS": 1,
+                    "SAMPLING_LABOR_COST": 420,
+                    "SURFACE_AREA": 0
+                }
+            }
+        }
+    ]
+}

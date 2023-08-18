@@ -4,14 +4,10 @@ import React, { useContext } from 'react';
 import { css } from '@emotion/react';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
-// config
-import { epaMarginOffset } from 'config/appConfig';
 
 const toolbarStyles = css`
   padding: 8px;
   background-color: lightgray;
-  width: calc(100% + ${epaMarginOffset * 2 + 'px'});
-  margin-left: -${epaMarginOffset}px;
 
   button {
     margin-bottom: 5px;

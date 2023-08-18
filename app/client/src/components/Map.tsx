@@ -23,7 +23,7 @@ import { getGraphicsArray } from 'utils/sketchUtils';
 // --- styles (Map) ---
 const mapStyles = (height: number) => {
   return css`
-    height: calc(100% - ${height}px);
+    height: ${height}px;
     background-color: whitesmoke;
   `;
 };
@@ -62,7 +62,7 @@ function Map({ height }: Props) {
     });
     setMap(newMap);
 
-    const viewParams = {
+    const viewParams: any = {
       container: mapRef.current,
       map: newMap,
       center: [-95, 37],

@@ -18,6 +18,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { settingDefaults } from 'contexts/Calculate';
 import { DialogContext } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
@@ -42,12 +43,13 @@ import {
 } from 'utils/sketchUtils';
 import { createErrorObject, escapeForLucene } from 'utils/utils';
 // types
-import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import {
+  CalculateSettingsBaseType,
   EditsType,
   ReferenceLayersTableType,
   ScenarioEditsType,
 } from 'types/Edits';
+import { LayerType, PortalLayerType, UrlLayerType } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
 import { AttributesType } from 'types/Publish';
 import {
@@ -65,6 +67,29 @@ import {
 type LayerGraphics = {
   [key: string]: __esri.Graphic[];
 };
+
+const layerTypeOptions = [
+  {
+    label: 'TOTS Sampling Plans',
+    type: 'category',
+    value: 'contains-epa-tots-sample-layer',
+  },
+  {
+    label: 'TOTS Custom Sample Types',
+    type: 'category',
+    value: 'contains-epa-tots-user-defined-sample-types',
+  },
+  { label: 'Feature Service', value: 'Feature Service' },
+  { label: 'Image Service', value: 'Image Service' },
+  { label: 'KML', value: 'KML' },
+  { label: 'Map Service', value: 'Map Service' },
+  { label: 'Scene Service (3D)', value: 'Scene Service' },
+  {
+    label: 'Vector Tile Service',
+    value: 'Vector Tile Service',
+  },
+  { label: 'WMS', value: 'WMS' },
+];
 
 // --- styles (SearchPanel) ---
 const searchContainerStyles = css`
@@ -117,20 +142,6 @@ const filterContainerStyles = css`
   }
 `;
 
-const typeSelectStyles = css`
-  position: absolute;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  z-index: 2;
-
-  ul {
-    padding: 0.5em;
-    list-style-type: none;
-  }
-`;
-
 const sortContainerStyles = css`
   display: flex;
 `;
@@ -155,6 +166,16 @@ const sortOrderStyles = css`
 const footerBar = css`
   display: flex;
   align-items: center;
+`;
+
+const fullWidthSelectStyles = css`
+  width: 100%;
+  margin-right: 10px;
+`;
+
+const multiSelectStyles = css`
+  ${fullWidthSelectStyles}
+  margin-bottom: 10px;
 `;
 
 const pageControlStyles = css`
@@ -195,11 +216,6 @@ type LocationType =
   | { value: 'My Organization'; label: 'My Organization' }
   | { value: 'My Groups'; label: 'My Groups' };
 
-type LayerTypeFilter =
-  | { value: 'All'; label: 'All' }
-  | { value: 'Sampling Plans'; label: 'TOTS Sampling Plans' }
-  | { value: 'Custom Sample Types'; label: 'TOTS Custom Sample Types' };
-
 type GroupType = {
   value: string;
   label: string;
@@ -229,24 +245,10 @@ function SearchPanel() {
     value: 'ArcGIS Online',
     label: 'ArcGIS Online',
   });
-  const [
-    layerTypeFilter,
-    setLayerTypeFilter, //
-  ] = useState<LayerTypeFilter>({
-    value: 'All',
-    label: 'All',
-  });
   const [group, setGroup] = useState<GroupType | null>(null);
   const [search, setSearch] = useState('');
   const [searchText, setSearchText] = useState('');
   const [withinMap, setWithinMap] = useState(false);
-  const [mapService, setMapService] = useState(false);
-  const [featureService, setFeatureService] = useState(false);
-  const [imageService, setImageService] = useState(false);
-  const [vectorTileService, setVectorTileService] = useState(false);
-  const [kml, setKml] = useState(false);
-  const [wms, setWms] = useState(false);
-  const [sceneService, setSceneService] = useState(false);
 
   const [
     searchResults,
@@ -262,6 +264,10 @@ function SearchPanel() {
     defaultSort: 'desc',
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const [layerTypeSelections, setLayerTypeSelections] = useState<
+    typeof layerTypeOptions | null
+  >(null);
 
   // Initializes the group selection
   useEffect(() => {
@@ -333,49 +339,28 @@ function SearchPanel() {
     }
 
     // type selection
+    const categories: string[] = [];
     let typePart = '';
     const defaultTypePart =
       'type:"Map Service" OR type:"Feature Service" OR type:"Image Service" ' +
       'OR type:"Vector Tile Service" OR type:"KML" OR type:"WMS" OR type:"Scene Service"';
-    if (mapService) {
-      typePart = appendToQuery(typePart, 'type:"Map Service"', 'OR');
-    }
-    if (featureService) {
-      typePart = appendToQuery(typePart, 'type:"Feature Service"', 'OR');
-    }
-    if (imageService) {
-      typePart = appendToQuery(typePart, 'type:"Image Service"', 'OR');
-    }
-    if (vectorTileService) {
-      typePart = appendToQuery(typePart, 'type:"Vector Tile Service"', 'OR');
-    }
-    if (kml) {
-      typePart = appendToQuery(typePart, 'type:"KML"', 'OR');
-    }
-    if (wms) {
-      typePart = appendToQuery(typePart, 'type:"WMS"', 'OR');
-    }
-    if (sceneService) {
-      typePart = appendToQuery(typePart, 'type:"Scene Service"', 'OR');
-    }
+    layerTypeSelections?.forEach((layerType) => {
+      if (layerType?.type === 'category') {
+        categories.push(layerType.value);
+      } else {
+        typePart = appendToQuery(typePart, `type:"${layerType.value}"`, 'OR');
+      }
+    });
 
     // add the type selection to the query, use all types if all types are set to false
     if (typePart.length > 0) query = appendToQuery(query, typePart);
     else query = appendToQuery(query, defaultTypePart);
 
-    const categories: string[] = [];
-    if (layerTypeFilter.value === 'Custom Sample Types') {
-      categories.push('contains-epa-tots-user-defined-sample-types');
-    }
-    if (layerTypeFilter.value === 'Sampling Plans') {
-      categories.push('contains-epa-tots-sample-layer');
-    }
-
     // build the query parameters
     let queryParams = {
       query,
       sortOrder,
-      categories,
+      categories: [categories],
     } as __esri.PortalQueryParams;
 
     if (withinMap && currentExtent) queryParams.extent = currentExtent;
@@ -417,22 +402,15 @@ function SearchPanel() {
   }, [
     currentExtent,
     group,
-    portal,
-    layerTypeFilter,
+    layerTypeSelections,
     location,
+    portal,
     search,
     setSearchResults,
-    withinMap,
-    mapService,
-    featureService,
-    imageService,
-    vectorTileService,
-    kml,
-    wms,
-    sceneService,
     sortBy,
     sortOrder,
     userInfo,
+    withinMap,
   ]);
 
   // Runs the query for changing pages of the result set
@@ -508,8 +486,6 @@ function SearchPanel() {
     };
   }, [mapView, sceneView, watchViewInitialized]);
 
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
-
   return (
     <Fragment>
       <label htmlFor="locations-select">Data Location</label>
@@ -546,17 +522,29 @@ function SearchPanel() {
           />
         </Fragment>
       )}
-      <label htmlFor="layer-type-select">Type</label>
-      <Select
-        inputId="layer-type-select"
-        value={layerTypeFilter}
-        onChange={(ev) => setLayerTypeFilter(ev as LayerTypeFilter)}
-        options={[
-          { value: 'All', label: 'All' },
-          { value: 'Sampling Plans', label: 'TOTS Sampling Plans' },
-          { value: 'Custom Sample Types', label: 'TOTS Custom Sample Types' },
-        ]}
-      />
+      <div css={filterContainerStyles}>
+        <div>
+          <input
+            id="within_map_filter"
+            type="checkbox"
+            checked={withinMap}
+            onChange={(ev) => setWithinMap(!withinMap)}
+          />{' '}
+          <label htmlFor="within_map_filter">Within map...</label>
+        </div>
+      </div>
+      <div>
+        <label htmlFor="layer-type-select">Layer Type</label>
+        <Select
+          inputId="layer-type-select"
+          isMulti={true}
+          isSearchable={false}
+          options={layerTypeOptions}
+          value={layerTypeSelections}
+          onChange={(ev) => setLayerTypeSelections(ev as any)}
+          css={multiSelectStyles}
+        />
+      </div>
       <label htmlFor="search-input">Search</label>
       <form
         css={searchContainerStyles}
@@ -583,101 +571,6 @@ function SearchPanel() {
           </span>
         </button>
       </form>
-      <div css={filterContainerStyles}>
-        <div>
-          <input
-            id="within_map_filter"
-            type="checkbox"
-            checked={withinMap}
-            onChange={(ev) => setWithinMap(!withinMap)}
-          />{' '}
-          <label htmlFor="within_map_filter">Within map...</label>
-        </div>
-        <div>
-          <span onClick={() => setShowFilterOptions(!showFilterOptions)}>
-            Type <i className="fas fa-caret-down"></i>
-          </span>
-          {showFilterOptions && (
-            <div css={typeSelectStyles}>
-              <ul>
-                <li>
-                  <input
-                    id="map_service_filter"
-                    type="checkbox"
-                    checked={mapService}
-                    onChange={(ev) => setMapService(!mapService)}
-                  />
-                  <label htmlFor="map_service_filter">Map Service</label>
-                </li>
-
-                <li>
-                  <input
-                    id="feature_service_filter"
-                    type="checkbox"
-                    checked={featureService}
-                    onChange={(ev) => setFeatureService(!featureService)}
-                  />
-                  <label htmlFor="feature_service_filter">
-                    Feature Service
-                  </label>
-                </li>
-
-                <li>
-                  <input
-                    id="image_service_filter"
-                    type="checkbox"
-                    checked={imageService}
-                    onChange={(ev) => setImageService(!imageService)}
-                  />
-                  <label htmlFor="image_service_filter">Image Service</label>
-                </li>
-
-                <li>
-                  <input
-                    id="vector_tile_service_filter"
-                    type="checkbox"
-                    checked={vectorTileService}
-                    onChange={(ev) => setVectorTileService(!vectorTileService)}
-                  />
-                  <label htmlFor="vector_tile_service_filter">
-                    Vector Tile Service
-                  </label>
-                </li>
-
-                <li>
-                  <input
-                    id="kml_filter"
-                    type="checkbox"
-                    checked={kml}
-                    onChange={(ev) => setKml(!kml)}
-                  />
-                  <label htmlFor="kml_filter">KML</label>
-                </li>
-
-                <li>
-                  <input
-                    id="wms_filter"
-                    type="checkbox"
-                    checked={wms}
-                    onChange={(ev) => setWms(!wms)}
-                  />
-                  <label htmlFor="wms_filter">WMS</label>
-                </li>
-
-                <li>
-                  <input
-                    id="scene_service_filter"
-                    type="checkbox"
-                    checked={sceneService}
-                    onChange={(ev) => setSceneService(!sceneService)}
-                  />
-                  <label htmlFor="scene_service_filter">Scene Service</label>
-                </li>
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
       <label htmlFor="sort-by-select">Sort By</label>
       <div css={sortContainerStyles}>
         <Select
@@ -716,19 +609,20 @@ function SearchPanel() {
           </button>
         )}
       </div>
-      {searchResults?.data?.results && searchResults.data.results.length > 0 && (
-        <span className="disclaimer" css={exitDisclaimerStyles}>
-          The following links exit the site{' '}
-          <a
-            className="exit-disclaimer"
-            href="https://www.epa.gov/home/exit-epa"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Exit
-          </a>
-        </span>
-      )}
+      {searchResults?.data?.results &&
+        searchResults.data.results.length > 0 && (
+          <span className="disclaimer" css={exitDisclaimerStyles}>
+            The following links exit the site{' '}
+            <a
+              className="exit-disclaimer"
+              href="https://www.epa.gov/home/exit-epa"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Exit
+            </a>
+          </span>
+        )}
       <hr />
       <div>
         {searchResults.status === 'fetching' && <LoadingSpinner />}
@@ -1188,6 +1082,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       const resSampleTypes: any[] = [];
       const resRefLayersTypes: any[] = [];
+      const resCalculateSettings: any[] = [];
       featureLayersRes.tables.forEach((table: any) => {
         if (table.name.endsWith('-sample-types')) {
           resSampleTypes.push(table);
@@ -1195,10 +1090,14 @@ function ResultCard({ result }: ResultCardProps) {
         if (table.name.endsWith('-reference-layers')) {
           resRefLayersTypes.push(table);
         }
+        if (table.name.endsWith('-calculate-settings')) {
+          resCalculateSettings.push(table);
+        }
       });
 
       // fire off the calls with the points layers last
       const resCombined = [
+        ...resCalculateSettings,
         ...resRefLayersTypes,
         ...resSampleTypes,
         ...resPolys,
@@ -1230,6 +1129,7 @@ function ResultCard({ result }: ResultCardProps) {
 
       // define items used for updating states
       let editsCopy: EditsType = deepCopyObject(edits);
+      let calcSettings: CalculateSettingsBaseType | null = null;
       const mapLayersToAdd: __esri.Layer[] = [];
       const newAttributes: Attributes = {};
       const newCustomAttributes: AttributesType[] = [];
@@ -1336,6 +1236,15 @@ function ResultCard({ result }: ResultCardProps) {
 
           if (newPortalLayers.length > 0) setPortalLayers(newPortalLayers);
           if (newUrlLayers.length > 0) setUrlLayers(newUrlLayers);
+        } else if (
+          layerDetails.type === 'Table' &&
+          layerDetails.name.endsWith('-calculate-settings')
+        ) {
+          if (layerFeatures.features.length > 0) {
+            calcSettings = {
+              ...layerFeatures.features[0].attributes,
+            };
+          }
         } else if (isPointsSampleLayer || isVspPointsSampleLayer) {
           if (layerFeatures.features?.length > 0) {
             updatePointIds(layerFeatures, layerDetails, layersToAdd, editsCopy);
@@ -1482,6 +1391,10 @@ function ResultCard({ result }: ResultCardProps) {
             table,
             referenceLayersTable,
             customAttributes: newCustomAttributes,
+            calculateSettings: {
+              current: calcSettings || settingDefaults,
+              published: calcSettings || undefined,
+            },
           };
 
           // make a copy of the edits context variable
@@ -1510,8 +1423,15 @@ function ResultCard({ result }: ResultCardProps) {
 
             // convert the polygon graphics into points
             let pointGraphics: __esri.Graphic[] = [];
-            graphicsList.forEach((graphic) => {
+            let hybridGraphics: __esri.Graphic[] = [];
+            graphicsList.forEach((graphicParams) => {
+              const graphic = new Graphic(graphicParams);
               pointGraphics.push(convertToPoint(graphic));
+              hybridGraphics.push(
+                graphic.attributes.ShapeType === 'point'
+                  ? convertToPoint(graphic)
+                  : graphic.clone(),
+              );
             });
 
             const pointsLayer = new GraphicsLayer({
@@ -1521,7 +1441,16 @@ function ResultCard({ result }: ResultCardProps) {
               visible: false,
               listMode: 'hide',
             });
-            groupLayer.addMany([graphicsLayer, pointsLayer]);
+
+            const hybridLayer = new GraphicsLayer({
+              id: firstAttributes.DECISIONUNITUUID + '-hybrid',
+              graphics: hybridGraphics,
+              title: layerName,
+              visible: false,
+              listMode: 'hide',
+            });
+
+            groupLayer.addMany([graphicsLayer, pointsLayer, hybridLayer]);
 
             // build the layer
             const layerToAdd: LayerType = {
@@ -1543,6 +1472,7 @@ function ResultCard({ result }: ResultCardProps) {
               status: 'published',
               sketchLayer: graphicsLayer,
               pointsLayer,
+              hybridLayer,
               parentLayer: groupLayer,
             };
             layersToAdd.push(layerToAdd);
@@ -1620,7 +1550,7 @@ function ResultCard({ result }: ResultCardProps) {
       // validate the area and attributes of features of the uploads. If there is an
       // issue, display a popup asking the user if they would like the samples to be updated.
       if (zoomToGraphics.length > 0) {
-        const output = sampleValidation(zoomToGraphics, true);
+        const output = sampleValidation(zoomToGraphics, true, false);
 
         if (output?.areaOutOfTolerance || output?.attributeMismatch) {
           setOptions({
@@ -1967,6 +1897,11 @@ function ResultCard({ result }: ResultCardProps) {
   function removeTotsLayer() {
     if (!map) return;
 
+    const newEdits = {
+      count: edits.count + 1,
+      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
+    };
+
     setLayers((layers) => {
       // remove the layers from the map and set the next sketchLayer
       const mapLayersToRemove: __esri.Layer[] = [];
@@ -1993,20 +1928,26 @@ function ResultCard({ result }: ResultCardProps) {
         }
       });
 
+      const newLayers = layers.filter((layer) => layer.portalId !== result.id);
+
       // select the next scenario and active sampling layer
       const { nextScenario, nextLayer } = getNextScenarioLayer(
-        edits,
-        layers,
+        newEdits,
+        newLayers,
         null,
         null,
       );
+
       if (nextScenario) setSelectedScenario(nextScenario);
+      else setSelectedScenario(null);
+
       if (nextLayer) setSketchLayer(nextLayer);
+      else setSketchLayer(null);
 
       map.removeMany(mapLayersToRemove);
 
       // set the state
-      return layers.filter((layer) => layer.portalId !== result.id);
+      return newLayers;
     });
 
     setReferenceLayers((layers) => {
@@ -2029,10 +1970,7 @@ function ResultCard({ result }: ResultCardProps) {
     });
 
     // remove the layer from edits
-    setEdits({
-      count: edits.count + 1,
-      edits: edits.edits.filter((layer) => layer.portalId !== result.id),
-    });
+    setEdits(newEdits);
 
     // remove the layer from portal layers
     setPortalLayers((portalLayers) =>
@@ -2056,6 +1994,7 @@ function ResultCard({ result }: ResultCardProps) {
       layer: LayerType;
       graphics: __esri.Graphic[];
       pointsGraphics: __esri.Graphic[];
+      hybridGraphics: __esri.Graphic[];
     };
     const removalObject: RemovalObject[] = [];
 
@@ -2084,11 +2023,25 @@ function ResultCard({ result }: ResultCardProps) {
         });
       }
 
-      if (graphicsToRemove.length > 0 || pointsGraphicsToRemove.length > 0) {
+      const hybridGraphicsToRemove: __esri.Graphic[] = [];
+      if (layer.hybridLayer) {
+        layer.hybridLayer.graphics.forEach((graphic) => {
+          if (typesToRemove.includes(graphic.attributes.TYPEUUID)) {
+            hybridGraphicsToRemove.push(graphic);
+          }
+        });
+      }
+
+      if (
+        graphicsToRemove.length > 0 ||
+        pointsGraphicsToRemove.length > 0 ||
+        hybridGraphicsToRemove.length > 0
+      ) {
         removalObject.push({
           layer: layer,
           graphics: graphicsToRemove,
           pointsGraphics: pointsGraphicsToRemove,
+          hybridGraphics: hybridGraphicsToRemove,
         });
       }
     });
@@ -2136,6 +2089,8 @@ function ResultCard({ result }: ResultCardProps) {
             object.layer.sketchLayer.removeMany(object.graphics);
             if (object.layer.pointsLayer)
               object.layer.pointsLayer.removeMany(object.pointsGraphics);
+            if (object.layer.hybridLayer)
+              object.layer.hybridLayer.removeMany(object.hybridGraphics);
 
             const collection = new Collection<__esri.Graphic>();
             collection.addMany(object.graphics);

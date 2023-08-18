@@ -7,6 +7,7 @@ import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import Graphic from '@arcgis/core/Graphic';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 // components
 import { AccordionList, AccordionItem } from 'components/Accordion';
 import ColorPicker from 'components/ColorPicker';
@@ -149,6 +150,11 @@ function activateSketchButton(id: string) {
 }
 
 // --- styles (SketchButton) ---
+const buttonContainerStyles = css`
+  display: flex;
+  align-items: end;
+`;
+
 const panelContainer = css`
   display: flex;
   flex-direction: column;
@@ -418,6 +424,7 @@ function LocateSamples() {
   const {
     defaultSymbols,
     setDefaultSymbolSingle,
+    displayDimensions,
     edits,
     setEdits,
     layersInitialized,
@@ -532,7 +539,8 @@ function LocateSamples() {
     }
 
     // determine whether the sketch button draws points or polygons
-    let shapeType = sampleAttributes[label as any].ShapeType;
+    const attributes = sampleAttributes[label as any];
+    let shapeType = attributes.ShapeType;
 
     // make the style of the button active
     const wasSet = activateSketchButton(label);
@@ -541,15 +549,22 @@ function LocateSamples() {
     let symbolType = 'Samples';
     if (defaultSymbols.symbols.hasOwnProperty(label)) symbolType = label;
 
-    sketchVM.polygonSymbol = defaultSymbols.symbols[symbolType] as any;
-    sketchVM.pointSymbol = defaultSymbols.symbols[symbolType] as any;
+    const isPath = attributes.POINT_STYLE.includes('path|');
+    const pointProps = {
+      color: defaultSymbols.symbols[symbolType].color,
+      outline: defaultSymbols.symbols[symbolType].outline,
+      style: isPath ? 'path' : attributes.POINT_STYLE,
+    } as any;
+    if (isPath) pointProps.path = attributes.POINT_STYLE.replace('path|', '');
 
-    if (wasSet) {
-      // let the user draw/place the shape
-      sketchVM.create(shapeType);
-    } else {
-      sketchVM.cancel();
-    }
+    sketchVM['2d'].polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM['2d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
+    sketchVM['3d'].polygonSymbol = defaultSymbols.symbols[symbolType] as any;
+    sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
+
+    // let the user draw/place the shape
+    if (wasSet) sketchVM[displayDimensions].create(shapeType);
+    else sketchVM[displayDimensions].cancel();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -579,7 +594,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (sketchVM) {
-      sketchVM.cancel();
+      sketchVM[displayDimensions].cancel();
     }
 
     // make the style of the button active
@@ -598,7 +613,7 @@ function LocateSamples() {
     if (!map || !sketchLayer || !getGpMaxRecordCount || !sampleType) return;
 
     activateSketchButton('disable-all-buttons');
-    sketchVM?.cancel();
+    sketchVM?.[displayDimensions].cancel();
     aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
@@ -701,6 +716,7 @@ function LocateSamples() {
             const timestamp = getCurrentDateTime();
             const popupTemplate = getPopupTemplate('Samples', trainingMode);
             const graphicsToAdd: __esri.Graphic[] = [];
+            const hybridGraphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
             const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
@@ -778,6 +794,11 @@ function LocateSamples() {
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
+                hybridGraphicsToAdd.push(
+                  poly.attributes.ShapeType === 'point'
+                    ? convertToPoint(poly)
+                    : poly.clone(),
+                );
 
                 index += 1;
               }
@@ -791,6 +812,7 @@ function LocateSamples() {
               sketchLayer.sketchLayer.graphics.addMany(collection);
 
               sketchLayer.pointsLayer?.addMany(pointsToAdd);
+              sketchLayer.hybridLayer?.addMany(hybridGraphicsToAdd);
 
               let editsCopy = updateLayerEdits({
                 edits,
@@ -1218,14 +1240,25 @@ function LocateSamples() {
                   edits,
                   layer: sketchLayer,
                   type: 'delete',
-                  changes: sketchVM.layer.graphics,
+                  changes: sketchVM[displayDimensions].layer.graphics,
                 });
 
                 setEdits(editsCopy);
 
-                sketchVM.layer.removeAll();
-                (sketchVM.layer as any).parent.layers.forEach((layer: any) => {
-                  if (layer.id === sketchVM.layer.id + '-points') {
+                sketchVM[displayDimensions].layer.removeAll();
+                (
+                  sketchVM[displayDimensions].layer as any
+                ).parent.layers.forEach((layer: any) => {
+                  if (
+                    layer.id ===
+                    sketchVM[displayDimensions].layer.id + '-points'
+                  ) {
+                    layer.removeAll();
+                  }
+                  if (
+                    layer.id ===
+                    sketchVM[displayDimensions].layer.id + '-hybrid'
+                  ) {
                     layer.removeAll();
                   }
                 });
@@ -1570,117 +1603,14 @@ function LocateSamples() {
               <div css={iconButtonContainerStyles}>
                 <div css={verticalCenterTextStyles}>
                   <label htmlFor="sampling-layer-select-input">
-                    Active Sampling Layer
+                    Active
+                    <br />
+                    Sampling Layer
                   </label>
                 </div>
-                <div>
+                <div css={buttonContainerStyles}>
                   {sketchLayer && (
                     <Fragment>
-                      <button
-                        css={iconButtonStyles}
-                        title="Delete Layer"
-                        onClick={() => {
-                          // remove the layer from layers
-                          setLayers((layers) => {
-                            return layers.filter(
-                              (layer) => layer.layerId !== sketchLayer.layerId,
-                            );
-                          });
-
-                          const parentLayer = sketchLayer.parentLayer;
-                          if (parentLayer) {
-                            // remove the scenario from edits
-                            setEdits((edits) => {
-                              const index = edits.edits.findIndex(
-                                (edit) => edit.layerId === parentLayer.id,
-                              );
-
-                              const editedScenario = edits.edits[
-                                index
-                              ] as ScenarioEditsType;
-                              editedScenario.layers =
-                                editedScenario.layers.filter(
-                                  (layer) =>
-                                    layer.layerId !== sketchLayer.layerId,
-                                );
-
-                              return {
-                                count: edits.count + 1,
-                                edits: [
-                                  ...edits.edits.slice(0, index),
-                                  editedScenario,
-                                  ...edits.edits.slice(index + 1),
-                                ],
-                              };
-                            });
-
-                            if (sketchLayer.sketchLayer)
-                              parentLayer.remove(sketchLayer.sketchLayer);
-                            if (sketchLayer.pointsLayer)
-                              parentLayer.remove(sketchLayer.pointsLayer);
-                          } else {
-                            // remove the scenario from edits
-                            setEdits((edits) => {
-                              return {
-                                count: edits.count + 1,
-                                edits: edits.edits.filter(
-                                  (item) =>
-                                    item.layerId !== sketchLayer.layerId,
-                                ),
-                              };
-                            });
-                          }
-
-                          // select the next available layer
-                          let newSketchLayerIndex: number = -1;
-
-                          // check in the selected scenario first, then in the root of edits
-                          if (selectedScenario) {
-                            const index = selectedScenario.layers.findIndex(
-                              (layer) => layer.layerId !== sketchLayer.layerId,
-                            );
-                            if (index > -1) {
-                              newSketchLayerIndex = layers.findIndex(
-                                (layer) =>
-                                  layer.layerId ===
-                                  selectedScenario.layers[index].layerId,
-                              );
-                            }
-                          }
-                          if (newSketchLayerIndex === -1) {
-                            const index = edits.edits.findIndex(
-                              (layer) =>
-                                layer.type === 'layer' &&
-                                (layer.layerType === 'Samples' ||
-                                  layer.layerType === 'VSP') &&
-                                layer.layerId !== sketchLayer.layerId,
-                            );
-                            if (index > -1) {
-                              newSketchLayerIndex = layers.findIndex(
-                                (layer) =>
-                                  layer.layerId === edits.edits[index].layerId,
-                              );
-                            }
-                          }
-
-                          setSketchLayer(
-                            newSketchLayerIndex > -1
-                              ? layers[newSketchLayerIndex]
-                              : null,
-                          );
-
-                          // remove the scenario from the map
-                          const parent = parentLayer
-                            ? parentLayer
-                            : map
-                            ? map
-                            : null;
-                          if (parent) parent.remove(sketchLayer.sketchLayer);
-                        }}
-                      >
-                        <i className="fas fa-trash-alt" />
-                        <span className="sr-only">Delete Layer</span>
-                      </button>
                       {sketchLayer.parentLayer ? (
                         <button
                           css={iconButtonStyles}
@@ -1741,6 +1671,13 @@ function LocateSamples() {
                                 sketchLayer.pointsLayer,
                               );
                               map.add(sketchLayer.pointsLayer);
+                            }
+                            if (sketchLayer.hybridLayer) {
+                              sketchLayer.hybridLayer.visible = false;
+                              sketchLayer.parentLayer?.remove(
+                                sketchLayer.hybridLayer,
+                              );
+                              map.add(sketchLayer.hybridLayer);
                             }
 
                             // update layers (clear parent layer)
@@ -1816,6 +1753,9 @@ function LocateSamples() {
                             if (sketchLayer.pointsLayer) {
                               groupLayer.add(sketchLayer.pointsLayer);
                             }
+                            if (sketchLayer.hybridLayer) {
+                              groupLayer.add(sketchLayer.hybridLayer);
+                            }
 
                             // show the newly added layer
                             if (
@@ -1823,6 +1763,11 @@ function LocateSamples() {
                               sketchLayer.pointsLayer
                             ) {
                               sketchLayer.pointsLayer.visible = true;
+                            } else if (
+                              displayGeometryType === 'hybrid' &&
+                              sketchLayer.hybridLayer
+                            ) {
+                              sketchLayer.hybridLayer.visible = true;
                             } else {
                               sketchLayer.sketchLayer.visible = true;
                             }
@@ -1875,6 +1820,113 @@ function LocateSamples() {
                       )}
                       <button
                         css={iconButtonStyles}
+                        title="Delete Layer"
+                        onClick={() => {
+                          // remove the layer from layers
+                          setLayers((layers) => {
+                            return layers.filter(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                          });
+
+                          const parentLayer = sketchLayer.parentLayer;
+                          if (parentLayer) {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              const index = edits.edits.findIndex(
+                                (edit) => edit.layerId === parentLayer.id,
+                              );
+
+                              const editedScenario = edits.edits[
+                                index
+                              ] as ScenarioEditsType;
+                              editedScenario.layers =
+                                editedScenario.layers.filter(
+                                  (layer) =>
+                                    layer.layerId !== sketchLayer.layerId,
+                                );
+
+                              return {
+                                count: edits.count + 1,
+                                edits: [
+                                  ...edits.edits.slice(0, index),
+                                  editedScenario,
+                                  ...edits.edits.slice(index + 1),
+                                ],
+                              };
+                            });
+
+                            if (sketchLayer.sketchLayer)
+                              parentLayer.remove(sketchLayer.sketchLayer);
+                            if (sketchLayer.pointsLayer)
+                              parentLayer.remove(sketchLayer.pointsLayer);
+                            if (sketchLayer.hybridLayer)
+                              parentLayer.remove(sketchLayer.hybridLayer);
+                          } else {
+                            // remove the scenario from edits
+                            setEdits((edits) => {
+                              return {
+                                count: edits.count + 1,
+                                edits: edits.edits.filter(
+                                  (item) =>
+                                    item.layerId !== sketchLayer.layerId,
+                                ),
+                              };
+                            });
+                          }
+
+                          // select the next available layer
+                          let newSketchLayerIndex: number = -1;
+
+                          // check in the selected scenario first, then in the root of edits
+                          if (selectedScenario) {
+                            const index = selectedScenario.layers.findIndex(
+                              (layer) => layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId ===
+                                  selectedScenario.layers[index].layerId,
+                              );
+                            }
+                          }
+                          if (newSketchLayerIndex === -1) {
+                            const index = edits.edits.findIndex(
+                              (layer) =>
+                                layer.type === 'layer' &&
+                                (layer.layerType === 'Samples' ||
+                                  layer.layerType === 'VSP') &&
+                                layer.layerId !== sketchLayer.layerId,
+                            );
+                            if (index > -1) {
+                              newSketchLayerIndex = layers.findIndex(
+                                (layer) =>
+                                  layer.layerId === edits.edits[index].layerId,
+                              );
+                            }
+                          }
+
+                          setSketchLayer(
+                            newSketchLayerIndex > -1
+                              ? layers[newSketchLayerIndex]
+                              : null,
+                          );
+
+                          // remove the scenario from the map
+                          const parent = parentLayer
+                            ? parentLayer
+                            : map
+                            ? map
+                            : null;
+                          if (parent) parent.remove(sketchLayer.sketchLayer);
+                        }}
+                      >
+                        <i className="fas fa-trash-alt" />
+                        <span className="sr-only">Delete Layer</span>
+                      </button>
+                      <button
+                        css={iconButtonStyles}
                         title="Clone Layer"
                         onClick={(ev) => {
                           // get the name for the new layer
@@ -1893,12 +1945,15 @@ function LocateSamples() {
                             sketchLayer.sketchLayer.type !== 'graphics' ||
                             tempLayer.sketchLayer.type !== 'graphics' ||
                             !tempLayer.pointsLayer ||
-                            tempLayer.pointsLayer.type !== 'graphics'
+                            tempLayer.pointsLayer.type !== 'graphics' ||
+                            !tempLayer.hybridLayer ||
+                            tempLayer.hybridLayer.type !== 'graphics'
                           )
                             return;
 
                           const clonedGraphics: __esri.Graphic[] = [];
                           const clonedPointGraphics: __esri.Graphic[] = [];
+                          const clonedHybridGraphics: __esri.Graphic[] = [];
                           sketchLayer.sketchLayer.graphics.forEach(
                             (graphic) => {
                               const uuid = generateUUID();
@@ -1907,6 +1962,8 @@ function LocateSamples() {
                                   ...graphic.attributes,
                                   GLOBALID: uuid,
                                   PERMANENT_IDENTIFIER: uuid,
+                                  DECISIONUNIT: tempLayer.name,
+                                  DECISIONUNITUUID: tempLayer.uuid,
                                 },
                                 geometry: graphic.geometry,
                                 popupTemplate: graphic.popupTemplate,
@@ -1917,11 +1974,17 @@ function LocateSamples() {
                               clonedPointGraphics.push(
                                 convertToPoint(clonedGraphic),
                               );
+                              clonedHybridGraphics.push(
+                                clonedGraphic.attributes.ShapeType === 'point'
+                                  ? convertToPoint(clonedGraphic)
+                                  : clonedGraphic.clone(),
+                              );
                             },
                           );
 
                           tempLayer.sketchLayer.addMany(clonedGraphics);
                           tempLayer.pointsLayer.addMany(clonedPointGraphics);
+                          tempLayer.hybridLayer.addMany(clonedHybridGraphics);
 
                           // add the new layer to layers
                           setLayers((layers) => {
@@ -1949,6 +2012,9 @@ function LocateSamples() {
                             tempGroupLayer.add(tempLayer.sketchLayer);
                             if (tempLayer.pointsLayer) {
                               tempGroupLayer.add(tempLayer.pointsLayer);
+                            }
+                            if (tempLayer.hybridLayer) {
+                              tempGroupLayer.add(tempLayer.hybridLayer);
                             }
                           }
 
@@ -1979,8 +2045,6 @@ function LocateSamples() {
                         <i className="fas fa-clone" />
                         <span className="sr-only">Clone Layer</span>
                       </button>
-                      <br />
-                      <div />
                       <button
                         css={iconButtonStyles}
                         title={editLayerVisible ? 'Cancel' : 'Edit Layer'}
@@ -2206,6 +2270,29 @@ function LocateSamples() {
                                 Draw Sampling Mask
                               </label>
                             </div>
+
+                            {generateRandomMode === 'draw' && (
+                              <button
+                                id="sampling-mask"
+                                title="Draw Sampling Mask"
+                                className="sketch-button"
+                                disabled={
+                                  generateRandomResponse.status === 'fetching'
+                                }
+                                onClick={() => {
+                                  if (!aoiSketchLayer) return;
+
+                                  sketchAoiButtonClick();
+                                }}
+                                css={sketchAoiButtonStyles}
+                              >
+                                <span css={sketchAoiTextStyles}>
+                                  <i className="fas fa-draw-polygon" />{' '}
+                                  <span>Draw Sampling Mask</span>
+                                </span>
+                              </button>
+                            )}
+
                             <div>
                               <input
                                 id="use-aoi-file"
@@ -2238,27 +2325,6 @@ function LocateSamples() {
                               </label>
                             </div>
 
-                            {generateRandomMode === 'draw' && (
-                              <button
-                                id="sampling-mask"
-                                title="Draw Sampling Mask"
-                                className="sketch-button"
-                                disabled={
-                                  generateRandomResponse.status === 'fetching'
-                                }
-                                onClick={() => {
-                                  if (!aoiSketchLayer) return;
-
-                                  sketchAoiButtonClick();
-                                }}
-                                css={sketchAoiButtonStyles}
-                              >
-                                <span css={sketchAoiTextStyles}>
-                                  <i className="fas fa-draw-polygon" />{' '}
-                                  <span>Draw Sampling Mask</span>
-                                </span>
-                              </button>
-                            )}
                             {generateRandomMode === 'file' && (
                               <Fragment>
                                 <label htmlFor="aoi-mask-select-input">
@@ -2434,7 +2500,7 @@ function LocateSamples() {
                 <div css={sectionContainer}>
                   <p>
                     Choose an existing sample type from the menu or click + to
-                    add a new sample type from scratch. You have the option
+                    add a new sample type from scratch. You have the option to
                     clone or view an existing sample type. Populate or edit the
                     parameter fields and click Save. Once you have saved a
                     custom sample type you can edit and/or delete the parameters
@@ -3109,6 +3175,15 @@ function LocateSamples() {
                                       updateAttributes({
                                         graphics:
                                           layer.pointsLayer.graphics.toArray(),
+                                        newAttributes,
+                                        oldType,
+                                        symbol: udtSymbol,
+                                      });
+                                    }
+                                    if (layer.hybridLayer) {
+                                      updateAttributes({
+                                        graphics:
+                                          layer.hybridLayer.graphics.toArray(),
                                         newAttributes,
                                         oldType,
                                         symbol: udtSymbol,

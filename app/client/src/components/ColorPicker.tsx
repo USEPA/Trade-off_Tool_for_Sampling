@@ -7,6 +7,8 @@ import React, {
 } from 'react';
 import { css } from '@emotion/react';
 import { SketchPicker, RGBColor } from 'react-color';
+// utils
+import { generateUUID } from 'utils/sketchUtils';
 // config
 import { PolygonSymbol } from 'config/sampleAttributes';
 
@@ -72,7 +74,7 @@ function SingleColorPicker({
 
   // Generate a random number for making a unique connection between the
   // color picker button and container
-  const [uid] = useState(Date.now() + Math.random());
+  const [uid] = useState(generateUUID());
 
   // Used to make the color picker visible and position it
   const [top, setTop] = useState(250);

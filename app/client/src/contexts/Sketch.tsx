@@ -33,6 +33,11 @@ type HomeWidgetType = {
   '3d': __esri.Home;
 };
 
+export type SketchViewModelType = {
+  '2d': __esri.SketchViewModel;
+  '3d': __esri.SketchViewModel;
+};
+
 type SketchType = {
   autoZoom: boolean;
   setAutoZoom: Dispatch<SetStateAction<boolean>>;
@@ -72,8 +77,8 @@ type SketchType = {
   setSelectedSampleIds: Dispatch<SetStateAction<SelectedSampleType[]>>;
   selectedScenario: ScenarioEditsType | null;
   setSelectedScenario: Dispatch<SetStateAction<ScenarioEditsType | null>>;
-  sketchVM: __esri.SketchViewModel | null;
-  setSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
+  sketchVM: SketchViewModelType | null;
+  setSketchVM: Dispatch<SetStateAction<SketchViewModelType | null>>;
   aoiSketchVM: __esri.SketchViewModel | null;
   setAoiSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
   getGpMaxRecordCount: (() => Promise<number>) | null;
@@ -85,10 +90,14 @@ type SketchType = {
   setSampleAttributes: Dispatch<SetStateAction<any[]>>;
   allSampleOptions: SampleSelectType[];
   setAllSampleOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
-  displayGeometryType: 'points' | 'polygons';
-  setDisplayGeometryType: Dispatch<SetStateAction<'points' | 'polygons'>>;
+  displayGeometryType: 'hybrid' | 'points' | 'polygons';
+  setDisplayGeometryType: Dispatch<
+    SetStateAction<'hybrid' | 'points' | 'polygons'>
+  >;
   displayDimensions: '2d' | '3d';
   setDisplayDimensions: Dispatch<SetStateAction<'2d' | '3d'>>;
+  terrain3dUseElevation: boolean;
+  setTerrain3dUseElevation: Dispatch<SetStateAction<boolean>>;
   terrain3dVisible: boolean;
   setTerrain3dVisible: Dispatch<SetStateAction<boolean>>;
   viewUnderground3d: boolean;
@@ -154,6 +163,8 @@ export const SketchContext = createContext<SketchType>({
   setDisplayGeometryType: () => {},
   displayDimensions: '2d',
   setDisplayDimensions: () => {},
+  terrain3dUseElevation: true,
+  setTerrain3dUseElevation: () => {},
   terrain3dVisible: true,
   setTerrain3dVisible: () => {},
   viewUnderground3d: false,
@@ -215,7 +226,7 @@ export function SketchProvider({ children }: Props) {
   const [
     sketchVM,
     setSketchVM, //
-  ] = useState<__esri.SketchViewModel | null>(null);
+  ] = useState<SketchViewModelType | null>(null);
   const [
     aoiSketchVM,
     setAoiSketchVM, //
@@ -230,9 +241,10 @@ export function SketchProvider({ children }: Props) {
     [],
   );
   const [displayGeometryType, setDisplayGeometryType] = useState<
-    'points' | 'polygons'
+    'hybrid' | 'points' | 'polygons'
   >('points');
   const [displayDimensions, setDisplayDimensions] = useState<'2d' | '3d'>('2d');
+  const [terrain3dUseElevation, setTerrain3dUseElevation] = useState(true);
   const [terrain3dVisible, setTerrain3dVisible] = useState(true);
   const [viewUnderground3d, setViewUnderground3d] = useState(false);
 
@@ -394,6 +406,8 @@ export function SketchProvider({ children }: Props) {
         setDisplayGeometryType,
         displayDimensions,
         setDisplayDimensions,
+        terrain3dUseElevation,
+        setTerrain3dUseElevation,
         terrain3dVisible,
         setTerrain3dVisible,
         viewUnderground3d,

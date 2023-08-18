@@ -543,6 +543,46 @@ function FilePanel() {
           });
           return;
         }
+
+        if (['Contamination Map', 'Samples'].includes(layerType.value)) {
+          // exceptions: Notes, ShapeType
+          const exceptions = ['Notes', 'ShapeType'];
+          res.featureCollection.layers.forEach((layer: any) => {
+            layer.featureSet.features.forEach(
+              (feature: any, _index: number) => {
+                Object.keys(feature.attributes).forEach((attribute) => {
+                  if (
+                    attribute === attribute.toLocaleUpperCase() ||
+                    exceptions.includes(attribute)
+                  )
+                    return;
+
+                  // check if this attribute is an exception
+                  let isException = false;
+                  exceptions.forEach((exception) => {
+                    if (
+                      exception.toLocaleUpperCase() !==
+                      attribute.toLocaleUpperCase()
+                    )
+                      return;
+
+                    isException = true;
+                    feature.attributes[exception] =
+                      feature.attributes[attribute];
+                  });
+
+                  if (!isException) {
+                    feature.attributes[attribute.toUpperCase()] =
+                      feature.attributes[attribute]; // duplicate attribute with upper case key
+                  }
+
+                  delete feature.attributes[attribute]; // delete the non uppercased key
+                });
+              },
+            );
+          });
+        }
+
         if (layerType.value !== 'VSP') {
           setGenerateResponse(res);
           return;
@@ -756,7 +796,7 @@ function FilePanel() {
     // build the list of graphics to be validated
     const features: __esri.Graphic[] = [];
     generateResponse.featureCollection.layers.forEach((layer: any) => {
-      layer.featureSet.features.forEach((feature: any, index: number) => {
+      layer.featureSet.features.forEach((feature: any, _index: number) => {
         features.push(feature);
       });
     });
@@ -839,6 +879,12 @@ function FilePanel() {
       visible: false,
       listMode: 'hide',
     });
+    const hybridLayer = new GraphicsLayer({
+      id: layerUuid + '-hybrid',
+      title: layerName,
+      visible: false,
+      listMode: 'hide',
+    });
 
     const isSamplesOrVsp =
       layerType.value === 'Samples' || layerType.value === 'VSP';
@@ -869,6 +915,7 @@ function FilePanel() {
       addedFrom: 'file',
       status: 'added',
       sketchLayer: graphicsLayer,
+      hybridLayer: isSamplesOrVsp ? hybridLayer : null,
       pointsLayer: isSamplesOrVsp ? pointsLayer : null,
       parentLayer: groupLayer ? groupLayer : null,
     };
@@ -877,6 +924,7 @@ function FilePanel() {
       if (!layerType || !map || !mapView || !sceneView) return;
 
       const graphics: __esri.Graphic[] = [];
+      const hybridGraphics: __esri.Graphic[] = [];
       const points: __esri.Graphic[] = [];
       let missingAttributes: string[] = [];
       let unknownSampleTypes: boolean = false;
@@ -906,7 +954,7 @@ function FilePanel() {
           const timestamp = getCurrentDateTime();
           let uuid = generateUUID();
           if (layerType.value === 'Samples') {
-            const { TYPE } = graphic.attributes;
+            const { Notes, TYPE } = graphic.attributes;
             if (!sampleAttributes.hasOwnProperty(TYPE)) {
               unknownSampleTypes = true;
             } else {
@@ -920,10 +968,11 @@ function FilePanel() {
               graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
               graphic.attributes['DECISIONUNITSORT'] = 0;
               graphic.attributes['GLOBALID'] = uuid;
+              graphic.attributes['Notes'] = Notes;
             }
           }
           if (layerType.value === 'VSP') {
-            const { CREATEDDATE } = graphic.attributes;
+            const { CREATEDDATE, ShapeType, SHAPETYPE } = graphic.attributes;
 
             graphic.attributes['AA'] = null;
             graphic.attributes['AC'] = null;
@@ -931,6 +980,8 @@ function FilePanel() {
             graphic.attributes['DECISIONUNIT'] = layerToAdd.label;
             graphic.attributes['DECISIONUNITSORT'] = 0;
             if (!CREATEDDATE) graphic.attributes['CREATEDDATE'] = timestamp;
+            if (!ShapeType && SHAPETYPE)
+              graphic.attributes['ShapeType'] = SHAPETYPE;
           }
 
           // add a layer type to the graphic
@@ -974,26 +1025,32 @@ function FilePanel() {
 
           // add the popup template
           graphic.popupTemplate = new PopupTemplate(popupTemplate);
+          if (layerType.value === 'VSP') graphic = new Graphic(graphic);
 
           // update the z values
           await setZValues({ map, graphic });
 
           // Add graphics to the layers based on what the original geometry type is
           if (graphic.geometry.type === 'point') {
-            points.push(
-              new Graphic({
-                attributes: graphic.attributes,
-                geometry: graphic.geometry,
-                popupTemplate: graphic.popupTemplate,
-                symbol: getPointSymbol(graphic),
-              }),
-            );
+            const pointGraphic = new Graphic({
+              attributes: graphic.attributes,
+              geometry: graphic.geometry,
+              popupTemplate: graphic.popupTemplate,
+              symbol: getPointSymbol(graphic),
+            });
+            points.push(pointGraphic);
+            hybridGraphics.push(pointGraphic.clone());
 
             const polyGraphic = graphic.clone();
             createBuffer(polyGraphic);
             graphics.push(polyGraphic);
           } else {
             graphics.push(graphic);
+            hybridGraphics.push(
+              graphic.attributes.ShapeType === 'point'
+                ? convertToPoint(graphic)
+                : graphic.clone(),
+            );
             points.push(convertToPoint(graphic));
           }
         }
@@ -1018,6 +1075,7 @@ function FilePanel() {
 
       graphicsLayer.addMany(graphics);
       pointsLayer.addMany(points);
+      hybridLayer.addMany(hybridGraphics);
 
       // make a copy of the edits context variable
       const editsCopy = updateLayerEdits({
@@ -1036,6 +1094,7 @@ function FilePanel() {
 
       if (isSamplesOrVsp) {
         map.add(pointsLayer);
+        map.add(hybridLayer);
 
         setSelectedScenario((selectedScenario) => {
           if (!selectedScenario) return selectedScenario;
@@ -1066,6 +1125,9 @@ function FilePanel() {
           groupLayer.add(layerToAdd.sketchLayer);
           if (layerToAdd.pointsLayer) {
             groupLayer.add(layerToAdd.pointsLayer);
+          }
+          if (layerToAdd.hybridLayer) {
+            groupLayer.add(layerToAdd.hybridLayer);
           }
         } else {
           const view = displayDimensions === '3d' ? sceneView : mapView;

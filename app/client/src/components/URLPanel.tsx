@@ -182,24 +182,24 @@ function URLPanel() {
     >
       <p>You can add the following types of layers through a URL:</p>
       <p css={layerInfo}>
-        <strong>ArcGIS Server web service</strong> - map, image, or feature
-        resource that is located on an ArcGIS Server site
+        <strong>ArcGIS Server web service</strong> - Map, image, or feature
+        resource that is located on an ArcGIS Server site.
       </p>
       <p css={layerInfo}>
-        <strong>WMS OGC web service</strong> - feature service that follows the
-        OGC Web Feature Service specification
+        <strong>WMS OGC web service</strong> - Feature service that follows the
+        OGC Web Feature Service specification.
       </p>
       <p css={layerInfo}>
         <strong>KML file</strong> - File containing a set of geographic
         features.
       </p>
       <p css={layerInfo}>
-        <strong>GeoRSS file</strong> - web feed that includes geographic
+        <strong>GeoRSS file</strong> - Web feed that includes geographic
         features and locations.
       </p>
       <p>
-        <strong>CSV file</strong> - web-based, comma-separated values text file
-        that includes location information
+        <strong>CSV file</strong> - Web-based, comma-separated values text file
+        that includes location information.
       </p>
       <label htmlFor="url-type-select">Type</label>
       <Select

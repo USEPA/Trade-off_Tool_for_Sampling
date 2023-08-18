@@ -37,6 +37,24 @@ export type ReferenceLayersTableType = {
   referenceLayers: ReferenceLayerTableType[];
 };
 
+export type CalculateSettingsBaseType = {
+  OBJECTID?: number;
+  GLOBALID?: string;
+  NUM_LABS: number;
+  NUM_LAB_HOURS: number;
+  NUM_SAMPLING_HOURS: number;
+  NUM_SAMPLING_PERSONNEL: number;
+  NUM_SAMPLING_SHIFTS: number;
+  NUM_SAMPLING_TEAMS: number;
+  SAMPLING_LABOR_COST: number;
+  SURFACE_AREA: number;
+};
+
+export type CalculateSettingsType = {
+  current: CalculateSettingsBaseType;
+  published?: CalculateSettingsBaseType;
+};
+
 export type ScenarioEditsType = {
   type: 'scenario';
   id: number; // scenario layer id
@@ -59,6 +77,7 @@ export type ScenarioEditsType = {
   table: TableType | null;
   referenceLayersTable: ReferenceLayersTableType;
   customAttributes: AttributesType[];
+  calculateSettings: CalculateSettingsType;
 };
 
 export type LayerEditsType = {

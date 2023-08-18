@@ -35,6 +35,7 @@ export type LayerType = {
   addedFrom: AddedFrom;
   status: PublishStatus;
   sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+  hybridLayer: __esri.GraphicsLayer | null;
   pointsLayer: __esri.GraphicsLayer | null;
   parentLayer: __esri.GroupLayer | null;
 };
