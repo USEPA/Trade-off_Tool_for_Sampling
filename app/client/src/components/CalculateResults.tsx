@@ -767,7 +767,8 @@ function CalculateResults() {
       scenarioGroupLayer.layers.forEach((layer) => {
         if (
           layer.type !== 'graphics' ||
-          layer.id.endsWith('-points' || layer.id.endsWith('-hybrid'))
+          layer.id.endsWith('-points') ||
+          layer.id.endsWith('-hybrid')
         )
           return;
 
