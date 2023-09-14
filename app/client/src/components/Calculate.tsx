@@ -70,7 +70,12 @@ function getGraphics(map: __esri.Map, layerId: string) {
   if (tempGroupLayer) {
     groupLayer = tempGroupLayer as __esri.GroupLayer;
     groupLayer.layers.forEach((layer) => {
-      if (layer.type !== 'graphics' || layer.id.includes('-points')) return;
+      if (
+        layer.type !== 'graphics' ||
+        layer.id.includes('-points') ||
+        layer.id.includes('-hybrid')
+      )
+        return;
 
       const graphicsLayer = layer as __esri.GraphicsLayer;
 
