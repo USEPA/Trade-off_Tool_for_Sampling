@@ -1039,7 +1039,6 @@ function Publish() {
     attributesToInclude.forEach((item, index) => {
       item.id = index + 1;
     });
-    console.log('attributesToInclude: ', attributesToInclude);
 
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
