@@ -24,7 +24,11 @@ import ShowLessMore from 'components/ShowLessMore';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { defaultPlanAttributes, PublishContext } from 'contexts/Publish';
+import {
+  defaultPlanAttributes,
+  PublishContext,
+  trainingModePlanAttributes,
+} from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -131,7 +135,8 @@ function Publish() {
   const { oAuthInfo, portal, setSignedIn, setPortal, signedIn } = useContext(
     AuthenticationContext,
   );
-  const { goToOptions, setGoToOptions } = useContext(NavigationContext);
+  const { goToOptions, setGoToOptions, trainingMode } =
+    useContext(NavigationContext);
   const {
     includeCustomSampleTypes,
     includeFullPlan,
@@ -1028,8 +1033,13 @@ function Publish() {
     // get the attributes to be published
     const attributesToInclude = [
       ...defaultPlanAttributes,
+      ...(trainingMode ? trainingModePlanAttributes : []),
       ...editsScenario.customAttributes,
     ];
+    attributesToInclude.forEach((item, index) => {
+      item.id = index + 1;
+    });
+    console.log('attributesToInclude: ', attributesToInclude);
 
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
@@ -1496,6 +1506,7 @@ function Publish() {
     setEdits,
     setLayers,
     setSelectedScenario,
+    trainingMode,
     webMapReferenceLayerSelections,
     webSceneReferenceLayerSelections,
   ]);
