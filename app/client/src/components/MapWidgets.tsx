@@ -308,6 +308,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         view,
         viewModel: svm as any,
         visibleElements: {
+          duplicateButton: false,
           settingsMenu: false,
           undoRedoMenu: false,
         },
@@ -428,7 +429,9 @@ function MapWidgets({ mapView, sceneView }: Props) {
               ? firstGeometry
               : firstGeometry.centroid,
           features: popupItems,
+          visible: true,
         };
+        view.popup = new Popup(popupProps);
         if (!view.popup?.open) {
           view.popup = new Popup(popupProps);
         } else {
@@ -455,13 +458,14 @@ function MapWidgets({ mapView, sceneView }: Props) {
         const contentContainer = document.createElement('div');
         createRoot(contentContainer).render(content);
 
-        view.popup.open({
+        view.popup = new Popup({
           location:
             firstGeometry.type === 'point'
               ? firstGeometry
               : firstGeometry.centroid,
           content: contentContainer,
           title: 'Edit Multiple',
+          visible: true,
         });
 
         const deleteMultiAction = view.popup.actions.find(
@@ -1430,9 +1434,9 @@ function MapWidgets({ mapView, sceneView }: Props) {
       const tempMapView = view as any;
       tempMapView.popup._displayActionTextLimit = 1;
 
-      reactiveUtils
-        .once(() => view.popup)
-        .then(() => {
+      reactiveUtils.watch(
+        () => view.popup,
+        () => {
           view.popup.on('trigger-action', (event) => {
             // Workaround for target not being on the PopupTriggerActionEvent
             if (event.action.id === 'delete' && view?.popup?.selectedFeature) {
@@ -1460,7 +1464,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
               if (tableMultiAction) view.popup.actions.remove(tableMultiAction);
             }
           });
-        });
+        },
+      );
     }
 
     setupPopupWatchers(mapView, sketchVM['2d']);

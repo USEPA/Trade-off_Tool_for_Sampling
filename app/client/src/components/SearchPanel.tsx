@@ -22,7 +22,7 @@ import { settingDefaults } from 'contexts/Calculate';
 import { DialogContext } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
+import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -1364,9 +1364,9 @@ function ResultCard({ result }: ResultCardProps) {
               defaultFields.findIndex((f: any) => f.name === field.name) > -1;
             if (isDefaultField) return;
 
-            const id = defaultPlanAttributes.length + index;
-
-            newCustomAttributes.push(buildCustomAttributeFromField(field, id));
+            newCustomAttributes.push(
+              buildCustomAttributeFromField(field, index),
+            );
           });
 
           const newScenario: ScenarioEditsType = {

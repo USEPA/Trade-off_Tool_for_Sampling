@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import Popup from '@arcgis/core/widgets/Popup';
 // contexts
 import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
 
@@ -96,7 +97,7 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
           const curIds: string[] = [];
           const popupFeatures: __esri.Graphic[] = view.popup.features;
           updateGraphics.forEach((g) => {
-            const popup = popupFeatures.find(
+            const popup = popupFeatures?.find(
               (f) =>
                 f.attributes.PERMANENT_IDENTIFIER ===
                 g.attributes.PERMANENT_IDENTIFIER,
@@ -133,12 +134,13 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
               sketchVMG?.update(sketchPopupItems.toArray());
 
             const firstGeometry = popupItems[0].geometry as any;
-            view.popup.open({
+            view.popup = new Popup({
               location:
                 firstGeometry.type === 'point'
                   ? firstGeometry
                   : firstGeometry.centroid,
               features: popupItems,
+              visible: true,
             });
           }
         })
