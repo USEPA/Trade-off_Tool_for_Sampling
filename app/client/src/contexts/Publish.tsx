@@ -145,6 +145,9 @@ export const defaultPlanAttributes: AttributesType[] = [
     length: 255,
     domain: null,
   },
+];
+
+export const trainingModePlanAttributes: AttributesType[] = [
   {
     id: 12,
     name: 'CONTAMTYPE',

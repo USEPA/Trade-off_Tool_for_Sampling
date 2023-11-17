@@ -14,7 +14,12 @@ import ShowLessMore from 'components/ShowLessMore';
 import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
-import { PublishContext, defaultPlanAttributes } from 'contexts/Publish';
+import { NavigationContext } from 'contexts/Navigation';
+import {
+  PublishContext,
+  defaultPlanAttributes,
+  trainingModePlanAttributes,
+} from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { ScenarioEditsType } from 'types/Edits';
@@ -149,6 +154,7 @@ const nestedAccordionStyles = css`
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
   const { signedIn } = useContext(AuthenticationContext);
+  const { trainingMode } = useContext(NavigationContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
@@ -407,6 +413,7 @@ function ConfigureOutput() {
           isOpen={editAttributesOpen}
           attributes={[
             ...defaultPlanAttributes,
+            ...(trainingMode ? trainingModePlanAttributes : []),
             ...(selectedScenario ? selectedScenario.customAttributes : []),
           ]}
           selectedIndex={attributesIndex}
@@ -598,6 +605,7 @@ function ConfigureOutput() {
                       id="tots-survey123-attributes-table"
                       data={[
                         ...defaultPlanAttributes,
+                        ...(trainingMode ? trainingModePlanAttributes : []),
                         ...(selectedScenario
                           ? selectedScenario.customAttributes
                           : []),
