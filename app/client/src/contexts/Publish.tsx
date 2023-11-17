@@ -145,30 +145,6 @@ export const defaultPlanAttributes: AttributesType[] = [
     length: 255,
     domain: null,
   },
-  {
-    id: 12,
-    name: 'CONTAMTYPE',
-    label: 'Contamination Type',
-    dataType: 'string',
-    length: null,
-    domain: null,
-  },
-  {
-    id: 13,
-    name: 'CONTAMVAL',
-    label: 'Activity',
-    dataType: 'double',
-    length: null,
-    domain: null,
-  },
-  {
-    id: 14,
-    name: 'CONTAMUNIT',
-    label: 'Unit of Measure',
-    dataType: 'string',
-    length: null,
-    domain: null,
-  },
 ];
 
 export const trainingModePlanAttributes: AttributesType[] = [
