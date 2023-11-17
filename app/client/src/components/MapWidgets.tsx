@@ -432,11 +432,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
           visible: true,
         };
         view.popup = new Popup(popupProps);
-        if (!view.popup?.open) {
-          view.popup = new Popup(popupProps);
-        } else {
-          view.popup.open(popupProps);
-        }
       } else {
         const content = (
           <MapPopup
