@@ -20,6 +20,293 @@ import { DefaultSymbolsType } from 'config/sampleAttributes';
 import { PolygonSymbol } from 'config/sampleAttributes';
 
 /**
+ * Converts a polygon graphic to a point graphic.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point graphic representation of the provided polygon
+ */
+export function convertToPoint(polygon: __esri.Graphic) {
+  const symbol = getPointSymbol(polygon);
+
+  // build the graphic
+  return new Graphic({
+    attributes: polygon.attributes,
+    geometry: (polygon.geometry as any).centroid,
+    popupTemplate: polygon.popupTemplate,
+    symbol,
+  });
+}
+
+/**
+ * Converts an esri graphic object into a simpler object
+ * for storing in the user's session storage.
+ *
+ * @param graphic The esri graphic to be stored
+ * @returns simple graphic object with just attributes and geometry
+ */
+export function convertToSimpleGraphic(graphic: __esri.Graphic) {
+  let geometry: __esri.Polygon | object = {};
+  if (graphic?.geometry?.type === 'polygon') {
+    geometry = graphic.geometry as __esri.Polygon;
+  }
+
+  // currently we only have polygons
+  // in the future we may need to add code to handle different geometry types
+  return {
+    attributes: graphic.attributes ? { ...graphic.attributes } : {},
+    geometry: geometry,
+  };
+}
+
+/**
+ * Creates GraphicsLayers from the provided editsLayer. Layers
+ * will be added to the newLayers. Layers will be added to the
+ * parentLayer, if a parentLayer is provided.
+ *
+ * @param defaultSymbols Symbols for each sample type
+ * @param editsLayer Edits Layer to create graphics layers from
+ * @param getPopupTemplate Function for building popup templates
+ * @param newLayers Array of layers to add the new layer to
+ * @param parentLayer (Optional) The parent layer of the new layers
+ * @returns
+ */
+export function createLayer({
+  defaultSymbols,
+  editsLayer,
+  getPopupTemplate,
+  newLayers,
+  parentLayer = null,
+}: {
+  defaultSymbols: DefaultSymbolsType;
+  editsLayer: LayerEditsType;
+  getPopupTemplate: Function;
+  newLayers: LayerType[];
+  parentLayer?: __esri.GroupLayer | null;
+}) {
+  const sketchLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid,
+    visible: editsLayer.visible,
+    listMode: editsLayer.listMode,
+  });
+  const pointsLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid + '-points',
+    visible: false,
+    listMode: 'hide',
+  });
+  const hybridLayer = new GraphicsLayer({
+    title: editsLayer.label,
+    id: editsLayer.uuid + '-hybrid',
+    visible: false,
+    listMode: 'hide',
+  });
+
+  const popupTemplate = getPopupTemplate(
+    editsLayer.layerType,
+    editsLayer.hasContaminationRan,
+  );
+  const polyFeatures: __esri.Graphic[] = [];
+  const pointFeatures: __esri.Graphic[] = [];
+  const hybridFeatures: __esri.Graphic[] = [];
+  const idsUsed: string[] = [];
+  const displayedFeatures: FeatureEditsType[] = [];
+
+  // push the items from the adds array
+  editsLayer.adds.forEach((item) => {
+    displayedFeatures.push(item);
+    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+  });
+
+  // push the items from the updates array
+  editsLayer.updates.forEach((item) => {
+    displayedFeatures.push(item);
+    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
+  });
+
+  // only push the ids of the deletes array to prevent drawing deleted items
+  editsLayer.deletes.forEach((item) => {
+    idsUsed.push(item.PERMANENT_IDENTIFIER);
+  });
+
+  // add graphics from AGOL that haven't been changed
+  editsLayer.published.forEach((item) => {
+    // don't re-add graphics that have already been added above
+    if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
+
+    displayedFeatures.push(item);
+  });
+
+  // add graphics to the map
+  displayedFeatures.forEach((graphic) => {
+    let layerType = editsLayer.layerType;
+    if (layerType === 'VSP') layerType = 'Samples';
+    if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
+
+    // set the symbol styles based on sample/layer type
+    let symbol = defaultSymbols.symbols[layerType] as any;
+    if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+      symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
+    }
+
+    const poly = new Graphic({
+      attributes: { ...graphic.attributes },
+      popupTemplate,
+      symbol,
+      geometry: new Polygon({
+        spatialReference: {
+          wkid: 3857,
+        },
+        rings: graphic.geometry.rings,
+      }),
+    });
+
+    polyFeatures.push(poly);
+    pointFeatures.push(convertToPoint(poly));
+    hybridFeatures.push(
+      poly.attributes.ShapeType === 'point'
+        ? convertToPoint(poly)
+        : poly.clone(),
+    );
+  });
+  sketchLayer.addMany(polyFeatures);
+  if (editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP') {
+    pointsLayer.addMany(pointFeatures);
+    hybridLayer.addMany(hybridFeatures);
+  }
+
+  newLayers.push({
+    id: editsLayer.id,
+    pointsId: editsLayer.pointsId,
+    uuid: editsLayer.uuid,
+    layerId: editsLayer.layerId,
+    portalId: editsLayer.portalId,
+    value: editsLayer.label,
+    name: editsLayer.name,
+    label: editsLayer.label,
+    layerType: editsLayer.layerType,
+    editType: 'add',
+    addedFrom: editsLayer.addedFrom,
+    status: editsLayer.status,
+    visible: editsLayer.visible,
+    listMode: editsLayer.listMode,
+    sort: editsLayer.sort,
+    geometryType: 'esriGeometryPolygon',
+    sketchLayer,
+    pointsLayer:
+      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+        ? pointsLayer
+        : null,
+    hybridLayer:
+      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
+        ? hybridLayer
+        : null,
+    parentLayer,
+  });
+
+  return [sketchLayer, pointsLayer, hybridLayer];
+}
+
+/**
+ * Creates the edit template for sketchable layers.
+ *
+ * @param layerToEdit The layer object
+ * @returns object representing the layer edit template
+ */
+export function createLayerEditTemplate(
+  layerToEdit: LayerType,
+  editType: EditType,
+) {
+  return {
+    type: 'layer',
+    id: layerToEdit.id,
+    pointsId: layerToEdit.pointsId,
+    uuid: layerToEdit.uuid,
+    layerId: layerToEdit.sketchLayer.id,
+    portalId: layerToEdit.portalId,
+    name: layerToEdit.name,
+    label: layerToEdit.label,
+    layerType: layerToEdit.layerType,
+    hasContaminationRan: false,
+    addedFrom: layerToEdit.addedFrom,
+    status: layerToEdit.status,
+    editType,
+    visible: layerToEdit.visible,
+    listMode: layerToEdit.listMode,
+    sort: layerToEdit.sort,
+    adds: [],
+    updates: [],
+    deletes: [],
+    published: [],
+  } as LayerEditsType;
+}
+
+/**
+ * Builds the default sample layer.
+ *
+ * @param name The name of the new layer
+ * @param parentLayer (optional) The parent layer of the new layer
+ * @returns LayerType The default sample layer
+ */
+export function createSampleLayer(
+  name: string = 'Default Sample Layer',
+  parentLayer: __esri.GroupLayer | null = null,
+) {
+  const layerUuid = generateUUID();
+  const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
+    title: name,
+  });
+  const pointsLayer = new GraphicsLayer({
+    id: layerUuid + '-points',
+    title: name,
+    visible: false,
+    listMode: 'hide',
+  });
+  const hybridLayer = new GraphicsLayer({
+    id: layerUuid + '-hybrid',
+    title: name,
+    visible: false,
+    listMode: 'hide',
+  });
+
+  return {
+    id: -1,
+    pointsId: -1,
+    uuid: layerUuid,
+    layerId: graphicsLayer.id,
+    portalId: '',
+    value: graphicsLayer.id,
+    name,
+    label: name,
+    layerType: 'Samples',
+    editType: 'add',
+    visible: true,
+    listMode: 'show',
+    sort: 0,
+    geometryType: 'esriGeometryPolygon',
+    addedFrom: 'sketch',
+    status: 'added',
+    sketchLayer: graphicsLayer,
+    pointsLayer,
+    hybridLayer,
+    parentLayer,
+  } as LayerType;
+}
+
+/**
+ * Makes all sketch buttons no longer active by removing
+ * the sketch-button-selected class.
+ */
+export function deactivateButtons() {
+  const buttons = document.querySelectorAll('.sketch-button');
+
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].classList.remove('sketch-button-selected');
+  }
+}
+
+/**
  * This function performs a deep copy, exluding functions,
  * of an object. This is mainly used for setting the edits
  * context variable.
@@ -87,58 +374,862 @@ export function findLayerInEdits(
 }
 
 /**
- * Creates the edit template for sketchable layers.
+ * Generates a unique identifier (uuid) in uppercase.
  *
- * @param layerToEdit The layer object
- * @returns object representing the layer edit template
+ * @returns string - A unique identifier (uuid).
  */
-export function createLayerEditTemplate(
-  layerToEdit: LayerType,
-  editType: EditType,
-) {
-  return {
-    type: 'layer',
-    id: layerToEdit.id,
-    pointsId: layerToEdit.pointsId,
-    uuid: layerToEdit.uuid,
-    layerId: layerToEdit.sketchLayer.id,
-    portalId: layerToEdit.portalId,
-    name: layerToEdit.name,
-    label: layerToEdit.label,
-    layerType: layerToEdit.layerType,
-    hasContaminationRan: false,
-    addedFrom: layerToEdit.addedFrom,
-    status: layerToEdit.status,
-    editType,
-    visible: layerToEdit.visible,
-    listMode: layerToEdit.listMode,
-    sort: layerToEdit.sort,
-    adds: [],
-    updates: [],
-    deletes: [],
-    published: [],
-  } as LayerEditsType;
+export function generateUUID() {
+  return '{' + uuidv4().toUpperCase() + '}';
 }
 
 /**
- * Converts an esri graphic object into a simpler object
- * for storing in the user's session storage.
+ * Gets a timestamp for the current date time formatted as
+ * YYYY/MM/DD hh:mm:ss.s
  *
- * @param graphic The esri graphic to be stored
- * @returns simple graphic object with just attributes and geometry
+ * @returns a formatted timestamp of the current date/time
  */
-export function convertToSimpleGraphic(graphic: __esri.Graphic) {
-  let geometry: __esri.Polygon | object = {};
-  if (graphic?.geometry?.type === 'polygon') {
-    geometry = graphic.geometry as __esri.Polygon;
+export function getCurrentDateTime() {
+  const currentdate = new Date();
+  return (
+    currentdate.getFullYear() +
+    '/' +
+    String(currentdate.getMonth() + 1).padStart(2, '0') +
+    '/' +
+    String(currentdate.getDate()).padStart(2, '0') +
+    ' ' +
+    String(currentdate.getHours()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getMinutes()).padStart(2, '0') +
+    ':' +
+    String(currentdate.getSeconds()).padStart(2, '0') +
+    '.' +
+    currentdate.getMilliseconds()
+  );
+}
+
+/**
+ * Builds the default sampling mask layer.
+ *
+ * @returns LayerType The default sampling mask layer
+ */
+export function getDefaultSamplingMaskLayer() {
+  const layerUuid = generateUUID();
+  const graphicsLayer = new GraphicsLayer({
+    id: layerUuid,
+    title: 'Sketched Sampling Mask',
+    listMode: 'hide',
+  });
+
+  return {
+    id: -1,
+    pointsId: -1,
+    uuid: layerUuid,
+    layerId: layerUuid,
+    portalId: '',
+    value: 'sketchAoi',
+    name: 'Sketched Sampling Mask',
+    label: 'Sketched Sampling Mask',
+    layerType: 'Sampling Mask',
+    scenarioName: '',
+    scenarioDescription: '',
+    editType: 'add',
+    visible: true,
+    listMode: 'hide',
+    sort: 0,
+    geometryType: 'esriGeometryPolygon',
+    addedFrom: 'sketch',
+    status: 'added',
+    sketchLayer: graphicsLayer,
+    pointsLayer: null,
+    hybridLayer: null,
+    parentLayer: null,
+  } as LayerType;
+}
+
+/**
+ * Gets the elevation layer from the map. This can be
+ * used for querying the elevation of points on the map.
+ *
+ * @param map The map object
+ * @returns Elevation layer
+ */
+export function getElevationLayer(map: __esri.Map) {
+  return map.ground.layers.find((l) => l.id === 'worldElevation');
+}
+
+/**
+ * Takes the graphics from the provided array of layers and
+ * combines them in to a single array of graphics. Helpful
+ * for zooming to multiple graphics layers.
+ *
+ * @param Layers - The layers to get a combined graphics array from.
+ * @returns extent - The extent of the graphics layers
+ */
+export function getGraphicsArray(layers: (LayerType | null)[]) {
+  let zoomGraphics: __esri.Graphic[] = [];
+  layers.forEach((layer) => {
+    if (layer?.sketchLayer?.type === 'graphics') {
+      zoomGraphics = zoomGraphics.concat(layer.sketchLayer.graphics.toArray());
+    }
+  });
+
+  return zoomGraphics;
+}
+
+/**
+ *
+ * @param edits Edits to search through for scenarios.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param selectedScenario
+ * @param sketchLayer
+ */
+export function getNextScenarioLayer(
+  edits: EditsType,
+  layers: LayerType[],
+  selectedScenario: ScenarioEditsType | null,
+  sketchLayer: LayerType | null,
+) {
+  let nextScenario: ScenarioEditsType | null = null;
+  let nextLayer: LayerType | null = null;
+
+  // determine which scenario to get layers for and
+  // select a scenario if necessary
+  const scenarios = getScenarios(edits);
+  let layerEdits = edits.edits;
+  if (selectedScenario) {
+    // get the layers for the selected scenario
+    layerEdits = selectedScenario.layers;
+  }
+  if (!selectedScenario && scenarios.length > 0) {
+    // select the first availble scenario and get it's layers
+    nextScenario = scenarios[0];
+    layerEdits = scenarios[0].layers;
   }
 
-  // currently we only have polygons
-  // in the future we may need to add code to handle different geometry types
+  // get the first layer that can be used for sketching and return
+  const sketchableLayers = getSketchableLayers(layers, layerEdits);
+  if (!sketchLayer && sketchableLayers.length > 0) {
+    // select the first availble sample layer. This will be
+    // an unlinked layer if there is no selected scenario or
+    // the selected scenario has no layers
+    nextLayer = sketchableLayers[0];
+  }
+
+  const defaultLayerIndex = sketchableLayers.findIndex(
+    (layer) => layer.name === 'Default Sample Layer',
+  );
+
   return {
-    attributes: graphic.attributes ? { ...graphic.attributes } : {},
-    geometry: geometry,
+    nextScenario,
+    nextLayer,
+    defaultLayerIndex,
   };
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+export function getPointSymbol(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  let point;
+  if (polygon.symbol.type.includes('-3d')) {
+    point = getPointSymbol3d(polygon, symbolColor);
+  } else {
+    point = getPointSymbol2d(polygon, symbolColor);
+  }
+
+  return point;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon for 2d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+function getPointSymbol2d(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = polygon.attributes.POINT_STYLE;
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'simple-marker',
+    color: symbolColor ? symbolColor.color : polygon.symbol.color,
+    outline: symbolColor
+      ? symbolColor.outline
+      : (polygon.symbol as any).outline,
+    style: style,
+  };
+  if (path) symbol.path = path;
+
+  return symbol;
+}
+
+/**
+ * Gets a point symbol representation of the provided polygon for 3d.
+ *
+ * @param polygon The polygon to be converted
+ * @returns A point symbol representation of the provided polygon
+ */
+function getPointSymbol3d(
+  polygon: __esri.Graphic,
+  symbolColor: PolygonSymbol | null = null,
+) {
+  // mapping 2d builtin shapes to 3d builtin shapes
+  const shapeMapping: any = {
+    circle: 'circle',
+    cross: 'cross',
+    diamond: 'kite',
+    square: 'square',
+    triangle: 'triangle',
+    x: 'x',
+  };
+
+  // get the point shape style (i.e. circle, triangle, etc.)
+  let style = 'circle';
+  let path = null;
+  if (polygon.attributes?.POINT_STYLE) {
+    // custom shape type
+    if (polygon.attributes.POINT_STYLE.includes('path|')) {
+      style = 'path';
+
+      // TODO need to figure out how to handle this
+      path = polygon.attributes.POINT_STYLE.split('|')[1];
+    } else {
+      style = shapeMapping[polygon.attributes.POINT_STYLE];
+    }
+  }
+
+  // build the symbol
+  const symbol: any = {
+    type: 'point-3d',
+    symbolLayers: [
+      {
+        type: 'icon',
+        // size:
+        material: {
+          color: symbolColor
+            ? symbolColor.color
+            : (polygon.symbol as any).symbolLayers.items[0].material.color,
+        },
+        outline: symbolColor
+          ? {
+              ...symbolColor.outline,
+              size: symbolColor.outline.width,
+            }
+          : (polygon.symbol as any).symbolLayers.items[0].outline,
+      },
+    ],
+  };
+
+  if (path) symbol.path = path;
+  else symbol.symbolLayers[0].resource = { primitive: style };
+
+  return symbol;
+}
+
+/**
+ * Gets the sample columns to include on the expandable table.
+ *
+ * @param tableWidth Used to determine how wide the columns should be.
+ * @param includeContaminationFields Says whether or not to include the contamination columns or not.
+ * @param useEqualWidth Forces the table to use equal width columns.
+ */
+export function getSampleTableColumns({
+  tableWidth,
+  includeContaminationFields,
+  useEqualWidth = false,
+}: {
+  tableWidth: number;
+  includeContaminationFields: boolean;
+  useEqualWidth?: boolean;
+}) {
+  const baseColumnWidth = 100;
+  const mediumColumnWidth = 140;
+  const largeColumnWidth = 160;
+
+  // add the base columns
+  let columns: any[] = [
+    {
+      Header: 'PERMANENT_IDENTIFIER',
+      accessor: 'PERMANENT_IDENTIFIER',
+      width: 0,
+      show: false,
+    },
+    {
+      Header: 'DECISIONUNITUUID',
+      accessor: 'DECISIONUNITUUID',
+      width: 0,
+      show: false,
+    },
+    {
+      Header: 'Layer',
+      accessor: 'DECISIONUNIT',
+      width: largeColumnWidth,
+    },
+    {
+      Header: 'Sample Type',
+      accessor: 'TYPE',
+      width: mediumColumnWidth,
+    },
+    {
+      Header: 'Reference Surface Area (sq inch)',
+      accessor: 'SA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Actual Surface Area (sq inch)',
+      accessor: 'AA',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Equivalent TOTS Samples',
+      accessor: 'AC',
+      width: baseColumnWidth,
+    },
+    // {
+    //   Header: 'Total Cost Per Sample (Labor + Material + Waste)',
+    //   accessor: 'TCPS',
+    //   width: baseColumnWidth,
+    // },
+    {
+      Header: 'Notes',
+      accessor: 'Notes',
+      width: largeColumnWidth,
+    },
+    {
+      Header: 'Analysis Labor Cost ($)',
+      accessor: 'ALC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Analysis Material Cost ($)',
+      accessor: 'AMC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Sampling Material Cost ($/sample)',
+      accessor: 'MCPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Time to Prepare Kits (person hrs/sample)',
+      accessor: 'TTPK',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Time to Collect (person hrs/sample)',
+      accessor: 'TTC',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Time to Analyze (person hrs/sample)',
+      accessor: 'TTA',
+      width: baseColumnWidth,
+    },
+    // {
+    //   Header: 'Total Time per Sample (person hrs/sample)',
+    //   accessor: 'TTPS',
+    //   width: baseColumnWidth,
+    // },
+    {
+      Header: 'Limit of Detection (CFU) Porous',
+      accessor: 'LOD_P',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Limit of Detection (CFU) Nonporous',
+      accessor: 'LOD_NON',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Waste Volume (L/sample)',
+      accessor: 'WVPS',
+      width: baseColumnWidth,
+    },
+    {
+      Header: 'Waste Weight (lbs/sample)',
+      accessor: 'WWPS',
+      width: baseColumnWidth,
+    },
+  ];
+
+  // add the contamination hits columns, if necessary
+  if (includeContaminationFields) {
+    columns = [
+      ...columns,
+      {
+        Header: 'Contamination Type',
+        accessor: 'CONTAMTYPE',
+        width: largeColumnWidth,
+      },
+      {
+        Header: 'Activity',
+        accessor: 'CONTAMVAL',
+        width: baseColumnWidth,
+      },
+      {
+        Header: 'Unit of Measure',
+        accessor: 'CONTAMUNIT',
+        width: baseColumnWidth,
+      },
+    ];
+  }
+
+  if (useEqualWidth) {
+    // set the column widths
+    const numColumns = columns.filter(
+      (col) => typeof col.show !== 'boolean' || col.show,
+    ).length;
+    const columnWidth = tableWidth > 0 ? tableWidth / numColumns - 1 : 0;
+    columns = columns.map((col) => {
+      return {
+        ...col,
+        width: col.show === 'boolean' && !col.show ? 0 : columnWidth,
+      };
+    });
+  }
+
+  return columns;
+}
+
+/**
+ * Searches the edits storage variable to find all available
+ * scenarios.
+ *
+ * @param edits The edits context variable to search through.
+ */
+export function getScenarios(edits: EditsType) {
+  return edits.edits.filter(
+    (item) => item.type === 'scenario',
+  ) as ScenarioEditsType[];
+}
+
+/**
+ * Creates a simple popup that contains all of the attributes on the
+ * graphic.
+ *
+ * @param attributes Attributes to be placed in the popup content
+ * @returns the json object to pass to the Esri PopupTemplate constructor.
+ */
+export function getSimplePopupTemplate(attributes: any) {
+  return {
+    title: '',
+    content: [
+      {
+        type: 'fields',
+        fieldInfos: Object.keys(attributes).map((key) => {
+          return { fieldName: key, label: key };
+        }),
+      },
+    ],
+  };
+}
+
+/**
+ * Gets an array of layers, included in the provided edits parameter,
+ * that can be used with the sketch widget. The search will look in
+ * child layers of scenarios as well.
+ *
+ * @param layers - The layers to search in.
+ * @param edits - The edits to search in.
+ */
+export function getSketchableLayers(
+  layers: LayerType[],
+  edits: (ScenarioEditsType | LayerEditsType)[],
+) {
+  return layers.filter(
+    (layer) =>
+      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
+      edits &&
+      edits.findIndex(
+        (editsLayer) =>
+          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
+      ) > -1,
+  ) as LayerType[];
+}
+
+/**
+ * Gets the z value from the provided graphic.
+ *
+ * @param graphic Graphic to get z value from.
+ * @returns z value of the graphic
+ */
+export function getZValue(graphic: __esri.Graphic) {
+  let z: number = 0;
+  if (!graphic) return z;
+
+  // get the z value from a point
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return 0;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  return z;
+}
+
+/**
+ * Handles saving changes to samples from the popups.
+ *
+ * @param edits Edits to be updated.
+ * @param setEdits React state setter for edits.
+ * @param layers Layers to search through if there are no scenarios.
+ * @param features Features to save changes too from the Popups.
+ * @param type Type of change either Save or Move.
+ * @param newLayer The new layer to move samples to. Only for "Move" type
+ */
+export function handlePopupClick(
+  edits: EditsType,
+  setEdits: Dispatch<SetStateAction<EditsType>>,
+  layers: LayerType[],
+  features: any[],
+  type: string,
+  newLayer: LayerType | null = null,
+) {
+  if (features?.length > 0 && !features[0].graphic) return;
+
+  // set the clicked button as active until the drawing is complete
+  deactivateButtons();
+
+  let editsCopy: EditsType = edits;
+
+  // find the layer
+  features.forEach((feature) => {
+    const changes = new Collection<__esri.Graphic>();
+    const tempGraphic = feature.graphic;
+    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
+    const tempSketchLayer = layers.find(
+      (layer) =>
+        layer.layerId ===
+        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
+    );
+    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
+      return;
+    }
+
+    // find the graphic
+    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
+      (item) =>
+        item.attributes.PERMANENT_IDENTIFIER ===
+        tempGraphic.attributes.PERMANENT_IDENTIFIER,
+    );
+    graphic.attributes = tempGraphic.attributes;
+
+    const pointGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.pointsLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
+
+    const hybridGraphic: __esri.Graphic | undefined =
+      tempSketchLayer.hybridLayer?.graphics.find(
+        (item) =>
+          item.attributes.PERMANENT_IDENTIFIER ===
+          graphic.attributes.PERMANENT_IDENTIFIER,
+      );
+    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
+
+    if (type === 'Save') {
+      changes.add(graphic);
+
+      // make a copy of the edits context variable
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+    }
+    if (type === 'Move' && newLayer) {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+
+      // get items from sketch view model
+      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+      graphic.attributes.DECISIONUNIT = newLayer.label;
+      changes.add(clonedGraphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: newLayer,
+        type: 'add',
+        changes,
+      });
+
+      // remove the graphics from the old layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'delete',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = newLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
+        clonedPointGraphic.attributes.DECISIONUNIT = newLayer.label;
+        clonedPointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
+        tempNewPointsLayer.add(clonedPointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+
+        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
+        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
+
+        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
+        tempNewHybridLayer.add(clonedHybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    } else if (type === 'Update') {
+      const clonedGraphic = graphic.clone();
+      setGeometryZValues(
+        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
+        getZValue(feature.graphic),
+      );
+      changes.add(clonedGraphic);
+
+      // add the graphics to move to the new layer
+      editsCopy = updateLayerEdits({
+        edits: editsCopy,
+        layer: tempSketchLayer,
+        type: 'update',
+        changes,
+      });
+
+      // move between layers on map
+      const tempNewLayer = tempSketchLayer.sketchLayer as __esri.GraphicsLayer;
+      tempNewLayer.addMany(changes.toArray());
+      tempSketchLayer.sketchLayer.remove(graphic);
+
+      feature.graphic.layer = tempSketchLayer.sketchLayer;
+
+      if (pointGraphic && tempSketchLayer.pointsLayer) {
+        const clonedPointGraphic = pointGraphic.clone();
+        setGeometryZValues(
+          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.pointsLayer.add(clonedPointGraphic);
+        tempSketchLayer.pointsLayer.remove(pointGraphic);
+      }
+
+      if (hybridGraphic && tempSketchLayer.hybridLayer) {
+        const clonedHybridGraphic = hybridGraphic.clone();
+        setGeometryZValues(
+          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
+          getZValue(feature.graphic),
+        );
+        tempSketchLayer.hybridLayer.add(clonedHybridGraphic);
+        tempSketchLayer.hybridLayer.remove(hybridGraphic);
+      }
+    }
+  });
+
+  setEdits(editsCopy);
+}
+
+/**
+ * Removes z values from the provided graphic. This is primarily
+ * for calling the gp server.
+ *
+ * @param graphic Graphic to remove z values from.
+ * @returns z value of the graphic that was removed
+ */
+export function removeZValues(graphic: __esri.Graphic) {
+  let z: number = 0;
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point') {
+    z = point.z;
+    (point as any).z = undefined;
+    point.hasZ = false;
+    return z;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return 0;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (firstCoordinate.length === 3) z = firstCoordinate[2];
+
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push(coord);
+      } else {
+        newCoords.push([coord[0], coord[1]]);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = false;
+
+  return z;
+}
+
+/**
+ * Updates the z value of the provided geometry.
+ *
+ * @param geometry geometry to set the z value on
+ * @param z The z value to apply to the geometry
+ */
+export function setGeometryZValues(
+  geometry: __esri.Polygon | __esri.Point,
+  z: number,
+) {
+  if (geometry.type === 'point') geometry.z = z;
+  else setPolygonZValues(geometry, z);
+}
+
+/**
+ * Adds z value to every coordinate in a polygon, if necessary.
+ *
+ * @param poly Polygon to add z value to
+ * @param z The value for z
+ */
+export function setPolygonZValues(poly: __esri.Polygon, z: number) {
+  const newRings: number[][][] = [];
+  poly.rings.forEach((ring) => {
+    const newCoords: number[][] = [];
+    ring.forEach((coord) => {
+      if (coord.length === 2) {
+        newCoords.push([...coord, z]);
+      } else if (coord.length === 3) {
+        newCoords.push([coord[0], coord[1], z]);
+      } else {
+        newCoords.push(coord);
+      }
+    });
+    newRings.push(newCoords);
+  });
+  poly.rings = newRings;
+  poly.hasZ = true;
+}
+
+/**
+ * Sets the z values for a point or polygon. If the zRefParam
+ * is provided the z value will be the elevation at that coordinate,
+ * otherwise the z value will be the centroid of the geometry.
+ *
+ * @param map Map used for getting the elevation of a coordinate
+ * @param graphic Graphic to add z value to
+ * @param zRefParam (Optional) Point to use for getting the z value from
+ * @param elevationSampler (Optional) Elevation sampler
+ */
+export async function setZValues({
+  map,
+  graphic,
+  zRefParam = null,
+  elevationSampler = null,
+  zOverride = null,
+}: {
+  map: __esri.Map;
+  graphic: __esri.Graphic;
+  zRefParam?: __esri.Point | null;
+  elevationSampler?: __esri.ElevationSampler | null;
+  zOverride?: number | null;
+}) {
+  // get the elevation layer
+  const elevationLayer = getElevationLayer(map);
+
+  async function getZAtPoint(point: __esri.Point) {
+    if (!elevationLayer && !elevationSampler) return 0;
+
+    let geometry: __esri.Geometry;
+    if (elevationSampler) {
+      geometry = elevationSampler.queryElevation(point);
+    } else {
+      geometry = (await elevationLayer.queryElevation(point)).geometry;
+    }
+
+    return (geometry as __esri.Point).z;
+  }
+
+  // update the z value of the point if necessary
+  const point = graphic.geometry as __esri.Point;
+  if (graphic.geometry.type === 'point' && !point.z) {
+    point.z = zOverride ?? (await getZAtPoint(point));
+    return;
+  }
+
+  if (graphic.geometry.type !== 'polygon') return;
+  const poly = graphic.geometry as __esri.Polygon;
+
+  const zRef: __esri.Point = zRefParam ? zRefParam : poly.centroid;
+
+  // update the z value of the polygon if necessary
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (
+    graphic.geometry.type === 'polygon' &&
+    zRef &&
+    (!poly.hasZ || firstCoordinate?.length === 2)
+  ) {
+    if (elevationLayer && firstCoordinate.length === 2) {
+      const z = zOverride ?? (await getZAtPoint(zRef));
+      setPolygonZValues(poly, z);
+    } else if (firstCoordinate?.length === 3) {
+      poly.hasZ = true;
+    } else {
+      setPolygonZValues(poly, zOverride ?? 0);
+    }
+  }
 }
 
 /**
@@ -338,204 +1429,6 @@ export function updateLayerEdits({
 }
 
 /**
- * Creates a simple popup that contains all of the attributes on the
- * graphic.
- *
- * @param attributes Attributes to be placed in the popup content
- * @returns the json object to pass to the Esri PopupTemplate constructor.
- */
-export function getSimplePopupTemplate(attributes: any) {
-  return {
-    title: '',
-    content: [
-      {
-        type: 'fields',
-        fieldInfos: Object.keys(attributes).map((key) => {
-          return { fieldName: key, label: key };
-        }),
-      },
-    ],
-  };
-}
-
-/**
- * Generates a unique identifier (uuid) in uppercase.
- *
- * @returns string - A unique identifier (uuid).
- */
-export function generateUUID() {
-  return '{' + uuidv4().toUpperCase() + '}';
-}
-
-/**
- * Takes the graphics from the provided array of layers and
- * combines them in to a single array of graphics. Helpful
- * for zooming to multiple graphics layers.
- *
- * @param Layers - The layers to get a combined graphics array from.
- * @returns extent - The extent of the graphics layers
- */
-export function getGraphicsArray(layers: (LayerType | null)[]) {
-  let zoomGraphics: __esri.Graphic[] = [];
-  layers.forEach((layer) => {
-    if (layer?.sketchLayer?.type === 'graphics') {
-      zoomGraphics = zoomGraphics.concat(layer.sketchLayer.graphics.toArray());
-    }
-  });
-
-  return zoomGraphics;
-}
-
-/**
- * Gets a timestamp for the current date time formatted as
- * YYYY/MM/DD hh:mm:ss.s
- *
- * @returns a formatted timestamp of the current date/time
- */
-export function getCurrentDateTime() {
-  const currentdate = new Date();
-  return (
-    currentdate.getFullYear() +
-    '/' +
-    String(currentdate.getMonth() + 1).padStart(2, '0') +
-    '/' +
-    String(currentdate.getDate()).padStart(2, '0') +
-    ' ' +
-    String(currentdate.getHours()).padStart(2, '0') +
-    ':' +
-    String(currentdate.getMinutes()).padStart(2, '0') +
-    ':' +
-    String(currentdate.getSeconds()).padStart(2, '0') +
-    '.' +
-    currentdate.getMilliseconds()
-  );
-}
-
-/**
- * Builds the default sample layer.
- *
- * @param name The name of the new layer
- * @param parentLayer (optional) The parent layer of the new layer
- * @returns LayerType The default sample layer
- */
-export function createSampleLayer(
-  name: string = 'Default Sample Layer',
-  parentLayer: __esri.GroupLayer | null = null,
-) {
-  const layerUuid = generateUUID();
-  const graphicsLayer = new GraphicsLayer({
-    id: layerUuid,
-    title: name,
-  });
-  const pointsLayer = new GraphicsLayer({
-    id: layerUuid + '-points',
-    title: name,
-    visible: false,
-    listMode: 'hide',
-  });
-  const hybridLayer = new GraphicsLayer({
-    id: layerUuid + '-hybrid',
-    title: name,
-    visible: false,
-    listMode: 'hide',
-  });
-
-  return {
-    id: -1,
-    pointsId: -1,
-    uuid: layerUuid,
-    layerId: graphicsLayer.id,
-    portalId: '',
-    value: graphicsLayer.id,
-    name,
-    label: name,
-    layerType: 'Samples',
-    editType: 'add',
-    visible: true,
-    listMode: 'show',
-    sort: 0,
-    geometryType: 'esriGeometryPolygon',
-    addedFrom: 'sketch',
-    status: 'added',
-    sketchLayer: graphicsLayer,
-    pointsLayer,
-    hybridLayer,
-    parentLayer,
-  } as LayerType;
-}
-
-/**
- * Builds the default sampling mask layer.
- *
- * @returns LayerType The default sampling mask layer
- */
-export function getDefaultSamplingMaskLayer() {
-  const layerUuid = generateUUID();
-  const graphicsLayer = new GraphicsLayer({
-    id: layerUuid,
-    title: 'Sketched Sampling Mask',
-    listMode: 'hide',
-  });
-
-  return {
-    id: -1,
-    pointsId: -1,
-    uuid: layerUuid,
-    layerId: layerUuid,
-    portalId: '',
-    value: 'sketchAoi',
-    name: 'Sketched Sampling Mask',
-    label: 'Sketched Sampling Mask',
-    layerType: 'Sampling Mask',
-    scenarioName: '',
-    scenarioDescription: '',
-    editType: 'add',
-    visible: true,
-    listMode: 'hide',
-    sort: 0,
-    geometryType: 'esriGeometryPolygon',
-    addedFrom: 'sketch',
-    status: 'added',
-    sketchLayer: graphicsLayer,
-    pointsLayer: null,
-    hybridLayer: null,
-    parentLayer: null,
-  } as LayerType;
-}
-
-/**
- * Updates the symbols of all of the graphics within the provided
- * graphics layers with the provided defaultSymbols.
- *
- * @param layers - The layers to update. FeatureLayers will be ignored.
- * @param defaultSymbols - The new default symbols.
- */
-export function updatePolygonSymbol(
-  layers: LayerType[],
-  defaultSymbols: DefaultSymbolsType,
-) {
-  layers.forEach((layer) => {
-    if (layer.sketchLayer.type !== 'graphics') return;
-
-    layer.sketchLayer.graphics.forEach((graphic) => {
-      if (graphic.geometry.type !== 'polygon') return;
-
-      let layerType = layer.layerType;
-      if (layerType === 'VSP') layerType = 'Samples';
-      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
-
-      // set the symbol based on sample/layer type
-      graphic.symbol = defaultSymbols.symbols[layerType] as any;
-      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-        graphic.symbol = defaultSymbols.symbols[
-          graphic.attributes.TYPEUUID
-        ] as any;
-      }
-    });
-  });
-}
-
-/**
  * Updates the symbols of all of the graphics within the provided
  * graphics layers with the provided defaultSymbols.
  *
@@ -590,926 +1483,33 @@ export function updatePointSymbol(
 }
 
 /**
- * Gets an array of layers, included in the provided edits parameter,
- * that can be used with the sketch widget. The search will look in
- * child layers of scenarios as well.
+ * Updates the symbols of all of the graphics within the provided
+ * graphics layers with the provided defaultSymbols.
  *
- * @param layers - The layers to search in.
- * @param edits - The edits to search in.
+ * @param layers - The layers to update. FeatureLayers will be ignored.
+ * @param defaultSymbols - The new default symbols.
  */
-export function getSketchableLayers(
+export function updatePolygonSymbol(
   layers: LayerType[],
-  edits: (ScenarioEditsType | LayerEditsType)[],
+  defaultSymbols: DefaultSymbolsType,
 ) {
-  return layers.filter(
-    (layer) =>
-      (layer.layerType === 'Samples' || layer.layerType === 'VSP') &&
-      edits &&
-      edits.findIndex(
-        (editsLayer) =>
-          editsLayer.type === 'layer' && editsLayer.layerId === layer.layerId,
-      ) > -1,
-  ) as LayerType[];
-}
+  layers.forEach((layer) => {
+    if (layer.sketchLayer.type !== 'graphics') return;
 
-/**
- * Searches the edits storage variable to find all available
- * scenarios.
- *
- * @param edits The edits context variable to search through.
- */
-export function getScenarios(edits: EditsType) {
-  return edits.edits.filter(
-    (item) => item.type === 'scenario',
-  ) as ScenarioEditsType[];
-}
+    layer.sketchLayer.graphics.forEach((graphic) => {
+      if (graphic.geometry.type !== 'polygon') return;
 
-/**
- *
- * @param edits Edits to search through for scenarios.
- * @param layers Layers to search through if there are no scenarios.
- * @param selectedScenario
- * @param sketchLayer
- */
-export function getNextScenarioLayer(
-  edits: EditsType,
-  layers: LayerType[],
-  selectedScenario: ScenarioEditsType | null,
-  sketchLayer: LayerType | null,
-) {
-  let nextScenario: ScenarioEditsType | null = null;
-  let nextLayer: LayerType | null = null;
+      let layerType = layer.layerType;
+      if (layerType === 'VSP') layerType = 'Samples';
+      if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
 
-  // determine which scenario to get layers for and
-  // select a scenario if necessary
-  const scenarios = getScenarios(edits);
-  let layerEdits = edits.edits;
-  if (selectedScenario) {
-    // get the layers for the selected scenario
-    layerEdits = selectedScenario.layers;
-  }
-  if (!selectedScenario && scenarios.length > 0) {
-    // select the first availble scenario and get it's layers
-    nextScenario = scenarios[0];
-    layerEdits = scenarios[0].layers;
-  }
-
-  // get the first layer that can be used for sketching and return
-  const sketchableLayers = getSketchableLayers(layers, layerEdits);
-  if (!sketchLayer && sketchableLayers.length > 0) {
-    // select the first availble sample layer. This will be
-    // an unlinked layer if there is no selected scenario or
-    // the selected scenario has no layers
-    nextLayer = sketchableLayers[0];
-  }
-
-  const defaultLayerIndex = sketchableLayers.findIndex(
-    (layer) => layer.name === 'Default Sample Layer',
-  );
-
-  return {
-    nextScenario,
-    nextLayer,
-    defaultLayerIndex,
-  };
-}
-
-/**
- * Gets the sample columns to include on the expandable table.
- *
- * @param tableWidth Used to determine how wide the columns should be.
- * @param includeContaminationFields Says whether or not to include the contamination columns or not.
- * @param useEqualWidth Forces the table to use equal width columns.
- */
-export function getSampleTableColumns({
-  tableWidth,
-  includeContaminationFields,
-  useEqualWidth = false,
-}: {
-  tableWidth: number;
-  includeContaminationFields: boolean;
-  useEqualWidth?: boolean;
-}) {
-  const baseColumnWidth = 100;
-  const mediumColumnWidth = 140;
-  const largeColumnWidth = 160;
-
-  // add the base columns
-  let columns: any[] = [
-    {
-      Header: 'PERMANENT_IDENTIFIER',
-      accessor: 'PERMANENT_IDENTIFIER',
-      width: 0,
-      show: false,
-    },
-    {
-      Header: 'DECISIONUNITUUID',
-      accessor: 'DECISIONUNITUUID',
-      width: 0,
-      show: false,
-    },
-    {
-      Header: 'Layer',
-      accessor: 'DECISIONUNIT',
-      width: largeColumnWidth,
-    },
-    {
-      Header: 'Sample Type',
-      accessor: 'TYPE',
-      width: mediumColumnWidth,
-    },
-    {
-      Header: 'Reference Surface Area (sq inch)',
-      accessor: 'SA',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Actual Surface Area (sq inch)',
-      accessor: 'AA',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Equivalent TOTS Samples',
-      accessor: 'AC',
-      width: baseColumnWidth,
-    },
-    // {
-    //   Header: 'Total Cost Per Sample (Labor + Material + Waste)',
-    //   accessor: 'TCPS',
-    //   width: baseColumnWidth,
-    // },
-    {
-      Header: 'Notes',
-      accessor: 'Notes',
-      width: largeColumnWidth,
-    },
-    {
-      Header: 'Analysis Labor Cost ($)',
-      accessor: 'ALC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Analysis Material Cost ($)',
-      accessor: 'AMC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Sampling Material Cost ($/sample)',
-      accessor: 'MCPS',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Time to Prepare Kits (person hrs/sample)',
-      accessor: 'TTPK',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Time to Collect (person hrs/sample)',
-      accessor: 'TTC',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Time to Analyze (person hrs/sample)',
-      accessor: 'TTA',
-      width: baseColumnWidth,
-    },
-    // {
-    //   Header: 'Total Time per Sample (person hrs/sample)',
-    //   accessor: 'TTPS',
-    //   width: baseColumnWidth,
-    // },
-    {
-      Header: 'Limit of Detection (CFU) Porous',
-      accessor: 'LOD_P',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Limit of Detection (CFU) Nonporous',
-      accessor: 'LOD_NON',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Waste Volume (L/sample)',
-      accessor: 'WVPS',
-      width: baseColumnWidth,
-    },
-    {
-      Header: 'Waste Weight (lbs/sample)',
-      accessor: 'WWPS',
-      width: baseColumnWidth,
-    },
-  ];
-
-  // add the contamination hits columns, if necessary
-  if (includeContaminationFields) {
-    columns = [
-      ...columns,
-      {
-        Header: 'Contamination Type',
-        accessor: 'CONTAMTYPE',
-        width: largeColumnWidth,
-      },
-      {
-        Header: 'Activity',
-        accessor: 'CONTAMVAL',
-        width: baseColumnWidth,
-      },
-      {
-        Header: 'Unit of Measure',
-        accessor: 'CONTAMUNIT',
-        width: baseColumnWidth,
-      },
-    ];
-  }
-
-  if (useEqualWidth) {
-    // set the column widths
-    const numColumns = columns.filter(
-      (col) => typeof col.show !== 'boolean' || col.show,
-    ).length;
-    const columnWidth = tableWidth > 0 ? tableWidth / numColumns - 1 : 0;
-    columns = columns.map((col) => {
-      return {
-        ...col,
-        width: col.show === 'boolean' && !col.show ? 0 : columnWidth,
-      };
-    });
-  }
-
-  return columns;
-}
-
-/**
- * Gets a point symbol representation of the provided polygon for 2d.
- *
- * @param polygon The polygon to be converted
- * @returns A point symbol representation of the provided polygon
- */
-function getPointSymbol2d(
-  polygon: __esri.Graphic,
-  symbolColor: PolygonSymbol | null = null,
-) {
-  // get the point shape style (i.e. circle, triangle, etc.)
-  let style = 'circle';
-  let path = null;
-  if (polygon.attributes?.POINT_STYLE) {
-    // custom shape type
-    if (polygon.attributes.POINT_STYLE.includes('path|')) {
-      style = 'path';
-      path = polygon.attributes.POINT_STYLE.split('|')[1];
-    } else {
-      style = polygon.attributes.POINT_STYLE;
-    }
-  }
-
-  // build the symbol
-  const symbol: any = {
-    type: 'simple-marker',
-    color: symbolColor ? symbolColor.color : polygon.symbol.color,
-    outline: symbolColor
-      ? symbolColor.outline
-      : (polygon.symbol as any).outline,
-    style: style,
-  };
-  if (path) symbol.path = path;
-
-  return symbol;
-}
-
-/**
- * Gets a point symbol representation of the provided polygon for 3d.
- *
- * @param polygon The polygon to be converted
- * @returns A point symbol representation of the provided polygon
- */
-function getPointSymbol3d(
-  polygon: __esri.Graphic,
-  symbolColor: PolygonSymbol | null = null,
-) {
-  // mapping 2d builtin shapes to 3d builtin shapes
-  const shapeMapping: any = {
-    circle: 'circle',
-    cross: 'cross',
-    diamond: 'kite',
-    square: 'square',
-    triangle: 'triangle',
-    x: 'x',
-  };
-
-  // get the point shape style (i.e. circle, triangle, etc.)
-  let style = 'circle';
-  let path = null;
-  if (polygon.attributes?.POINT_STYLE) {
-    // custom shape type
-    if (polygon.attributes.POINT_STYLE.includes('path|')) {
-      style = 'path';
-
-      // TODO need to figure out how to handle this
-      path = polygon.attributes.POINT_STYLE.split('|')[1];
-    } else {
-      style = shapeMapping[polygon.attributes.POINT_STYLE];
-    }
-  }
-
-  // build the symbol
-  const symbol: any = {
-    type: 'point-3d',
-    symbolLayers: [
-      {
-        type: 'icon',
-        // size:
-        material: {
-          color: symbolColor
-            ? symbolColor.color
-            : (polygon.symbol as any).symbolLayers.items[0].material.color,
-        },
-        outline: symbolColor
-          ? {
-              ...symbolColor.outline,
-              size: symbolColor.outline.width,
-            }
-          : (polygon.symbol as any).symbolLayers.items[0].outline,
-      },
-    ],
-  };
-
-  if (path) symbol.path = path;
-  else symbol.symbolLayers[0].resource = { primitive: style };
-
-  return symbol;
-}
-
-/**
- * Gets a point symbol representation of the provided polygon.
- *
- * @param polygon The polygon to be converted
- * @returns A point symbol representation of the provided polygon
- */
-export function getPointSymbol(
-  polygon: __esri.Graphic,
-  symbolColor: PolygonSymbol | null = null,
-) {
-  let point;
-  if (polygon.symbol.type.includes('-3d')) {
-    point = getPointSymbol3d(polygon, symbolColor);
-  } else {
-    point = getPointSymbol2d(polygon, symbolColor);
-  }
-
-  return point;
-}
-
-/**
- * Converts a polygon graphic to a point graphic.
- *
- * @param polygon The polygon to be converted
- * @returns A point graphic representation of the provided polygon
- */
-export function convertToPoint(polygon: __esri.Graphic) {
-  const symbol = getPointSymbol(polygon);
-
-  // build the graphic
-  return new Graphic({
-    attributes: polygon.attributes,
-    geometry: (polygon.geometry as any).centroid,
-    popupTemplate: polygon.popupTemplate,
-    symbol,
-  });
-}
-
-/**
- * Makes all sketch buttons no longer active by removing
- * the sketch-button-selected class.
- */
-export function deactivateButtons() {
-  const buttons = document.querySelectorAll('.sketch-button');
-
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].classList.remove('sketch-button-selected');
-  }
-}
-
-/**
- * Creates GraphicsLayers from the provided editsLayer. Layers
- * will be added to the newLayers. Layers will be added to the
- * parentLayer, if a parentLayer is provided.
- *
- * @param defaultSymbols Symbols for each sample type
- * @param editsLayer Edits Layer to create graphics layers from
- * @param getPopupTemplate Function for building popup templates
- * @param newLayers Array of layers to add the new layer to
- * @param parentLayer (Optional) The parent layer of the new layers
- * @returns
- */
-export function createLayer({
-  defaultSymbols,
-  editsLayer,
-  getPopupTemplate,
-  newLayers,
-  parentLayer = null,
-}: {
-  defaultSymbols: DefaultSymbolsType;
-  editsLayer: LayerEditsType;
-  getPopupTemplate: Function;
-  newLayers: LayerType[];
-  parentLayer?: __esri.GroupLayer | null;
-}) {
-  const sketchLayer = new GraphicsLayer({
-    title: editsLayer.label,
-    id: editsLayer.uuid,
-    visible: editsLayer.visible,
-    listMode: editsLayer.listMode,
-  });
-  const pointsLayer = new GraphicsLayer({
-    title: editsLayer.label,
-    id: editsLayer.uuid + '-points',
-    visible: false,
-    listMode: 'hide',
-  });
-  const hybridLayer = new GraphicsLayer({
-    title: editsLayer.label,
-    id: editsLayer.uuid + '-hybrid',
-    visible: false,
-    listMode: 'hide',
-  });
-
-  const popupTemplate = getPopupTemplate(
-    editsLayer.layerType,
-    editsLayer.hasContaminationRan,
-  );
-  const polyFeatures: __esri.Graphic[] = [];
-  const pointFeatures: __esri.Graphic[] = [];
-  const hybridFeatures: __esri.Graphic[] = [];
-  const idsUsed: string[] = [];
-  const displayedFeatures: FeatureEditsType[] = [];
-
-  // push the items from the adds array
-  editsLayer.adds.forEach((item) => {
-    displayedFeatures.push(item);
-    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
-  });
-
-  // push the items from the updates array
-  editsLayer.updates.forEach((item) => {
-    displayedFeatures.push(item);
-    idsUsed.push(item.attributes['PERMANENT_IDENTIFIER']);
-  });
-
-  // only push the ids of the deletes array to prevent drawing deleted items
-  editsLayer.deletes.forEach((item) => {
-    idsUsed.push(item.PERMANENT_IDENTIFIER);
-  });
-
-  // add graphics from AGOL that haven't been changed
-  editsLayer.published.forEach((item) => {
-    // don't re-add graphics that have already been added above
-    if (idsUsed.includes(item.attributes['PERMANENT_IDENTIFIER'])) return;
-
-    displayedFeatures.push(item);
-  });
-
-  // add graphics to the map
-  displayedFeatures.forEach((graphic) => {
-    let layerType = editsLayer.layerType;
-    if (layerType === 'VSP') layerType = 'Samples';
-    if (layerType === 'Sampling Mask') layerType = 'Area of Interest';
-
-    // set the symbol styles based on sample/layer type
-    let symbol = defaultSymbols.symbols[layerType] as any;
-    if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
-      symbol = defaultSymbols.symbols[graphic.attributes.TYPEUUID];
-    }
-
-    const poly = new Graphic({
-      attributes: { ...graphic.attributes },
-      popupTemplate,
-      symbol,
-      geometry: new Polygon({
-        spatialReference: {
-          wkid: 3857,
-        },
-        rings: graphic.geometry.rings,
-      }),
-    });
-
-    polyFeatures.push(poly);
-    pointFeatures.push(convertToPoint(poly));
-    hybridFeatures.push(
-      poly.attributes.ShapeType === 'point'
-        ? convertToPoint(poly)
-        : poly.clone(),
-    );
-  });
-  sketchLayer.addMany(polyFeatures);
-  if (editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP') {
-    pointsLayer.addMany(pointFeatures);
-    hybridLayer.addMany(hybridFeatures);
-  }
-
-  newLayers.push({
-    id: editsLayer.id,
-    pointsId: editsLayer.pointsId,
-    uuid: editsLayer.uuid,
-    layerId: editsLayer.layerId,
-    portalId: editsLayer.portalId,
-    value: editsLayer.label,
-    name: editsLayer.name,
-    label: editsLayer.label,
-    layerType: editsLayer.layerType,
-    editType: 'add',
-    addedFrom: editsLayer.addedFrom,
-    status: editsLayer.status,
-    visible: editsLayer.visible,
-    listMode: editsLayer.listMode,
-    sort: editsLayer.sort,
-    geometryType: 'esriGeometryPolygon',
-    sketchLayer,
-    pointsLayer:
-      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
-        ? pointsLayer
-        : null,
-    hybridLayer:
-      editsLayer.layerType === 'Samples' || editsLayer.layerType === 'VSP'
-        ? hybridLayer
-        : null,
-    parentLayer,
-  });
-
-  return [sketchLayer, pointsLayer, hybridLayer];
-}
-
-/**
- * Gets the elevation layer from the map. This can be
- * used for querying the elevation of points on the map.
- *
- * @param map The map object
- * @returns Elevation layer
- */
-export function getElevationLayer(map: __esri.Map) {
-  return map.ground.layers.find((l) => l.id === 'worldElevation');
-}
-
-/**
- * Updates the z value of the provided geometry.
- *
- * @param geometry geometry to set the z value on
- * @param z The z value to apply to the geometry
- */
-export function setGeometryZValues(
-  geometry: __esri.Polygon | __esri.Point,
-  z: number,
-) {
-  if (geometry.type === 'point') geometry.z = z;
-  else setPolygonZValues(geometry, z);
-}
-
-/**
- * Adds z value to every coordinate in a polygon, if necessary.
- *
- * @param poly Polygon to add z value to
- * @param z The value for z
- */
-export function setPolygonZValues(poly: __esri.Polygon, z: number) {
-  const newRings: number[][][] = [];
-  poly.rings.forEach((ring) => {
-    const newCoords: number[][] = [];
-    ring.forEach((coord) => {
-      if (coord.length === 2) {
-        newCoords.push([...coord, z]);
-      } else if (coord.length === 3) {
-        newCoords.push([coord[0], coord[1], z]);
-      } else {
-        newCoords.push(coord);
+      // set the symbol based on sample/layer type
+      graphic.symbol = defaultSymbols.symbols[layerType] as any;
+      if (defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)) {
+        graphic.symbol = defaultSymbols.symbols[
+          graphic.attributes.TYPEUUID
+        ] as any;
       }
     });
-    newRings.push(newCoords);
   });
-  poly.rings = newRings;
-  poly.hasZ = true;
-}
-
-/**
- * Gets the z value from the provided graphic.
- *
- * @param graphic Graphic to get z value from.
- * @returns z value of the graphic
- */
-export function getZValue(graphic: __esri.Graphic) {
-  let z: number = 0;
-  if (!graphic) return z;
-
-  // get the z value from a point
-  const point = graphic.geometry as __esri.Point;
-  if (graphic.geometry.type === 'point') {
-    z = point.z;
-    return z;
-  }
-
-  if (graphic.geometry.type !== 'polygon') return 0;
-  const poly = graphic.geometry as __esri.Polygon;
-
-  // update the z value of the polygon if necessary
-  const firstCoordinate = poly.rings?.[0]?.[0];
-  if (firstCoordinate.length === 3) z = firstCoordinate[2];
-
-  return z;
-}
-
-/**
- * Sets the z values for a point or polygon. If the zRefParam
- * is provided the z value will be the elevation at that coordinate,
- * otherwise the z value will be the centroid of the geometry.
- *
- * @param map Map used for getting the elevation of a coordinate
- * @param graphic Graphic to add z value to
- * @param zRefParam (Optional) Point to use for getting the z value from
- * @param elevationSampler (Optional) Elevation sampler
- */
-export async function setZValues({
-  map,
-  graphic,
-  zRefParam = null,
-  elevationSampler = null,
-  zOverride = null,
-}: {
-  map: __esri.Map;
-  graphic: __esri.Graphic;
-  zRefParam?: __esri.Point | null;
-  elevationSampler?: __esri.ElevationSampler | null;
-  zOverride?: number | null;
-}) {
-  // get the elevation layer
-  const elevationLayer = getElevationLayer(map);
-
-  async function getZAtPoint(point: __esri.Point) {
-    if (!elevationLayer && !elevationSampler) return 0;
-
-    let geometry: __esri.Geometry;
-    if (elevationSampler) {
-      geometry = elevationSampler.queryElevation(point);
-    } else {
-      geometry = (await elevationLayer.queryElevation(point)).geometry;
-    }
-
-    return (geometry as __esri.Point).z;
-  }
-
-  // update the z value of the point if necessary
-  const point = graphic.geometry as __esri.Point;
-  if (graphic.geometry.type === 'point' && !point.z) {
-    point.z = zOverride ?? (await getZAtPoint(point));
-    return;
-  }
-
-  if (graphic.geometry.type !== 'polygon') return;
-  const poly = graphic.geometry as __esri.Polygon;
-
-  const zRef: __esri.Point = zRefParam ? zRefParam : poly.centroid;
-
-  // update the z value of the polygon if necessary
-  const firstCoordinate = poly.rings?.[0]?.[0];
-  if (
-    graphic.geometry.type === 'polygon' &&
-    zRef &&
-    (!poly.hasZ || firstCoordinate?.length === 2)
-  ) {
-    if (elevationLayer && firstCoordinate.length === 2) {
-      const z = zOverride ?? (await getZAtPoint(zRef));
-      setPolygonZValues(poly, z);
-    } else if (firstCoordinate?.length === 3) {
-      poly.hasZ = true;
-    } else {
-      setPolygonZValues(poly, zOverride ?? 0);
-    }
-  }
-}
-
-/**
- * Removes z values from the provided graphic. This is primarily
- * for calling the gp server.
- *
- * @param graphic Graphic to remove z values from.
- * @returns z value of the graphic that was removed
- */
-export function removeZValues(graphic: __esri.Graphic) {
-  let z: number = 0;
-
-  // update the z value of the point if necessary
-  const point = graphic.geometry as __esri.Point;
-  if (graphic.geometry.type === 'point') {
-    z = point.z;
-    (point as any).z = undefined;
-    point.hasZ = false;
-    return z;
-  }
-
-  if (graphic.geometry.type !== 'polygon') return 0;
-  const poly = graphic.geometry as __esri.Polygon;
-
-  // update the z value of the polygon if necessary
-  const firstCoordinate = poly.rings?.[0]?.[0];
-  if (firstCoordinate.length === 3) z = firstCoordinate[2];
-
-  const newRings: number[][][] = [];
-  poly.rings.forEach((ring) => {
-    const newCoords: number[][] = [];
-    ring.forEach((coord) => {
-      if (coord.length === 2) {
-        newCoords.push(coord);
-      } else {
-        newCoords.push([coord[0], coord[1]]);
-      }
-    });
-    newRings.push(newCoords);
-  });
-  poly.rings = newRings;
-  poly.hasZ = false;
-
-  return z;
-}
-
-/**
- * Handles saving changes to samples from the popups.
- *
- * @param edits Edits to be updated.
- * @param setEdits React state setter for edits.
- * @param layers Layers to search through if there are no scenarios.
- * @param features Features to save changes too from the Popups.
- * @param type Type of change either Save or Move.
- * @param newLayer The new layer to move samples to. Only for "Move" type
- */
-export function handlePopupClick(
-  edits: EditsType,
-  setEdits: Dispatch<SetStateAction<EditsType>>,
-  layers: LayerType[],
-  features: any[],
-  type: string,
-  newLayer: LayerType | null = null,
-) {
-  if (features?.length > 0 && !features[0].graphic) return;
-
-  // set the clicked button as active until the drawing is complete
-  deactivateButtons();
-
-  let editsCopy: EditsType = edits;
-
-  // find the layer
-  features.forEach((feature) => {
-    const changes = new Collection<__esri.Graphic>();
-    const tempGraphic = feature.graphic;
-    const tempLayer = tempGraphic.layer as __esri.GraphicsLayer;
-    const tempSketchLayer = layers.find(
-      (layer) =>
-        layer.layerId ===
-        tempLayer.id.replace('-points', '').replace('-hybrid', ''),
-    );
-    if (!tempSketchLayer || tempSketchLayer.sketchLayer.type !== 'graphics') {
-      return;
-    }
-
-    // find the graphic
-    const graphic: __esri.Graphic = tempSketchLayer.sketchLayer.graphics.find(
-      (item) =>
-        item.attributes.PERMANENT_IDENTIFIER ===
-        tempGraphic.attributes.PERMANENT_IDENTIFIER,
-    );
-    graphic.attributes = tempGraphic.attributes;
-
-    const pointGraphic: __esri.Graphic | undefined =
-      tempSketchLayer.pointsLayer?.graphics.find(
-        (item) =>
-          item.attributes.PERMANENT_IDENTIFIER ===
-          graphic.attributes.PERMANENT_IDENTIFIER,
-      );
-    if (pointGraphic) pointGraphic.attributes = tempGraphic.attributes;
-
-    const hybridGraphic: __esri.Graphic | undefined =
-      tempSketchLayer.hybridLayer?.graphics.find(
-        (item) =>
-          item.attributes.PERMANENT_IDENTIFIER ===
-          graphic.attributes.PERMANENT_IDENTIFIER,
-      );
-    if (hybridGraphic) hybridGraphic.attributes = tempGraphic.attributes;
-
-    if (type === 'Save') {
-      changes.add(graphic);
-
-      // make a copy of the edits context variable
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: tempSketchLayer,
-        type: 'update',
-        changes,
-      });
-    }
-    if (type === 'Move' && newLayer) {
-      const clonedGraphic = graphic.clone();
-      setGeometryZValues(
-        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
-        getZValue(feature.graphic),
-      );
-
-      // get items from sketch view model
-      graphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-      graphic.attributes.DECISIONUNIT = newLayer.label;
-      changes.add(clonedGraphic);
-
-      // add the graphics to move to the new layer
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: newLayer,
-        type: 'add',
-        changes,
-      });
-
-      // remove the graphics from the old layer
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: tempSketchLayer,
-        type: 'delete',
-        changes,
-      });
-
-      // move between layers on map
-      const tempNewLayer = newLayer.sketchLayer as __esri.GraphicsLayer;
-      tempNewLayer.addMany(changes.toArray());
-      tempSketchLayer.sketchLayer.remove(graphic);
-
-      feature.graphic.layer = newLayer.sketchLayer;
-
-      if (pointGraphic && tempSketchLayer.pointsLayer) {
-        const clonedPointGraphic = pointGraphic.clone();
-        setGeometryZValues(
-          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
-          getZValue(feature.graphic),
-        );
-
-        clonedPointGraphic.attributes.DECISIONUNIT = newLayer.label;
-        clonedPointGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-        const tempNewPointsLayer = newLayer.pointsLayer as __esri.GraphicsLayer;
-        tempNewPointsLayer.add(clonedPointGraphic);
-        tempSketchLayer.pointsLayer.remove(pointGraphic);
-      }
-
-      if (hybridGraphic && tempSketchLayer.hybridLayer) {
-        const clonedHybridGraphic = hybridGraphic.clone();
-        setGeometryZValues(
-          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
-          getZValue(feature.graphic),
-        );
-
-        hybridGraphic.attributes.DECISIONUNIT = newLayer.label;
-        hybridGraphic.attributes.DECISIONUNITUUID = newLayer.uuid;
-
-        const tempNewHybridLayer = newLayer.hybridLayer as __esri.GraphicsLayer;
-        tempNewHybridLayer.add(clonedHybridGraphic);
-        tempSketchLayer.hybridLayer.remove(hybridGraphic);
-      }
-    } else if (type === 'Update') {
-      const clonedGraphic = graphic.clone();
-      setGeometryZValues(
-        clonedGraphic.geometry as __esri.Point | __esri.Polygon,
-        getZValue(feature.graphic),
-      );
-      changes.add(clonedGraphic);
-
-      // add the graphics to move to the new layer
-      editsCopy = updateLayerEdits({
-        edits: editsCopy,
-        layer: tempSketchLayer,
-        type: 'update',
-        changes,
-      });
-
-      // move between layers on map
-      const tempNewLayer = tempSketchLayer.sketchLayer as __esri.GraphicsLayer;
-      tempNewLayer.addMany(changes.toArray());
-      tempSketchLayer.sketchLayer.remove(graphic);
-
-      feature.graphic.layer = tempSketchLayer.sketchLayer;
-
-      if (pointGraphic && tempSketchLayer.pointsLayer) {
-        const clonedPointGraphic = pointGraphic.clone();
-        setGeometryZValues(
-          clonedPointGraphic.geometry as __esri.Point | __esri.Polygon,
-          getZValue(feature.graphic),
-        );
-        tempSketchLayer.pointsLayer.add(clonedPointGraphic);
-        tempSketchLayer.pointsLayer.remove(pointGraphic);
-      }
-
-      if (hybridGraphic && tempSketchLayer.hybridLayer) {
-        const clonedHybridGraphic = hybridGraphic.clone();
-        setGeometryZValues(
-          clonedHybridGraphic.geometry as __esri.Point | __esri.Polygon,
-          getZValue(feature.graphic),
-        );
-        tempSketchLayer.hybridLayer.add(clonedHybridGraphic);
-        tempSketchLayer.hybridLayer.remove(hybridGraphic);
-      }
-    }
-  });
-
-  setEdits(editsCopy);
 }
