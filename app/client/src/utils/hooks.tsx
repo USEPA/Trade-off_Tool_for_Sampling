@@ -14,7 +14,6 @@ import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import Field from '@arcgis/core/layers/support/Field';
-import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import Graphic from '@arcgis/core/Graphic';
@@ -26,12 +25,9 @@ import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import PortalItem from '@arcgis/core/portal/PortalItem';
-import * as projection from '@arcgis/core/geometry/projection';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
-import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import Viewpoint from '@arcgis/core/Viewpoint';
-import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import MapPopup from 'components/MapPopup';
@@ -61,7 +57,9 @@ import { SampleTypeOptions } from 'types/Publish';
 import { PanelValueType } from 'config/navigation';
 // utils
 import {
+  calculateArea,
   convertToPoint,
+  createBuffer,
   createLayer,
   deactivateButtons,
   findLayerInEdits,
@@ -72,8 +70,6 @@ import {
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
-  SampleIssues,
-  SampleIssuesOutput,
   SampleSelectType,
   UserDefinedAttributes,
 } from 'config/sampleAttributes';
@@ -120,23 +116,6 @@ export function readFromStorage(key: string) {
 function getLayerById(layers: LayerType[], id: string) {
   const index = layers.findIndex((layer) => layer.layerId === id);
   return layers[index];
-}
-
-// Finds the center of the provided geometry
-function getCenterOfGeometry(geometry: __esri.Geometry) {
-  let geometryCasted;
-  let center: __esri.Point | null = null;
-
-  // get the center based on geometry type
-  if (geometry.type === 'point') {
-    geometryCasted = geometry as __esri.Point;
-    center = geometryCasted;
-  } else if (geometry.type === 'polygon') {
-    geometryCasted = geometry as __esri.Polygon;
-    center = geometryCasted.centroid;
-  }
-
-  return center;
 }
 
 // Hook that allows the user to easily start over without
@@ -291,264 +270,6 @@ export function useStartOver() {
   };
 }
 
-// Provides geometry engine related tools
-//    calculateArea    - Function for calculating the area of the provided graphic.
-//    createBuffer     - Function for creating a square around the center point of
-//                       the provided graphic with the provided width.
-//    loadedProjection - The esri projection library. Mainly used to test if the
-//                       library is ready for use.
-export function useGeometryTools() {
-  const sampleTypeContext = useSampleTypesContext();
-
-  // Load the esri projection module. This needs
-  // to happen before the projection module will work.
-  const [
-    loadedProjection,
-    setLoadedProjection, //
-  ] = useState<__esri.projection | null>(null);
-  useEffect(() => {
-    projection.load().then(() => {
-      setLoadedProjection(projection);
-    });
-  });
-
-  // Calculates the area of the provided graphic using a
-  // spatial reference system based on where the sample is located.
-  const calculateArea = useCallback(
-    (graphic: __esri.Graphic) => {
-      if (!loadedProjection) return 'ERROR - Projection library not loaded';
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-        false,
-      ) as __esri.Polygon;
-
-      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
-
-      // get the center
-      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
-      if (!center) return;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = center;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      if (!spatialReference) return 'ERROR - Spatial Reference is null';
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Polygon;
-
-      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
-
-      // calulate the area
-      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-      return areaSI;
-    },
-    [loadedProjection],
-  );
-
-  // Creates a square buffer around the center of the provided graphic,
-  // where the width of the sqaure is the provided width.
-  const createBuffer = useCallback(
-    (graphic: __esri.Graphic) => {
-      if (!loadedProjection) return 'ERROR - Projection library not loaded';
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-        false,
-      );
-
-      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
-
-      // get the center
-      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
-      if (!center) return;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = center;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      if (!spatialReference) return 'ERROR - Spatial Reference is null';
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Geometry;
-
-      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
-
-      center = getCenterOfGeometry(projectedGeometry);
-      if (!center) return;
-
-      // create a circular buffer around the center point
-      const halfWidth = Math.sqrt(graphic.attributes.SA) / 2;
-      const ptBuff = geometryEngine.buffer(
-        center,
-        halfWidth,
-        109009,
-      ) as __esri.Polygon;
-
-      // use the extent to make the buffer a square
-      const projectedPolygon = new Polygon({
-        spatialReference: center.spatialReference,
-        centroid: center,
-        rings: [
-          [
-            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
-            [ptBuff.extent.xmin, ptBuff.extent.ymax, center.z],
-            [ptBuff.extent.xmax, ptBuff.extent.ymax, center.z],
-            [ptBuff.extent.xmax, ptBuff.extent.ymin, center.z],
-            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
-          ],
-        ],
-      });
-
-      // re-project the geometry back to the original spatialReference
-      const reprojectedGeometry = loadedProjection.project(
-        projectedPolygon,
-        graphic.geometry.spatialReference,
-      ) as __esri.Point;
-
-      graphic.geometry = reprojectedGeometry;
-    },
-    [loadedProjection],
-  );
-
-  // Validates that the area of samples is within tolerance and that sample
-  // attributes match up with the predefined attributes.
-  const sampleValidation: (
-    graphics: __esri.Graphic[],
-    isFullGraphic?: boolean,
-    hasAllAttributes?: boolean,
-  ) => SampleIssuesOutput = useCallback(
-    (
-      graphics: __esri.Graphic[],
-      isFullGraphic: boolean = false,
-      hasAllAttributes: boolean = true,
-    ) => {
-      let areaOutOfTolerance = false;
-      let attributeMismatch = false;
-
-      let sampleWithIssues: SampleIssues = {
-        areaOutOfTolerance: false,
-        attributeMismatch: false,
-        attributesWithMismatch: [],
-        difference: 0,
-        graphic: null,
-      };
-      const samplesWithIssues: SampleIssues[] = [];
-
-      graphics.forEach((simpleGraphic) => {
-        let graphic = simpleGraphic;
-        if (!isFullGraphic) {
-          graphic = new Graphic({
-            ...simpleGraphic,
-            geometry: new Polygon({
-              ...simpleGraphic.geometry,
-            }),
-          });
-        }
-
-        // create the sample issues object
-        sampleWithIssues = {
-          areaOutOfTolerance: false,
-          attributeMismatch: false,
-          attributesWithMismatch: [],
-          difference: 0,
-          graphic,
-        };
-
-        // Calculates area and checks if the sample area is within the allowable
-        // tolerance of the reference surface area (SA) value
-        function performAreaToleranceCheck() {
-          // Get the area of the sample
-          const area = calculateArea(graphic);
-          if (typeof area !== 'number') return;
-
-          // check that area is within allowable tolerance
-          const difference = area - graphic.attributes.SA;
-          sampleWithIssues.difference = difference;
-          if (Math.abs(difference) > sampleTypeContext.data.areaTolerance) {
-            areaOutOfTolerance = true;
-            sampleWithIssues.areaOutOfTolerance = true;
-          }
-        }
-
-        // Check if the sample is a predefined type or not
-        if (
-          sampleTypeContext.status === 'success' &&
-          sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-            graphic.attributes.TYPEUUID,
-          )
-        ) {
-          performAreaToleranceCheck();
-
-          // check sample attributes against predefined attributes
-          const predefinedAttributes: any =
-            sampleTypeContext.data.sampleAttributes[
-              graphic.attributes.TYPEUUID
-            ];
-          Object.keys(predefinedAttributes).forEach((key) => {
-            if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
-            if (!hasAllAttributes && !graphic.attributes.hasOwnProperty(key))
-              return;
-            if (
-              graphic.attributes.hasOwnProperty(key) &&
-              predefinedAttributes[key] === graphic.attributes[key]
-            ) {
-              return;
-            }
-
-            attributeMismatch = true;
-            sampleWithIssues.attributeMismatch = true;
-            sampleWithIssues.attributesWithMismatch.push(key);
-          });
-        } else {
-          // Check area tolerance of user defined sample types
-          if (graphic?.attributes?.SA) {
-            performAreaToleranceCheck();
-          }
-        }
-
-        if (
-          sampleWithIssues.areaOutOfTolerance ||
-          sampleWithIssues.attributeMismatch
-        ) {
-          samplesWithIssues.push(sampleWithIssues);
-        }
-      });
-
-      const output: SampleIssuesOutput = {
-        areaOutOfTolerance,
-        attributeMismatch,
-        samplesWithIssues,
-      };
-      if (window.location.search.includes('devMode=true')) {
-        console.log('sampleValidation: ', output);
-      }
-
-      return output;
-    },
-    [calculateArea, sampleTypeContext],
-  );
-
-  return { calculateArea, createBuffer, loadedProjection, sampleValidation };
-}
-
 // Runs sampling plan calculations whenever the
 // samples change or the variables on the calculate tab
 // change.
@@ -568,8 +289,6 @@ export function useCalculatePlan() {
     setUpdateContextValues,
     updateContextValues,
   } = useContext(CalculateContext);
-
-  const { calculateArea, loadedProjection } = useGeometryTools();
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
@@ -632,7 +351,6 @@ export function useCalculatePlan() {
   // perform geospatial calculatations
   useEffect(() => {
     // exit early checks
-    if (!loadedProjection) return;
     if (
       !selectedScenario ||
       selectedScenario.layers.length === 0 ||
@@ -650,140 +368,145 @@ export function useCalculatePlan() {
     );
     if (!editsScenario || editsScenario.editType === 'properties') return;
 
-    let ttpk = 0;
-    let ttc = 0;
-    let tta = 0;
-    let ttps = 0;
-    let lod_p = 0;
-    let lod_non = 0;
-    let mcps = 0;
-    let tcps = 0;
-    let wvps = 0;
-    let wwps = 0;
-    let sa = 0;
-    let alc = 0;
-    let amc = 0;
-    let ac = 0;
+    async function processFeatures() {
+      let ttpk = 0;
+      let ttc = 0;
+      let tta = 0;
+      let ttps = 0;
+      let lod_p = 0;
+      let lod_non = 0;
+      let mcps = 0;
+      let tcps = 0;
+      let wvps = 0;
+      let wwps = 0;
+      let sa = 0;
+      let alc = 0;
+      let amc = 0;
+      let ac = 0;
 
-    // caluclate the area for graphics for the selected scenario
-    let totalAreaSquereFeet = 0;
-    const calcGraphics: __esri.Graphic[] = [];
-    layers.forEach((layer) => {
-      if (
-        layer.parentLayer?.id !== selectedScenario.layerId ||
-        layer.sketchLayer.type !== 'graphics'
-      ) {
-        return;
+      // caluclate the area for graphics for the selected scenario
+      let totalAreaSquereFeet = 0;
+      const calcGraphics: __esri.Graphic[] = [];
+      for (const layer of layers) {
+        if (
+          !selectedScenario ||
+          layer.parentLayer?.id !== selectedScenario.layerId ||
+          layer.sketchLayer.type !== 'graphics'
+        ) {
+          continue;
+        }
+
+        for (const graphic of layer.sketchLayer.graphics.toArray()) {
+          const calcGraphic = graphic.clone();
+
+          // calculate the area using the custom hook
+          const areaSI = await calculateArea(graphic);
+          if (typeof areaSI !== 'number') {
+            continue;
+          }
+
+          // convert area to square feet
+          const areaSF = areaSI * 0.00694444;
+          totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
+
+          // Get the number of reference surface areas that are in the actual area.
+          // This is to prevent users from cheating the system by drawing larger shapes
+          // then the reference surface area and it only getting counted as "1" sample.
+          const { SA } = calcGraphic.attributes;
+          let areaCount = 1;
+          if (areaSI >= SA) {
+            areaCount = Math.round(areaSI / SA);
+          }
+
+          // set the AA on the original graphic, so it is visible in the popup
+          graphic.setAttribute('AA', Math.round(areaSI));
+          graphic.setAttribute('AC', areaCount);
+
+          // multiply all of the attributes by the area
+          const {
+            TTPK,
+            TTC,
+            TTA,
+            TTPS,
+            LOD_P,
+            LOD_NON,
+            MCPS,
+            TCPS,
+            WVPS,
+            WWPS,
+            ALC,
+            AMC,
+          } = calcGraphic.attributes;
+
+          if (TTPK) {
+            ttpk = ttpk + Number(TTPK) * areaCount;
+          }
+          if (TTC) {
+            ttc = ttc + Number(TTC) * areaCount;
+          }
+          if (TTA) {
+            tta = tta + Number(TTA) * areaCount;
+          }
+          if (TTPS) {
+            ttps = ttps + Number(TTPS) * areaCount;
+          }
+          if (LOD_P) {
+            lod_p = lod_p + Number(LOD_P);
+          }
+          if (LOD_NON) {
+            lod_non = lod_non + Number(LOD_NON);
+          }
+          if (MCPS) {
+            mcps = mcps + Number(MCPS) * areaCount;
+          }
+          if (TCPS) {
+            tcps = tcps + Number(TCPS) * areaCount;
+          }
+          if (WVPS) {
+            wvps = wvps + Number(WVPS) * areaCount;
+          }
+          if (WWPS) {
+            wwps = wwps + Number(WWPS) * areaCount;
+          }
+          if (SA) {
+            sa = sa + Number(SA);
+          }
+          if (ALC) {
+            alc = alc + Number(ALC) * areaCount;
+          }
+          if (AMC) {
+            amc = amc + Number(AMC) * areaCount;
+          }
+          if (areaCount) {
+            ac = ac + Number(areaCount);
+          }
+
+          calcGraphics.push(calcGraphic);
+        }
       }
 
-      layer.sketchLayer.graphics.forEach((graphic) => {
-        const calcGraphic = graphic.clone();
-
-        // calculate the area using the custom hook
-        const areaSI = calculateArea(graphic);
-        if (typeof areaSI !== 'number') {
-          return;
-        }
-
-        // convert area to square feet
-        const areaSF = areaSI * 0.00694444;
-        totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
-
-        // Get the number of reference surface areas that are in the actual area.
-        // This is to prevent users from cheating the system by drawing larger shapes
-        // then the reference surface area and it only getting counted as "1" sample.
-        const { SA } = calcGraphic.attributes;
-        let areaCount = 1;
-        if (areaSI >= SA) {
-          areaCount = Math.round(areaSI / SA);
-        }
-
-        // set the AA on the original graphic, so it is visible in the popup
-        graphic.setAttribute('AA', Math.round(areaSI));
-        graphic.setAttribute('AC', areaCount);
-
-        // multiply all of the attributes by the area
-        const {
-          TTPK,
-          TTC,
-          TTA,
-          TTPS,
-          LOD_P,
-          LOD_NON,
-          MCPS,
-          TCPS,
-          WVPS,
-          WWPS,
-          ALC,
-          AMC,
-        } = calcGraphic.attributes;
-
-        if (TTPK) {
-          ttpk = ttpk + Number(TTPK) * areaCount;
-        }
-        if (TTC) {
-          ttc = ttc + Number(TTC) * areaCount;
-        }
-        if (TTA) {
-          tta = tta + Number(TTA) * areaCount;
-        }
-        if (TTPS) {
-          ttps = ttps + Number(TTPS) * areaCount;
-        }
-        if (LOD_P) {
-          lod_p = lod_p + Number(LOD_P);
-        }
-        if (LOD_NON) {
-          lod_non = lod_non + Number(LOD_NON);
-        }
-        if (MCPS) {
-          mcps = mcps + Number(MCPS) * areaCount;
-        }
-        if (TCPS) {
-          tcps = tcps + Number(TCPS) * areaCount;
-        }
-        if (WVPS) {
-          wvps = wvps + Number(WVPS) * areaCount;
-        }
-        if (WWPS) {
-          wwps = wwps + Number(WWPS) * areaCount;
-        }
-        if (SA) {
-          sa = sa + Number(SA);
-        }
-        if (ALC) {
-          alc = alc + Number(ALC) * areaCount;
-        }
-        if (AMC) {
-          amc = amc + Number(AMC) * areaCount;
-        }
-        if (areaCount) {
-          ac = ac + Number(areaCount);
-        }
-
-        calcGraphics.push(calcGraphic);
+      setTotals({
+        ttpk,
+        ttc,
+        tta,
+        ttps,
+        lod_p,
+        lod_non,
+        mcps,
+        tcps,
+        wvps,
+        wwps,
+        sa,
+        alc,
+        amc,
+        ac,
       });
-    });
+      setCalcGraphics(calcGraphics);
+      setTotalArea(totalAreaSquereFeet);
+    }
 
-    setTotals({
-      ttpk,
-      ttc,
-      tta,
-      ttps,
-      lod_p,
-      lod_non,
-      mcps,
-      tcps,
-      wvps,
-      wwps,
-      sa,
-      alc,
-      amc,
-      ac,
-    });
-    setCalcGraphics(calcGraphics);
-    setTotalArea(totalAreaSquereFeet);
-  }, [calculateArea, edits, layers, loadedProjection, selectedScenario]);
+    processFeatures();
+  }, [edits, layers, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
@@ -1152,7 +875,6 @@ export function use3dSketch() {
     sketchVM,
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
-  const { createBuffer } = useGeometryTools();
 
   const [clickEvent, setClickEvent] = useState<IHandle | null>(null);
   const [doubleClickEvent, setDoubleClickEvent] = useState<IHandle | null>(
@@ -1585,7 +1307,6 @@ export function use3dSketch() {
     setGeometry(null);
     tempSketchLayer.removeAll();
   }, [
-    createBuffer,
     displayDimensions,
     edits,
     geometry,

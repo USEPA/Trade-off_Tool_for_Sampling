@@ -47,14 +47,10 @@ import {
 } from 'config/errorMessages';
 // utils
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
-import {
-  use3dSketch,
-  useDynamicPopup,
-  useGeometryTools,
-  useStartOver,
-} from 'utils/hooks';
+import { use3dSketch, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
   createLayer,
   createSampleLayer,
   deepCopyObject,
@@ -457,7 +453,6 @@ function LocateSamples() {
   } = useContext(SketchContext);
   const startOver = useStartOver();
   const { endSketch, startSketch } = use3dSketch();
-  const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();

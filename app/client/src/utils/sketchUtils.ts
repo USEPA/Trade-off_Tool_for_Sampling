@@ -2,9 +2,13 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import Collection from '@arcgis/core/core/Collection';
+import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import * as projection from '@arcgis/core/geometry/projection';
+import SpatialReference from '@arcgis/core/geometry/SpatialReference';
+import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import { Dispatch, SetStateAction } from 'react';
 // types
 import {
@@ -17,7 +21,57 @@ import {
 import { LayerType } from 'types/Layer';
 import { DefaultSymbolsType } from 'config/sampleAttributes';
 // config
-import { PolygonSymbol } from 'config/sampleAttributes';
+import {
+  PolygonSymbol,
+  SampleIssues,
+  SampleIssuesOutput,
+} from 'config/sampleAttributes';
+
+/**
+ * Calculates the area of the provided graphic using a
+ * spatial reference system based on where the sample is located.
+ *
+ * @param graphic The polygon to be converted
+ * @returns The area of the provided graphic
+ */
+export async function calculateArea(graphic: __esri.Graphic) {
+  loadProjection();
+  if (!loadedProjection) return 'ERROR - Projection library not loaded';
+
+  // convert the geometry to WGS84 for geometryEngine
+  // Cast the geometry as a Polygon to avoid typescript errors on
+  // accessing the centroid.
+  const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+    graphic.geometry,
+    false,
+  ) as __esri.Polygon;
+
+  if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+
+  // get the center
+  let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+  if (!center) return;
+
+  // get the spatial reference from the centroid
+  const { latitude, longitude } = center;
+  const base_wkid = latitude > 0 ? 32600 : 32700;
+  const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+  const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+  if (!spatialReference) return 'ERROR - Spatial Reference is null';
+
+  // project the geometry
+  const projectedGeometry = loadedProjection.project(
+    wgsGeometry,
+    spatialReference,
+  ) as __esri.Polygon;
+
+  if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
+
+  // calulate the area
+  const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
+  return areaSI;
+}
 
 /**
  * Converts a polygon graphic to a point graphic.
@@ -56,6 +110,81 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
     attributes: graphic.attributes ? { ...graphic.attributes } : {},
     geometry: geometry,
   };
+}
+
+/**
+ * Creates a square buffer around the center of the provided graphic,
+ * where the width of the sqaure is the provided width.
+ *
+ * @param graphic The polygon to be converted
+ */
+export function createBuffer(graphic: __esri.Graphic) {
+  loadProjection();
+  if (!loadedProjection) return 'ERROR - Projection library not loaded';
+
+  // convert the geometry to WGS84 for geometryEngine
+  // Cast the geometry as a Polygon to avoid typescript errors on
+  // accessing the centroid.
+  const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+    graphic.geometry,
+    false,
+  );
+
+  if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+
+  // get the center
+  let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+  if (!center) return;
+
+  // get the spatial reference from the centroid
+  const { latitude, longitude } = center;
+  const base_wkid = latitude > 0 ? 32600 : 32700;
+  const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+  const spatialReference = new SpatialReference({ wkid: out_wkid });
+
+  if (!spatialReference) return 'ERROR - Spatial Reference is null';
+
+  // project the geometry
+  const projectedGeometry = loadedProjection.project(
+    wgsGeometry,
+    spatialReference,
+  ) as __esri.Geometry;
+
+  if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
+
+  center = getCenterOfGeometry(projectedGeometry);
+  if (!center) return;
+
+  // create a circular buffer around the center point
+  const halfWidth = Math.sqrt(graphic.attributes.SA) / 2;
+  const ptBuff = geometryEngine.buffer(
+    center,
+    halfWidth,
+    109009,
+  ) as __esri.Polygon;
+
+  // use the extent to make the buffer a square
+  const projectedPolygon = new Polygon({
+    spatialReference: center.spatialReference,
+    centroid: center,
+    rings: [
+      [
+        [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
+        [ptBuff.extent.xmin, ptBuff.extent.ymax, center.z],
+        [ptBuff.extent.xmax, ptBuff.extent.ymax, center.z],
+        [ptBuff.extent.xmax, ptBuff.extent.ymin, center.z],
+        [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
+      ],
+    ],
+  });
+
+  // re-project the geometry back to the original spatialReference
+  const reprojectedGeometry = loadedProjection.project(
+    projectedPolygon,
+    graphic.geometry.spatialReference,
+  ) as __esri.Point;
+
+  graphic.geometry = reprojectedGeometry;
 }
 
 /**
@@ -380,6 +509,28 @@ export function findLayerInEdits(
  */
 export function generateUUID() {
   return '{' + uuidv4().toUpperCase() + '}';
+}
+
+/**
+ * Finds the center of the provided geometry
+ *
+ * @param geometry Geometry to get the center of
+ * @returns Coordinates of the center of provided geometry
+ */
+function getCenterOfGeometry(geometry: __esri.Geometry) {
+  let geometryCasted;
+  let center: __esri.Point | null = null;
+
+  // get the center based on geometry type
+  if (geometry.type === 'point') {
+    geometryCasted = geometry as __esri.Point;
+    center = geometryCasted;
+  } else if (geometry.type === 'polygon') {
+    geometryCasted = geometry as __esri.Polygon;
+    center = geometryCasted.centroid;
+  }
+
+  return center;
 }
 
 /**
@@ -1080,6 +1231,17 @@ export function handlePopupClick(
   setEdits(editsCopy);
 }
 
+let loadedProjection: __esri.projection | null = null;
+/**
+ * Load the esri projection module. This needs
+ * to happen before the projection module will work.
+ */
+async function loadProjection() {
+  if (loadedProjection) return;
+  await projection.load();
+  loadedProjection = projection;
+}
+
 /**
  * Removes z values from the provided graphic. This is primarily
  * for calling the gp server.
@@ -1122,6 +1284,124 @@ export function removeZValues(graphic: __esri.Graphic) {
   poly.hasZ = false;
 
   return z;
+}
+
+/**
+ * Validates that the area of samples is within tolerance and that sample
+ * attributes match up with the predefined attributes.
+ *
+ * @param sampleTypeContext
+ * @param graphics Array of graphics to validate
+ * @param isFullGraphic If false, use default attributes when building sample
+ * @param hasAllAttributes If true, validates all attributes against defaults
+ * @returns Object detailing any issues found
+ */
+export async function sampleValidation(
+  sampleTypeContext: any,
+  graphics: __esri.Graphic[],
+  isFullGraphic: boolean = false,
+  hasAllAttributes: boolean = true,
+) {
+  let areaOutOfTolerance = false;
+  let attributeMismatch = false;
+
+  let sampleWithIssues: SampleIssues = {
+    areaOutOfTolerance: false,
+    attributeMismatch: false,
+    attributesWithMismatch: [],
+    difference: 0,
+    graphic: null,
+  };
+  const samplesWithIssues: SampleIssues[] = [];
+
+  // Calculates area and checks if the sample area is within the allowable
+  // tolerance of the reference surface area (SA) value
+  async function performAreaToleranceCheck(graphic: __esri.Graphic) {
+    // Get the area of the sample
+    const area = await calculateArea(graphic);
+    if (typeof area !== 'number') return;
+
+    // check that area is within allowable tolerance
+    const difference = area - graphic.attributes.SA;
+    sampleWithIssues.difference = difference;
+    if (Math.abs(difference) > sampleTypeContext.data.areaTolerance) {
+      areaOutOfTolerance = true;
+      sampleWithIssues.areaOutOfTolerance = true;
+    }
+  }
+
+  for (const simpleGraphic of graphics) {
+    let graphic = simpleGraphic;
+    if (!isFullGraphic) {
+      graphic = new Graphic({
+        ...simpleGraphic,
+        geometry: new Polygon({
+          ...simpleGraphic.geometry,
+        }),
+      });
+    }
+
+    // create the sample issues object
+    sampleWithIssues = {
+      areaOutOfTolerance: false,
+      attributeMismatch: false,
+      attributesWithMismatch: [],
+      difference: 0,
+      graphic,
+    };
+
+    // Check if the sample is a predefined type or not
+    if (
+      sampleTypeContext.status === 'success' &&
+      sampleTypeContext.data.sampleAttributes.hasOwnProperty(
+        graphic.attributes.TYPEUUID,
+      )
+    ) {
+      await performAreaToleranceCheck(graphic);
+
+      // check sample attributes against predefined attributes
+      const predefinedAttributes: any =
+        sampleTypeContext.data.sampleAttributes[graphic.attributes.TYPEUUID];
+      for (const key in predefinedAttributes) {
+        if (!sampleTypeContext.data.attributesToCheck.includes(key)) continue;
+        if (!hasAllAttributes && !graphic.attributes.hasOwnProperty(key))
+          continue;
+        if (
+          graphic.attributes.hasOwnProperty(key) &&
+          predefinedAttributes[key] === graphic.attributes[key]
+        ) {
+          continue;
+        }
+
+        attributeMismatch = true;
+        sampleWithIssues.attributeMismatch = true;
+        sampleWithIssues.attributesWithMismatch.push(key);
+      }
+    } else {
+      // Check area tolerance of user defined sample types
+      if (graphic?.attributes?.SA) {
+        await performAreaToleranceCheck(graphic);
+      }
+    }
+
+    if (
+      sampleWithIssues.areaOutOfTolerance ||
+      sampleWithIssues.attributeMismatch
+    ) {
+      samplesWithIssues.push(sampleWithIssues);
+    }
+  }
+
+  const output: SampleIssuesOutput = {
+    areaOutOfTolerance,
+    attributeMismatch,
+    samplesWithIssues,
+  };
+  if (window.location.search.includes('devMode=true')) {
+    console.log('sampleValidation: ', output);
+  }
+
+  return output;
 }
 
 /**

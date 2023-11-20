@@ -35,12 +35,14 @@ import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
-import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
+import { useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
   generateUUID,
   getCurrentDateTime,
   getPointSymbol,
+  sampleValidation,
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -247,7 +249,6 @@ function FilePanel() {
   } = useContext(SketchContext);
 
   const getPopupTemplate = useDynamicPopup();
-  const { createBuffer, sampleValidation } = useGeometryTools();
   const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
   const services = useServicesContext();
@@ -801,23 +802,32 @@ function FilePanel() {
       });
     });
     const isFullGraphic = layerType.value === 'VSP' ? true : false;
-    const output = sampleValidation(features, isFullGraphic);
 
-    // display a message if any of the samples have some kind of issue
-    if (output?.areaOutOfTolerance || output?.attributeMismatch) {
-      setOptions({
-        title: 'Sample Issues',
-        ariaLabel: 'Sample Issues',
-        description: sampleIssuesPopupMessage(
-          output,
-          sampleTypeContext.data.areaTolerance,
-        ),
-        onContinue: () => setFileValidated(true),
-        onCancel: () => setUploadStatus('user-canceled'),
-      });
-    } else {
-      setFileValidated(true);
+    async function validateSamples() {
+      const output = await sampleValidation(
+        sampleTypeContext,
+        features,
+        isFullGraphic,
+      );
+
+      // display a message if any of the samples have some kind of issue
+      if (output?.areaOutOfTolerance || output?.attributeMismatch) {
+        setOptions({
+          title: 'Sample Issues',
+          ariaLabel: 'Sample Issues',
+          description: sampleIssuesPopupMessage(
+            output,
+            sampleTypeContext.data.areaTolerance,
+          ),
+          onContinue: () => setFileValidated(true),
+          onCancel: () => setUploadStatus('user-canceled'),
+        });
+      } else {
+        setFileValidated(true);
+      }
     }
+
+    validateSamples();
   }, [
     layerType,
     generateResponse,
@@ -828,7 +838,6 @@ function FilePanel() {
     map,
     mapView,
     sampleTypeContext,
-    sampleValidation,
     setOptions,
     sceneView,
   ]);
@@ -1140,7 +1149,6 @@ function FilePanel() {
 
     processItem();
   }, [
-    createBuffer,
     defaultSymbols,
     displayDimensions,
     edits,

@@ -33,9 +33,10 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType, LayerTypeName } from 'types/Layer';
 import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
-import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
+import { useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
   deactivateButtons,
   generateUUID,
   getCurrentDateTime,
@@ -197,7 +198,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     displayDimensions,
     terrain3dUseElevation,
   } = useContext(SketchContext);
-  const { createBuffer, loadedProjection } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
 
@@ -992,7 +992,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, userInfo],
+    [getPopupTemplate, getTrainingMode, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -1003,7 +1003,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
   ] = useState(false);
   const [updateSketchEvent, setUpdateSketchEvent] = useState<any>(null);
   useEffect(() => {
-    if (!sketchVM || !loadedProjection || sketchEventsInitialized) return;
+    if (!sketchVM || sketchEventsInitialized) return;
     setupEvents(sketchVM['2d'], setSketchVMActive, setUpdateSketchEvent);
     setupEvents(sketchVM['3d'], setSketchVMActive, setUpdateSketchEvent);
 
@@ -1013,7 +1013,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setupEvents,
     sketchEventsInitialized,
     setSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Setup the sketch view model events for the Sampling Mask sketchVM
@@ -1027,7 +1026,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setAoiUpdateSketchEvent, //
   ] = useState<any>(null);
   useEffect(() => {
-    if (!aoiSketchVM || !loadedProjection || aoiSketchEventsInitialized) return;
+    if (!aoiSketchVM || aoiSketchEventsInitialized) return;
     setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
@@ -1036,7 +1035,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setupEvents,
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Get the active sketchVM
