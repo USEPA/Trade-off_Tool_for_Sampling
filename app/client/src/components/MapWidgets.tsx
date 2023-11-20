@@ -785,7 +785,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            createBuffer(graphic);
+            await createBuffer(graphic);
           }
 
           graphic.symbol = sketchViewModel.polygonSymbol;

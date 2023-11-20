@@ -274,8 +274,14 @@ export function useStartOver() {
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { edits, layers, selectedScenario, setEdits, setSelectedScenario } =
-    useContext(SketchContext);
+  const {
+    edits,
+    layers,
+    sceneView,
+    selectedScenario,
+    setEdits,
+    setSelectedScenario,
+  } = useContext(SketchContext);
   const {
     inputNumLabs,
     inputNumLabHours,
@@ -400,7 +406,7 @@ export function useCalculatePlan() {
           const calcGraphic = graphic.clone();
 
           // calculate the area using the custom hook
-          const areaSI = await calculateArea(graphic);
+          const areaSI = await calculateArea(graphic, sceneView);
           if (typeof areaSI !== 'number') {
             continue;
           }
@@ -506,7 +512,7 @@ export function useCalculatePlan() {
     }
 
     processFeatures();
-  }, [edits, layers, selectedScenario]);
+  }, [edits, layers, sceneView, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
@@ -1185,127 +1191,132 @@ export function use3dSketch() {
 
   // save sketched 3d graphic
   useEffect(() => {
-    if (!geometry || !tempSketchLayer || !sketchLayer) return;
-    if (sketchLayer.sketchLayer.type === 'feature') return;
+    async function processItem() {
+      if (!geometry || !tempSketchLayer || !sketchLayer) return;
+      if (sketchLayer.sketchLayer.type === 'feature') return;
 
-    // get the button and it's id
-    const button = document.querySelector('.sketch-button-selected');
-    const id = button && button.id;
-    if (id === 'sampling-mask') {
-      deactivateButtons();
-    }
-
-    if (!id) return;
-
-    // get the predefined attributes using the id of the clicked button
-    let attributes: any = {};
-    const uuid = generateUUID();
-    let layerType: LayerTypeName = 'Samples';
-    if (id === 'sampling-mask') {
-      layerType = 'Sampling Mask';
-      attributes = {
-        DECISIONUNITUUID: sketchLayer.sketchLayer.id,
-        DECISIONUNIT: sketchLayer.sketchLayer.title,
-        DECISIONUNITSORT: 0,
-        PERMANENT_IDENTIFIER: uuid,
-        GLOBALID: uuid,
-        OBJECTID: -1,
-        TYPE: layerType,
-      };
-    } else {
-      attributes = {
-        ...(window as any).totsSampleAttributes[id],
-        DECISIONUNITUUID: sketchLayer.sketchLayer.id,
-        DECISIONUNIT: sketchLayer.sketchLayer.title,
-        DECISIONUNITSORT: 0,
-        PERMANENT_IDENTIFIER: uuid,
-        GLOBALID: uuid,
-        OBJECTID: -1,
-        Notes: '',
-        CREATEDDATE: getCurrentDateTime(),
-        UPDATEDDATE: getCurrentDateTime(),
-        USERNAME: userInfo?.username || '',
-        ORGANIZATION: userInfo?.orgId || '',
-      };
-    }
-
-    const graphic = new Graphic({
-      attributes,
-      geometry,
-      popupTemplate: new PopupTemplate(
-        getPopupTemplate(layerType, getTrainingMode()),
-      ),
-      symbol: sketchVM?.[displayDimensions].polygonSymbol,
-    });
-
-    sketchLayer.sketchLayer.graphics.add(graphic);
-
-    // predefined boxes (sponge, micro vac and swab) need to be
-    // converted to a box of a specific size.
-    if (attributes.ShapeType === 'point') {
-      createBuffer(graphic);
-    }
-
-    if (id !== 'sampling-mask') {
-      // find the points version of the layer
-      const layerId = graphic.layer.id;
-      const pointLayer = (graphic.layer as any).parent.layers.find(
-        (layer: any) => `${layerId}-points` === layer.id,
-      );
-      if (pointLayer) pointLayer.add(convertToPoint(graphic));
-    }
-
-    // look up the layer for this event
-    let updateLayer: LayerType | null = null;
-    let updateLayerIndex = -1;
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
-      if (
-        (sketchLayer && layer.layerId === sketchLayer.sketchLayer.id) ||
-        (!sketchLayer && layer.layerId === graphic.attributes?.DECISIONUNITUUID)
-      ) {
-        updateLayer = layer;
-        updateLayerIndex = i;
-        break;
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id === 'sampling-mask') {
+        deactivateButtons();
       }
+
+      if (!id) return;
+
+      // get the predefined attributes using the id of the clicked button
+      let attributes: any = {};
+      const uuid = generateUUID();
+      let layerType: LayerTypeName = 'Samples';
+      if (id === 'sampling-mask') {
+        layerType = 'Sampling Mask';
+        attributes = {
+          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          DECISIONUNITSORT: 0,
+          PERMANENT_IDENTIFIER: uuid,
+          GLOBALID: uuid,
+          OBJECTID: -1,
+          TYPE: layerType,
+        };
+      } else {
+        attributes = {
+          ...(window as any).totsSampleAttributes[id],
+          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          DECISIONUNITSORT: 0,
+          PERMANENT_IDENTIFIER: uuid,
+          GLOBALID: uuid,
+          OBJECTID: -1,
+          Notes: '',
+          CREATEDDATE: getCurrentDateTime(),
+          UPDATEDDATE: getCurrentDateTime(),
+          USERNAME: userInfo?.username || '',
+          ORGANIZATION: userInfo?.orgId || '',
+        };
+      }
+
+      const graphic = new Graphic({
+        attributes,
+        geometry,
+        popupTemplate: new PopupTemplate(
+          getPopupTemplate(layerType, getTrainingMode()),
+        ),
+        symbol: sketchVM?.[displayDimensions].polygonSymbol,
+      });
+
+      sketchLayer.sketchLayer.graphics.add(graphic);
+
+      // predefined boxes (sponge, micro vac and swab) need to be
+      // converted to a box of a specific size.
+      if (attributes.ShapeType === 'point') {
+        await createBuffer(graphic);
+      }
+
+      if (id !== 'sampling-mask') {
+        // find the points version of the layer
+        const layerId = graphic.layer.id;
+        const pointLayer = (graphic.layer as any).parent.layers.find(
+          (layer: any) => `${layerId}-points` === layer.id,
+        );
+        if (pointLayer) pointLayer.add(convertToPoint(graphic));
+      }
+
+      // look up the layer for this event
+      let updateLayer: LayerType | null = null;
+      let updateLayerIndex = -1;
+      for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        if (
+          (sketchLayer && layer.layerId === sketchLayer.sketchLayer.id) ||
+          (!sketchLayer &&
+            layer.layerId === graphic.attributes?.DECISIONUNITUUID)
+        ) {
+          updateLayer = layer;
+          updateLayerIndex = i;
+          break;
+        }
+      }
+      if (!updateLayer) return;
+
+      const changes = new Collection<__esri.Graphic>();
+      changes.add(graphic);
+
+      // save the layer changes
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: sketchLayer,
+        type: 'add',
+        changes,
+      });
+
+      // update the edits state
+      setEdits(editsCopy);
+
+      const newScenario = editsCopy.edits.find(
+        (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
+      ) as ScenarioEditsType;
+      if (newScenario) setSelectedScenario(newScenario);
+
+      // updated the edited layer
+      setLayers([
+        ...layers.slice(0, updateLayerIndex),
+        updateLayer,
+        ...layers.slice(updateLayerIndex + 1),
+      ]);
+
+      // update sketchVM event
+      setSketchLayer((layer) => {
+        return layer ? { ...layer, editType: 'add' } : null;
+      });
+
+      // clear out sketched stuff
+      setGeometry(null);
+      tempSketchLayer.removeAll();
     }
-    if (!updateLayer) return;
 
-    const changes = new Collection<__esri.Graphic>();
-    changes.add(graphic);
-
-    // save the layer changes
-    // make a copy of the edits context variable
-    const editsCopy = updateLayerEdits({
-      edits,
-      layer: sketchLayer,
-      type: 'add',
-      changes,
-    });
-
-    // update the edits state
-    setEdits(editsCopy);
-
-    const newScenario = editsCopy.edits.find(
-      (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
-    ) as ScenarioEditsType;
-    if (newScenario) setSelectedScenario(newScenario);
-
-    // updated the edited layer
-    setLayers([
-      ...layers.slice(0, updateLayerIndex),
-      updateLayer,
-      ...layers.slice(updateLayerIndex + 1),
-    ]);
-
-    // update sketchVM event
-    setSketchLayer((layer) => {
-      return layer ? { ...layer, editType: 'add' } : null;
-    });
-
-    // clear out sketched stuff
-    setGeometry(null);
-    tempSketchLayer.removeAll();
+    processItem();
   }, [
     displayDimensions,
     edits,

@@ -1,12 +1,14 @@
 /** @jsxImportSource @emotion/react */
 
 import { v4 as uuidv4 } from 'uuid';
+import AreaMeasurementAnalysis from '@arcgis/core/analysis/AreaMeasurementAnalysis';
 import Collection from '@arcgis/core/core/Collection';
 import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import * as projection from '@arcgis/core/geometry/projection';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import { Dispatch, SetStateAction } from 'react';
@@ -34,43 +36,65 @@ import {
  * @param graphic The polygon to be converted
  * @returns The area of the provided graphic
  */
-export async function calculateArea(graphic: __esri.Graphic) {
-  loadProjection();
-  if (!loadedProjection) return 'ERROR - Projection library not loaded';
+export async function calculateArea(
+  graphic: __esri.Graphic,
+  sceneView: __esri.SceneView | null,
+) {
+  if (hasDifferingZ(graphic) && sceneView) {
+    const areaMeasurement = new AreaMeasurementAnalysis({
+      geometry: graphic.geometry,
+      unit: 'square-meters',
+    });
 
-  // convert the geometry to WGS84 for geometryEngine
-  // Cast the geometry as a Polygon to avoid typescript errors on
-  // accessing the centroid.
-  const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-    graphic.geometry,
-    false,
-  ) as __esri.Polygon;
+    // add to scene view
+    sceneView.analyses.add(areaMeasurement);
 
-  if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
+    // retrieve measured results from analysis view
+    const analysisView = (await sceneView.whenAnalysisView(
+      areaMeasurement,
+    )) as any; // any is workaround for type not having updating field
+    await reactiveUtils.whenOnce(() => !analysisView.updating);
+    const areaSM = analysisView.result.area.value;
+    const areaSI = areaSM * 1550.0031000062;
+    sceneView.analyses.remove(areaMeasurement);
+    return areaSI;
+  } else {
+    await loadProjection();
+    if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
-  // get the center
-  let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
-  if (!center) return;
+    // convert the geometry to WGS84 for geometryEngine
+    // Cast the geometry as a Polygon to avoid typescript errors on
+    // accessing the centroid.
+    const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
+      graphic.geometry,
+      false,
+    ) as __esri.Polygon;
 
-  // get the spatial reference from the centroid
-  const { latitude, longitude } = center;
-  const base_wkid = latitude > 0 ? 32600 : 32700;
-  const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-  const spatialReference = new SpatialReference({ wkid: out_wkid });
+    if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
 
-  if (!spatialReference) return 'ERROR - Spatial Reference is null';
+    // get the center
+    let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
+    if (!center) return;
 
-  // project the geometry
-  const projectedGeometry = loadedProjection.project(
-    wgsGeometry,
-    spatialReference,
-  ) as __esri.Polygon;
+    // get the spatial reference from the centroid
+    const { latitude, longitude } = center;
+    const base_wkid = latitude > 0 ? 32600 : 32700;
+    const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
+    const spatialReference = new SpatialReference({ wkid: out_wkid });
 
-  if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
+    if (!spatialReference) return 'ERROR - Spatial Reference is null';
 
-  // calulate the area
-  const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-  return areaSI;
+    // project the geometry
+    const projectedGeometry = loadedProjection.project(
+      wgsGeometry,
+      spatialReference,
+    ) as __esri.Polygon;
+
+    if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
+
+    // calulate the area
+    return geometryEngine.planarArea(projectedGeometry, 109454);
+  }
 }
 
 /**
@@ -118,8 +142,8 @@ export function convertToSimpleGraphic(graphic: __esri.Graphic) {
  *
  * @param graphic The polygon to be converted
  */
-export function createBuffer(graphic: __esri.Graphic) {
-  loadProjection();
+export async function createBuffer(graphic: __esri.Graphic) {
+  await loadProjection();
   if (!loadedProjection) return 'ERROR - Projection library not loaded';
 
   // convert the geometry to WGS84 for geometryEngine
@@ -1231,6 +1255,32 @@ export function handlePopupClick(
   setEdits(editsCopy);
 }
 
+/**
+ * Checks if all z values of the provided graphic are the same or not.
+ *
+ * @param graphic Graphic to get z value from.
+ * @returns false if all z values are the same and true if any are different
+ */
+export function hasDifferingZ(graphic: __esri.Graphic) {
+  if (!graphic || graphic.geometry.type !== 'polygon') return false;
+
+  const poly = graphic.geometry as __esri.Polygon;
+  const firstCoordinate = poly.rings?.[0]?.[0];
+  if (!firstCoordinate || firstCoordinate.length < 3) return false;
+
+  const firstZ = firstCoordinate[2];
+  let differentZ = false;
+  poly.rings.forEach((ring) => {
+    ring.forEach((coord) => {
+      if (coord[2] !== firstZ) {
+        differentZ = true;
+      }
+    });
+  });
+
+  return differentZ;
+}
+
 let loadedProjection: __esri.projection | null = null;
 /**
  * Load the esri projection module. This needs
@@ -1298,6 +1348,7 @@ export function removeZValues(graphic: __esri.Graphic) {
  */
 export async function sampleValidation(
   sampleTypeContext: any,
+  sceneView: __esri.SceneView | null,
   graphics: __esri.Graphic[],
   isFullGraphic: boolean = false,
   hasAllAttributes: boolean = true,
@@ -1318,7 +1369,7 @@ export async function sampleValidation(
   // tolerance of the reference surface area (SA) value
   async function performAreaToleranceCheck(graphic: __esri.Graphic) {
     // Get the area of the sample
-    const area = await calculateArea(graphic);
+    const area = await calculateArea(graphic, sceneView);
     if (typeof area !== 'number') return;
 
     // check that area is within allowable tolerance

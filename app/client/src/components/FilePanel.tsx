@@ -806,6 +806,7 @@ function FilePanel() {
     async function validateSamples() {
       const output = await sampleValidation(
         sampleTypeContext,
+        sceneView,
         features,
         isFullGraphic,
       );
@@ -1051,7 +1052,7 @@ function FilePanel() {
             hybridGraphics.push(pointGraphic.clone());
 
             const polyGraphic = graphic.clone();
-            createBuffer(polyGraphic);
+            await createBuffer(polyGraphic);
             graphics.push(polyGraphic);
           } else {
             graphics.push(graphic);

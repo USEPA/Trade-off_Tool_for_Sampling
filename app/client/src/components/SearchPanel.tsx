@@ -1552,6 +1552,7 @@ function ResultCard({ result }: ResultCardProps) {
       if (zoomToGraphics.length > 0) {
         const output = await sampleValidation(
           sampleTypeContext,
+          sceneView,
           zoomToGraphics,
           true,
           false,
