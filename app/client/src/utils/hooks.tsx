@@ -18,11 +18,13 @@ import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
 import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
 import PortalItem from '@arcgis/core/portal/PortalItem';
 import * as projection from '@arcgis/core/geometry/projection';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
@@ -34,6 +36,7 @@ import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
@@ -58,9 +61,14 @@ import { SampleTypeOptions } from 'types/Publish';
 import { PanelValueType } from 'config/navigation';
 // utils
 import {
+  convertToPoint,
   createLayer,
+  deactivateButtons,
   findLayerInEdits,
+  generateUUID,
+  getCurrentDateTime,
   handlePopupClick,
+  updateLayerEdits,
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
@@ -1122,6 +1130,480 @@ export function useDynamicPopup() {
 
     return {};
   };
+}
+
+// Custom utility for sketching in 3D scene view. Currently, the ArcGIS JS
+// sketch utilities don't support recording Z axis values.
+export function use3dSketch() {
+  const { userInfo } = useContext(AuthenticationContext);
+  const { getTrainingMode } = useContext(NavigationContext);
+  const {
+    displayDimensions,
+    edits,
+    layers,
+    map,
+    sceneView,
+    selectedScenario,
+    setEdits,
+    setLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    sketchLayer,
+    sketchVM,
+  } = useContext(SketchContext);
+  const getPopupTemplate = useDynamicPopup();
+  const { createBuffer } = useGeometryTools();
+
+  const [clickEvent, setClickEvent] = useState<IHandle | null>(null);
+  const [doubleClickEvent, setDoubleClickEvent] = useState<IHandle | null>(
+    null,
+  );
+  const [moveEvent, setMoveEvent] = useState<IHandle | null>(null);
+  const [tempSketchLayer, setTempSketchLayer] =
+    useState<__esri.GraphicsLayer | null>(null);
+  const [popupEvent, setPopupEvent] = useState<IHandle | null>(null);
+  const [geometry, setGeometry] = useState<
+    __esri.Point | __esri.Polygon | null
+  >(null);
+
+  // turns off the 3D sketch tools
+  const endSketch = useCallback(() => {
+    if (clickEvent) clickEvent.remove();
+    if (doubleClickEvent) doubleClickEvent.remove();
+    if (moveEvent) moveEvent.remove();
+    if (popupEvent) popupEvent.remove();
+
+    if (map && tempSketchLayer) {
+      tempSketchLayer?.removeAll();
+      map.remove(tempSketchLayer);
+      if (sceneView) sceneView.container.style.cursor = 'default';
+    }
+  }, [
+    clickEvent,
+    doubleClickEvent,
+    map,
+    moveEvent,
+    popupEvent,
+    sceneView,
+    tempSketchLayer,
+  ]);
+
+  // turns on the 3D sketch tools
+  const startSketch = useCallback(
+    (tool: 'point' | 'polygon') => {
+      if (!map || !sceneView || !sketchVM) return;
+
+      endSketch();
+
+      // set to sketch cursor
+      sceneView.container.style.cursor = 'crosshair';
+
+      // turn the popups off while the 3D sketch tools are active
+      const popupEvt = reactiveUtils.watch(
+        () => sceneView.popup.visible,
+        () => {
+          if (sceneView.popup.visible) {
+            sceneView.popup.visible = false;
+          }
+        },
+      );
+      setPopupEvent(popupEvt);
+
+      const tmpSketchLayer = new GraphicsLayer({
+        listMode: 'hide',
+      });
+      map.add(tmpSketchLayer);
+      setTempSketchLayer(tmpSketchLayer);
+
+      // clean out temp sketch graphics
+      function removeTempGraphics() {
+        // delete last mouse position graphic
+        const graphicsToRemove: __esri.Graphic[] = [];
+        tmpSketchLayer.graphics.forEach((graphic) => {
+          if (
+            ['addVertex', 'addVertexLine', 'addPolygon'].includes(
+              graphic.attributes.type,
+            )
+          ) {
+            graphicsToRemove.push(graphic);
+          }
+        });
+        tmpSketchLayer.removeMany(graphicsToRemove);
+      }
+
+      // Get the clicked location including 3D sceneview graphics
+      function getClickedPoint(hitRes: __esri.SceneViewHitTestResult) {
+        if (hitRes.results.length === 0) return hitRes.ground.mapPoint;
+
+        // filter out temp sketch graphics
+        const filteredResults = hitRes.results.filter(
+          (result: any) =>
+            !['addVertex', 'addVertexLine', 'addPolygon'].includes(
+              result?.graphic?.attributes?.type,
+            ),
+        );
+
+        if (filteredResults.length === 0) return hitRes.ground.mapPoint;
+        return filteredResults[0].mapPoint;
+      }
+
+      // creates a partial polygon from temp vertices
+      function createPolygon(hitRes: __esri.SceneViewHitTestResult) {
+        const clickPoint = getClickedPoint(hitRes);
+
+        const vertices = tmpSketchLayer.graphics.filter((graphic) => {
+          return graphic.attributes.type === 'vertex';
+        });
+
+        const poly = new Polygon({
+          spatialReference: clickPoint.spatialReference,
+          hasZ: true,
+        });
+
+        const clockwiseRing = [
+          ...vertices
+            .map((graphic) => {
+              const vertex: __esri.Point = graphic.geometry as __esri.Point;
+              return [vertex.x, vertex.y, vertex.z];
+            })
+            .toArray(),
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+        ];
+        clockwiseRing.push(clockwiseRing[0]);
+
+        const counterClockwiseRing = [
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+          ...vertices
+            .reverse()
+            .map((graphic) => {
+              const vertex: __esri.Point = graphic.geometry as __esri.Point;
+              return [vertex.x, vertex.y, vertex.z];
+            })
+            .toArray(),
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+        ];
+
+        if (poly.isClockwise(clockwiseRing)) {
+          poly.rings = [clockwiseRing];
+        } else {
+          poly.rings = [counterClockwiseRing];
+        }
+
+        if (!poly.isClockwise(poly.rings[0]))
+          poly.rings = [poly.rings[0].reverse()];
+
+        return poly;
+      }
+
+      // creates a partial polygon graphic from temp vertices
+      function createPolygonGraphic(hitRes: __esri.SceneViewHitTestResult) {
+        return new Graphic({
+          attributes: { type: 'addPolygon' },
+          geometry: createPolygon(hitRes),
+          symbol: sketchVM?.[displayDimensions].polygonSymbol,
+        });
+      }
+
+      // click event used for dropping single vertex for graphic
+      const clickEvt = sceneView.on('click', (event) => {
+        sceneView.hitTest(event).then((hitRes) => {
+          const clickPoint = getClickedPoint(hitRes);
+
+          removeTempGraphics();
+
+          if (tool === 'point') {
+            setGeometry(clickPoint);
+            return;
+          }
+
+          // add the permanent vertex
+          tmpSketchLayer.add(
+            new Graphic({
+              attributes: { type: 'vertex' },
+              geometry: {
+                type: 'point',
+                spatialReference: clickPoint.spatialReference,
+                x: clickPoint.x,
+                y: clickPoint.y,
+                z: clickPoint.z,
+              } as any,
+              symbol: {
+                type: 'simple-marker',
+                color: [255, 255, 255],
+                size: 6,
+                outline: {
+                  color: [0, 0, 0],
+                  width: 1,
+                },
+              } as any,
+            }),
+          );
+
+          // add the permanent line if more than one point
+          const vertices = tmpSketchLayer.graphics.filter(
+            (graphic) => graphic.attributes.type === 'vertex',
+          );
+          if (vertices.length > 2) {
+            tmpSketchLayer.add(createPolygonGraphic(hitRes));
+          }
+        });
+      });
+      setClickEvent(clickEvt);
+
+      // double click event used for finishing drawing of graphic
+      if (tool === 'polygon') {
+        const doubleClickEvt = sceneView.on('double-click', (event) => {
+          sceneView.hitTest(event).then((hitRes) => {
+            removeTempGraphics();
+
+            const poly = createPolygon(hitRes);
+
+            setGeometry(poly);
+
+            tmpSketchLayer.removeAll();
+          });
+        });
+        setDoubleClickEvent(doubleClickEvt);
+      }
+
+      // pointer move event used for displaying what graphic will look like
+      // when user drops the vertex
+      const moveEvt = sceneView.on('pointer-move', (event) => {
+        sceneView
+          .hitTest(event)
+          .then((hitRes) => {
+            const clickPoint = getClickedPoint(hitRes);
+
+            removeTempGraphics();
+
+            // add in current mouse position graphic
+            tmpSketchLayer.add(
+              new Graphic({
+                attributes: { type: 'addVertex' },
+                geometry: {
+                  type: 'point',
+                  spatialReference: clickPoint.spatialReference,
+                  x: clickPoint.x,
+                  y: clickPoint.y,
+                  z: clickPoint.z,
+                } as any,
+                symbol: {
+                  type: 'simple-marker',
+                  color: [255, 127, 0],
+                  size: 6,
+                  outline: {
+                    color: [0, 0, 0],
+                    width: 1,
+                  },
+                } as any,
+              }),
+            );
+
+            // add in line graphic if more than one point
+            const vertices = tmpSketchLayer.graphics.filter((graphic) => {
+              return graphic.attributes.type === 'vertex';
+            });
+            if (vertices.length > 0) {
+              const lastGraphic: __esri.Graphic = vertices.getItemAt(
+                vertices.length - 1,
+              );
+              const lastVertex: __esri.Point =
+                lastGraphic.geometry as __esri.Point;
+
+              tmpSketchLayer.addMany([
+                new Graphic({
+                  attributes: { type: 'addVertexLine' },
+                  geometry: {
+                    type: 'polyline',
+                    spatialReference: clickPoint.spatialReference,
+                    paths: [
+                      [lastVertex.x, lastVertex.y, lastVertex.z],
+                      [clickPoint.x, clickPoint.y, clickPoint.z],
+                    ],
+                  } as any,
+                  symbol: {
+                    type: 'simple-line',
+                    color: [255, 255, 255],
+                    style: 'dash',
+                    width: 5,
+                  } as any,
+                }),
+                new Graphic({
+                  attributes: { type: 'addVertexLine' },
+                  geometry: {
+                    type: 'polyline',
+                    spatialReference: clickPoint.spatialReference,
+                    paths: [
+                      [lastVertex.x, lastVertex.y, lastVertex.z],
+                      [clickPoint.x, clickPoint.y, clickPoint.z],
+                    ],
+                  } as any,
+                  symbol: {
+                    type: 'simple-line',
+                    color: [0, 0, 0],
+                    style: 'solid',
+                    width: 5,
+                  } as any,
+                }),
+              ]);
+            }
+            if (vertices.length > 1) {
+              const poly = createPolygonGraphic(hitRes);
+              tmpSketchLayer.add(poly);
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      });
+      setMoveEvent(moveEvt);
+    },
+    [displayDimensions, endSketch, map, sceneView, sketchVM],
+  );
+
+  // save sketched 3d graphic
+  useEffect(() => {
+    if (!geometry || !tempSketchLayer || !sketchLayer) return;
+    if (sketchLayer.sketchLayer.type === 'feature') return;
+
+    // get the button and it's id
+    const button = document.querySelector('.sketch-button-selected');
+    const id = button && button.id;
+    if (id === 'sampling-mask') {
+      deactivateButtons();
+    }
+
+    if (!id) return;
+
+    // get the predefined attributes using the id of the clicked button
+    let attributes: any = {};
+    const uuid = generateUUID();
+    let layerType: LayerTypeName = 'Samples';
+    if (id === 'sampling-mask') {
+      layerType = 'Sampling Mask';
+      attributes = {
+        DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+        DECISIONUNIT: sketchLayer.sketchLayer.title,
+        DECISIONUNITSORT: 0,
+        PERMANENT_IDENTIFIER: uuid,
+        GLOBALID: uuid,
+        OBJECTID: -1,
+        TYPE: layerType,
+      };
+    } else {
+      attributes = {
+        ...(window as any).totsSampleAttributes[id],
+        DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+        DECISIONUNIT: sketchLayer.sketchLayer.title,
+        DECISIONUNITSORT: 0,
+        PERMANENT_IDENTIFIER: uuid,
+        GLOBALID: uuid,
+        OBJECTID: -1,
+        Notes: '',
+        CREATEDDATE: getCurrentDateTime(),
+        UPDATEDDATE: getCurrentDateTime(),
+        USERNAME: userInfo?.username || '',
+        ORGANIZATION: userInfo?.orgId || '',
+      };
+    }
+
+    const graphic = new Graphic({
+      attributes,
+      geometry,
+      popupTemplate: new PopupTemplate(
+        getPopupTemplate(layerType, getTrainingMode()),
+      ),
+      symbol: sketchVM?.[displayDimensions].polygonSymbol,
+    });
+
+    sketchLayer.sketchLayer.graphics.add(graphic);
+
+    // predefined boxes (sponge, micro vac and swab) need to be
+    // converted to a box of a specific size.
+    if (attributes.ShapeType === 'point') {
+      createBuffer(graphic);
+    }
+
+    if (id !== 'sampling-mask') {
+      // find the points version of the layer
+      const layerId = graphic.layer.id;
+      const pointLayer = (graphic.layer as any).parent.layers.find(
+        (layer: any) => `${layerId}-points` === layer.id,
+      );
+      if (pointLayer) pointLayer.add(convertToPoint(graphic));
+    }
+
+    // look up the layer for this event
+    let updateLayer: LayerType | null = null;
+    let updateLayerIndex = -1;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (
+        (sketchLayer && layer.layerId === sketchLayer.sketchLayer.id) ||
+        (!sketchLayer && layer.layerId === graphic.attributes?.DECISIONUNITUUID)
+      ) {
+        updateLayer = layer;
+        updateLayerIndex = i;
+        break;
+      }
+    }
+    if (!updateLayer) return;
+
+    const changes = new Collection<__esri.Graphic>();
+    changes.add(graphic);
+
+    // save the layer changes
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer: sketchLayer,
+      type: 'add',
+      changes,
+    });
+
+    // update the edits state
+    setEdits(editsCopy);
+
+    const newScenario = editsCopy.edits.find(
+      (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
+    ) as ScenarioEditsType;
+    if (newScenario) setSelectedScenario(newScenario);
+
+    // updated the edited layer
+    setLayers([
+      ...layers.slice(0, updateLayerIndex),
+      updateLayer,
+      ...layers.slice(updateLayerIndex + 1),
+    ]);
+
+    // update sketchVM event
+    setSketchLayer((layer) => {
+      return layer ? { ...layer, editType: 'add' } : null;
+    });
+
+    // clear out sketched stuff
+    setGeometry(null);
+    tempSketchLayer.removeAll();
+  }, [
+    createBuffer,
+    displayDimensions,
+    edits,
+    geometry,
+    getPopupTemplate,
+    getTrainingMode,
+    layers,
+    selectedScenario,
+    setEdits,
+    setLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    sketchLayer,
+    sketchVM,
+    tempSketchLayer,
+    userInfo,
+  ]);
+
+  return { endSketch, startSketch };
 }
 
 ///////////////////////////////////////////////////////////////////

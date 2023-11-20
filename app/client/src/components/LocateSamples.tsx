@@ -47,7 +47,12 @@ import {
 } from 'config/errorMessages';
 // utils
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
-import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
+import {
+  use3dSketch,
+  useDynamicPopup,
+  useGeometryTools,
+  useStartOver,
+} from 'utils/hooks';
 import {
   convertToPoint,
   createLayer,
@@ -451,6 +456,7 @@ function LocateSamples() {
     mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
+  const { endSketch, startSketch } = use3dSketch();
   const { createBuffer } = useGeometryTools();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
@@ -563,8 +569,14 @@ function LocateSamples() {
     sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
 
     // let the user draw/place the shape
-    if (wasSet) sketchVM[displayDimensions].create(shapeType);
-    else sketchVM[displayDimensions].cancel();
+    if (wasSet) {
+      if (displayDimensions === '2d')
+        sketchVM[displayDimensions].create(shapeType);
+      else startSketch(shapeType);
+    } else {
+      endSketch();
+      sketchVM[displayDimensions].cancel();
+    }
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
