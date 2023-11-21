@@ -903,10 +903,8 @@ export function use3dSketch() {
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
       map.remove(tempSketchLayer);
-      if (sceneView?.container?.style)
-        sceneView.container.style.cursor = 'default';
     }
-  }, [displayDimensions, map, sceneView, sketchVM, tempSketchLayer]);
+  }, [displayDimensions, map, sketchVM, tempSketchLayer]);
 
   // turns on the 3D sketch tools
   const startSketch = useCallback(
@@ -919,9 +917,6 @@ export function use3dSketch() {
         sketchVM[displayDimensions].create(tool);
         return;
       }
-
-      // set to sketch cursor
-      sceneView.container.style.cursor = 'crosshair';
 
       // turn the popups off while the 3D sketch tools are active
       const popupEvt = reactiveUtils.watch(
