@@ -565,12 +565,9 @@ function LocateSamples() {
 
     // let the user draw/place the shape
     if (wasSet) {
-      if (displayDimensions === '2d')
-        sketchVM[displayDimensions].create(shapeType);
-      else startSketch(shapeType);
+      startSketch(shapeType);
     } else {
       endSketch();
-      sketchVM[displayDimensions].cancel();
     }
   }
 

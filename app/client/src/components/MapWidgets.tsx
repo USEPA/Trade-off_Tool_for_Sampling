@@ -33,7 +33,7 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType, LayerTypeName } from 'types/Layer';
 import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
-import { useDynamicPopup } from 'utils/hooks';
+import { use3dSketch, useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
   createBuffer,
@@ -198,6 +198,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     displayDimensions,
     terrain3dUseElevation,
   } = useContext(SketchContext);
+  const { startSketch } = use3dSketch();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
 
@@ -588,6 +589,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
   }, [currentPanel, defaultSymbols, sketchWidget, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the sketchViewModel
+  const [lastDisplayDimensions, setLastDisplayDimensions] =
+    useState(displayDimensions);
   useEffect(() => {
     if (!sketchVM || !sketchLayer?.sketchLayer || !mapView || !sceneView)
       return;
@@ -624,19 +627,22 @@ function MapWidgets({ mapView, sceneView }: Props) {
         (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
       }
 
-      let shapeType = attributes.ShapeType;
-
-      sketchVM[displayDimensions === '2d' ? '3d' : '2d'].cancel();
-      sketchVM[displayDimensions].create(shapeType);
+      if (displayDimensions !== lastDisplayDimensions) {
+        let shapeType = attributes.ShapeType;
+        startSketch(shapeType);
+        setLastDisplayDimensions(displayDimensions);
+      }
     }
   }, [
     defaultSymbols,
+    displayDimensions,
+    lastDisplayDimensions,
     mapView,
     sceneView,
-    displayDimensions,
     sampleAttributes,
     sketchLayer,
     sketchVM,
+    startSketch,
   ]);
 
   // Updates the selected layer of the aoiSketchViewModel

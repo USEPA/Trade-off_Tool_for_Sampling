@@ -863,6 +863,10 @@ export function useDynamicPopup() {
 
 // Custom utility for sketching in 3D scene view. Currently, the ArcGIS JS
 // sketch utilities don't support recording Z axis values.
+let clickEvent: IHandle | null = null;
+let doubleClickEvent: IHandle | null = null;
+let moveEvent: IHandle | null = null;
+let popupEvent: IHandle | null = null;
 export function use3dSketch() {
   const { userInfo } = useContext(AuthenticationContext);
   const { getTrainingMode } = useContext(NavigationContext);
@@ -882,20 +886,15 @@ export function use3dSketch() {
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
 
-  const [clickEvent, setClickEvent] = useState<IHandle | null>(null);
-  const [doubleClickEvent, setDoubleClickEvent] = useState<IHandle | null>(
-    null,
-  );
-  const [moveEvent, setMoveEvent] = useState<IHandle | null>(null);
   const [tempSketchLayer, setTempSketchLayer] =
     useState<__esri.GraphicsLayer | null>(null);
-  const [popupEvent, setPopupEvent] = useState<IHandle | null>(null);
   const [geometry, setGeometry] = useState<
     __esri.Point | __esri.Polygon | null
   >(null);
 
   // turns off the 3D sketch tools
   const endSketch = useCallback(() => {
+    if (sketchVM) sketchVM[displayDimensions].cancel();
     if (clickEvent) clickEvent.remove();
     if (doubleClickEvent) doubleClickEvent.remove();
     if (moveEvent) moveEvent.remove();
@@ -904,17 +903,10 @@ export function use3dSketch() {
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
       map.remove(tempSketchLayer);
-      if (sceneView) sceneView.container.style.cursor = 'default';
+      if (sceneView?.container?.style)
+        sceneView.container.style.cursor = 'default';
     }
-  }, [
-    clickEvent,
-    doubleClickEvent,
-    map,
-    moveEvent,
-    popupEvent,
-    sceneView,
-    tempSketchLayer,
-  ]);
+  }, [displayDimensions, map, sceneView, sketchVM, tempSketchLayer]);
 
   // turns on the 3D sketch tools
   const startSketch = useCallback(
@@ -922,6 +914,11 @@ export function use3dSketch() {
       if (!map || !sceneView || !sketchVM) return;
 
       endSketch();
+
+      if (displayDimensions === '2d') {
+        sketchVM[displayDimensions].create(tool);
+        return;
+      }
 
       // set to sketch cursor
       sceneView.container.style.cursor = 'crosshair';
@@ -935,7 +932,7 @@ export function use3dSketch() {
           }
         },
       );
-      setPopupEvent(popupEvt);
+      popupEvent = popupEvt;
 
       const tmpSketchLayer = new GraphicsLayer({
         listMode: 'hide',
@@ -1076,7 +1073,7 @@ export function use3dSketch() {
           }
         });
       });
-      setClickEvent(clickEvt);
+      clickEvent = clickEvt;
 
       // double click event used for finishing drawing of graphic
       if (tool === 'polygon') {
@@ -1091,7 +1088,7 @@ export function use3dSketch() {
             tmpSketchLayer.removeAll();
           });
         });
-        setDoubleClickEvent(doubleClickEvt);
+        doubleClickEvent = doubleClickEvt;
       }
 
       // pointer move event used for displaying what graphic will look like
@@ -1184,7 +1181,7 @@ export function use3dSketch() {
             console.error(error);
           });
       });
-      setMoveEvent(moveEvt);
+      moveEvent = moveEvt;
     },
     [displayDimensions, endSketch, map, sceneView, sketchVM],
   );

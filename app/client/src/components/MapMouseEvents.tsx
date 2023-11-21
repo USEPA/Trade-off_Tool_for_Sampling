@@ -3,6 +3,8 @@ import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Popup from '@arcgis/core/widgets/Popup';
 // contexts
 import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
+// utils
+import { use3dSketch } from 'utils/hooks';
 
 let ctrl = false;
 let shift = false;
@@ -37,6 +39,7 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     setSelectedSampleIds,
     sketchVM,
   } = useContext(SketchContext);
+  const { startSketch } = use3dSketch();
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {
@@ -173,7 +176,7 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
 
           // determine whether the sketch button draws points or polygons
           let shapeType = sampleAttributesG[id as any].ShapeType;
-          sketchVMG.create(shapeType);
+          startSketch(shapeType);
         }
       }
     };
@@ -197,7 +200,7 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     sceneView.on('key-up', handleKeyUp);
 
     setInitialized(true);
-  }, [handleMapClick, initialized, mapView, sceneView]);
+  }, [handleMapClick, initialized, mapView, sceneView, startSketch]);
 
   // syncs the sampleAttributesG variable with the sampleAttributes context value
   useEffect(() => {
