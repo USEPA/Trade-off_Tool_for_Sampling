@@ -14,6 +14,7 @@ import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import Field from '@arcgis/core/layers/support/Field';
+import FillSymbol3DLayer from '@arcgis/core/symbols/FillSymbol3DLayer';
 import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import Graphic from '@arcgis/core/Graphic';
@@ -21,8 +22,12 @@ import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
+import LineStylePattern3D from '@arcgis/core/symbols/patterns/LineStylePattern3D';
+import LineSymbol3D from '@arcgis/core/symbols/LineSymbol3D';
+import LineSymbol3DLayer from '@arcgis/core/symbols/LineSymbol3DLayer';
 import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import PolygonSymbol3D from '@arcgis/core/symbols/PolygonSymbol3D';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
 import PortalItem from '@arcgis/core/portal/PortalItem';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
@@ -1015,12 +1020,41 @@ export function use3dSketch() {
         return poly;
       }
 
+      // creates the line portion of the temp polygon/polyline
+      function create3dLineGraphic() {
+        return [
+          new LineSymbol3DLayer({
+            pattern: new LineStylePattern3D({
+              style: 'dash',
+            }),
+            material: { color: [30, 30, 30] },
+            size: '3.5px',
+          }),
+          new LineSymbol3DLayer({
+            material: { color: [240, 240, 240] },
+            size: '3.5px',
+          }),
+          new LineSymbol3DLayer({
+            material: { color: [30, 30, 30] },
+            size: '3.7px',
+          }),
+        ];
+      }
+
       // creates a partial polygon graphic from temp vertices
       function createPolygonGraphic(hitRes: __esri.SceneViewHitTestResult) {
+        const polySymbol = sketchVM?.[displayDimensions].polygonSymbol as any;
         return new Graphic({
           attributes: { type: 'addPolygon' },
           geometry: createPolygon(hitRes),
-          symbol: sketchVM?.[displayDimensions].polygonSymbol,
+          symbol: new PolygonSymbol3D({
+            symbolLayers: [
+              ...create3dLineGraphic(),
+              new FillSymbol3DLayer({
+                material: { color: polySymbol.color },
+              }),
+            ],
+          }),
         });
       }
 
@@ -1123,14 +1157,14 @@ export function use3dSketch() {
             const vertices = tmpSketchLayer.graphics.filter((graphic) => {
               return graphic.attributes.type === 'vertex';
             });
-            if (vertices.length > 0) {
+            if (vertices.length === 1) {
               const lastGraphic: __esri.Graphic = vertices.getItemAt(
                 vertices.length - 1,
               );
               const lastVertex: __esri.Point =
                 lastGraphic.geometry as __esri.Point;
 
-              tmpSketchLayer.addMany([
+              tmpSketchLayer.add(
                 new Graphic({
                   attributes: { type: 'addVertexLine' },
                   geometry: {
@@ -1141,31 +1175,11 @@ export function use3dSketch() {
                       [clickPoint.x, clickPoint.y, clickPoint.z],
                     ],
                   } as any,
-                  symbol: {
-                    type: 'simple-line',
-                    color: [255, 255, 255],
-                    style: 'dash',
-                    width: 5,
-                  } as any,
+                  symbol: new LineSymbol3D({
+                    symbolLayers: create3dLineGraphic(),
+                  }),
                 }),
-                new Graphic({
-                  attributes: { type: 'addVertexLine' },
-                  geometry: {
-                    type: 'polyline',
-                    spatialReference: clickPoint.spatialReference,
-                    paths: [
-                      [lastVertex.x, lastVertex.y, lastVertex.z],
-                      [clickPoint.x, clickPoint.y, clickPoint.z],
-                    ],
-                  } as any,
-                  symbol: {
-                    type: 'simple-line',
-                    color: [0, 0, 0],
-                    style: 'solid',
-                    width: 5,
-                  } as any,
-                }),
-              ]);
+              );
             }
             if (vertices.length > 1) {
               const poly = createPolygonGraphic(hitRes);
