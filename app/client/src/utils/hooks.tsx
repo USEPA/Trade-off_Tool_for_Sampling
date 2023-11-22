@@ -14,32 +14,36 @@ import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import Extent from '@arcgis/core/geometry/Extent';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import Field from '@arcgis/core/layers/support/Field';
-import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
+import FillSymbol3DLayer from '@arcgis/core/symbols/FillSymbol3DLayer';
 import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
+import LineStylePattern3D from '@arcgis/core/symbols/patterns/LineStylePattern3D';
+import LineSymbol3D from '@arcgis/core/symbols/LineSymbol3D';
+import LineSymbol3DLayer from '@arcgis/core/symbols/LineSymbol3DLayer';
 import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
+import PolygonSymbol3D from '@arcgis/core/symbols/PolygonSymbol3D';
+import PopupTemplate from '@arcgis/core/PopupTemplate';
 import PortalItem from '@arcgis/core/portal/PortalItem';
-import * as projection from '@arcgis/core/geometry/projection';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
-import SpatialReference from '@arcgis/core/geometry/SpatialReference';
 import Viewpoint from '@arcgis/core/Viewpoint';
-import * as webMercatorUtils from '@arcgis/core/geometry/support/webMercatorUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import MapPopup from 'components/MapPopup';
 // contexts
+import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
 // types
 import {
   CalculateResultsType,
@@ -58,14 +62,19 @@ import { SampleTypeOptions } from 'types/Publish';
 import { PanelValueType } from 'config/navigation';
 // utils
 import {
+  calculateArea,
+  convertToPoint,
+  createBuffer,
   createLayer,
+  deactivateButtons,
   findLayerInEdits,
+  generateUUID,
+  getCurrentDateTime,
   handlePopupClick,
+  updateLayerEdits,
 } from 'utils/sketchUtils';
 import { GoToOptions } from 'types/Navigation';
 import {
-  SampleIssues,
-  SampleIssuesOutput,
   SampleSelectType,
   UserDefinedAttributes,
 } from 'config/sampleAttributes';
@@ -112,23 +121,6 @@ export function readFromStorage(key: string) {
 function getLayerById(layers: LayerType[], id: string) {
   const index = layers.findIndex((layer) => layer.layerId === id);
   return layers[index];
-}
-
-// Finds the center of the provided geometry
-function getCenterOfGeometry(geometry: __esri.Geometry) {
-  let geometryCasted;
-  let center: __esri.Point | null = null;
-
-  // get the center based on geometry type
-  if (geometry.type === 'point') {
-    geometryCasted = geometry as __esri.Point;
-    center = geometryCasted;
-  } else if (geometry.type === 'polygon') {
-    geometryCasted = geometry as __esri.Polygon;
-    center = geometryCasted.centroid;
-  }
-
-  return center;
 }
 
 // Hook that allows the user to easily start over without
@@ -283,270 +275,18 @@ export function useStartOver() {
   };
 }
 
-// Provides geometry engine related tools
-//    calculateArea    - Function for calculating the area of the provided graphic.
-//    createBuffer     - Function for creating a square around the center point of
-//                       the provided graphic with the provided width.
-//    loadedProjection - The esri projection library. Mainly used to test if the
-//                       library is ready for use.
-export function useGeometryTools() {
-  const sampleTypeContext = useSampleTypesContext();
-
-  // Load the esri projection module. This needs
-  // to happen before the projection module will work.
-  const [
-    loadedProjection,
-    setLoadedProjection, //
-  ] = useState<__esri.projection | null>(null);
-  useEffect(() => {
-    projection.load().then(() => {
-      setLoadedProjection(projection);
-    });
-  });
-
-  // Calculates the area of the provided graphic using a
-  // spatial reference system based on where the sample is located.
-  const calculateArea = useCallback(
-    (graphic: __esri.Graphic) => {
-      if (!loadedProjection) return 'ERROR - Projection library not loaded';
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-        false,
-      ) as __esri.Polygon;
-
-      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
-
-      // get the center
-      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
-      if (!center) return;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = center;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      if (!spatialReference) return 'ERROR - Spatial Reference is null';
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Polygon;
-
-      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
-
-      // calulate the area
-      const areaSI = geometryEngine.planarArea(projectedGeometry, 109454);
-      return areaSI;
-    },
-    [loadedProjection],
-  );
-
-  // Creates a square buffer around the center of the provided graphic,
-  // where the width of the sqaure is the provided width.
-  const createBuffer = useCallback(
-    (graphic: __esri.Graphic) => {
-      if (!loadedProjection) return 'ERROR - Projection library not loaded';
-
-      // convert the geometry to WGS84 for geometryEngine
-      // Cast the geometry as a Polygon to avoid typescript errors on
-      // accessing the centroid.
-      const wgsGeometry = webMercatorUtils.webMercatorToGeographic(
-        graphic.geometry,
-        false,
-      );
-
-      if (!wgsGeometry) return 'ERROR - WGS Geometry is null';
-
-      // get the center
-      let center: __esri.Point | null = getCenterOfGeometry(wgsGeometry);
-      if (!center) return;
-
-      // get the spatial reference from the centroid
-      const { latitude, longitude } = center;
-      const base_wkid = latitude > 0 ? 32600 : 32700;
-      const out_wkid = base_wkid + Math.floor((longitude + 180) / 6) + 1;
-      const spatialReference = new SpatialReference({ wkid: out_wkid });
-
-      if (!spatialReference) return 'ERROR - Spatial Reference is null';
-
-      // project the geometry
-      const projectedGeometry = loadedProjection.project(
-        wgsGeometry,
-        spatialReference,
-      ) as __esri.Geometry;
-
-      if (!projectedGeometry) return 'ERROR - Projected Geometry is null';
-
-      center = getCenterOfGeometry(projectedGeometry);
-      if (!center) return;
-
-      // create a circular buffer around the center point
-      const halfWidth = Math.sqrt(graphic.attributes.SA) / 2;
-      const ptBuff = geometryEngine.buffer(
-        center,
-        halfWidth,
-        109009,
-      ) as __esri.Polygon;
-
-      // use the extent to make the buffer a square
-      const projectedPolygon = new Polygon({
-        spatialReference: center.spatialReference,
-        centroid: center,
-        rings: [
-          [
-            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
-            [ptBuff.extent.xmin, ptBuff.extent.ymax, center.z],
-            [ptBuff.extent.xmax, ptBuff.extent.ymax, center.z],
-            [ptBuff.extent.xmax, ptBuff.extent.ymin, center.z],
-            [ptBuff.extent.xmin, ptBuff.extent.ymin, center.z],
-          ],
-        ],
-      });
-
-      // re-project the geometry back to the original spatialReference
-      const reprojectedGeometry = loadedProjection.project(
-        projectedPolygon,
-        graphic.geometry.spatialReference,
-      ) as __esri.Point;
-
-      graphic.geometry = reprojectedGeometry;
-    },
-    [loadedProjection],
-  );
-
-  // Validates that the area of samples is within tolerance and that sample
-  // attributes match up with the predefined attributes.
-  const sampleValidation: (
-    graphics: __esri.Graphic[],
-    isFullGraphic?: boolean,
-    hasAllAttributes?: boolean,
-  ) => SampleIssuesOutput = useCallback(
-    (
-      graphics: __esri.Graphic[],
-      isFullGraphic: boolean = false,
-      hasAllAttributes: boolean = true,
-    ) => {
-      let areaOutOfTolerance = false;
-      let attributeMismatch = false;
-
-      let sampleWithIssues: SampleIssues = {
-        areaOutOfTolerance: false,
-        attributeMismatch: false,
-        attributesWithMismatch: [],
-        difference: 0,
-        graphic: null,
-      };
-      const samplesWithIssues: SampleIssues[] = [];
-
-      graphics.forEach((simpleGraphic) => {
-        let graphic = simpleGraphic;
-        if (!isFullGraphic) {
-          graphic = new Graphic({
-            ...simpleGraphic,
-            geometry: new Polygon({
-              ...simpleGraphic.geometry,
-            }),
-          });
-        }
-
-        // create the sample issues object
-        sampleWithIssues = {
-          areaOutOfTolerance: false,
-          attributeMismatch: false,
-          attributesWithMismatch: [],
-          difference: 0,
-          graphic,
-        };
-
-        // Calculates area and checks if the sample area is within the allowable
-        // tolerance of the reference surface area (SA) value
-        function performAreaToleranceCheck() {
-          // Get the area of the sample
-          const area = calculateArea(graphic);
-          if (typeof area !== 'number') return;
-
-          // check that area is within allowable tolerance
-          const difference = area - graphic.attributes.SA;
-          sampleWithIssues.difference = difference;
-          if (Math.abs(difference) > sampleTypeContext.data.areaTolerance) {
-            areaOutOfTolerance = true;
-            sampleWithIssues.areaOutOfTolerance = true;
-          }
-        }
-
-        // Check if the sample is a predefined type or not
-        if (
-          sampleTypeContext.status === 'success' &&
-          sampleTypeContext.data.sampleAttributes.hasOwnProperty(
-            graphic.attributes.TYPEUUID,
-          )
-        ) {
-          performAreaToleranceCheck();
-
-          // check sample attributes against predefined attributes
-          const predefinedAttributes: any =
-            sampleTypeContext.data.sampleAttributes[
-              graphic.attributes.TYPEUUID
-            ];
-          Object.keys(predefinedAttributes).forEach((key) => {
-            if (!sampleTypeContext.data.attributesToCheck.includes(key)) return;
-            if (!hasAllAttributes && !graphic.attributes.hasOwnProperty(key))
-              return;
-            if (
-              graphic.attributes.hasOwnProperty(key) &&
-              predefinedAttributes[key] === graphic.attributes[key]
-            ) {
-              return;
-            }
-
-            attributeMismatch = true;
-            sampleWithIssues.attributeMismatch = true;
-            sampleWithIssues.attributesWithMismatch.push(key);
-          });
-        } else {
-          // Check area tolerance of user defined sample types
-          if (graphic?.attributes?.SA) {
-            performAreaToleranceCheck();
-          }
-        }
-
-        if (
-          sampleWithIssues.areaOutOfTolerance ||
-          sampleWithIssues.attributeMismatch
-        ) {
-          samplesWithIssues.push(sampleWithIssues);
-        }
-      });
-
-      const output: SampleIssuesOutput = {
-        areaOutOfTolerance,
-        attributeMismatch,
-        samplesWithIssues,
-      };
-      if (window.location.search.includes('devMode=true')) {
-        console.log('sampleValidation: ', output);
-      }
-
-      return output;
-    },
-    [calculateArea, sampleTypeContext],
-  );
-
-  return { calculateArea, createBuffer, loadedProjection, sampleValidation };
-}
-
 // Runs sampling plan calculations whenever the
 // samples change or the variables on the calculate tab
 // change.
 export function useCalculatePlan() {
-  const { edits, layers, selectedScenario, setEdits, setSelectedScenario } =
-    useContext(SketchContext);
+  const {
+    edits,
+    layers,
+    sceneView,
+    selectedScenario,
+    setEdits,
+    setSelectedScenario,
+  } = useContext(SketchContext);
   const {
     inputNumLabs,
     inputNumLabHours,
@@ -560,8 +300,6 @@ export function useCalculatePlan() {
     setUpdateContextValues,
     updateContextValues,
   } = useContext(CalculateContext);
-
-  const { calculateArea, loadedProjection } = useGeometryTools();
 
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
@@ -624,7 +362,6 @@ export function useCalculatePlan() {
   // perform geospatial calculatations
   useEffect(() => {
     // exit early checks
-    if (!loadedProjection) return;
     if (
       !selectedScenario ||
       selectedScenario.layers.length === 0 ||
@@ -642,140 +379,145 @@ export function useCalculatePlan() {
     );
     if (!editsScenario || editsScenario.editType === 'properties') return;
 
-    let ttpk = 0;
-    let ttc = 0;
-    let tta = 0;
-    let ttps = 0;
-    let lod_p = 0;
-    let lod_non = 0;
-    let mcps = 0;
-    let tcps = 0;
-    let wvps = 0;
-    let wwps = 0;
-    let sa = 0;
-    let alc = 0;
-    let amc = 0;
-    let ac = 0;
+    async function processFeatures() {
+      let ttpk = 0;
+      let ttc = 0;
+      let tta = 0;
+      let ttps = 0;
+      let lod_p = 0;
+      let lod_non = 0;
+      let mcps = 0;
+      let tcps = 0;
+      let wvps = 0;
+      let wwps = 0;
+      let sa = 0;
+      let alc = 0;
+      let amc = 0;
+      let ac = 0;
 
-    // caluclate the area for graphics for the selected scenario
-    let totalAreaSquereFeet = 0;
-    const calcGraphics: __esri.Graphic[] = [];
-    layers.forEach((layer) => {
-      if (
-        layer.parentLayer?.id !== selectedScenario.layerId ||
-        layer.sketchLayer.type !== 'graphics'
-      ) {
-        return;
+      // caluclate the area for graphics for the selected scenario
+      let totalAreaSquereFeet = 0;
+      const calcGraphics: __esri.Graphic[] = [];
+      for (const layer of layers) {
+        if (
+          !selectedScenario ||
+          layer.parentLayer?.id !== selectedScenario.layerId ||
+          layer.sketchLayer.type !== 'graphics'
+        ) {
+          continue;
+        }
+
+        for (const graphic of layer.sketchLayer.graphics.toArray()) {
+          const calcGraphic = graphic.clone();
+
+          // calculate the area using the custom hook
+          const areaSI = await calculateArea(graphic, sceneView);
+          if (typeof areaSI !== 'number') {
+            continue;
+          }
+
+          // convert area to square feet
+          const areaSF = areaSI * 0.00694444;
+          totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
+
+          // Get the number of reference surface areas that are in the actual area.
+          // This is to prevent users from cheating the system by drawing larger shapes
+          // then the reference surface area and it only getting counted as "1" sample.
+          const { SA } = calcGraphic.attributes;
+          let areaCount = 1;
+          if (areaSI >= SA) {
+            areaCount = Math.round(areaSI / SA);
+          }
+
+          // set the AA on the original graphic, so it is visible in the popup
+          graphic.setAttribute('AA', Math.round(areaSI));
+          graphic.setAttribute('AC', areaCount);
+
+          // multiply all of the attributes by the area
+          const {
+            TTPK,
+            TTC,
+            TTA,
+            TTPS,
+            LOD_P,
+            LOD_NON,
+            MCPS,
+            TCPS,
+            WVPS,
+            WWPS,
+            ALC,
+            AMC,
+          } = calcGraphic.attributes;
+
+          if (TTPK) {
+            ttpk = ttpk + Number(TTPK) * areaCount;
+          }
+          if (TTC) {
+            ttc = ttc + Number(TTC) * areaCount;
+          }
+          if (TTA) {
+            tta = tta + Number(TTA) * areaCount;
+          }
+          if (TTPS) {
+            ttps = ttps + Number(TTPS) * areaCount;
+          }
+          if (LOD_P) {
+            lod_p = lod_p + Number(LOD_P);
+          }
+          if (LOD_NON) {
+            lod_non = lod_non + Number(LOD_NON);
+          }
+          if (MCPS) {
+            mcps = mcps + Number(MCPS) * areaCount;
+          }
+          if (TCPS) {
+            tcps = tcps + Number(TCPS) * areaCount;
+          }
+          if (WVPS) {
+            wvps = wvps + Number(WVPS) * areaCount;
+          }
+          if (WWPS) {
+            wwps = wwps + Number(WWPS) * areaCount;
+          }
+          if (SA) {
+            sa = sa + Number(SA);
+          }
+          if (ALC) {
+            alc = alc + Number(ALC) * areaCount;
+          }
+          if (AMC) {
+            amc = amc + Number(AMC) * areaCount;
+          }
+          if (areaCount) {
+            ac = ac + Number(areaCount);
+          }
+
+          calcGraphics.push(calcGraphic);
+        }
       }
 
-      layer.sketchLayer.graphics.forEach((graphic) => {
-        const calcGraphic = graphic.clone();
-
-        // calculate the area using the custom hook
-        const areaSI = calculateArea(graphic);
-        if (typeof areaSI !== 'number') {
-          return;
-        }
-
-        // convert area to square feet
-        const areaSF = areaSI * 0.00694444;
-        totalAreaSquereFeet = totalAreaSquereFeet + areaSF;
-
-        // Get the number of reference surface areas that are in the actual area.
-        // This is to prevent users from cheating the system by drawing larger shapes
-        // then the reference surface area and it only getting counted as "1" sample.
-        const { SA } = calcGraphic.attributes;
-        let areaCount = 1;
-        if (areaSI >= SA) {
-          areaCount = Math.round(areaSI / SA);
-        }
-
-        // set the AA on the original graphic, so it is visible in the popup
-        graphic.setAttribute('AA', Math.round(areaSI));
-        graphic.setAttribute('AC', areaCount);
-
-        // multiply all of the attributes by the area
-        const {
-          TTPK,
-          TTC,
-          TTA,
-          TTPS,
-          LOD_P,
-          LOD_NON,
-          MCPS,
-          TCPS,
-          WVPS,
-          WWPS,
-          ALC,
-          AMC,
-        } = calcGraphic.attributes;
-
-        if (TTPK) {
-          ttpk = ttpk + Number(TTPK) * areaCount;
-        }
-        if (TTC) {
-          ttc = ttc + Number(TTC) * areaCount;
-        }
-        if (TTA) {
-          tta = tta + Number(TTA) * areaCount;
-        }
-        if (TTPS) {
-          ttps = ttps + Number(TTPS) * areaCount;
-        }
-        if (LOD_P) {
-          lod_p = lod_p + Number(LOD_P);
-        }
-        if (LOD_NON) {
-          lod_non = lod_non + Number(LOD_NON);
-        }
-        if (MCPS) {
-          mcps = mcps + Number(MCPS) * areaCount;
-        }
-        if (TCPS) {
-          tcps = tcps + Number(TCPS) * areaCount;
-        }
-        if (WVPS) {
-          wvps = wvps + Number(WVPS) * areaCount;
-        }
-        if (WWPS) {
-          wwps = wwps + Number(WWPS) * areaCount;
-        }
-        if (SA) {
-          sa = sa + Number(SA);
-        }
-        if (ALC) {
-          alc = alc + Number(ALC) * areaCount;
-        }
-        if (AMC) {
-          amc = amc + Number(AMC) * areaCount;
-        }
-        if (areaCount) {
-          ac = ac + Number(areaCount);
-        }
-
-        calcGraphics.push(calcGraphic);
+      setTotals({
+        ttpk,
+        ttc,
+        tta,
+        ttps,
+        lod_p,
+        lod_non,
+        mcps,
+        tcps,
+        wvps,
+        wwps,
+        sa,
+        alc,
+        amc,
+        ac,
       });
-    });
+      setCalcGraphics(calcGraphics);
+      setTotalArea(totalAreaSquereFeet);
+    }
 
-    setTotals({
-      ttpk,
-      ttc,
-      tta,
-      ttps,
-      lod_p,
-      lod_non,
-      mcps,
-      tcps,
-      wvps,
-      wwps,
-      sa,
-      alc,
-      amc,
-      ac,
-    });
-    setCalcGraphics(calcGraphics);
-    setTotalArea(totalAreaSquereFeet);
-  }, [calculateArea, edits, layers, loadedProjection, selectedScenario]);
+    processFeatures();
+  }, [edits, layers, sceneView, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
@@ -1122,6 +864,488 @@ export function useDynamicPopup() {
 
     return {};
   };
+}
+
+// Custom utility for sketching in 3D scene view. Currently, the ArcGIS JS
+// sketch utilities don't support recording Z axis values.
+let clickEvent: IHandle | null = null;
+let doubleClickEvent: IHandle | null = null;
+let moveEvent: IHandle | null = null;
+let popupEvent: IHandle | null = null;
+let sketchVMG: SketchViewModelType | null = null;
+let tempSketchLayer: __esri.GraphicsLayer | null = null;
+export function use3dSketch() {
+  const { userInfo } = useContext(AuthenticationContext);
+  const { getTrainingMode } = useContext(NavigationContext);
+  const {
+    displayDimensions,
+    edits,
+    layers,
+    map,
+    sceneView,
+    selectedScenario,
+    setEdits,
+    setLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    sketchLayer,
+    sketchVM,
+  } = useContext(SketchContext);
+  const getPopupTemplate = useDynamicPopup();
+
+  const [geometry, setGeometry] = useState<
+    __esri.Point | __esri.Polygon | null
+  >(null);
+
+  // syncs the sketchVMG variable with the sketchVM context value
+  useEffect(() => {
+    sketchVMG = sketchVM;
+  }, [displayDimensions, sketchVM]);
+
+  // turns off the 3D sketch tools
+  const endSketch = useCallback(() => {
+    if (sketchVMG) sketchVMG[displayDimensions].cancel();
+    if (clickEvent) clickEvent.remove();
+    if (doubleClickEvent) doubleClickEvent.remove();
+    if (moveEvent) moveEvent.remove();
+    if (popupEvent) popupEvent.remove();
+
+    if (map && tempSketchLayer) {
+      tempSketchLayer?.removeAll();
+      map.remove(tempSketchLayer);
+    }
+  }, [displayDimensions, map]);
+
+  // turns on the 3D sketch tools
+  const startSketch = useCallback(
+    (tool: 'point' | 'polygon') => {
+      if (!map || !sceneView || !sketchVMG) return;
+
+      endSketch();
+
+      if (displayDimensions === '2d') {
+        sketchVMG[displayDimensions].create(tool);
+        return;
+      }
+
+      // turn the popups off while the 3D sketch tools are active
+      const popupEvt = reactiveUtils.watch(
+        () => sceneView.popup.visible,
+        () => {
+          if (sceneView.popup.visible) {
+            sceneView.popup.visible = false;
+          }
+        },
+      );
+      popupEvent = popupEvt;
+
+      const tmpSketchLayer = new GraphicsLayer({
+        listMode: 'hide',
+      });
+      map.add(tmpSketchLayer);
+      tempSketchLayer = tmpSketchLayer;
+
+      // clean out temp sketch graphics
+      function removeTempGraphics() {
+        // delete last mouse position graphic
+        const graphicsToRemove: __esri.Graphic[] = [];
+        tmpSketchLayer.graphics.forEach((graphic) => {
+          if (
+            ['addVertex', 'addVertexLine', 'addPolygon'].includes(
+              graphic.attributes.type,
+            )
+          ) {
+            graphicsToRemove.push(graphic);
+          }
+        });
+        tmpSketchLayer.removeMany(graphicsToRemove);
+      }
+
+      // Get the clicked location including 3D sceneview graphics
+      function getClickedPoint(hitRes: __esri.SceneViewHitTestResult) {
+        if (hitRes.results.length === 0) return hitRes.ground.mapPoint;
+
+        // filter out temp sketch graphics
+        const filteredResults = hitRes.results.filter(
+          (result: any) =>
+            !['addVertex', 'addVertexLine', 'addPolygon'].includes(
+              result?.graphic?.attributes?.type,
+            ),
+        );
+
+        if (filteredResults.length === 0) return hitRes.ground.mapPoint;
+        return filteredResults[0].mapPoint;
+      }
+
+      // creates a partial polygon from temp vertices
+      function createPolygon(hitRes: __esri.SceneViewHitTestResult) {
+        const clickPoint = getClickedPoint(hitRes);
+
+        const vertices = tmpSketchLayer.graphics.filter((graphic) => {
+          return graphic.attributes.type === 'vertex';
+        });
+
+        const poly = new Polygon({
+          spatialReference: clickPoint.spatialReference,
+          hasZ: true,
+        });
+
+        const clockwiseRing = [
+          ...vertices
+            .map((graphic) => {
+              const vertex: __esri.Point = graphic.geometry as __esri.Point;
+              return [vertex.x, vertex.y, vertex.z];
+            })
+            .toArray(),
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+        ];
+        clockwiseRing.push(clockwiseRing[0]);
+
+        const counterClockwiseRing = [
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+          ...vertices
+            .reverse()
+            .map((graphic) => {
+              const vertex: __esri.Point = graphic.geometry as __esri.Point;
+              return [vertex.x, vertex.y, vertex.z];
+            })
+            .toArray(),
+          [clickPoint.x, clickPoint.y, clickPoint.z],
+        ];
+
+        if (poly.isClockwise(clockwiseRing)) {
+          poly.rings = [clockwiseRing];
+        } else {
+          poly.rings = [counterClockwiseRing];
+        }
+
+        if (!poly.isClockwise(poly.rings[0]))
+          poly.rings = [poly.rings[0].reverse()];
+
+        return poly;
+      }
+
+      // creates the line portion of the temp polygon/polyline
+      function create3dLineGraphic() {
+        return [
+          new LineSymbol3DLayer({
+            pattern: new LineStylePattern3D({
+              style: 'dash',
+            }),
+            material: { color: [30, 30, 30] },
+            size: '3.5px',
+          }),
+          new LineSymbol3DLayer({
+            material: { color: [240, 240, 240] },
+            size: '3.5px',
+          }),
+          new LineSymbol3DLayer({
+            material: { color: [30, 30, 30] },
+            size: '3.7px',
+          }),
+        ];
+      }
+
+      // creates a partial polygon graphic from temp vertices
+      function createPolygonGraphic(hitRes: __esri.SceneViewHitTestResult) {
+        const polySymbol = sketchVMG?.[displayDimensions].polygonSymbol as any;
+        return new Graphic({
+          attributes: { type: 'addPolygon' },
+          geometry: createPolygon(hitRes),
+          symbol: new PolygonSymbol3D({
+            symbolLayers: [
+              ...create3dLineGraphic(),
+              new FillSymbol3DLayer({
+                material: { color: polySymbol.color },
+              }),
+            ],
+          }),
+        });
+      }
+
+      // click event used for dropping single vertex for graphic
+      const clickEvt = sceneView.on('click', (event) => {
+        sceneView.hitTest(event).then((hitRes) => {
+          const clickPoint = getClickedPoint(hitRes);
+
+          removeTempGraphics();
+
+          if (tool === 'point') {
+            setGeometry(clickPoint);
+            return;
+          }
+
+          // add the permanent vertex
+          tmpSketchLayer.add(
+            new Graphic({
+              attributes: { type: 'vertex' },
+              geometry: {
+                type: 'point',
+                spatialReference: clickPoint.spatialReference,
+                x: clickPoint.x,
+                y: clickPoint.y,
+                z: clickPoint.z,
+              } as any,
+              symbol: {
+                type: 'simple-marker',
+                color: [255, 255, 255],
+                size: 6,
+                outline: {
+                  color: [0, 0, 0],
+                  width: 1,
+                },
+              } as any,
+            }),
+          );
+
+          // add the permanent line if more than one point
+          const vertices = tmpSketchLayer.graphics.filter(
+            (graphic) => graphic.attributes.type === 'vertex',
+          );
+          if (vertices.length > 2) {
+            tmpSketchLayer.add(createPolygonGraphic(hitRes));
+          }
+        });
+      });
+      clickEvent = clickEvt;
+
+      // double click event used for finishing drawing of graphic
+      if (tool === 'polygon') {
+        const doubleClickEvt = sceneView.on('double-click', (event) => {
+          sceneView.hitTest(event).then((hitRes) => {
+            removeTempGraphics();
+
+            const poly = createPolygon(hitRes);
+
+            setGeometry(poly);
+
+            tmpSketchLayer.removeAll();
+          });
+        });
+        doubleClickEvent = doubleClickEvt;
+      }
+
+      // pointer move event used for displaying what graphic will look like
+      // when user drops the vertex
+      const moveEvt = sceneView.on('pointer-move', (event) => {
+        sceneView
+          .hitTest(event)
+          .then((hitRes) => {
+            const clickPoint = getClickedPoint(hitRes);
+
+            removeTempGraphics();
+
+            // add in current mouse position graphic
+            tmpSketchLayer.add(
+              new Graphic({
+                attributes: { type: 'addVertex' },
+                geometry: {
+                  type: 'point',
+                  spatialReference: clickPoint.spatialReference,
+                  x: clickPoint.x,
+                  y: clickPoint.y,
+                  z: clickPoint.z,
+                } as any,
+                symbol: {
+                  type: 'simple-marker',
+                  color: [255, 127, 0],
+                  size: 6,
+                  outline: {
+                    color: [0, 0, 0],
+                    width: 1,
+                  },
+                } as any,
+              }),
+            );
+
+            // add in line graphic if more than one point
+            const vertices = tmpSketchLayer.graphics.filter((graphic) => {
+              return graphic.attributes.type === 'vertex';
+            });
+            if (vertices.length === 1) {
+              const lastGraphic: __esri.Graphic = vertices.getItemAt(
+                vertices.length - 1,
+              );
+              const lastVertex: __esri.Point =
+                lastGraphic.geometry as __esri.Point;
+
+              tmpSketchLayer.add(
+                new Graphic({
+                  attributes: { type: 'addVertexLine' },
+                  geometry: {
+                    type: 'polyline',
+                    spatialReference: clickPoint.spatialReference,
+                    paths: [
+                      [lastVertex.x, lastVertex.y, lastVertex.z],
+                      [clickPoint.x, clickPoint.y, clickPoint.z],
+                    ],
+                  } as any,
+                  symbol: new LineSymbol3D({
+                    symbolLayers: create3dLineGraphic(),
+                  }),
+                }),
+              );
+            }
+            if (vertices.length > 1) {
+              const poly = createPolygonGraphic(hitRes);
+              tmpSketchLayer.add(poly);
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      });
+      moveEvent = moveEvt;
+    },
+    [displayDimensions, endSketch, map, sceneView],
+  );
+
+  // save sketched 3d graphic
+  useEffect(() => {
+    async function processItem() {
+      if (!geometry || !tempSketchLayer || !sketchLayer) return;
+      if (sketchLayer.sketchLayer.type === 'feature') return;
+
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id === 'sampling-mask') {
+        deactivateButtons();
+      }
+
+      if (!id) return;
+
+      // get the predefined attributes using the id of the clicked button
+      let attributes: any = {};
+      const uuid = generateUUID();
+      let layerType: LayerTypeName = 'Samples';
+      if (id === 'sampling-mask') {
+        layerType = 'Sampling Mask';
+        attributes = {
+          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          DECISIONUNITSORT: 0,
+          PERMANENT_IDENTIFIER: uuid,
+          GLOBALID: uuid,
+          OBJECTID: -1,
+          TYPE: layerType,
+        };
+      } else {
+        attributes = {
+          ...(window as any).totsSampleAttributes[id],
+          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
+          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          DECISIONUNITSORT: 0,
+          PERMANENT_IDENTIFIER: uuid,
+          GLOBALID: uuid,
+          OBJECTID: -1,
+          Notes: '',
+          CREATEDDATE: getCurrentDateTime(),
+          UPDATEDDATE: getCurrentDateTime(),
+          USERNAME: userInfo?.username || '',
+          ORGANIZATION: userInfo?.orgId || '',
+        };
+      }
+
+      const graphic = new Graphic({
+        attributes,
+        geometry,
+        popupTemplate: new PopupTemplate(
+          getPopupTemplate(layerType, getTrainingMode()),
+        ),
+        symbol: sketchVM?.[displayDimensions].polygonSymbol,
+      });
+
+      sketchLayer.sketchLayer.graphics.add(graphic);
+
+      // predefined boxes (sponge, micro vac and swab) need to be
+      // converted to a box of a specific size.
+      if (attributes.ShapeType === 'point') {
+        await createBuffer(graphic);
+      }
+
+      if (id !== 'sampling-mask') {
+        // find the points version of the layer
+        const layerId = graphic.layer.id;
+        const pointLayer = (graphic.layer as any).parent.layers.find(
+          (layer: any) => `${layerId}-points` === layer.id,
+        );
+        if (pointLayer) pointLayer.add(convertToPoint(graphic));
+      }
+
+      // look up the layer for this event
+      let updateLayer: LayerType | null = null;
+      let updateLayerIndex = -1;
+      for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        if (
+          (sketchLayer && layer.layerId === sketchLayer.sketchLayer.id) ||
+          (!sketchLayer &&
+            layer.layerId === graphic.attributes?.DECISIONUNITUUID)
+        ) {
+          updateLayer = layer;
+          updateLayerIndex = i;
+          break;
+        }
+      }
+      if (!updateLayer) return;
+
+      const changes = new Collection<__esri.Graphic>();
+      changes.add(graphic);
+
+      // save the layer changes
+      // make a copy of the edits context variable
+      const editsCopy = updateLayerEdits({
+        edits,
+        layer: sketchLayer,
+        type: 'add',
+        changes,
+      });
+
+      // update the edits state
+      setEdits(editsCopy);
+
+      const newScenario = editsCopy.edits.find(
+        (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
+      ) as ScenarioEditsType;
+      if (newScenario) setSelectedScenario(newScenario);
+
+      // updated the edited layer
+      setLayers([
+        ...layers.slice(0, updateLayerIndex),
+        updateLayer,
+        ...layers.slice(updateLayerIndex + 1),
+      ]);
+
+      // update sketchVM event
+      setSketchLayer((layer) => {
+        return layer ? { ...layer, editType: 'add' } : null;
+      });
+
+      // clear out sketched stuff
+      setGeometry(null);
+      tempSketchLayer.removeAll();
+    }
+
+    processItem();
+  }, [
+    displayDimensions,
+    edits,
+    geometry,
+    getPopupTemplate,
+    getTrainingMode,
+    layers,
+    selectedScenario,
+    setEdits,
+    setLayers,
+    setSelectedScenario,
+    setSketchLayer,
+    sketchLayer,
+    sketchVM,
+    userInfo,
+  ]);
+
+  return { endSketch, startSketch };
 }
 
 ///////////////////////////////////////////////////////////////////

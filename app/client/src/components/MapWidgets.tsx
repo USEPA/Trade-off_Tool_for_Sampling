@@ -33,9 +33,10 @@ import { SketchContext } from 'contexts/Sketch';
 import { LayerType, LayerTypeName } from 'types/Layer';
 import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
-import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
+import { use3dSketch, useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
   deactivateButtons,
   generateUUID,
   getCurrentDateTime,
@@ -197,7 +198,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     displayDimensions,
     terrain3dUseElevation,
   } = useContext(SketchContext);
-  const { createBuffer, loadedProjection } = useGeometryTools();
+  const { startSketch } = use3dSketch();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
 
@@ -588,6 +589,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
   }, [currentPanel, defaultSymbols, sketchWidget, sketchVM, sketchLayer]);
 
   // Updates the selected layer of the sketchViewModel
+  const [lastDisplayDimensions, setLastDisplayDimensions] =
+    useState(displayDimensions);
   useEffect(() => {
     if (!sketchVM || !sketchLayer?.sketchLayer || !mapView || !sceneView)
       return;
@@ -624,19 +627,22 @@ function MapWidgets({ mapView, sceneView }: Props) {
         (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
       }
 
-      let shapeType = attributes.ShapeType;
-
-      sketchVM[displayDimensions === '2d' ? '3d' : '2d'].cancel();
-      sketchVM[displayDimensions].create(shapeType);
+      if (displayDimensions !== lastDisplayDimensions) {
+        let shapeType = attributes.ShapeType;
+        startSketch(shapeType);
+        setLastDisplayDimensions(displayDimensions);
+      }
     }
   }, [
     defaultSymbols,
+    displayDimensions,
+    lastDisplayDimensions,
     mapView,
     sceneView,
-    displayDimensions,
     sampleAttributes,
     sketchLayer,
     sketchVM,
+    startSketch,
   ]);
 
   // Updates the selected layer of the aoiSketchViewModel
@@ -785,7 +791,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            createBuffer(graphic);
+            await createBuffer(graphic);
           }
 
           graphic.symbol = sketchViewModel.polygonSymbol;
@@ -992,7 +998,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, userInfo],
+    [getPopupTemplate, getTrainingMode, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -1003,7 +1009,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
   ] = useState(false);
   const [updateSketchEvent, setUpdateSketchEvent] = useState<any>(null);
   useEffect(() => {
-    if (!sketchVM || !loadedProjection || sketchEventsInitialized) return;
+    if (!sketchVM || sketchEventsInitialized) return;
     setupEvents(sketchVM['2d'], setSketchVMActive, setUpdateSketchEvent);
     setupEvents(sketchVM['3d'], setSketchVMActive, setUpdateSketchEvent);
 
@@ -1013,7 +1019,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setupEvents,
     sketchEventsInitialized,
     setSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Setup the sketch view model events for the Sampling Mask sketchVM
@@ -1027,7 +1032,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setAoiUpdateSketchEvent, //
   ] = useState<any>(null);
   useEffect(() => {
-    if (!aoiSketchVM || !loadedProjection || aoiSketchEventsInitialized) return;
+    if (!aoiSketchVM || aoiSketchEventsInitialized) return;
     setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
@@ -1036,7 +1041,6 @@ function MapWidgets({ mapView, sceneView }: Props) {
     setupEvents,
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Get the active sketchVM

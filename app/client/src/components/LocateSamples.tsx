@@ -47,9 +47,10 @@ import {
 } from 'config/errorMessages';
 // utils
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
-import { useGeometryTools, useDynamicPopup, useStartOver } from 'utils/hooks';
+import { use3dSketch, useDynamicPopup, useStartOver } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
   createLayer,
   createSampleLayer,
   deepCopyObject,
@@ -451,7 +452,7 @@ function LocateSamples() {
     mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
-  const { createBuffer } = useGeometryTools();
+  const { endSketch, startSketch } = use3dSketch();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
@@ -563,8 +564,8 @@ function LocateSamples() {
     sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
 
     // let the user draw/place the shape
-    if (wasSet) sketchVM[displayDimensions].create(shapeType);
-    else sketchVM[displayDimensions].cancel();
+    if (wasSet) startSketch(shapeType);
+    else endSketch();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -1076,7 +1077,7 @@ function LocateSamples() {
   }
 
   // Updates the attributes of graphics that have had property changes
-  function updateAttributes({
+  async function updateAttributes({
     graphics,
     newAttributes,
     oldType,
@@ -1088,7 +1089,7 @@ function LocateSamples() {
     symbol?: PolygonSymbol | null;
   }) {
     const editedGraphics: __esri.Graphic[] = [];
-    graphics.forEach((graphic: __esri.Graphic) => {
+    for (const graphic of graphics) {
       // update attributes for the edited type
       if (graphic.attributes.TYPEUUID === oldType) {
         const areaChanged = graphic.attributes.SA !== newAttributes.SA;
@@ -1120,7 +1121,7 @@ function LocateSamples() {
           (areaChanged || shapeTypeChanged)
         ) {
           // convert the geometry _esriPolygon if it is missing stuff
-          createBuffer(graphic as __esri.Graphic);
+          await createBuffer(graphic as __esri.Graphic);
         }
 
         // update the point symbol if necessary
@@ -1130,7 +1131,7 @@ function LocateSamples() {
 
         editedGraphics.push(graphic);
       }
-    });
+    }
 
     return editedGraphics;
   }
@@ -2992,7 +2993,7 @@ function LocateSamples() {
                                   ))))) && (
                           <button
                             css={addButtonStyles}
-                            onClick={(ev) => {
+                            onClick={async (ev) => {
                               setValidationMessage('');
                               const typeUuid =
                                 (editingStatus === 'edit' ||
@@ -3155,24 +3156,25 @@ function LocateSamples() {
 
                                   // Update the attributes of the graphics on the map on edits
                                   let editsCopy: EditsType = edits;
-                                  layers.forEach((layer) => {
+                                  for (const layer of layers) {
                                     if (
                                       !['Samples', 'VSP'].includes(
                                         layer.layerType,
                                       ) ||
                                       layer.sketchLayer.type !== 'graphics'
                                     ) {
-                                      return;
+                                      continue;
                                     }
 
-                                    const editedGraphics = updateAttributes({
-                                      graphics:
-                                        layer.sketchLayer.graphics.toArray(),
-                                      newAttributes,
-                                      oldType,
-                                    });
+                                    const editedGraphics =
+                                      await updateAttributes({
+                                        graphics:
+                                          layer.sketchLayer.graphics.toArray(),
+                                        newAttributes,
+                                        oldType,
+                                      });
                                     if (layer.pointsLayer) {
-                                      updateAttributes({
+                                      await updateAttributes({
                                         graphics:
                                           layer.pointsLayer.graphics.toArray(),
                                         newAttributes,
@@ -3181,7 +3183,7 @@ function LocateSamples() {
                                       });
                                     }
                                     if (layer.hybridLayer) {
-                                      updateAttributes({
+                                      await updateAttributes({
                                         graphics:
                                           layer.hybridLayer.graphics.toArray(),
                                         newAttributes,
@@ -3201,7 +3203,7 @@ function LocateSamples() {
                                         changes: collection,
                                       });
                                     }
-                                  });
+                                  }
 
                                   setEdits(editsCopy);
                                 }

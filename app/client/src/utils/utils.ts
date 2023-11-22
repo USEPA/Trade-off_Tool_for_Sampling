@@ -2,37 +2,6 @@ import { EditsType } from 'types/Edits';
 import { LayerType } from 'types/Layer';
 
 /**
- * Script from ESRI for escaping an ArcGIS Online usernames and
- * organization ids.
- *
- * @param value The ArcGIS Online username or organization id
- * @returns The escaped version of the username or org id.
- */
-export function escapeForLucene(value: string) {
-  var a = [
-    '+',
-    '-',
-    '&',
-    '!',
-    '(',
-    ')',
-    '{',
-    '}',
-    '[',
-    ']',
-    '^',
-    '"',
-    '~',
-    '*',
-    '?',
-    ':',
-    '\\',
-  ];
-  var r = new RegExp('(\\' + a.join('|\\') + ')', 'g');
-  return value.replace(r, '\\$1');
-}
-
-/**
  * Utility function to split up an array into chunks of a designated length.
  *
  * @param array The original array
@@ -75,6 +44,37 @@ export function createErrorObject(error: any) {
 }
 
 /**
+ * Script from ESRI for escaping an ArcGIS Online usernames and
+ * organization ids.
+ *
+ * @param value The ArcGIS Online username or organization id
+ * @returns The escaped version of the username or org id.
+ */
+export function escapeForLucene(value: string) {
+  var a = [
+    '+',
+    '-',
+    '&',
+    '!',
+    '(',
+    ')',
+    '{',
+    '}',
+    '[',
+    ']',
+    '^',
+    '"',
+    '~',
+    '*',
+    '?',
+    ':',
+    '\\',
+  ];
+  var r = new RegExp('(\\' + a.join('|\\') + ')', 'g');
+  return value.replace(r, '\\$1');
+}
+
+/**
  * Sanitizes regex strings.
  *
  * @param str The regex string to be sanitized
@@ -82,18 +82,6 @@ export function createErrorObject(error: any) {
  */
 export function escapeRegex(str: string) {
   return str.replace(/([.*+?^=!:${}()|\]\\])/g, '\\$1');
-}
-
-/**
- * Gets the number from the last parentheses. If the value
- * is not a number NaN is returned.
- *
- * @param str String to get number in last parentheses
- * @returns
- */
-function getNumberFromParen(str: string) {
-  const splitLabel = str.split('(');
-  return parseInt(splitLabel[splitLabel.length - 1].replace(')', ''));
 }
 
 /**
@@ -126,6 +114,18 @@ export function getLayerName(layers: LayerType[], desiredName: string) {
     return `${newName} (${
       duplicateCount === numInDesiredName ? duplicateCount + 1 : duplicateCount
     })`;
+}
+
+/**
+ * Gets the number from the last parentheses. If the value
+ * is not a number NaN is returned.
+ *
+ * @param str String to get number in last parentheses
+ * @returns
+ */
+function getNumberFromParen(str: string) {
+  const splitLabel = str.split('(');
+  return parseInt(splitLabel[splitLabel.length - 1].replace(')', ''));
 }
 
 /**

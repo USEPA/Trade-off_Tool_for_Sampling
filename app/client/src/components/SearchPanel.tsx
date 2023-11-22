@@ -32,13 +32,14 @@ import {
   getFeatureLayers,
   getFeatureTables,
 } from 'utils/arcGisRestUtils';
-import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
+import { useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
   deepCopyObject,
   generateUUID,
   getNextScenarioLayer,
   getSimplePopupTemplate,
+  sampleValidation,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { createErrorObject, escapeForLucene } from 'utils/utils';
@@ -769,7 +770,6 @@ function ResultCard({ result }: ResultCardProps) {
     setUserDefinedAttributes,
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
-  const { sampleValidation } = useGeometryTools();
   const layerProps = useLayerProps();
 
   // Used to determine if the layer for this card has been added or not
@@ -1550,7 +1550,13 @@ function ResultCard({ result }: ResultCardProps) {
       // validate the area and attributes of features of the uploads. If there is an
       // issue, display a popup asking the user if they would like the samples to be updated.
       if (zoomToGraphics.length > 0) {
-        const output = sampleValidation(zoomToGraphics, true, false);
+        const output = await sampleValidation(
+          sampleTypeContext,
+          sceneView,
+          zoomToGraphics,
+          true,
+          false,
+        );
 
         if (output?.areaOutOfTolerance || output?.attributeMismatch) {
           setOptions({
