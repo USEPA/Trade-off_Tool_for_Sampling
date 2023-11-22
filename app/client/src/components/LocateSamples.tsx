@@ -564,11 +564,8 @@ function LocateSamples() {
     sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
 
     // let the user draw/place the shape
-    if (wasSet) {
-      startSketch(shapeType);
-    } else {
-      endSketch();
-    }
+    if (wasSet) startSketch(shapeType);
+    else endSketch();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
