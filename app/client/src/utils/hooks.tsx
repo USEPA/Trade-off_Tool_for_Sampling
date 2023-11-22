@@ -43,7 +43,7 @@ import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
 import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
 // types
 import {
   CalculateResultsType,
@@ -872,6 +872,8 @@ let clickEvent: IHandle | null = null;
 let doubleClickEvent: IHandle | null = null;
 let moveEvent: IHandle | null = null;
 let popupEvent: IHandle | null = null;
+let sketchVMG: SketchViewModelType | null = null;
+let tempSketchLayer: __esri.GraphicsLayer | null = null;
 export function use3dSketch() {
   const { userInfo } = useContext(AuthenticationContext);
   const { getTrainingMode } = useContext(NavigationContext);
@@ -891,15 +893,18 @@ export function use3dSketch() {
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
 
-  const [tempSketchLayer, setTempSketchLayer] =
-    useState<__esri.GraphicsLayer | null>(null);
   const [geometry, setGeometry] = useState<
     __esri.Point | __esri.Polygon | null
   >(null);
 
+  // syncs the sketchVMG variable with the sketchVM context value
+  useEffect(() => {
+    sketchVMG = sketchVM;
+  }, [displayDimensions, sketchVM]);
+
   // turns off the 3D sketch tools
   const endSketch = useCallback(() => {
-    if (sketchVM) sketchVM[displayDimensions].cancel();
+    if (sketchVMG) sketchVMG[displayDimensions].cancel();
     if (clickEvent) clickEvent.remove();
     if (doubleClickEvent) doubleClickEvent.remove();
     if (moveEvent) moveEvent.remove();
@@ -909,17 +914,17 @@ export function use3dSketch() {
       tempSketchLayer?.removeAll();
       map.remove(tempSketchLayer);
     }
-  }, [displayDimensions, map, sketchVM, tempSketchLayer]);
+  }, [displayDimensions, map]);
 
   // turns on the 3D sketch tools
   const startSketch = useCallback(
     (tool: 'point' | 'polygon') => {
-      if (!map || !sceneView || !sketchVM) return;
+      if (!map || !sceneView || !sketchVMG) return;
 
       endSketch();
 
       if (displayDimensions === '2d') {
-        sketchVM[displayDimensions].create(tool);
+        sketchVMG[displayDimensions].create(tool);
         return;
       }
 
@@ -938,7 +943,7 @@ export function use3dSketch() {
         listMode: 'hide',
       });
       map.add(tmpSketchLayer);
-      setTempSketchLayer(tmpSketchLayer);
+      tempSketchLayer = tmpSketchLayer;
 
       // clean out temp sketch graphics
       function removeTempGraphics() {
@@ -1043,7 +1048,7 @@ export function use3dSketch() {
 
       // creates a partial polygon graphic from temp vertices
       function createPolygonGraphic(hitRes: __esri.SceneViewHitTestResult) {
-        const polySymbol = sketchVM?.[displayDimensions].polygonSymbol as any;
+        const polySymbol = sketchVMG?.[displayDimensions].polygonSymbol as any;
         return new Graphic({
           attributes: { type: 'addPolygon' },
           geometry: createPolygon(hitRes),
@@ -1192,7 +1197,7 @@ export function use3dSketch() {
       });
       moveEvent = moveEvt;
     },
-    [displayDimensions, endSketch, map, sceneView, sketchVM],
+    [displayDimensions, endSketch, map, sceneView],
   );
 
   // save sketched 3d graphic
@@ -1337,7 +1342,6 @@ export function use3dSketch() {
     setSketchLayer,
     sketchLayer,
     sketchVM,
-    tempSketchLayer,
     userInfo,
   ]);
 
