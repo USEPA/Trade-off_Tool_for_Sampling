@@ -1271,6 +1271,17 @@ export function use3dSketch() {
           (layer: any) => `${layerId}-points` === layer.id,
         );
         if (pointLayer) pointLayer.add(convertToPoint(graphic));
+
+        const hybridLayer = (graphic.layer as any).parent.layers.find(
+          (layer: any) => `${layerId}-hybrid` === layer.id,
+        );
+        if (hybridLayer) {
+          hybridLayer.add(
+            graphic.attributes.ShapeType === 'point'
+              ? convertToPoint(graphic)
+              : graphic.clone(),
+          );
+        }
       }
 
       // look up the layer for this event
