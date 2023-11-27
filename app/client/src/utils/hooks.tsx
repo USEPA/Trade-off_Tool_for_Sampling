@@ -282,7 +282,7 @@ export function useCalculatePlan() {
   const {
     edits,
     layers,
-    sceneView,
+    sceneViewForArea,
     selectedScenario,
     setEdits,
     setSelectedScenario,
@@ -411,7 +411,7 @@ export function useCalculatePlan() {
           const calcGraphic = graphic.clone();
 
           // calculate the area using the custom hook
-          const areaSI = await calculateArea(graphic, sceneView);
+          const areaSI = await calculateArea(graphic, sceneViewForArea);
           if (typeof areaSI !== 'number') {
             continue;
           }
@@ -517,7 +517,7 @@ export function useCalculatePlan() {
     }
 
     processFeatures();
-  }, [edits, layers, sceneView, selectedScenario]);
+  }, [edits, layers, sceneViewForArea, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
