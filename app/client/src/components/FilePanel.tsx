@@ -243,6 +243,7 @@ function FilePanel() {
     sampleAttributes,
     allSampleOptions,
     sceneView,
+    sceneViewForArea,
     selectedScenario,
     setSelectedScenario,
     setSketchLayer,
@@ -773,7 +774,7 @@ function FilePanel() {
     if (
       !map ||
       !mapView ||
-      !sceneView ||
+      !sceneViewForArea ||
       !layerType ||
       !file?.file?.esriFileType ||
       fileValidationStarted ||
@@ -806,7 +807,7 @@ function FilePanel() {
     async function validateSamples() {
       const output = await sampleValidation(
         sampleTypeContext,
-        sceneView,
+        sceneViewForArea,
         features,
         isFullGraphic,
       );
@@ -840,7 +841,7 @@ function FilePanel() {
     mapView,
     sampleTypeContext,
     setOptions,
-    sceneView,
+    sceneViewForArea,
   ]);
 
   // add features to the map as graphics layers. This is for every layer type

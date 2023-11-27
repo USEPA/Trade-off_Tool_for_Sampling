@@ -282,7 +282,7 @@ export function useCalculatePlan() {
   const {
     edits,
     layers,
-    sceneView,
+    sceneViewForArea,
     selectedScenario,
     setEdits,
     setSelectedScenario,
@@ -411,7 +411,7 @@ export function useCalculatePlan() {
           const calcGraphic = graphic.clone();
 
           // calculate the area using the custom hook
-          const areaSI = await calculateArea(graphic, sceneView);
+          const areaSI = await calculateArea(graphic, sceneViewForArea);
           if (typeof areaSI !== 'number') {
             continue;
           }
@@ -517,7 +517,7 @@ export function useCalculatePlan() {
     }
 
     processFeatures();
-  }, [edits, layers, sceneView, selectedScenario]);
+  }, [edits, layers, sceneViewForArea, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
@@ -1271,6 +1271,17 @@ export function use3dSketch() {
           (layer: any) => `${layerId}-points` === layer.id,
         );
         if (pointLayer) pointLayer.add(convertToPoint(graphic));
+
+        const hybridLayer = (graphic.layer as any).parent.layers.find(
+          (layer: any) => `${layerId}-hybrid` === layer.id,
+        );
+        if (hybridLayer) {
+          hybridLayer.add(
+            graphic.attributes.ShapeType === 'point'
+              ? convertToPoint(graphic)
+              : graphic.clone(),
+          );
+        }
       }
 
       // look up the layer for this event
