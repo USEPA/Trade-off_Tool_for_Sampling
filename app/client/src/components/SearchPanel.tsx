@@ -327,7 +327,7 @@ function SearchPanel() {
       }
       query = appendToQuery(
         query,
-        `owner:${escapeForLucene(tmpPortal.user.orgId)}`,
+        `orgid:${escapeForLucene(tmpPortal.user.orgId)}`,
       );
     }
     if (location.value === 'My Groups') {
