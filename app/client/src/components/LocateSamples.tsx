@@ -674,7 +674,11 @@ function LocateSamples() {
           fields: layerProps.data.defaultFields,
           features: [
             {
-              attributes: sampleAttributes[typeuuid as any],
+              attributes: {
+                ...sampleAttributes[typeuuid as any],
+                GLOBALID: generateUUID(),
+                PERMANENT_IDENTIFIER: generateUUID(),
+              },
             },
           ],
         };

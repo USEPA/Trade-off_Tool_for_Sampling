@@ -625,7 +625,11 @@ function FilePanel() {
           fields: layerProps.data.defaultFields,
           features: [
             {
-              attributes: sampleAttributes[localSampleType.value as any],
+              attributes: {
+                ...sampleAttributes[localSampleType.value as any],
+                GLOBALID: generateUUID(),
+                PERMANENT_IDENTIFIER: generateUUID(),
+              },
             },
           ],
         };
