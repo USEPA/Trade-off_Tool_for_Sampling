@@ -452,7 +452,8 @@ function LocateSamples() {
     mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
-  const { endSketch, startSketch } = use3dSketch();
+  const samplesSketch = use3dSketch(sketchVM, sketchLayer);
+  const aoiSketch = use3dSketch(aoiSketchVM, aoiSketchLayer);
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
@@ -536,7 +537,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (aoiSketchVM) {
-      aoiSketchVM.cancel();
+      aoiSketchVM[displayDimensions].cancel();
     }
 
     // determine whether the sketch button draws points or polygons
@@ -564,8 +565,8 @@ function LocateSamples() {
     sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
 
     // let the user draw/place the shape
-    if (wasSet) startSketch(shapeType);
-    else endSketch();
+    if (wasSet) samplesSketch.startSketch(shapeType);
+    else samplesSketch.endSketch();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -603,9 +604,9 @@ function LocateSamples() {
 
     if (wasSet) {
       // let the user draw/place the shape
-      aoiSketchVM.create('polygon');
+      aoiSketch.startSketch('polygon');
     } else {
-      aoiSketchVM.cancel();
+      aoiSketch.endSketch();
     }
   }
 
@@ -615,7 +616,7 @@ function LocateSamples() {
 
     activateSketchButton('disable-all-buttons');
     sketchVM?.[displayDimensions].cancel();
-    aoiSketchVM?.cancel();
+    aoiSketchVM?.[displayDimensions].cancel();
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'

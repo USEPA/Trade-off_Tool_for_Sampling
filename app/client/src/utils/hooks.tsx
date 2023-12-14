@@ -874,7 +874,10 @@ let moveEvent: IHandle | null = null;
 let popupEvent: IHandle | null = null;
 let sketchVMG: SketchViewModelType | null = null;
 let tempSketchLayer: __esri.GraphicsLayer | null = null;
-export function use3dSketch() {
+export function use3dSketch(
+  sketchVM: SketchViewModelType | null,
+  sketchLayer: LayerType | null,
+) {
   const { userInfo } = useContext(AuthenticationContext);
   const { getTrainingMode } = useContext(NavigationContext);
   const {
@@ -888,8 +891,6 @@ export function use3dSketch() {
     setLayers,
     setSelectedScenario,
     setSketchLayer,
-    sketchLayer,
-    sketchVM,
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
 
@@ -909,6 +910,10 @@ export function use3dSketch() {
     if (doubleClickEvent) doubleClickEvent.remove();
     if (moveEvent) moveEvent.remove();
     if (popupEvent) popupEvent.remove();
+    clickEvent = null;
+    doubleClickEvent = null;
+    moveEvent = null;
+    popupEvent = null;
 
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
@@ -1211,6 +1216,7 @@ export function use3dSketch() {
       const id = button && button.id;
       if (id === 'sampling-mask') {
         deactivateButtons();
+        endSketch();
       }
 
       if (!id) return;
@@ -1342,6 +1348,7 @@ export function use3dSketch() {
   }, [
     displayDimensions,
     edits,
+    endSketch,
     geometry,
     getPopupTemplate,
     getTrainingMode,

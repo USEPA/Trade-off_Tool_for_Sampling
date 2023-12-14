@@ -37,9 +37,10 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     displayDimensions,
     sampleAttributes,
     setSelectedSampleIds,
+    sketchLayer,
     sketchVM,
   } = useContext(SketchContext);
-  const { startSketch } = use3dSketch();
+  const { startSketch } = use3dSketch(sketchVM, sketchLayer);
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {

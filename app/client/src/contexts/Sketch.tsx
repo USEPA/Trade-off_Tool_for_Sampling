@@ -81,8 +81,8 @@ type SketchType = {
   setSelectedScenario: Dispatch<SetStateAction<ScenarioEditsType | null>>;
   sketchVM: SketchViewModelType | null;
   setSketchVM: Dispatch<SetStateAction<SketchViewModelType | null>>;
-  aoiSketchVM: __esri.SketchViewModel | null;
-  setAoiSketchVM: Dispatch<SetStateAction<__esri.SketchViewModel | null>>;
+  aoiSketchVM: SketchViewModelType | null;
+  setAoiSketchVM: Dispatch<SetStateAction<SketchViewModelType | null>>;
   getGpMaxRecordCount: (() => Promise<number>) | null;
   userDefinedOptions: SampleSelectType[];
   setUserDefinedOptions: Dispatch<SetStateAction<SampleSelectType[]>>;
@@ -236,7 +236,7 @@ export function SketchProvider({ children }: Props) {
   const [
     aoiSketchVM,
     setAoiSketchVM, //
-  ] = useState<__esri.SketchViewModel | null>(null);
+  ] = useState<SketchViewModelType | null>(null);
   const [userDefinedOptions, setUserDefinedOptions] = useState<
     SampleSelectType[]
   >([]);
