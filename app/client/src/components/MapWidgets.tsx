@@ -199,6 +199,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
     terrain3dUseElevation,
   } = useContext(SketchContext);
   const samplesSketch = use3dSketch(sketchVM, sketchLayer);
+  const aoiSketch = use3dSketch(aoiSketchVM, aoiSketchLayer);
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
 
@@ -709,17 +710,29 @@ function MapWidgets({ mapView, sceneView }: Props) {
         displayDimensions === '3d'
           ? { mode: 'absolute-height' }
           : (null as any);
+
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id === 'sampling-mask') {
+        if (displayDimensions !== lastDisplayDimensions) {
+          aoiSketch.startSketch('polygon');
+          setLastDisplayDimensions(displayDimensions);
+        }
+      }
     } else {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM['2d'].layer = null as unknown as __esri.GraphicsLayer;
       aoiSketchVM['3d'].layer = null as unknown as __esri.GraphicsLayer;
     }
   }, [
+    aoiSketch,
     aoiSketchLayer,
     aoiSketchVM,
     currentPanel,
     defaultSymbols,
     displayDimensions,
+    lastDisplayDimensions,
     mapView,
     sceneView,
   ]);
