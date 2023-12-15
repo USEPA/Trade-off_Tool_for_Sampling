@@ -160,6 +160,8 @@ export function useStartOver() {
     setAoiSketchLayer,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setDisplayGeometryType2d,
+    setDisplayGeometryType3d,
     setEdits,
     setLayers,
     setPortalLayers,
@@ -206,6 +208,8 @@ export function useStartOver() {
     setGettingStartedOpen(false);
     setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setDisplayGeometryType2d('points');
+    setDisplayGeometryType3d('hybrid');
     setTerrain3dUseElevation(true);
     setTerrain3dVisible(true);
     setViewUnderground3d(false);
@@ -2653,8 +2657,11 @@ function useDisplayModeStorage() {
   const {
     displayDimensions,
     setDisplayDimensions,
-    displayGeometryType,
     setDisplayGeometryType,
+    displayGeometryType2d,
+    setDisplayGeometryType2d,
+    displayGeometryType3d,
+    setDisplayGeometryType3d,
     terrain3dUseElevation,
     setTerrain3dUseElevation,
     terrain3dVisible,
@@ -2675,6 +2682,8 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setDisplayGeometryType2d('points');
+      setDisplayGeometryType3d('hybrid');
       setTerrain3dUseElevation(true);
       setTerrain3dVisible(true);
       setViewUnderground3d(false);
@@ -2683,8 +2692,14 @@ function useDisplayModeStorage() {
 
     const displayMode = JSON.parse(displayModeStr);
 
-    setDisplayDimensions(displayMode.dimensions);
-    setDisplayGeometryType(displayMode.geometryType);
+    const { dimensions, geometryType2d, geometryType3d } = displayMode;
+
+    setDisplayDimensions(dimensions);
+    setDisplayGeometryType(
+      dimensions === '3d' ? geometryType3d : geometryType2d,
+    );
+    setDisplayGeometryType2d(geometryType2d);
+    setDisplayGeometryType3d(geometryType3d);
     setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
@@ -2692,6 +2707,8 @@ function useDisplayModeStorage() {
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setDisplayGeometryType2d,
+    setDisplayGeometryType3d,
     setTerrain3dUseElevation,
     setTerrain3dVisible,
     setViewUnderground3d,
@@ -2702,7 +2719,8 @@ function useDisplayModeStorage() {
 
     const displayMode: object = {
       dimensions: displayDimensions,
-      geometryType: displayGeometryType,
+      geometryType2d: displayGeometryType2d,
+      geometryType3d: displayGeometryType3d,
       terrain3dUseElevation,
       terrain3dVisible,
       viewUnderground3d,
@@ -2710,7 +2728,8 @@ function useDisplayModeStorage() {
     writeToStorage(key, displayMode, setOptions);
   }, [
     displayDimensions,
-    displayGeometryType,
+    displayGeometryType2d,
+    displayGeometryType3d,
     localDisplayModeInitialized,
     setOptions,
     terrain3dUseElevation,
