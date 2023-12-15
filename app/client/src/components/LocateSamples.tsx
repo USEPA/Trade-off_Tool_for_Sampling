@@ -62,7 +62,6 @@ import {
   getPointSymbol,
   getScenarios,
   getSketchableLayers,
-  removeZValues,
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -630,16 +629,9 @@ function LocateSamples() {
 
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
-        const originalValuesZ: number[] = [];
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
-          const fullGraphics = aoiMaskLayer.sketchLayer.graphics.clone();
-          fullGraphics.forEach((graphic) => {
-            const z = removeZValues(graphic);
-            originalValuesZ.push(z);
-          });
-
-          graphics = fullGraphics.toArray();
+          graphics = aoiMaskLayer.sketchLayer.graphics.clone().toArray();
         }
 
         // create a feature set for communicating with the GPServer
@@ -724,7 +716,6 @@ function LocateSamples() {
             const graphicsToAdd: __esri.Graphic[] = [];
             const hybridGraphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
-            const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -756,16 +747,8 @@ function LocateSamples() {
                 symbol = defaultSymbols.symbols[sampleType.value];
               }
 
-              let originalZIndex = 0;
-              const graphicsPerAoi = results.features.length / numberOfAois;
-
               // build an array of graphics to draw on the map
-              let index = 0;
               for (const feature of results.features) {
-                if (index !== 0 && index % graphicsPerAoi === 0)
-                  originalZIndex += 1;
-
-                const originalZ = originalValuesZ[originalZIndex];
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[typeuuid],
@@ -789,14 +772,12 @@ function LocateSamples() {
                   popupTemplate,
                 });
 
-                await setZValues({
-                  map,
-                  graphic: poly,
-                  zOverride:
-                    generateRandomElevationMode === 'aoiElevation'
-                      ? originalZ
-                      : null,
-                });
+                if (generateRandomElevationMode === 'ground') {
+                  await setZValues({
+                    map,
+                    graphic: poly,
+                  });
+                }
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
@@ -805,8 +786,6 @@ function LocateSamples() {
                     ? convertToPoint(poly)
                     : poly.clone(),
                 );
-
-                index += 1;
               }
             }
 
