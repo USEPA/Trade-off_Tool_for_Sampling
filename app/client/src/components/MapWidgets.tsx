@@ -632,45 +632,52 @@ function MapWidgets({ mapView, sceneView }: Props) {
     if (!sketchVM || !sketchLayer?.sketchLayer || !mapView || !sceneView)
       return;
 
-    sketchVM['2d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-    sketchVM['2d'].pointSymbol = {
-      ...defaultSymbols.symbols['Samples'],
-      type: 'simple-marker',
-    } as any;
-    sketchVM['3d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-    sketchVM['3d'].pointSymbol = {
-      ...defaultSymbols.symbols['Samples'],
-      type: 'simple-marker',
-    } as any;
+    if (currentPanel?.value === 'locateSamples') {
+      sketchVM['2d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM['2d'].pointSymbol = {
+        ...defaultSymbols.symbols['Samples'],
+        type: 'simple-marker',
+      } as any;
+      sketchVM['3d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM['3d'].pointSymbol = {
+        ...defaultSymbols.symbols['Samples'],
+        type: 'simple-marker',
+      } as any;
 
-    sketchLayer.sketchLayer.elevationInfo =
-      displayDimensions === '3d' ? { mode: 'absolute-height' } : (null as any);
+      sketchLayer.sketchLayer.elevationInfo =
+        displayDimensions === '3d'
+          ? { mode: 'absolute-height' }
+          : (null as any);
 
-    // get the button and it's id
-    const button = document.querySelector('.sketch-button-selected');
-    const id = button && button.id;
-    if (id && sampleAttributes.hasOwnProperty(id)) {
-      // determine whether the sketch button draws points or polygons
-      const attributes = sampleAttributes[id as any];
-      if (attributes.POINT_STYLE.includes('path|')) {
-        (sketchVM['2d'].pointSymbol as any).style = 'path';
-        (sketchVM['2d'].pointSymbol as any).path =
-          attributes.POINT_STYLE.replace('path|', '');
-        (sketchVM['3d'].pointSymbol as any).style = 'path';
-        (sketchVM['3d'].pointSymbol as any).path =
-          attributes.POINT_STYLE.replace('path|', '');
-      } else {
-        (sketchVM['2d'].pointSymbol as any).style = attributes.POINT_STYLE;
-        (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id && sampleAttributes.hasOwnProperty(id)) {
+        // determine whether the sketch button draws points or polygons
+        const attributes = sampleAttributes[id as any];
+        if (attributes.POINT_STYLE.includes('path|')) {
+          (sketchVM['2d'].pointSymbol as any).style = 'path';
+          (sketchVM['2d'].pointSymbol as any).path =
+            attributes.POINT_STYLE.replace('path|', '');
+          (sketchVM['3d'].pointSymbol as any).style = 'path';
+          (sketchVM['3d'].pointSymbol as any).path =
+            attributes.POINT_STYLE.replace('path|', '');
+        } else {
+          (sketchVM['2d'].pointSymbol as any).style = attributes.POINT_STYLE;
+          (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
+        }
+
+        if (displayDimensions !== lastDisplayDimensions) {
+          let shapeType = attributes.ShapeType;
+          samplesSketch.startSketch(shapeType);
+          setLastDisplayDimensions(displayDimensions);
+        }
       }
-
-      if (displayDimensions !== lastDisplayDimensions) {
-        let shapeType = attributes.ShapeType;
-        samplesSketch.startSketch(shapeType);
-        setLastDisplayDimensions(displayDimensions);
-      }
+    } else {
+      samplesSketch.endSketch();
     }
   }, [
+    currentPanel,
     defaultSymbols,
     displayDimensions,
     lastDisplayDimensions,
@@ -722,6 +729,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
       }
     } else {
       // disable the sketch vm for any panel other than locateSamples
+      aoiSketch.endSketch();
       aoiSketchVM['2d'].layer = null as unknown as __esri.GraphicsLayer;
       aoiSketchVM['3d'].layer = null as unknown as __esri.GraphicsLayer;
     }
