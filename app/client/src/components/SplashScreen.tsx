@@ -117,7 +117,7 @@ function SplashScreen() {
   // Read the splash disabled cookie
   const [hasCheckedCookie, setHasCheckedCookie] = useState(false);
   const [preventSplashScreen, setPreventSplashScreen] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   useEffect(() => {
     // only check the cookie on load
     if (!cookies || hasCheckedCookie) return;
