@@ -125,7 +125,7 @@ function SplashScreen() {
 
     // Read the splash disabled cookie.
     // Note: Pre-pendeded 'tots_' to quickly distinguish between tots and esri cookies
-    const splashScreenDisabled = cookies.get('tots_splash_disabled');
+    const splashScreenDisabled = cookies.get('tots_splash_disabled') ?? false;
 
     // Set states to control the splash screen
     setPreventSplashScreen(splashScreenDisabled);
