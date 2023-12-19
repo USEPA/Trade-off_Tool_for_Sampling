@@ -904,11 +904,13 @@ export function use3dSketch() {
 
   // turns off the 3D sketch tools
   const endSketch = useCallback(() => {
-    if (sketchVMG) sketchVMG[displayDimensions].cancel();
-    if (clickEvent) clickEvent.remove();
-    if (doubleClickEvent) doubleClickEvent.remove();
-    if (moveEvent) moveEvent.remove();
-    if (popupEvent) popupEvent.remove();
+    try {
+      if (sketchVMG) sketchVMG[displayDimensions].cancel();
+      if (clickEvent) clickEvent.remove();
+      if (doubleClickEvent) doubleClickEvent.remove();
+      if (moveEvent) moveEvent.remove();
+      if (popupEvent) popupEvent.remove();
+    } catch (_ex) {}
 
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
