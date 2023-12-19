@@ -18,7 +18,7 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "scripts": {
     "client": "cd client && npm start",
@@ -29,12 +29,12 @@
     "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"npx rimraf .nyc_output/out.json && cypress run --browser electron\""
   },
   "devDependencies": {
-    "@cypress/code-coverage": "3.12.14",
+    "@cypress/code-coverage": "3.12.15",
     "@testing-library/cypress": "10.0.1",
     "@types/cypress-image-snapshot": "3.1.9",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
-    "@types/node": "18.16.0",
+    "@types/node": "20.10.5",
     "@types/testing-library__cypress": "5.0.13",
     "concurrently": "8.2.2",
     "cypress": "13.6.1",

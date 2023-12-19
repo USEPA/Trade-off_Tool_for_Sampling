@@ -18,7 +18,7 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "main": "src/index.js",
   "homepage": ".",
@@ -58,7 +58,7 @@
     "@types/file-saver": "2.0.7",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
-    "@types/node": "18.16.0",
+    "@types/node": "20.10.5",
     "@types/react": "18.2.45",
     "@types/react-color": "3.0.10",
     "@types/react-dom": "18.2.18",

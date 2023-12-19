@@ -18,7 +18,7 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "main": "app/server.js",
   "scripts": {
