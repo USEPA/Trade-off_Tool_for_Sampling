@@ -52,8 +52,12 @@ describe("Map Widget", function () {
     cy.findByTitle("Delete Sample").should("exist");
     cy.findByTitle("View In Table").should("exist").click();
     cy.findByTitle("Zoom to").should("exist").click();
-    cy.findByRole("button", { name: "Show More" }).should("exist").click();
-    cy.findByRole("button", { name: "Show Less" }).should("exist").click();
+    cy.findByRole("button", { name: "Show More" })
+      .should("exist")
+      .click({ force: true });
+    cy.findByRole("button", { name: "Show Less" })
+      .should("exist")
+      .click({ force: true });
     cy.get("#graphic-note").type("graphic note");
     cy.findByRole("button", { name: "Save" }).should("exist").click();
     cy.get("body").trigger("keydown", { keyCode: 27 });

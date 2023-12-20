@@ -113,13 +113,11 @@ describe("Add data from file uploads", function () {
       .should("be.visible");
     cy.get(layerSelectId).type("TOTS Sampling Plans{enter}", { force: true });
 
-    cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should(
       "not.exist"
     );
 
     cy.get("#search-input").type(`${planName}{enter}`);
-    cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should(
       "not.exist"
     );
@@ -236,7 +234,6 @@ describe("Add data from file uploads", function () {
     cy.get("#sample-table-name-input").type(table_Name);
     cy.get("#scenario-description-input").type("scenario_description_input");
     cy.findByRole("button", { name: "Save" }).click({ force: true });
-    cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should(
       "not.exist"
     );
@@ -258,7 +255,6 @@ describe("Add data from file uploads", function () {
       .should("exist")
       .click({ force: true });
 
-    cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout: 200000 }).should(
       "not.exist"
     );

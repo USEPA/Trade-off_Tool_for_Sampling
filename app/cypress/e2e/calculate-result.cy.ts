@@ -210,6 +210,12 @@ describe("Calculate results tests", () => {
       force: true,
     });
 
+    cy.wait(1000);
+
+    cy.findByRole("button", { name: "View Detailed Results" }).click({
+      force: true,
+    });
+
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("exist");
     cy.findAllByTestId(loadingSpinnerId, { timeout }).should("not.exist");
   });
