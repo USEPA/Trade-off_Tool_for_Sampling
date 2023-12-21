@@ -177,6 +177,21 @@ export function useStartOver() {
   } = useContext(SketchContext);
 
   function startOver() {
+    try {
+      if (sketchVMG) {
+        sketchVMG['2d'].cancel();
+        sketchVMG['3d'].cancel();
+      }
+      if (clickEvent) clickEvent.remove();
+      if (doubleClickEvent) doubleClickEvent.remove();
+      if (moveEvent) moveEvent.remove();
+      if (popupEvent) popupEvent.remove();
+    } catch (_ex) {}
+    clickEvent = null;
+    doubleClickEvent = null;
+    moveEvent = null;
+    popupEvent = null;
+
     setSelectedScenario(null);
     setSketchLayer(null);
     setAoiSketchLayer(null);
@@ -909,11 +924,13 @@ export function use3dSketch(
 
   // turns off the 3D sketch tools
   const endSketch = useCallback(() => {
-    if (sketchVMG) sketchVMG[displayDimensions].cancel();
-    if (clickEvent) clickEvent.remove();
-    if (doubleClickEvent) doubleClickEvent.remove();
-    if (moveEvent) moveEvent.remove();
-    if (popupEvent) popupEvent.remove();
+    try {
+      if (sketchVMG) sketchVMG[displayDimensions].cancel();
+      if (clickEvent) clickEvent.remove();
+      if (doubleClickEvent) doubleClickEvent.remove();
+      if (moveEvent) moveEvent.remove();
+      if (popupEvent) popupEvent.remove();
+    } catch (_ex) {}
     clickEvent = null;
     doubleClickEvent = null;
     moveEvent = null;
@@ -1035,6 +1052,35 @@ export function use3dSketch(
       }
 
       // creates the line portion of the temp polygon/polyline
+      function create3dFillLineGraphic() {
+        return [
+          new FillSymbol3DLayer({
+            outline: {
+              color: [30, 30, 30],
+              size: '3.5px',
+              pattern: new LineStylePattern3D({
+                style: 'dash',
+              }),
+            },
+          }),
+
+          new FillSymbol3DLayer({
+            outline: {
+              color: [240, 240, 240],
+              size: '3.5px',
+            },
+          }),
+
+          new FillSymbol3DLayer({
+            outline: {
+              color: [30, 30, 30],
+              size: '3.7px',
+            },
+          }),
+        ];
+      }
+
+      // creates the line portion of the temp polygon/polyline
       function create3dLineGraphic() {
         return [
           new LineSymbol3DLayer({
@@ -1063,7 +1109,7 @@ export function use3dSketch(
           geometry: createPolygon(hitRes),
           symbol: new PolygonSymbol3D({
             symbolLayers: [
-              ...create3dLineGraphic(),
+              ...create3dFillLineGraphic(),
               new FillSymbol3DLayer({
                 material: { color: polySymbol.color },
               }),
