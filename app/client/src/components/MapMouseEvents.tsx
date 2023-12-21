@@ -34,12 +34,16 @@ type Props = {
 
 function MapMouseEvents({ mapView, sceneView }: Props) {
   const {
+    aoiSketchLayer,
+    aoiSketchVM,
     displayDimensions,
     sampleAttributes,
     setSelectedSampleIds,
+    sketchLayer,
     sketchVM,
   } = useContext(SketchContext);
-  const { startSketch } = use3dSketch();
+  const samplesSketch = use3dSketch(sketchVM, sketchLayer);
+  const aoiSketch = use3dSketch(aoiSketchVM, aoiSketchLayer);
 
   const handleMapClick = useCallback(
     (event: any, view: __esri.MapView | __esri.SceneView) => {
@@ -174,9 +178,12 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
         if (button?.id && sketchVMG) {
           const id = button.id;
 
-          // determine whether the sketch button draws points or polygons
-          let shapeType = sampleAttributesG[id as any].ShapeType;
-          startSketch(shapeType);
+          if (id === 'sampling-mask') aoiSketch.startSketch('polygon');
+          else {
+            // determine whether the sketch button draws points or polygons
+            let shapeType = sampleAttributesG[id as any].ShapeType;
+            samplesSketch.startSketch(shapeType);
+          }
         }
       }
     };
@@ -200,7 +207,14 @@ function MapMouseEvents({ mapView, sceneView }: Props) {
     sceneView.on('key-up', handleKeyUp);
 
     setInitialized(true);
-  }, [handleMapClick, initialized, mapView, sceneView, startSketch]);
+  }, [
+    aoiSketch,
+    handleMapClick,
+    initialized,
+    mapView,
+    samplesSketch,
+    sceneView,
+  ]);
 
   // syncs the sampleAttributesG variable with the sampleAttributes context value
   useEffect(() => {

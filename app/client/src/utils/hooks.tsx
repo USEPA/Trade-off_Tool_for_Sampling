@@ -160,6 +160,8 @@ export function useStartOver() {
     setAoiSketchLayer,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setDisplayGeometryType2d,
+    setDisplayGeometryType3d,
     setEdits,
     setLayers,
     setPortalLayers,
@@ -185,6 +187,10 @@ export function useStartOver() {
       if (moveEvent) moveEvent.remove();
       if (popupEvent) popupEvent.remove();
     } catch (_ex) {}
+    clickEvent = null;
+    doubleClickEvent = null;
+    moveEvent = null;
+    popupEvent = null;
 
     setSelectedScenario(null);
     setSketchLayer(null);
@@ -217,6 +223,8 @@ export function useStartOver() {
     setGettingStartedOpen(false);
     setDisplayDimensions('2d');
     setDisplayGeometryType('points');
+    setDisplayGeometryType2d('points');
+    setDisplayGeometryType3d('hybrid');
     setTerrain3dUseElevation(true);
     setTerrain3dVisible(true);
     setViewUnderground3d(false);
@@ -885,7 +893,10 @@ let moveEvent: IHandle | null = null;
 let popupEvent: IHandle | null = null;
 let sketchVMG: SketchViewModelType | null = null;
 let tempSketchLayer: __esri.GraphicsLayer | null = null;
-export function use3dSketch() {
+export function use3dSketch(
+  sketchVM: SketchViewModelType | null,
+  sketchLayer: LayerType | null,
+) {
   const { userInfo } = useContext(AuthenticationContext);
   const { getTrainingMode } = useContext(NavigationContext);
   const {
@@ -899,8 +910,6 @@ export function use3dSketch() {
     setLayers,
     setSelectedScenario,
     setSketchLayer,
-    sketchLayer,
-    sketchVM,
   } = useContext(SketchContext);
   const getPopupTemplate = useDynamicPopup();
 
@@ -922,6 +931,10 @@ export function use3dSketch() {
       if (moveEvent) moveEvent.remove();
       if (popupEvent) popupEvent.remove();
     } catch (_ex) {}
+    clickEvent = null;
+    doubleClickEvent = null;
+    moveEvent = null;
+    popupEvent = null;
 
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
@@ -1253,6 +1266,7 @@ export function use3dSketch() {
       const id = button && button.id;
       if (id === 'sampling-mask') {
         deactivateButtons();
+        endSketch();
       }
 
       if (!id) return;
@@ -1384,6 +1398,7 @@ export function use3dSketch() {
   }, [
     displayDimensions,
     edits,
+    endSketch,
     geometry,
     getPopupTemplate,
     getTrainingMode,
@@ -2688,8 +2703,11 @@ function useDisplayModeStorage() {
   const {
     displayDimensions,
     setDisplayDimensions,
-    displayGeometryType,
     setDisplayGeometryType,
+    displayGeometryType2d,
+    setDisplayGeometryType2d,
+    displayGeometryType3d,
+    setDisplayGeometryType3d,
     terrain3dUseElevation,
     setTerrain3dUseElevation,
     terrain3dVisible,
@@ -2710,6 +2728,8 @@ function useDisplayModeStorage() {
     if (!displayModeStr) {
       setDisplayDimensions('2d');
       setDisplayGeometryType('points');
+      setDisplayGeometryType2d('points');
+      setDisplayGeometryType3d('hybrid');
       setTerrain3dUseElevation(true);
       setTerrain3dVisible(true);
       setViewUnderground3d(false);
@@ -2718,8 +2738,14 @@ function useDisplayModeStorage() {
 
     const displayMode = JSON.parse(displayModeStr);
 
-    setDisplayDimensions(displayMode.dimensions);
-    setDisplayGeometryType(displayMode.geometryType);
+    const { dimensions, geometryType2d, geometryType3d } = displayMode;
+
+    setDisplayDimensions(dimensions);
+    setDisplayGeometryType(
+      dimensions === '3d' ? geometryType3d : geometryType2d,
+    );
+    setDisplayGeometryType2d(geometryType2d);
+    setDisplayGeometryType3d(geometryType3d);
     setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
     setTerrain3dVisible(displayMode.terrain3dVisible);
     setViewUnderground3d(displayMode.viewUnderground3d);
@@ -2727,6 +2753,8 @@ function useDisplayModeStorage() {
     localDisplayModeInitialized,
     setDisplayDimensions,
     setDisplayGeometryType,
+    setDisplayGeometryType2d,
+    setDisplayGeometryType3d,
     setTerrain3dUseElevation,
     setTerrain3dVisible,
     setViewUnderground3d,
@@ -2737,7 +2765,8 @@ function useDisplayModeStorage() {
 
     const displayMode: object = {
       dimensions: displayDimensions,
-      geometryType: displayGeometryType,
+      geometryType2d: displayGeometryType2d,
+      geometryType3d: displayGeometryType3d,
       terrain3dUseElevation,
       terrain3dVisible,
       viewUnderground3d,
@@ -2745,7 +2774,8 @@ function useDisplayModeStorage() {
     writeToStorage(key, displayMode, setOptions);
   }, [
     displayDimensions,
-    displayGeometryType,
+    displayGeometryType2d,
+    displayGeometryType3d,
     localDisplayModeInitialized,
     setOptions,
     terrain3dUseElevation,

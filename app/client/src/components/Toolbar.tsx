@@ -1,6 +1,13 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { Fragment, useContext, useEffect, useState } from 'react';
+import React, {
+  Dispatch,
+  Fragment,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
@@ -20,7 +27,7 @@ import Switch from 'components/Switch';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
-import { SketchContext } from 'contexts/Sketch';
+import { DisplayGeometryType, SketchContext } from 'contexts/Sketch';
 // utils
 import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
@@ -442,6 +449,10 @@ function Toolbar() {
     setSketchLayer,
     displayGeometryType,
     setDisplayGeometryType,
+    displayGeometryType2d,
+    setDisplayGeometryType2d,
+    displayGeometryType3d,
+    setDisplayGeometryType3d,
     userDefinedAttributes,
     sceneView,
     displayDimensions,
@@ -776,6 +787,19 @@ function Toolbar() {
     basemapWidget.view = displayDimensions === '2d' ? mapView : sceneView;
   }, [basemapWidget, displayDimensions, layerList, mapView, sceneView]);
 
+  // Syncs displayDimensions with the 2d and 3d selections
+  useEffect(() => {
+    if (displayDimensions === '2d')
+      setDisplayGeometryType(displayGeometryType2d);
+    if (displayDimensions === '3d')
+      setDisplayGeometryType(displayGeometryType3d);
+  }, [
+    displayDimensions,
+    displayGeometryType2d,
+    displayGeometryType3d,
+    setDisplayGeometryType,
+  ]);
+
   // Switches between point and polygon representations
   useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
@@ -953,61 +977,25 @@ function Toolbar() {
                 name="dimension"
                 value="3d"
                 checked={displayDimensions === '3d'}
-                onChange={(ev) => {
-                  setDisplayDimensions('3d');
-                  setDisplayGeometryType('points');
-                }}
+                onChange={(ev) => setDisplayDimensions('3d')}
               />
               <label htmlFor="dimension-3d">3D</label>
             </fieldset>
 
-            <fieldset css={settingContainerStyles}>
-              <legend>
-                Shape
-                <InfoIcon
-                  cssStyles={infoIconStyles}
-                  id="poly-points-switch"
-                  tooltip={
-                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
-                  }
-                  place="bottom"
-                />
-              </legend>
-              <input
-                id="shape-points"
-                type="radio"
-                name="shape"
-                value="points"
-                checked={displayGeometryType === 'points'}
-                onChange={(ev) => setDisplayGeometryType('points')}
+            {displayDimensions === '2d' && (
+              <ShapeSelector
+                displayGeometryType={displayGeometryType2d}
+                setDisplayGeometryType={setDisplayGeometryType2d}
               />
-              <label htmlFor="shape-points">Points</label>
-              <br />
-
-              <input
-                id="shape-polygons"
-                type="radio"
-                name="shape"
-                value="polygons"
-                checked={displayGeometryType === 'polygons'}
-                onChange={(ev) => setDisplayGeometryType('polygons')}
-              />
-              <label htmlFor="shape-polygons">Polygons</label>
-              <br />
-
-              <input
-                id="shape-hybrid"
-                type="radio"
-                name="shape"
-                value="hybrid"
-                checked={displayGeometryType === 'hybrid'}
-                onChange={(ev) => setDisplayGeometryType('hybrid')}
-              />
-              <label htmlFor="shape-hybrid">Hybrid</label>
-            </fieldset>
+            )}
 
             {displayDimensions === '3d' && (
               <Fragment>
+                <ShapeSelector
+                  displayGeometryType={displayGeometryType3d}
+                  setDisplayGeometryType={setDisplayGeometryType3d}
+                />
+
                 <label css={switchLabelContainer}>
                   <span css={switchLabel}>3D Terrain Visible</span>
                   <Switch
@@ -1154,6 +1142,63 @@ function Toolbar() {
         </a>
       </div>
     </div>
+  );
+}
+
+type ShapeSelectorProps = {
+  displayGeometryType: DisplayGeometryType;
+  setDisplayGeometryType: Dispatch<SetStateAction<DisplayGeometryType>>;
+};
+
+function ShapeSelector({
+  displayGeometryType,
+  setDisplayGeometryType,
+}: ShapeSelectorProps) {
+  return (
+    <fieldset css={settingContainerStyles}>
+      <legend>
+        Shape
+        <InfoIcon
+          cssStyles={infoIconStyles}
+          id="poly-points-switch"
+          tooltip={
+            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
+          }
+          place="bottom"
+        />
+      </legend>
+      <input
+        id="shape-points"
+        type="radio"
+        name="shape"
+        value="points"
+        checked={displayGeometryType === 'points'}
+        onChange={(ev) => setDisplayGeometryType('points')}
+      />
+      <label htmlFor="shape-points">Points</label>
+      <br />
+
+      <input
+        id="shape-polygons"
+        type="radio"
+        name="shape"
+        value="polygons"
+        checked={displayGeometryType === 'polygons'}
+        onChange={(ev) => setDisplayGeometryType('polygons')}
+      />
+      <label htmlFor="shape-polygons">Polygons</label>
+      <br />
+
+      <input
+        id="shape-hybrid"
+        type="radio"
+        name="shape"
+        value="hybrid"
+        checked={displayGeometryType === 'hybrid'}
+        onChange={(ev) => setDisplayGeometryType('hybrid')}
+      />
+      <label htmlFor="shape-hybrid">Hybrid</label>
+    </fieldset>
   );
 }
 

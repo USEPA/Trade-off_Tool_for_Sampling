@@ -198,7 +198,8 @@ function MapWidgets({ mapView, sceneView }: Props) {
     displayDimensions,
     terrain3dUseElevation,
   } = useContext(SketchContext);
-  const { startSketch } = use3dSketch();
+  const samplesSketch = use3dSketch(sketchVM, sketchLayer);
+  const aoiSketch = use3dSketch(aoiSketchVM, aoiSketchLayer);
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
 
@@ -555,19 +556,55 @@ function MapWidgets({ mapView, sceneView }: Props) {
   useEffect(() => {
     if (!aoiSketchLayer) return;
     if (aoiSketchVM) return;
-    const svm = new SketchViewModel({
+
+    const svm2d = new SketchViewModel({
       layer: aoiSketchLayer.sketchLayer,
       view: mapView,
       polygonSymbol: defaultSymbols.symbols['Area of Interest'],
       pointSymbol: defaultSymbols.symbols['Area of Interest'] as any,
+      defaultCreateOptions: {
+        hasZ: false,
+      },
+      defaultUpdateOptions: {
+        enableZ: false,
+      },
+      snappingOptions: {
+        featureSources: [],
+      },
     });
 
-    const tempSvm = svm as any;
+    const svm3d = new SketchViewModel({
+      layer: aoiSketchLayer.sketchLayer,
+      view: sceneView,
+      polygonSymbol: defaultSymbols.symbols['Area of Interest'],
+      pointSymbol: defaultSymbols.symbols['Area of Interest'] as any,
+      defaultCreateOptions: {
+        hasZ: true,
+      },
+      defaultUpdateOptions: {
+        enableZ: true,
+      },
+      snappingOptions: {
+        featureSources: [{ layer: aoiSketchLayer.sketchLayer }],
+      },
+    });
+
     const tempWindow = window as any;
+    const tempSvm = svm2d as any;
     tempWindow.aoiSketchVmInternalLayerId = tempSvm._internalGraphicsLayer.id;
 
-    setAoiSketchVM(svm);
-  }, [defaultSymbols, mapView, aoiSketchVM, setAoiSketchVM, aoiSketchLayer]);
+    setAoiSketchVM({
+      '2d': svm2d,
+      '3d': svm3d,
+    });
+  }, [
+    defaultSymbols,
+    mapView,
+    aoiSketchVM,
+    setAoiSketchVM,
+    aoiSketchLayer,
+    sceneView,
+  ]);
 
   // Updates the selected layer of the sketchViewModel
   useEffect(() => {
@@ -595,54 +632,61 @@ function MapWidgets({ mapView, sceneView }: Props) {
     if (!sketchVM || !sketchLayer?.sketchLayer || !mapView || !sceneView)
       return;
 
-    sketchVM['2d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-    sketchVM['2d'].pointSymbol = {
-      ...defaultSymbols.symbols['Samples'],
-      type: 'simple-marker',
-    } as any;
-    sketchVM['3d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
-    sketchVM['3d'].pointSymbol = {
-      ...defaultSymbols.symbols['Samples'],
-      type: 'simple-marker',
-    } as any;
+    if (currentPanel?.value === 'locateSamples') {
+      sketchVM['2d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM['2d'].pointSymbol = {
+        ...defaultSymbols.symbols['Samples'],
+        type: 'simple-marker',
+      } as any;
+      sketchVM['3d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+      sketchVM['3d'].pointSymbol = {
+        ...defaultSymbols.symbols['Samples'],
+        type: 'simple-marker',
+      } as any;
 
-    sketchLayer.sketchLayer.elevationInfo =
-      displayDimensions === '3d' ? { mode: 'absolute-height' } : (null as any);
+      sketchLayer.sketchLayer.elevationInfo =
+        displayDimensions === '3d'
+          ? { mode: 'absolute-height' }
+          : (null as any);
 
-    // get the button and it's id
-    const button = document.querySelector('.sketch-button-selected');
-    const id = button && button.id;
-    if (id && sampleAttributes.hasOwnProperty(id)) {
-      // determine whether the sketch button draws points or polygons
-      const attributes = sampleAttributes[id as any];
-      if (attributes.POINT_STYLE.includes('path|')) {
-        (sketchVM['2d'].pointSymbol as any).style = 'path';
-        (sketchVM['2d'].pointSymbol as any).path =
-          attributes.POINT_STYLE.replace('path|', '');
-        (sketchVM['3d'].pointSymbol as any).style = 'path';
-        (sketchVM['3d'].pointSymbol as any).path =
-          attributes.POINT_STYLE.replace('path|', '');
-      } else {
-        (sketchVM['2d'].pointSymbol as any).style = attributes.POINT_STYLE;
-        (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id && sampleAttributes.hasOwnProperty(id)) {
+        // determine whether the sketch button draws points or polygons
+        const attributes = sampleAttributes[id as any];
+        if (attributes.POINT_STYLE.includes('path|')) {
+          (sketchVM['2d'].pointSymbol as any).style = 'path';
+          (sketchVM['2d'].pointSymbol as any).path =
+            attributes.POINT_STYLE.replace('path|', '');
+          (sketchVM['3d'].pointSymbol as any).style = 'path';
+          (sketchVM['3d'].pointSymbol as any).path =
+            attributes.POINT_STYLE.replace('path|', '');
+        } else {
+          (sketchVM['2d'].pointSymbol as any).style = attributes.POINT_STYLE;
+          (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
+        }
+
+        if (displayDimensions !== lastDisplayDimensions) {
+          let shapeType = attributes.ShapeType;
+          samplesSketch.startSketch(shapeType);
+          setLastDisplayDimensions(displayDimensions);
+        }
       }
-
-      if (displayDimensions !== lastDisplayDimensions) {
-        let shapeType = attributes.ShapeType;
-        startSketch(shapeType);
-        setLastDisplayDimensions(displayDimensions);
-      }
+    } else {
+      samplesSketch.endSketch();
     }
   }, [
+    currentPanel,
     defaultSymbols,
     displayDimensions,
     lastDisplayDimensions,
     mapView,
     sceneView,
     sampleAttributes,
+    samplesSketch,
     sketchLayer,
     sketchVM,
-    startSketch,
   ]);
 
   // Updates the selected layer of the aoiSketchViewModel
@@ -653,50 +697,50 @@ function MapWidgets({ mapView, sceneView }: Props) {
       currentPanel?.value === 'locateSamples' &&
       aoiSketchLayer?.sketchLayer?.type === 'graphics'
     ) {
-      aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+      aoiSketchVM['2d'].layer = aoiSketchLayer.sketchLayer;
+      aoiSketchVM['3d'].layer = aoiSketchLayer.sketchLayer;
 
-      aoiSketchVM.polygonSymbol = defaultSymbols.symbols[
+      aoiSketchVM['2d'].polygonSymbol = defaultSymbols.symbols[
         'Area of Interest'
       ] as any;
-      aoiSketchVM.pointSymbol = defaultSymbols.symbols[
+      aoiSketchVM['2d'].pointSymbol = defaultSymbols.symbols[
+        'Area of Interest'
+      ] as any;
+      aoiSketchVM['3d'].polygonSymbol = defaultSymbols.symbols[
+        'Area of Interest'
+      ] as any;
+      aoiSketchVM['3d'].pointSymbol = defaultSymbols.symbols[
         'Area of Interest'
       ] as any;
 
-      if (displayDimensions === '2d') {
-        aoiSketchVM.view = mapView;
-        aoiSketchVM.layer.elevationInfo = null as any;
-        aoiSketchVM.snappingOptions = {
-          featureSources: [],
-        } as any;
-        aoiSketchVM.defaultCreateOptions = {
-          hasZ: false,
-        };
-        aoiSketchVM.defaultUpdateOptions = {
-          enableZ: false,
-        };
-      } else {
-        aoiSketchVM.view = sceneView;
-        aoiSketchVM.layer.elevationInfo = { mode: 'absolute-height' };
-        aoiSketchVM.snappingOptions = {
-          featureSources: [{ layer: aoiSketchVM.layer }],
-        } as any;
-        aoiSketchVM.defaultCreateOptions = {
-          hasZ: true,
-        };
-        aoiSketchVM.defaultUpdateOptions = {
-          enableZ: true,
-        };
+      aoiSketchLayer.sketchLayer.elevationInfo =
+        displayDimensions === '3d'
+          ? { mode: 'absolute-height' }
+          : (null as any);
+
+      // get the button and it's id
+      const button = document.querySelector('.sketch-button-selected');
+      const id = button && button.id;
+      if (id === 'sampling-mask') {
+        if (displayDimensions !== lastDisplayDimensions) {
+          aoiSketch.startSketch('polygon');
+          setLastDisplayDimensions(displayDimensions);
+        }
       }
     } else {
       // disable the sketch vm for any panel other than locateSamples
-      aoiSketchVM.layer = null as unknown as __esri.GraphicsLayer;
+      aoiSketch.endSketch();
+      aoiSketchVM['2d'].layer = null as unknown as __esri.GraphicsLayer;
+      aoiSketchVM['3d'].layer = null as unknown as __esri.GraphicsLayer;
     }
   }, [
+    aoiSketch,
     aoiSketchLayer,
     aoiSketchVM,
     currentPanel,
     defaultSymbols,
     displayDimensions,
+    lastDisplayDimensions,
     mapView,
     sceneView,
   ]);
@@ -1033,7 +1077,16 @@ function MapWidgets({ mapView, sceneView }: Props) {
   ] = useState<any>(null);
   useEffect(() => {
     if (!aoiSketchVM || aoiSketchEventsInitialized) return;
-    setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
+    setupEvents(
+      aoiSketchVM['2d'],
+      setAoiSketchVMActive,
+      setAoiUpdateSketchEvent,
+    );
+    setupEvents(
+      aoiSketchVM['3d'],
+      setAoiSketchVMActive,
+      setAoiUpdateSketchEvent,
+    );
 
     setAoiSketchEventsInitialized(true);
   }, [
@@ -1170,14 +1223,16 @@ function MapWidgets({ mapView, sceneView }: Props) {
     if (
       updateSketchEvent ||
       !aoiSketchVM ||
-      aoiSketchVM.layer ||
+      aoiSketchVM['2d'].layer ||
+      aoiSketchVM['3d'].layer ||
       aoiSketchLayer?.sketchLayer?.type !== 'graphics' ||
       currentPanel?.value !== 'locateSamples'
     ) {
       return;
     }
 
-    aoiSketchVM.layer = aoiSketchLayer.sketchLayer;
+    aoiSketchVM['2d'].layer = aoiSketchLayer.sketchLayer;
+    aoiSketchVM['3d'].layer = aoiSketchLayer.sketchLayer;
   }, [currentPanel, updateSketchEvent, aoiSketchVM, aoiSketchLayer]);
 
   // Reactivate sketchVM after the aoiUpdateSketchEvent is null
