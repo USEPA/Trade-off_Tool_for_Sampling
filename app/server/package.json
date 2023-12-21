@@ -18,27 +18,27 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "main": "app/server.js",
   "scripts": {
     "start": "nodemon -r dotenv/config --inspect app/server.js dotenv_config_path=./.env.local"
   },
   "dependencies": {
-    "axios": "1.4.0",
+    "axios": "1.6.2",
     "dotenv": "16.3.1",
     "express": "4.18.2",
     "express-basic-auth": "1.2.1",
-    "helmet": "7.0.0",
+    "helmet": "7.1.0",
     "log4js": "6.9.1",
     "serve-favicon": "2.5.0"
   },
   "devDependencies": {
     "browser-sync": "2.29.3",
     "husky": "8.0.3",
-    "lint-staged": "13.2.2",
-    "nodemon": "2.0.22",
-    "prettier": "2.8.8"
+    "lint-staged": "15.2.0",
+    "nodemon": "3.0.2",
+    "prettier": "3.1.1"
   },
   "husky": {
     "hooks": {

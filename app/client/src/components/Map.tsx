@@ -30,7 +30,7 @@ const mapStyles = (height: number) => {
     .esri-sketch__feature-count-badge {
       width: 100%;
     }
-    
+
     .esri-sketch__info-section:last-of-type {
       display: none !important;
     }
@@ -55,6 +55,7 @@ function Map({ height }: Props) {
     setMapView,
     sceneView,
     setSceneView,
+    setSceneViewForArea,
     sketchLayer,
     aoiSketchLayer,
   } = useContext(SketchContext);
@@ -98,7 +99,29 @@ function Map({ height }: Props) {
     });
 
     setSceneView(scene);
-  }, [mapView, setMap, setMapView, sceneView, setSceneView]);
+
+    // Create a hidden scene view that is only for calculating
+    // area of 3D geometry. This is to work around an issue
+    // where area of 3D geometry could not be calculated when
+    // 2D mode is selected.
+    setSceneViewForArea(
+      new SceneView({
+        container: 'hidden-scene-view',
+        map: new EsriMap({
+          ground: 'world-elevation',
+          layers: [],
+        }),
+        qualityProfile: 'low',
+      }),
+    );
+  }, [
+    mapView,
+    sceneView,
+    setMap,
+    setMapView,
+    setSceneView,
+    setSceneViewForArea,
+  ]);
 
   // Creates a watch event that is used for reordering the layers
   const [watchInitialized, setWatchInitialized] = useState(false);
@@ -203,14 +226,17 @@ function Map({ height }: Props) {
   ]);
 
   return (
-    <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
-      {mapView && sceneView && (
-        <Fragment>
-          <MapWidgets mapView={mapView} sceneView={sceneView} />
-          <MapMouseEvents mapView={mapView} sceneView={sceneView} />
-        </Fragment>
-      )}
-    </div>
+    <Fragment>
+      <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
+        {mapView && sceneView && (
+          <Fragment>
+            <MapWidgets mapView={mapView} sceneView={sceneView} />
+            <MapMouseEvents mapView={mapView} sceneView={sceneView} />
+          </Fragment>
+        )}
+      </div>
+      <div id="hidden-scene-view" className="sr-only" />
+    </Fragment>
   );
 }
 
