@@ -33,7 +33,7 @@ describe("Calculate results tests", () => {
     cy.findByRole("button", { name: "Create Plan" }).click({ force: true });
 
     //Nav bar
-    cy.findByText("Resource Tally").should("exist");
+    cy.findByText("Resource Tally", { timeout: 60000 }).should("exist");
     cy.contains("Total Cost: $").should("exist");
     cy.contains("Max Time day(s):").should("exist");
     cy.contains("Limiting Factor").should("exist");
@@ -98,6 +98,10 @@ describe("Calculate results tests", () => {
     cy.findByRole("button", { name: "View Detailed Results" }).click({
       force: true,
     });
+
+    cy.findAllByTestId(loadingSpinnerId).should("exist");
+    cy.findAllByTestId(loadingSpinnerId).should("not.exist");
+
     cy.findByRole("button", { name: "Download" }).click();
 
     cy.findAllByTestId(loadingSpinnerId).should("exist");

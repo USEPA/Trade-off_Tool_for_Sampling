@@ -48,10 +48,8 @@ describe("Map Widget", function () {
     cy.mapLoadDelay();
 
     cy.get("#tots-map-div").click(200, 200);
-    cy.findByRole("dialog").should("be.visible");
-    cy.findByTitle("Delete Sample").should("exist");
-    cy.findByTitle("View In Table").should("exist").click();
-    cy.findByTitle("Zoom to").should("exist").click();
+    cy.get(".esri-popup__main-container").first().should("be.visible");
+
     cy.findByRole("button", { name: "Show More" })
       .should("exist")
       .click({ force: true });

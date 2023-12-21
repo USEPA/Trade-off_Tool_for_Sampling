@@ -30,7 +30,7 @@
     "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
   },
   "dependencies": {
-    "@arcgis/core": "4.27.3",
+    "@arcgis/core": "4.28.10",
     "@emotion/react": "11.11.1",
     "@emotion/styled": "11.11.0",
     "@reach/dialog": "0.18.0",
@@ -54,7 +54,6 @@
   },
   "devDependencies": {
     "@cypress/instrument-cra": "1.4.0",
-    "@types/arcgis-js-api": "4.27.0",
     "@types/file-saver": "2.0.7",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
