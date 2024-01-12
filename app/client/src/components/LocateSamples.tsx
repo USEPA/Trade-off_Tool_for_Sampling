@@ -62,6 +62,7 @@ import {
   getPointSymbol,
   getScenarios,
   getSketchableLayers,
+  removeZValues,
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
@@ -451,8 +452,7 @@ function LocateSamples() {
     mapView,
   } = useContext(SketchContext);
   const startOver = useStartOver();
-  const samplesSketch = use3dSketch(sketchVM, sketchLayer);
-  const aoiSketch = use3dSketch(aoiSketchVM, aoiSketchLayer);
+  const { endSketch, startSketch } = use3dSketch();
   const getPopupTemplate = useDynamicPopup();
   const layerProps = useLayerProps();
   const sampleTypeContext = useSampleTypesContext();
@@ -536,7 +536,7 @@ function LocateSamples() {
     // save changes from other sketchVM and disable to prevent
     // interference
     if (aoiSketchVM) {
-      aoiSketchVM[displayDimensions].cancel();
+      aoiSketchVM.cancel();
     }
 
     // determine whether the sketch button draws points or polygons
@@ -564,8 +564,8 @@ function LocateSamples() {
     sketchVM['3d'].pointSymbol = new SimpleMarkerSymbol(pointProps);
 
     // let the user draw/place the shape
-    if (wasSet) samplesSketch.startSketch(shapeType);
-    else samplesSketch.endSketch();
+    if (wasSet) startSketch(shapeType);
+    else endSketch();
   }
 
   // Handle a user clicking the sketch AOI button. If an AOI is not selected from the
@@ -603,9 +603,9 @@ function LocateSamples() {
 
     if (wasSet) {
       // let the user draw/place the shape
-      aoiSketch.startSketch('polygon');
+      aoiSketchVM.create('polygon');
     } else {
-      aoiSketch.endSketch();
+      aoiSketchVM.cancel();
     }
   }
 
@@ -615,7 +615,7 @@ function LocateSamples() {
 
     activateSketchButton('disable-all-buttons');
     sketchVM?.[displayDimensions].cancel();
-    aoiSketchVM?.[displayDimensions].cancel();
+    aoiSketchVM?.cancel();
 
     const aoiMaskLayer: LayerType | null =
       generateRandomMode === 'draw'
@@ -629,9 +629,16 @@ function LocateSamples() {
 
     getGpMaxRecordCount()
       .then((maxRecordCount) => {
+        const originalValuesZ: number[] = [];
         let graphics: __esri.GraphicProperties[] = [];
         if (aoiMaskLayer?.sketchLayer?.type === 'graphics') {
-          graphics = aoiMaskLayer.sketchLayer.graphics.clone().toArray();
+          const fullGraphics = aoiMaskLayer.sketchLayer.graphics.clone();
+          fullGraphics.forEach((graphic) => {
+            const z = removeZValues(graphic);
+            originalValuesZ.push(z);
+          });
+
+          graphics = fullGraphics.toArray();
         }
 
         // create a feature set for communicating with the GPServer
@@ -716,6 +723,7 @@ function LocateSamples() {
             const graphicsToAdd: __esri.Graphic[] = [];
             const hybridGraphicsToAdd: __esri.Graphic[] = [];
             const pointsToAdd: __esri.Graphic[] = [];
+            const numberOfAois = graphics.length;
             for (let i = 0; i < responses.length; i++) {
               res = responses[i];
               if (!res?.results?.[0]?.value) {
@@ -747,8 +755,16 @@ function LocateSamples() {
                 symbol = defaultSymbols.symbols[sampleType.value];
               }
 
+              let originalZIndex = 0;
+              const graphicsPerAoi = results.features.length / numberOfAois;
+
               // build an array of graphics to draw on the map
+              let index = 0;
               for (const feature of results.features) {
+                if (index !== 0 && index % graphicsPerAoi === 0)
+                  originalZIndex += 1;
+
+                const originalZ = originalValuesZ[originalZIndex];
                 const poly = new Graphic({
                   attributes: {
                     ...(window as any).totsSampleAttributes[typeuuid],
@@ -772,12 +788,14 @@ function LocateSamples() {
                   popupTemplate,
                 });
 
-                if (generateRandomElevationMode === 'ground') {
-                  await setZValues({
-                    map,
-                    graphic: poly,
-                  });
-                }
+                await setZValues({
+                  map,
+                  graphic: poly,
+                  zOverride:
+                    generateRandomElevationMode === 'aoiElevation'
+                      ? originalZ
+                      : null,
+                });
 
                 graphicsToAdd.push(poly);
                 pointsToAdd.push(convertToPoint(poly));
@@ -786,6 +804,8 @@ function LocateSamples() {
                     ? convertToPoint(poly)
                     : poly.clone(),
                 );
+
+                index += 1;
               }
             }
 
