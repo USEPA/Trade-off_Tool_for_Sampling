@@ -29,15 +29,15 @@
     "coverage": "concurrently -kc \"blue.dim,green.dim,yellow.dim\" -n server,client,cypress \"npm:server\" \"npm:client\" \"npx rimraf .nyc_output/out.json && cypress run --browser electron\""
   },
   "devDependencies": {
-    "@cypress/code-coverage": "3.12.15",
+    "@cypress/code-coverage": "3.12.18",
     "@testing-library/cypress": "10.0.1",
     "@types/cypress-image-snapshot": "3.1.9",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
-    "@types/node": "20.10.5",
+    "@types/node": "20.11.0",
     "@types/testing-library__cypress": "5.0.13",
     "concurrently": "8.2.2",
-    "cypress": "13.6.1",
+    "cypress": "13.6.2",
     "cypress-image-snapshot": "4.0.1",
     "eslint-plugin-cypress": "2.15.1",
     "istanbul-lib-coverage": "3.2.2",
