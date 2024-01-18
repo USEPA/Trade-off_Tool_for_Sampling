@@ -38,6 +38,7 @@ import {
   PolygonSymbol,
 } from 'config/sampleAttributes';
 import {
+  cantUseWith3dMessage,
   cantUseWithVspMessage,
   featureNotAvailableMessage,
   generateRandomExceededTransferLimitMessage,
@@ -621,8 +622,8 @@ function LocateSamples() {
       generateRandomMode === 'draw'
         ? aoiSketchLayer
         : generateRandomMode === 'file'
-        ? selectedAoiFile
-        : null;
+          ? selectedAoiFile
+          : null;
     if (!aoiMaskLayer) return;
 
     setGenerateRandomResponse({ status: 'fetching', data: [] });
@@ -1922,8 +1923,8 @@ function LocateSamples() {
                           const parent = parentLayer
                             ? parentLayer
                             : map
-                            ? map
-                            : null;
+                              ? map
+                              : null;
                           if (parent) parent.remove(sketchLayer.sketchLayer);
                         }}
                       >
@@ -2228,277 +2229,292 @@ function LocateSamples() {
               <AccordionItem title={'Add Multiple Random Samples'}>
                 <div css={sectionContainer}>
                   {sketchLayer?.layerType === 'VSP' && cantUseWithVspMessage}
-                  {sketchLayer?.layerType !== 'VSP' && (
-                    <Fragment>
-                      {(services.status === 'fetching' ||
-                        sampleTypeContext.status === 'fetching' ||
-                        layerProps.status === 'fetching') && <LoadingSpinner />}
-                      {(services.status === 'failure' ||
-                        sampleTypeContext.status === 'failure' ||
-                        layerProps.status === 'failure') &&
-                        featureNotAvailableMessage(
-                          'Add Multiple Random Samples',
+                  {sketchLayer?.layerType !== 'VSP' &&
+                    displayDimensions === '3d' &&
+                    cantUseWith3dMessage}
+                  {sketchLayer?.layerType !== 'VSP' &&
+                    displayDimensions === '2d' && (
+                      <Fragment>
+                        {(services.status === 'fetching' ||
+                          sampleTypeContext.status === 'fetching' ||
+                          layerProps.status === 'fetching') && (
+                          <LoadingSpinner />
                         )}
-                      {services.status === 'success' &&
-                        sampleTypeContext.status === 'success' &&
-                        layerProps.status === 'success' && (
-                          <Fragment>
-                            <p>
-                              Select "Draw Sampling Mask" to draw a boundary on
-                              your map for placing samples or select "Use
-                              Imported Area of Interest" to use an Area of
-                              Interest file to place samples. Select a Sample
-                              Type from the menu and specify the number of
-                              samples to add. Click Submit to add samples.
-                            </p>
-                            <div>
-                              <input
-                                id="draw-aoi"
-                                type="radio"
-                                name="mode"
-                                value="Draw area of Interest"
-                                disabled={
-                                  generateRandomResponse.status === 'fetching'
-                                }
-                                checked={generateRandomMode === 'draw'}
-                                onChange={(ev) => {
-                                  setGenerateRandomMode('draw');
-
-                                  const maskLayers = layers.filter(
-                                    (layer) =>
-                                      layer.layerType === 'Sampling Mask',
-                                  );
-                                  setAoiSketchLayer(maskLayers[0]);
-                                }}
-                              />
-                              <label htmlFor="draw-aoi" css={radioLabelStyles}>
-                                Draw Sampling Mask
-                              </label>
-                            </div>
-
-                            {generateRandomMode === 'draw' && (
-                              <button
-                                id="sampling-mask"
-                                title="Draw Sampling Mask"
-                                className="sketch-button"
-                                disabled={
-                                  generateRandomResponse.status === 'fetching'
-                                }
-                                onClick={() => {
-                                  if (!aoiSketchLayer) return;
-
-                                  sketchAoiButtonClick();
-                                }}
-                                css={sketchAoiButtonStyles}
-                              >
-                                <span css={sketchAoiTextStyles}>
-                                  <i className="fas fa-draw-polygon" />{' '}
-                                  <span>Draw Sampling Mask</span>
-                                </span>
-                              </button>
-                            )}
-
-                            <div>
-                              <input
-                                id="use-aoi-file"
-                                type="radio"
-                                name="mode"
-                                value="Use Imported Area of Interest"
-                                disabled={
-                                  generateRandomResponse.status === 'fetching'
-                                }
-                                checked={generateRandomMode === 'file'}
-                                onChange={(ev) => {
-                                  setGenerateRandomMode('file');
-
-                                  setAoiSketchLayer(null);
-
-                                  if (!selectedAoiFile) {
-                                    const aoiLayers = layers.filter(
-                                      (layer) =>
-                                        layer.layerType === 'Area of Interest',
-                                    );
-                                    setSelectedAoiFile(aoiLayers[0]);
-                                  }
-                                }}
-                              />
-                              <label
-                                htmlFor="use-aoi-file"
-                                css={radioLabelStyles}
-                              >
-                                Use Imported Area of Interest
-                              </label>
-                            </div>
-
-                            {generateRandomMode === 'file' && (
-                              <Fragment>
-                                <label htmlFor="aoi-mask-select-input">
-                                  Area of Interest Mask
-                                </label>
-                                <div css={inlineMenuStyles}>
-                                  <Select
-                                    id="aoi-mask-select"
-                                    inputId="aoi-mask-select-input"
-                                    css={inlineSelectStyles}
-                                    styles={reactSelectStyles as any}
-                                    isClearable={true}
-                                    value={selectedAoiFile}
-                                    onChange={(ev) =>
-                                      setSelectedAoiFile(ev as LayerType)
-                                    }
-                                    options={layers.filter(
-                                      (layer) =>
-                                        layer.layerType === 'Area of Interest',
-                                    )}
-                                  />
-                                  <button
-                                    css={addButtonStyles}
-                                    disabled={
-                                      generateRandomResponse.status ===
-                                      'fetching'
-                                    }
-                                    onClick={(ev) => {
-                                      setGoTo('addData');
-                                      setGoToOptions({
-                                        from: 'file',
-                                        layerType: 'Area of Interest',
-                                      });
-                                    }}
-                                  >
-                                    Add
-                                  </button>
-                                </div>
-                              </Fragment>
-                            )}
-                            {generateRandomMode && (
-                              <Fragment>
-                                <br />
-                                <label htmlFor="sample-type-select-input">
-                                  Sample Type
-                                </label>
-                                <Select
-                                  id="sample-type-select"
-                                  inputId="sample-type-select-input"
-                                  css={fullWidthSelectStyles}
-                                  value={sampleType}
-                                  onChange={(ev) =>
-                                    setSampleType(ev as SampleSelectType)
-                                  }
-                                  options={allSampleOptions}
-                                />
-                                <label htmlFor="number-of-samples-input">
-                                  Number of Samples
-                                </label>
+                        {(services.status === 'failure' ||
+                          sampleTypeContext.status === 'failure' ||
+                          layerProps.status === 'failure') &&
+                          featureNotAvailableMessage(
+                            'Add Multiple Random Samples',
+                          )}
+                        {services.status === 'success' &&
+                          sampleTypeContext.status === 'success' &&
+                          layerProps.status === 'success' && (
+                            <Fragment>
+                              <p>
+                                Select "Draw Sampling Mask" to draw a boundary
+                                on your map for placing samples or select "Use
+                                Imported Area of Interest" to use an Area of
+                                Interest file to place samples. Select a Sample
+                                Type from the menu and specify the number of
+                                samples to add. Click Submit to add samples.
+                              </p>
+                              <div>
                                 <input
-                                  id="number-of-samples-input"
-                                  css={inputStyles}
-                                  value={numberRandomSamples}
-                                  onChange={(ev) =>
-                                    setNumberRandomSamples(ev.target.value)
+                                  id="draw-aoi"
+                                  type="radio"
+                                  name="mode"
+                                  value="Draw area of Interest"
+                                  disabled={
+                                    generateRandomResponse.status === 'fetching'
                                   }
+                                  checked={generateRandomMode === 'draw'}
+                                  onChange={(ev) => {
+                                    setGenerateRandomMode('draw');
+
+                                    const maskLayers = layers.filter(
+                                      (layer) =>
+                                        layer.layerType === 'Sampling Mask',
+                                    );
+                                    setAoiSketchLayer(maskLayers[0]);
+                                  }}
                                 />
+                                <label
+                                  htmlFor="draw-aoi"
+                                  css={radioLabelStyles}
+                                >
+                                  Draw Sampling Mask
+                                </label>
+                              </div>
 
-                                <div>
-                                  <input
-                                    id="use-aoi-elevation"
-                                    type="radio"
-                                    name="elevation-mode"
-                                    value="Use AOI Elevation"
-                                    disabled={
-                                      generateRandomResponse.status ===
-                                      'fetching'
-                                    }
-                                    checked={
-                                      generateRandomElevationMode ===
-                                      'aoiElevation'
-                                    }
-                                    onChange={(ev) => {
-                                      setGenerateRandomElevationMode(
-                                        'aoiElevation',
+                              {generateRandomMode === 'draw' && (
+                                <button
+                                  id="sampling-mask"
+                                  title="Draw Sampling Mask"
+                                  className="sketch-button"
+                                  disabled={
+                                    generateRandomResponse.status === 'fetching'
+                                  }
+                                  onClick={() => {
+                                    if (!aoiSketchLayer) return;
+
+                                    sketchAoiButtonClick();
+                                  }}
+                                  css={sketchAoiButtonStyles}
+                                >
+                                  <span css={sketchAoiTextStyles}>
+                                    <i className="fas fa-draw-polygon" />{' '}
+                                    <span>Draw Sampling Mask</span>
+                                  </span>
+                                </button>
+                              )}
+
+                              <div>
+                                <input
+                                  id="use-aoi-file"
+                                  type="radio"
+                                  name="mode"
+                                  value="Use Imported Area of Interest"
+                                  disabled={
+                                    generateRandomResponse.status === 'fetching'
+                                  }
+                                  checked={generateRandomMode === 'file'}
+                                  onChange={(ev) => {
+                                    setGenerateRandomMode('file');
+
+                                    setAoiSketchLayer(null);
+
+                                    if (!selectedAoiFile) {
+                                      const aoiLayers = layers.filter(
+                                        (layer) =>
+                                          layer.layerType ===
+                                          'Area of Interest',
                                       );
-                                    }}
-                                  />
-                                  <label
-                                    htmlFor="use-aoi-elevation"
-                                    css={radioLabelStyles}
-                                  >
-                                    Use AOI Elevation
-                                  </label>
-                                </div>
-                                <div>
-                                  <input
-                                    id="snap-to-ground"
-                                    type="radio"
-                                    name="elevation-mode"
-                                    value="Snap to Ground"
-                                    disabled={
-                                      generateRandomResponse.status ===
-                                      'fetching'
+                                      setSelectedAoiFile(aoiLayers[0]);
                                     }
-                                    checked={
-                                      generateRandomElevationMode === 'ground'
-                                    }
-                                    onChange={(ev) => {
-                                      setGenerateRandomElevationMode('ground');
-                                    }}
-                                  />
-                                  <label
-                                    htmlFor="snap-to-ground"
-                                    css={radioLabelStyles}
-                                  >
-                                    Snap to Ground
-                                  </label>
-                                </div>
+                                  }}
+                                />
+                                <label
+                                  htmlFor="use-aoi-file"
+                                  css={radioLabelStyles}
+                                >
+                                  Use Imported Area of Interest
+                                </label>
+                              </div>
 
-                                {generateRandomResponse.status === 'success' &&
-                                  sketchLayer &&
-                                  generateRandomSuccessMessage(
-                                    generateRandomResponse.data.length,
-                                    sketchLayer.label,
-                                  )}
-                                {generateRandomResponse.status === 'failure' &&
-                                  webServiceErrorMessage(
-                                    generateRandomResponse.error,
-                                  )}
-                                {generateRandomResponse.status ===
-                                  'exceededTransferLimit' &&
-                                  generateRandomExceededTransferLimitMessage}
-                                {((generateRandomMode === 'draw' &&
-                                  numberRandomSamples &&
-                                  aoiSketchLayer?.sketchLayer.type ===
-                                    'graphics' &&
-                                  aoiSketchLayer.sketchLayer.graphics.length >
-                                    0) ||
-                                  (generateRandomMode === 'file' &&
-                                    selectedAoiFile?.sketchLayer.type ===
-                                      'graphics' &&
-                                    selectedAoiFile.sketchLayer.graphics
-                                      .length > 0)) && (
-                                  <button
-                                    css={submitButtonStyles}
-                                    disabled={
-                                      generateRandomResponse.status ===
-                                      'fetching'
+                              {generateRandomMode === 'file' && (
+                                <Fragment>
+                                  <label htmlFor="aoi-mask-select-input">
+                                    Area of Interest Mask
+                                  </label>
+                                  <div css={inlineMenuStyles}>
+                                    <Select
+                                      id="aoi-mask-select"
+                                      inputId="aoi-mask-select-input"
+                                      css={inlineSelectStyles}
+                                      styles={reactSelectStyles as any}
+                                      isClearable={true}
+                                      value={selectedAoiFile}
+                                      onChange={(ev) =>
+                                        setSelectedAoiFile(ev as LayerType)
+                                      }
+                                      options={layers.filter(
+                                        (layer) =>
+                                          layer.layerType ===
+                                          'Area of Interest',
+                                      )}
+                                    />
+                                    <button
+                                      css={addButtonStyles}
+                                      disabled={
+                                        generateRandomResponse.status ===
+                                        'fetching'
+                                      }
+                                      onClick={(ev) => {
+                                        setGoTo('addData');
+                                        setGoToOptions({
+                                          from: 'file',
+                                          layerType: 'Area of Interest',
+                                        });
+                                      }}
+                                    >
+                                      Add
+                                    </button>
+                                  </div>
+                                </Fragment>
+                              )}
+                              {generateRandomMode && (
+                                <Fragment>
+                                  <br />
+                                  <label htmlFor="sample-type-select-input">
+                                    Sample Type
+                                  </label>
+                                  <Select
+                                    id="sample-type-select"
+                                    inputId="sample-type-select-input"
+                                    css={fullWidthSelectStyles}
+                                    value={sampleType}
+                                    onChange={(ev) =>
+                                      setSampleType(ev as SampleSelectType)
                                     }
-                                    onClick={randomSamples}
-                                  >
-                                    {generateRandomResponse.status !==
-                                      'fetching' && 'Submit'}
-                                    {generateRandomResponse.status ===
-                                      'fetching' && (
-                                      <Fragment>
-                                        <i className="fas fa-spinner fa-pulse" />
-                                        &nbsp;&nbsp;Loading...
-                                      </Fragment>
+                                    options={allSampleOptions}
+                                  />
+                                  <label htmlFor="number-of-samples-input">
+                                    Number of Samples
+                                  </label>
+                                  <input
+                                    id="number-of-samples-input"
+                                    css={inputStyles}
+                                    value={numberRandomSamples}
+                                    onChange={(ev) =>
+                                      setNumberRandomSamples(ev.target.value)
+                                    }
+                                  />
+
+                                  <div>
+                                    <input
+                                      id="use-aoi-elevation"
+                                      type="radio"
+                                      name="elevation-mode"
+                                      value="Use AOI Elevation"
+                                      disabled={
+                                        generateRandomResponse.status ===
+                                        'fetching'
+                                      }
+                                      checked={
+                                        generateRandomElevationMode ===
+                                        'aoiElevation'
+                                      }
+                                      onChange={(ev) => {
+                                        setGenerateRandomElevationMode(
+                                          'aoiElevation',
+                                        );
+                                      }}
+                                    />
+                                    <label
+                                      htmlFor="use-aoi-elevation"
+                                      css={radioLabelStyles}
+                                    >
+                                      Use AOI Elevation
+                                    </label>
+                                  </div>
+                                  <div>
+                                    <input
+                                      id="snap-to-ground"
+                                      type="radio"
+                                      name="elevation-mode"
+                                      value="Snap to Ground"
+                                      disabled={
+                                        generateRandomResponse.status ===
+                                        'fetching'
+                                      }
+                                      checked={
+                                        generateRandomElevationMode === 'ground'
+                                      }
+                                      onChange={(ev) => {
+                                        setGenerateRandomElevationMode(
+                                          'ground',
+                                        );
+                                      }}
+                                    />
+                                    <label
+                                      htmlFor="snap-to-ground"
+                                      css={radioLabelStyles}
+                                    >
+                                      Snap to Ground
+                                    </label>
+                                  </div>
+
+                                  {generateRandomResponse.status ===
+                                    'success' &&
+                                    sketchLayer &&
+                                    generateRandomSuccessMessage(
+                                      generateRandomResponse.data.length,
+                                      sketchLayer.label,
                                     )}
-                                  </button>
-                                )}
-                              </Fragment>
-                            )}
-                          </Fragment>
-                        )}
-                    </Fragment>
-                  )}
+                                  {generateRandomResponse.status ===
+                                    'failure' &&
+                                    webServiceErrorMessage(
+                                      generateRandomResponse.error,
+                                    )}
+                                  {generateRandomResponse.status ===
+                                    'exceededTransferLimit' &&
+                                    generateRandomExceededTransferLimitMessage}
+                                  {((generateRandomMode === 'draw' &&
+                                    numberRandomSamples &&
+                                    aoiSketchLayer?.sketchLayer.type ===
+                                      'graphics' &&
+                                    aoiSketchLayer.sketchLayer.graphics.length >
+                                      0) ||
+                                    (generateRandomMode === 'file' &&
+                                      selectedAoiFile?.sketchLayer.type ===
+                                        'graphics' &&
+                                      selectedAoiFile.sketchLayer.graphics
+                                        .length > 0)) && (
+                                    <button
+                                      css={submitButtonStyles}
+                                      disabled={
+                                        generateRandomResponse.status ===
+                                        'fetching'
+                                      }
+                                      onClick={randomSamples}
+                                    >
+                                      {generateRandomResponse.status !==
+                                        'fetching' && 'Submit'}
+                                      {generateRandomResponse.status ===
+                                        'fetching' && (
+                                        <Fragment>
+                                          <i className="fas fa-spinner fa-pulse" />
+                                          &nbsp;&nbsp;Loading...
+                                        </Fragment>
+                                      )}
+                                    </button>
+                                  )}
+                                </Fragment>
+                              )}
+                            </Fragment>
+                          )}
+                      </Fragment>
+                    )}
                 </div>
               </AccordionItem>
               <AccordionItem title={'Create Custom Sample Types'}>
