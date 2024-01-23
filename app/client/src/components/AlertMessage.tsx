@@ -5,16 +5,13 @@ import { css } from '@emotion/react';
 // import { globalHistory } from '@reach/router';
 // contexts
 import { useNotificationsContext } from 'contexts/LookupFiles';
-// config
-import { epaMarginOffset } from 'config/appConfig';
 
 const bannerStyles = (color: string, backgroundColor: string) => {
   return css`
     background-color: ${backgroundColor};
     color: ${color};
-    width: calc(100% + ${epaMarginOffset * 2 + 'px'});
+    width: 100%;
     margin: 0 auto;
-    margin-left: -${epaMarginOffset}px;
     padding: 10px 5px;
     text-align: center;
 

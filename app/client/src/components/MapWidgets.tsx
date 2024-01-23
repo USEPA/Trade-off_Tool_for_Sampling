@@ -149,6 +149,10 @@ const divActiveStyle = css`
   ${divSharedStyles}
   background-color: #999696;
   color: black;
+
+  &:focus {
+    outline: none;
+  }
 `;
 
 const divHoverStyle = css`

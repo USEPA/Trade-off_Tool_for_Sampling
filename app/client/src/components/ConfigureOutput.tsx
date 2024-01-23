@@ -93,7 +93,7 @@ const inputStyles = css`
   width: 100%;
   height: 36px;
   margin: 0 0 10px 0;
-  padding: 0;
+  padding: 1px 2px 1px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
 `;

@@ -311,6 +311,19 @@ const switchLabelContainer = css`
   font-weight: bold;
 `;
 
+const fieldsetStyles = css`
+  ${settingContainerStyles}
+  margin: 0 2px 1.5em;
+  padding: 0.35em 1em 0.75em;
+  border: 2px groove rgb(192, 192, 192);
+
+  legend {
+    font-weight: bold;
+    line-height: 1.3;
+    padding: 0 2px;
+  }
+`;
+
 const infoIconStyles = css`
   margin-left: 10px;
 `;
@@ -924,7 +937,7 @@ function Toolbar() {
             Settings{' '}
           </button>
           <div css={floatContainerStyles(settingsVisible, '223px')}>
-            <fieldset css={settingContainerStyles}>
+            <fieldset css={fieldsetStyles}>
               <legend>
                 Dimension
                 <InfoIcon
@@ -961,7 +974,7 @@ function Toolbar() {
               <label htmlFor="dimension-3d">3D</label>
             </fieldset>
 
-            <fieldset css={settingContainerStyles}>
+            <fieldset css={fieldsetStyles}>
               <legend>
                 Shape
                 <InfoIcon
@@ -1105,7 +1118,7 @@ function Toolbar() {
         </div>
         {oAuthInfo && (
           <button
-            css={toolBarButtonStyles('100px')}
+            css={toolBarButtonStyles('105px')}
             onClick={(ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();
