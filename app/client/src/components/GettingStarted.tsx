@@ -7,6 +7,12 @@ import { DialogOverlay, DialogContent } from '@reach/dialog';
 import { colors } from 'styles';
 
 // --- styles (GettingStarted) ---
+const linkStyles = css`
+  &:focus {
+    outline: none;
+  }
+`;
+
 const overlayStyles = css`
   &[data-reach-dialog-overlay] {
     z-index: 100;
@@ -142,6 +148,7 @@ function GettingStarted({ isOpen, children }: Props) {
             href={`${baseUrl}/proxy?url=${baseUrl}/data/documents/TOTS-Users-Guide.pdf`}
             target="_blank"
             rel="noopener noreferrer"
+            css={linkStyles}
           >
             TOTS User’s Guide (PDF)
           </a>{' '}
