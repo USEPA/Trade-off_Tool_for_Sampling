@@ -245,7 +245,9 @@ function MapPopup({
 
   // get the sketch layer id
   const activeLayer = features?.[0].graphic?.layer;
-  const activeLayerId = activeLayer?.id;
+  const activeLayerId = activeLayer?.id
+    .replace('-points', '')
+    .replace('-hybrid', '');
 
   // get the notes character limit from the defaultFields
   let notesCharacterLimit = 2000;
