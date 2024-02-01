@@ -33,6 +33,7 @@ const linkButtonStyles = css`
   padding: 0;
   border: none;
   font-size: 87.5%;
+  font-weight: normal;
   text-decoration: underline;
   color: #0071bc;
   background-color: transparent;

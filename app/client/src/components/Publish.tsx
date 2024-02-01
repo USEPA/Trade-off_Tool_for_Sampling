@@ -1083,23 +1083,33 @@ function Publish() {
               item.attributes.PERMANENT_IDENTIFIER,
           );
 
-          attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
-          attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
+          if (graphic) {
+            attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
+            attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
 
-          attributesToInclude.forEach((attribute) => {
-            attributes[attribute.name] =
-              graphic.attributes[attribute.name] || null;
-          });
+            attributesToInclude.forEach((attribute) => {
+              attributes[attribute.name] =
+                graphic.attributes[attribute.name] || null;
+            });
+          }
         }
 
         if (attributes.length === 0) {
           attributes = { ...item.attributes };
         }
 
-        layerEdits.updates.push({
-          ...item,
-          attributes,
-        });
+        const inDeletes =
+          layer.deletes.findIndex(
+            (feat) =>
+              feat.PERMANENT_IDENTIFIER ===
+              item.attributes.PERMANENT_IDENTIFIER,
+          ) !== -1;
+        if (!inDeletes) {
+          layerEdits.updates.push({
+            ...item,
+            attributes,
+          });
+        }
       });
       layer.deletes.forEach((item) => {
         layerEdits.deletes.push({

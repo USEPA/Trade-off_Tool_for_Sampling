@@ -149,6 +149,10 @@ const divActiveStyle = css`
   ${divSharedStyles}
   background-color: #999696;
   color: black;
+
+  &:focus {
+    outline: none;
+  }
 `;
 
 const divHoverStyle = css`
@@ -714,7 +718,7 @@ function MapWidgets({ mapView, sceneView }: Props) {
         const { graphic } = event;
         if (!graphic) return;
 
-        if (!firstPoint) {
+        if (!firstPoint && graphic.geometry) {
           if (graphic.geometry.type === 'point') {
             firstPoint = graphic.geometry as __esri.Point;
           }

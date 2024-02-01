@@ -311,6 +311,19 @@ const switchLabelContainer = css`
   font-weight: bold;
 `;
 
+const fieldsetStyles = css`
+  ${settingContainerStyles}
+  margin: 0 2px 1.5em;
+  padding: 0.35em 1em 0.75em;
+  border: 2px groove rgb(192, 192, 192);
+
+  legend {
+    font-weight: bold;
+    line-height: 1.3;
+    padding: 0 2px;
+  }
+`;
+
 const infoIconStyles = css`
   margin-left: 10px;
 `;
@@ -386,9 +399,9 @@ const floatContainerStyles = (containerVisible: boolean, right: string) => {
   `;
 };
 
-const legendStyles = (legendVisible: boolean) => {
+const legendStyles = (legendVisible: boolean, right: string) => {
   return css`
-    ${floatContainerStyles(legendVisible, '0')}
+    ${floatContainerStyles(legendVisible, right)}
 
     /* Hide/show the actions panel */
     .esri-layer-list__item-actions[hidden] {
@@ -923,8 +936,8 @@ function Toolbar() {
             <i className="esri-icon-settings2" css={navIconStyles} />
             Settings{' '}
           </button>
-          <div css={floatContainerStyles(settingsVisible, '223px')}>
-            <fieldset css={settingContainerStyles}>
+          <div css={floatContainerStyles(settingsVisible, '242px')}>
+            <fieldset css={fieldsetStyles}>
               <legend>
                 Dimension
                 <InfoIcon
@@ -961,7 +974,7 @@ function Toolbar() {
               <label htmlFor="dimension-3d">3D</label>
             </fieldset>
 
-            <fieldset css={settingContainerStyles}>
+            <fieldset css={fieldsetStyles}>
               <legend>
                 Shape
                 <InfoIcon
@@ -1080,7 +1093,7 @@ function Toolbar() {
             Basemap{' '}
           </button>
           <div
-            css={floatContainerStyles(basemapVisible, '115px')}
+            css={floatContainerStyles(basemapVisible, '131px')}
             id="basemap-container"
           />
         </div>
@@ -1097,7 +1110,7 @@ function Toolbar() {
             <i className="esri-icon-legend" css={navIconStyles} />
             Legend{' '}
           </button>
-          <div css={legendStyles(legendVisible)} id="legend-container">
+          <div css={legendStyles(legendVisible, '13px')} id="legend-container">
             <div className="esri-layer-list__no-items">
               There are currently no items to display.
             </div>
@@ -1105,7 +1118,7 @@ function Toolbar() {
         </div>
         {oAuthInfo && (
           <button
-            css={toolBarButtonStyles('100px')}
+            css={toolBarButtonStyles('105px')}
             onClick={(ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();

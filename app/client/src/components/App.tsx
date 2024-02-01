@@ -35,7 +35,7 @@ import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
 import { useSessionStorage } from 'utils/hooks';
 import { getSampleTableColumns } from 'utils/sketchUtils';
 // config
-import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
+import { navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
 import '@arcgis/core/assets/esri/themes/light/main.css';
@@ -48,8 +48,6 @@ var startY = 0;
 
 declare global {
   interface Window {
-    ga: Function;
-    gaTarget: string;
     googleAnalyticsMapping: any[];
     logErrorToGa: Function;
     logToGa: Function;
@@ -97,12 +95,18 @@ const globalStyles = css`
   }
 
   .esri-popup__main-container {
-    max-height: 465px !important;
     min-width: 460px !important;
   }
 
   .esri-popup__action-text {
     display: none;
+  }
+
+  .esri-widget,
+  .esri-widget--button {
+    &:focus {
+      outline: none;
+    }
   }
 `;
 
@@ -111,8 +115,7 @@ const appStyles = (offset: number) => css`
   flex-direction: column;
   height: calc(100vh - ${offset}px);
   min-height: 675px;
-  width: calc(100% + ${epaMarginOffset * 2 + 'px'});
-  margin-left: -${epaMarginOffset}px;
+  width: 100%;
 `;
 
 const containerStyles = css`

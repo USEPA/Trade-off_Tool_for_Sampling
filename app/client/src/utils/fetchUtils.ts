@@ -227,9 +227,6 @@ export function logCallToGoogleAnalytics(
   status: number,
   startTime: number,
 ) {
-  if (!window.gaTarget) return;
-  if (!window.ga) return;
-
   const duration = performance.now() - startTime;
 
   // combine the web service and map service mappings
@@ -247,7 +244,11 @@ export function logCallToGoogleAnalytics(
   const eventLabel = `${url} | status:${status} | time:${duration}`;
 
   // log to google analytics if it has been setup
-  window.logToGa('send', 'event', 'Web-service', eventAction, eventLabel);
+  window.logToGa('service_call', {
+    event_action: eventAction,
+    event_category: 'Web-service',
+    event_label: eventLabel,
+  });
 }
 
 /**

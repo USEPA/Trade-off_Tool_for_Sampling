@@ -1587,7 +1587,7 @@ async function applyEdits({
       // Loop through the above changes and build a points version
       const pointsAdds: FeatureEditsType[] = [];
       const pointsUpdates: FeatureEditsType[] = [];
-      const pointsDeletes: FeatureEditsType[] = [];
+      const pointsDeletes: string[] = [];
       layerEdits.adds.forEach((item) => {
         addPointFeatures(mapLayer, pointsAdds, item, attributesToInclude);
       });
@@ -1601,15 +1601,7 @@ async function applyEdits({
       });
       if (layerEdits.pointsId !== -1) {
         layerEdits.deletes.forEach((item) => {
-          addPointFeatures(
-            mapLayer,
-            pointsDeletes,
-            {
-              attributes: item,
-              geometry: {},
-            },
-            attributesToInclude,
-          );
+          pointsDeletes.push(item.GLOBALID);
         });
       }
 
@@ -1695,7 +1687,20 @@ async function applyEdits({
       }),
       layerProps,
     });
-    changes.push(output.edits);
+    changes.push({
+      ...output.edits,
+      updates: output.edits.updates.map((i) => {
+        const item: any = Object.values(table?.sampleTypes).find(
+          (t: any) => t.TYPEUUID === i.attributes.TYPEUUID,
+        );
+        return {
+          attributes: {
+            ...i.attributes,
+            GLOBALID: item?.GLOBALID ?? i.attributes.GLOBALID,
+          },
+        };
+      }),
+    });
     tableOut = output.table;
 
     let refLayerTableOut: ReferenceLayersTableType | null = null;
@@ -1784,9 +1789,9 @@ function buildTableEdits({
       Object.keys(table.sampleTypes).forEach((key) => {
         if (
           !sampleTypes.hasOwnProperty(key) &&
-          table.sampleTypes[key]?.OBJECTID
+          table.sampleTypes[key]?.GLOBALID
         ) {
-          deletes.push(table.sampleTypes[key].OBJECTID);
+          deletes.push(table.sampleTypes[key].GLOBALID);
         }
       });
     }

@@ -105,10 +105,7 @@ export async function writeToStorage(
       description: message,
     });
 
-    window.logToGa('send', 'exception', {
-      exDescription: `${key}:${message}`,
-      exFatal: false,
-    });
+    window.logErrorToGa(`${key}:${message}`);
   }
 }
 
