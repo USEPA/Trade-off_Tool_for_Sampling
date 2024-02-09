@@ -1497,9 +1497,11 @@ function ResultCard({ result }: ResultCardProps) {
           const source: __esri.Graphic[] = [];
           layerFeatures.features.forEach((feature: any) => {
             const graphic: any = Graphic.fromJSON(feature);
-            graphic.geometry.spatialReference = {
-              wkid: 3857,
-            };
+            if (graphic.geometry) {
+              graphic.geometry.spatialReference = {
+                wkid: 3857,
+              };
+            }
             source.push(graphic);
           });
 

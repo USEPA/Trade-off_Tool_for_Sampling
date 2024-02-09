@@ -433,11 +433,11 @@ function Calculate() {
       ],
     });
 
-    const { groupLayer, graphics: sketchedGraphics } = getGraphics(
+    const { groupLayer, graphics: sketchedGraphicsTmp } = getGraphics(
       map,
       selectedScenario.layerId,
     );
-    if (sketchedGraphics.length === 0 || !groupLayer) {
+    if (sketchedGraphicsTmp.length === 0 || !groupLayer) {
       // display the no-graphics warning
       setContaminationResults({
         status: 'no-graphics',
@@ -445,6 +445,21 @@ function Calculate() {
       });
       return;
     }
+
+    function addBraces(str: string) {
+      if (!str.includes('{') && !str.includes('}')) return `{${str}}`;
+      else if (!str.includes('{') && str.includes('}')) return `{${str}`;
+      else if (str.includes('{') && !str.includes('}')) return `${str}}`;
+      else return str;
+    }
+
+    const sketchedGraphics = [...sketchedGraphicsTmp];
+    sketchedGraphics.forEach((g) => {
+      g.attributes.GLOBALID = addBraces(g.attributes.GLOBALID);
+      g.attributes.PERMANENT_IDENTIFIER = addBraces(
+        g.attributes.PERMANENT_IDENTIFIER,
+      );
+    });
 
     // display the loading spinner
     setContaminationResults({
@@ -679,8 +694,12 @@ function Calculate() {
                 tempLayer.graphics.forEach((graphic) => {
                   const resFeature = resFeatures.find(
                     (feature: any) =>
-                      graphic.attributes.PERMANENT_IDENTIFIER ===
-                      feature.attributes.PERMANENT_IDENTIFIER,
+                      graphic.attributes.PERMANENT_IDENTIFIER.toLowerCase()
+                        .replace('{', '')
+                        .replace('}', '') ===
+                      feature.attributes.PERMANENT_IDENTIFIER.toLowerCase()
+                        .replace('{', '')
+                        .replace('}', ''),
                   );
 
                   // if the graphic was not found in the response, set contam value to null,
