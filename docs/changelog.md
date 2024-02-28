@@ -1,6 +1,6 @@
 # Change Log
 
-## 3.0.0 (February 2024)
+## 3.0.0 (March 2024)
 
 ### Added
 
