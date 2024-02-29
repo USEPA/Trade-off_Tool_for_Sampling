@@ -44,7 +44,7 @@ const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
 const minMapHeight = 180;
-var startY = 0;
+let startY = 0;
 
 declare global {
   interface Window {
@@ -404,18 +404,14 @@ function App() {
   useEffect(() => {
     if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
 
-    var callId = 0;
-    var callDurations: any = {};
+    let callId = 0;
+    let callDurations: any = {};
 
     if (services.status === 'success') {
       // Have ESRI use the proxy for communicating with the TOTS GP Server
       urlUtils.addProxyRule({
         proxyUrl: services.data.proxyUrl,
         urlPrefix: 'https://ags.erg.com',
-      });
-      urlUtils.addProxyRule({
-        proxyUrl: services.data.proxyUrl,
-        urlPrefix: 'http://ags.erg.com',
       });
     }
 
@@ -557,7 +553,6 @@ function App() {
                       <div
                         css={resizerContainerStyles}
                         onMouseDown={(e) => {
-                          e = e || window.event;
                           e.preventDefault();
                           startY = e.clientY;
 
@@ -590,7 +585,6 @@ function App() {
                           };
                           // call a function whenever the cursor moves:
                           document.onmousemove = (e: MouseEvent) => {
-                            e = e || window.event;
                             e.preventDefault();
 
                             if (!mapDiv || !tableDiv || !buttonDiv) return;

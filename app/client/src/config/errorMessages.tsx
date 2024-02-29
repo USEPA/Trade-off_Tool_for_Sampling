@@ -5,6 +5,8 @@ import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
+// utils
+import { generateUUID } from 'utils/sketchUtils';
 // config
 import { SampleIssuesOutput } from 'config/sampleAttributes';
 // types
@@ -22,7 +24,7 @@ export const webServiceErrorMessage = (
   },
   title: string = 'Web Service Error',
 ) => {
-  const id = `error-copy-input-${Date.now() + Math.random()}`;
+  const id = `error-copy-input-${generateUUID()}`;
 
   return (
     <MessageBox
