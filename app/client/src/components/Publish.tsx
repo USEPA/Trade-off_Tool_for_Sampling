@@ -326,7 +326,6 @@ function Publish() {
               summary: { success: '', failed: '' },
               rawData: null,
             });
-            return;
           }
         }
 

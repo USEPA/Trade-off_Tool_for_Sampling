@@ -324,7 +324,6 @@ function FilePanel() {
 
     if (!fileType) {
       setUploadStatus('invalid-file-type');
-      return;
     }
   }, []);
 
@@ -360,11 +359,8 @@ function FilePanel() {
     // get batch geocode services
     const newBatchGeocodeServices: any[] = [];
     if (portal?.helperServices?.geocode) {
-      // workaround for accessing portal.user.privileges since privileges doesn't exist on
-      // the type definition.
-      const user = portal.user as any;
       const hasGeocodePrivileges =
-        user.privileges.indexOf('premium:user:geocode') > -1;
+        portal.user.privileges.indexOf('premium:user:geocode') > -1;
 
       portal.helperServices.geocode.forEach((service: any) => {
         const isWorld = service.url.match(worldExp);
@@ -1078,7 +1074,7 @@ function FilePanel() {
 
       if (missingAttributes.length > 0) {
         setUploadStatus('missing-attributes');
-        const sortedMissingAttributes = missingAttributes.sort();
+        const sortedMissingAttributes = [...missingAttributes].sort();
         const missingAttributesStr =
           sortedMissingAttributes.slice(0, -1).join(', ') +
           ' and ' +
