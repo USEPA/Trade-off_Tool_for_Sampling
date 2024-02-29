@@ -919,9 +919,9 @@ function Toolbar() {
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
-      <h2 css={toolBarTitle}>
+      <h1 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
-      </h2>
+      </h1>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
