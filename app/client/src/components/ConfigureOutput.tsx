@@ -1,12 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { css } from '@emotion/react';
 import { DialogOverlay, DialogContent } from '@reach/dialog';
 // components
@@ -20,14 +14,21 @@ import ShowLessMore from 'components/ShowLessMore';
 import Switch from 'components/Switch';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
-import { PublishContext } from 'contexts/Publish';
+import { NavigationContext } from 'contexts/Navigation';
+import {
+  PublishContext,
+  defaultPlanAttributes,
+  trainingModePlanAttributes,
+} from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // types
+import { ScenarioEditsType } from 'types/Edits';
 import { ErrorType } from 'types/Misc';
 import {
   AttributesType,
   CodedValue,
   Domain,
+  ReferenceLayerSelections,
   SampleTypeOptions,
 } from 'types/Publish';
 // config
@@ -92,7 +93,7 @@ const inputStyles = css`
   width: 100%;
   height: 36px;
   margin: 0 0 10px 0;
-  padding-left: 8px;
+  padding: 1px 2px 1px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
 `;
@@ -108,6 +109,14 @@ const labelStyles = css`
   span {
     margin-left: 0.5em;
   }
+`;
+
+const subLabelStyles = css`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  pointer-events: none;
 `;
 
 const switchStyles = css`
@@ -128,10 +137,6 @@ const editButtonStyles = css`
   font-size: 16px;
 `;
 
-const checkboxStyles = css`
-  margin-right: 5px;
-`;
-
 const nextInstructionStyles = css`
   margin-top: 20px;
 `;
@@ -139,6 +144,7 @@ const nextInstructionStyles = css`
 const infoIconStyles = css`
   margin-left: 10px;
   color: #19a3dd;
+  pointer-events: all;
 `;
 
 const nestedAccordionStyles = css`
@@ -148,25 +154,35 @@ const nestedAccordionStyles = css`
 // --- components (ConfigureOutput) ---
 function ConfigureOutput() {
   const { signedIn } = useContext(AuthenticationContext);
+  const { trainingMode } = useContext(NavigationContext);
   const {
     publishSamplesMode,
     setPublishSamplesMode,
     sampleTypeSelections,
     setSampleTypeSelections,
-    // includeFullPlan,
-    // setIncludeFullPlan,
-    // includeFullPlanWebMap,
-    // setIncludeFullPlanWebMap,
     includePartialPlan,
     setIncludePartialPlan,
     includePartialPlanWebMap,
     setIncludePartialPlanWebMap,
+    includePartialPlanWebScene,
+    setIncludePartialPlanWebScene,
     includeCustomSampleTypes,
     setIncludeCustomSampleTypes,
-    partialPlanAttributes,
-    setPartialPlanAttributes,
+    webMapReferenceLayerSelections,
+    setWebMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
-  const { selectedScenario, userDefinedAttributes } = useContext(SketchContext);
+  const {
+    edits,
+    map,
+    portalLayers,
+    referenceLayers,
+    selectedScenario,
+    setEdits,
+    urlLayers,
+    userDefinedAttributes,
+  } = useContext(SketchContext);
 
   const sampleTypeOptions: SampleTypeOptions = Object.values(
     userDefinedAttributes.sampleTypes,
@@ -183,29 +199,223 @@ function ConfigureOutput() {
 
   const [editAttributesOpen, setEditAttributesOpen] = useState(false);
   const [attributesIndex, setAttributesIndex] = useState(-1);
-  // const [isFullOpen, setIsFullOpen] = useState(includeFullPlan);
   const [isPartialOpen, setIsPartialOpen] = useState(includePartialPlan);
   const [isSampleTypesOpen, setIsSampleTypesOpen] = useState(
     includeCustomSampleTypes,
   );
+  const [isIncludeWebMapOpen, setIsIncludeWebMapOpen] = useState(false);
+  const [isIncludeWebMapSceneOpen, setIsIncludeWebSceneOpen] = useState(false);
 
   const webMapIcon = (id: string) => (
     <InfoIcon
       id={id}
       cssStyles={infoIconStyles}
       tooltip="A web map is used with Field Maps and supports field data collection activities."
-      place="right"
-      type="info"
     />
   );
+
+  const webSceneIcon = (id: string) => (
+    <InfoIcon
+      id={id}
+      cssStyles={infoIconStyles}
+      tooltip="A web scene is used for viewing TOTS sampling plans in ArcGIS Online with 3D."
+    />
+  );
+
+  const [webMapRefOptions, setWebMapRefOptions] = useState<
+    ReferenceLayerSelections[]
+  >([]);
+  const [webSceneRefOptions, setWebSceneRefOptions] = useState<
+    ReferenceLayerSelections[]
+  >([]);
+  useEffect(() => {
+    const webMapRefLayers: ReferenceLayerSelections[] = [];
+    const webSceneRefLayers: ReferenceLayerSelections[] = [];
+
+    const applicableLayerTypesAgoWebMap = [
+      'Feature Service',
+      'Image Service',
+      'KML',
+      'Map Service',
+      'Vector Tile Service',
+      'WMS',
+    ];
+    const applicableLayerTypesAgoWebScene = [
+      'Feature Service',
+      'Image Service',
+      'Map Service',
+      'Scene Service',
+      'Vector Tile Service',
+    ];
+    portalLayers.forEach((l) => {
+      if (l.type === 'tots') return;
+
+      const item: ReferenceLayerSelections = {
+        label: l.label,
+        id: l.id,
+        value: l.url,
+        layerType: l.layerType,
+        type: 'arcgis',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
+      if (applicableLayerTypesAgoWebMap.includes(l.layerType)) {
+        item.onWebMap = 1;
+        webMapRefLayers.push(item);
+      }
+
+      if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
+        item.onWebScene = 1;
+        webSceneRefLayers.push(item);
+      }
+    });
+
+    const applicableLayerTypesUrlWebMap = [
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'map-image',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebMap = ['CSV', 'GeoRSS', 'KML', 'WMS'];
+    const applicableLayerTypesUrlWebScene = [
+      'building-scene',
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'integrated-mesh',
+      'map-image',
+      'point-cloud',
+      'scene',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebScene = ['CSV'];
+    urlLayers.forEach((l) => {
+      if (l.layerType === 'stream') return;
+
+      const item: ReferenceLayerSelections = {
+        label: l.label,
+        id: l.layerId,
+        value: l.url,
+        layerType: l.layerType,
+        urlType: l.type,
+        type: 'url',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
+      if (
+        applicableUrlTypesUrlWebMap.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebMap.includes(l.layerType))
+      ) {
+        item.onWebMap = 1;
+        webMapRefLayers.push(item);
+      }
+
+      if (
+        applicableUrlTypesUrlWebScene.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebScene.includes(l.layerType))
+      ) {
+        item.onWebScene = 1;
+        webSceneRefLayers.push(item);
+      }
+    });
+
+    // add in file reference layers
+    referenceLayers.forEach((l) => {
+      const item: ReferenceLayerSelections = {
+        label: l.title,
+        id: l.layerId,
+        value: l.layerId,
+        layer: l,
+        type: 'file',
+        onWebMap: 1,
+        onWebScene: 1,
+      };
+      webMapRefLayers.push(item);
+      webSceneRefLayers.push(item);
+    });
+
+    webMapRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+    webSceneRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+
+    setWebMapRefOptions(webMapRefLayers);
+    setWebSceneRefOptions(webSceneRefLayers);
+  }, [portalLayers, referenceLayers, urlLayers]);
+
+  const [initializedRefSelections, setInitializedRefSelections] =
+    useState(false);
+  useEffect(() => {
+    if (!map || initializedRefSelections) return;
+    if (webMapRefOptions.length === 0 && webSceneRefOptions.length === 0)
+      return;
+
+    const webMapReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    const webSceneReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    if (
+      selectedScenario &&
+      selectedScenario.referenceLayersTable.referenceLayers.length > 0
+    ) {
+      selectedScenario.referenceLayersTable.referenceLayers.forEach((l) => {
+        const wmOption = webMapRefOptions.find(
+          (o) =>
+            (o.type !== 'file' && o.id === l.layerId) ||
+            (o.type === 'file' && o.label === l.label),
+        );
+        const wsOption = webSceneRefOptions.find(
+          (o) =>
+            (o.type !== 'file' && o.id === l.layerId) ||
+            (o.type === 'file' && o.label === l.label),
+        );
+
+        if (wmOption && l.onWebMap)
+          webMapReferenceLayerSelections.push(wmOption);
+        if (wsOption && l.onWebScene)
+          webSceneReferenceLayerSelections.push(wsOption);
+      });
+    } else {
+      const findLayer = (layer: any, refLayers: ReferenceLayerSelections[]) => {
+        return refLayers.find(
+          (o) => o.id === layer.id || o.id === layer?.portalItem?.id,
+        );
+      };
+      map.layers.forEach((l) => {
+        if (!l.visible) return;
+
+        const wmOption = findLayer(l, webMapRefOptions);
+        const wsOption = findLayer(l, webSceneRefOptions);
+
+        if (wmOption) webMapReferenceLayerSelections.push(wmOption);
+        if (wsOption) webSceneReferenceLayerSelections.push(wsOption);
+      });
+    }
+
+    setWebMapReferenceLayerSelections(webMapReferenceLayerSelections);
+    setWebSceneReferenceLayerSelections(webSceneReferenceLayerSelections);
+    setInitializedRefSelections(true);
+  }, [
+    initializedRefSelections,
+    map,
+    selectedScenario,
+    setWebMapReferenceLayerSelections,
+    setWebSceneReferenceLayerSelections,
+    webMapRefOptions,
+    webSceneRefOptions,
+  ]);
 
   return (
     <div css={panelContainer}>
       <div>
         <EditAttributePopup
           isOpen={editAttributesOpen}
-          attributes={partialPlanAttributes}
-          setAttributes={setPartialPlanAttributes}
+          attributes={[
+            ...defaultPlanAttributes,
+            ...(trainingMode ? trainingModePlanAttributes : []),
+            ...(selectedScenario ? selectedScenario.customAttributes : []),
+          ]}
           selectedIndex={attributesIndex}
           onSave={() => setEditAttributesOpen(false)}
           onClose={() => setEditAttributesOpen(false)}
@@ -233,53 +443,6 @@ function ConfigureOutput() {
           </p>
         </div>
         <AccordionList>
-          {/* <AccordionItem
-          isOpenParam={isFullOpen}
-          onChange={(isOpen) => {
-            setIsFullOpen(!isFullOpen);
-            if (!isOpen) return;
-
-            setIncludeFullPlan(true);
-          }}
-          title={
-            <label css={labelStyles}>
-              <strong>Include TOTS Full Reference File</strong>
-              <div css={switchStyles} onClick={(ev) => ev.stopPropagation()}>
-                <Switch
-                  checked={includeFullPlan}
-                  onChange={() => {
-                    setIncludeFullPlan(!includeFullPlan);
-                    setIsFullOpen(!includeFullPlan);
-                  }}
-                  ariaLabel="Include TOTS Full Reference File"
-                />
-              </div>
-            </label>
-          }
-        >
-          <div css={sectionContainer}>
-            <p>
-              Choose this option to publish a complete set of output, including
-              all TOTS attribute values, that can be imported back into TOTS in
-              the future.
-            </p>
-            <div>
-              <input
-                id="include-web-map-toggle"
-                type="checkbox"
-                css={checkboxStyles}
-                checked={includeFullPlanWebMap}
-                onChange={(ev) =>
-                  setIncludeFullPlanWebMap(!includeFullPlanWebMap)
-                }
-              />
-              <label htmlFor="include-web-map-toggle">
-                Include web map in output
-              </label>
-              {webMapIcon('full-web-map-icon')}
-            </div>
-          </div>
-        </AccordionItem> */}
           <AccordionItem
             isOpenParam={isPartialOpen}
             onChange={(isOpen) => {
@@ -313,23 +476,108 @@ function ConfigureOutput() {
                 to use with field data collection apps.
               </p>
             </div>
-            <div css={sectionContainer}>
-              <input
-                id="include-partial-web-map-toggle"
-                type="checkbox"
-                css={checkboxStyles}
-                checked={includePartialPlanWebMap}
-                onChange={(ev) =>
-                  setIncludePartialPlanWebMap(!includePartialPlanWebMap)
-                }
-              />
-              <label htmlFor="include-partial-web-map-toggle">
-                Include web map in output
-              </label>
-              {webMapIcon('partial-web-map-icon')}
-            </div>
             <div css={nestedAccordionStyles}>
               <AccordionList>
+                <AccordionItem
+                  isOpenParam={isIncludeWebMapOpen}
+                  onChange={(isOpen) => {
+                    setIsIncludeWebMapOpen(!isIncludeWebMapOpen);
+                    if (!isOpen) return;
+
+                    setIncludePartialPlanWebMap(true);
+                  }}
+                  title={
+                    <label css={subLabelStyles}>
+                      <span>
+                        Include Web Map
+                        {webMapIcon('partial-web-map-icon')}
+                      </span>
+                      <div
+                        css={switchStyles}
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <Switch
+                          checked={includePartialPlanWebMap}
+                          onChange={() => {
+                            setIsIncludeWebMapOpen(!includePartialPlanWebMap);
+                            setIncludePartialPlanWebMap(
+                              !includePartialPlanWebMap,
+                            );
+                          }}
+                          ariaLabel="Include Web Map"
+                        />
+                      </div>
+                    </label>
+                  }
+                >
+                  <div>
+                    <label htmlFor="webmap-reference-layers-select">
+                      Reference Layers to Include with web map
+                    </label>
+                    <Select
+                      inputId="webmap-reference-layers-select"
+                      isMulti={true}
+                      isSearchable={false}
+                      options={webMapRefOptions}
+                      value={webMapReferenceLayerSelections}
+                      onChange={(ev) =>
+                        setWebMapReferenceLayerSelections(ev as any)
+                      }
+                      css={multiSelectStyles}
+                    />
+                  </div>
+                </AccordionItem>
+                <AccordionItem
+                  isOpenParam={isIncludeWebMapSceneOpen}
+                  onChange={(isOpen) => {
+                    setIsIncludeWebSceneOpen(!isIncludeWebMapSceneOpen);
+                    if (!isOpen) return;
+
+                    setIncludePartialPlanWebScene(true);
+                  }}
+                  title={
+                    <label css={subLabelStyles}>
+                      <span>
+                        Include Web Scene
+                        {webSceneIcon('partial-web-scene-icon')}
+                      </span>
+                      <div
+                        css={switchStyles}
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <Switch
+                          checked={includePartialPlanWebScene}
+                          onChange={() => {
+                            setIsIncludeWebSceneOpen(
+                              !includePartialPlanWebScene,
+                            );
+                            setIncludePartialPlanWebScene(
+                              !includePartialPlanWebScene,
+                            );
+                          }}
+                          ariaLabel="Include Web Scene"
+                        />
+                      </div>
+                    </label>
+                  }
+                >
+                  <div>
+                    <label htmlFor="webscene-reference-layers-select">
+                      Reference Layers to Include with web scene
+                    </label>
+                    <Select
+                      inputId="webscene-reference-layers-select"
+                      isMulti={true}
+                      isSearchable={false}
+                      options={webSceneRefOptions}
+                      value={webSceneReferenceLayerSelections}
+                      onChange={(ev) =>
+                        setWebSceneReferenceLayerSelections(ev as any)
+                      }
+                      css={multiSelectStyles}
+                    />
+                  </div>
+                </AccordionItem>
                 <AccordionItem title="Add User-Defined Attributes">
                   <div css={tableContainer}>
                     <p>
@@ -341,6 +589,7 @@ function ConfigureOutput() {
                       previously added.
                     </p>
                     <button
+                      disabled={!selectedScenario}
                       onClick={() => {
                         setAttributesIndex(-1);
                         setEditAttributesOpen(true);
@@ -354,7 +603,13 @@ function ConfigureOutput() {
                     </label>
                     <ReactTable
                       id="tots-survey123-attributes-table"
-                      data={partialPlanAttributes}
+                      data={[
+                        ...defaultPlanAttributes,
+                        ...(trainingMode ? trainingModePlanAttributes : []),
+                        ...(selectedScenario
+                          ? selectedScenario.customAttributes
+                          : []),
+                      ]}
                       idColumn={'ID'}
                       striped={true}
                       initialSelectedRowIds={{ ids: [] }}
@@ -390,6 +645,7 @@ function ConfigureOutput() {
                                 <div css={editColumnContainerStyles}>
                                   <button
                                     css={editButtonStyles}
+                                    disabled={!selectedScenario}
                                     onClick={(event) => {
                                       setAttributesIndex(row.index);
                                       setEditAttributesOpen(true);
@@ -399,14 +655,37 @@ function ConfigureOutput() {
                                   </button>
                                   <button
                                     css={editButtonStyles}
+                                    disabled={!selectedScenario}
                                     onClick={(event) => {
-                                      setPartialPlanAttributes((attr) => {
-                                        return attr.filter(
-                                          (x) =>
-                                            x.id !== row.original.id ||
-                                            x.name !== row.original.name ||
-                                            x.label !== row.original.label,
-                                        );
+                                      if (!selectedScenario) return;
+
+                                      const index = edits.edits.findIndex(
+                                        (item) =>
+                                          item.type === 'scenario' &&
+                                          item.layerId ===
+                                            selectedScenario.layerId,
+                                      );
+                                      setEdits((edits) => {
+                                        const editedScenario = edits.edits[
+                                          index
+                                        ] as ScenarioEditsType;
+
+                                        editedScenario.customAttributes =
+                                          editedScenario.customAttributes.filter(
+                                            (x) =>
+                                              x.id !== row.original.id ||
+                                              x.name !== row.original.name ||
+                                              x.label !== row.original.label,
+                                          );
+
+                                        return {
+                                          count: edits.count + 1,
+                                          edits: [
+                                            ...edits.edits.slice(0, index),
+                                            editedScenario,
+                                            ...edits.edits.slice(index + 1),
+                                          ],
+                                        };
                                       });
                                     }}
                                   >
@@ -462,10 +741,10 @@ function ConfigureOutput() {
                 </label>
                 <Select
                   inputId="publish-sample-select"
-                  isMulti={true as any}
+                  isMulti={true}
                   isSearchable={false}
-                  options={sampleTypeOptions as any}
-                  value={sampleTypeSelections as any}
+                  options={sampleTypeOptions}
+                  value={sampleTypeSelections}
                   onChange={(ev) => setSampleTypeSelections(ev as any)}
                   css={multiSelectStyles}
                 />
@@ -591,7 +870,7 @@ const codedContainerStyles = css`
 // allow the required attribute to be passed in.
 const hiddenInput = css`
   opacity: 0;
-  width: 100%;
+  width: 0;
   height: 0;
   position: absolute;
   margin-top: -15px;
@@ -601,7 +880,6 @@ const hiddenInput = css`
 type Props = {
   isOpen: boolean;
   attributes: AttributesType[];
-  setAttributes: Dispatch<SetStateAction<AttributesType[]>>;
   onClose: Function;
   onSave: Function;
   selectedIndex: number;
@@ -610,7 +888,6 @@ type Props = {
 function EditAttributePopup({
   isOpen,
   attributes,
-  setAttributes,
   onClose,
   onSave,
   selectedIndex,
@@ -619,6 +896,7 @@ function EditAttributePopup({
     value: string;
     label: string;
   };
+  const { edits, setEdits, selectedScenario } = useContext(SketchContext);
 
   const [name, setName] = useState('');
   const [label, setLabel] = useState('');
@@ -747,7 +1025,7 @@ function EditAttributePopup({
       <DialogContent css={dialogStyles} aria-label="Edit Attribute">
         <form
           onSubmit={() => {
-            if (!dataType) return;
+            if (!dataType || !selectedScenario) return;
 
             let domain: null | Domain = null;
             if (
@@ -756,6 +1034,9 @@ function EditAttributePopup({
                 dataType.value === 'integer' ||
                 dataType.value === 'string')
             ) {
+              // filter out blank row of coded values
+              const codedValues = codes.filter((c) => c.id !== -1);
+
               if (domainType.value === 'range') {
                 domain = {
                   type: 'range',
@@ -765,11 +1046,14 @@ function EditAttributePopup({
                   },
                   codedValues: null,
                 };
-              } else if (domainType.value === 'coded') {
+              } else if (
+                domainType.value === 'coded' &&
+                codedValues.length > 0
+              ) {
                 domain = {
                   type: 'coded',
                   range: null,
-                  codedValues: codes,
+                  codedValues,
                 };
               } else {
                 domain = {
@@ -793,19 +1077,37 @@ function EditAttributePopup({
               domain,
             };
 
-            setAttributes((attributes) => {
-              let newAttributes = attributes.map((attribute, index) => {
-                if (index === selectedIndex) {
-                  return newAttribute;
-                }
-                return attribute;
-              });
+            const index = edits.edits.findIndex(
+              (item) =>
+                item.type === 'scenario' &&
+                item.layerId === selectedScenario.layerId,
+            );
+            setEdits((edits) => {
+              const editedScenario = edits.edits[index] as ScenarioEditsType;
+
+              let newAttributes = editedScenario.customAttributes.map(
+                (attribute, index) => {
+                  if (index === selectedIndex) {
+                    return newAttribute;
+                  }
+                  return attribute;
+                },
+              );
 
               if (selectedIndex === -1) {
                 newAttributes.push(newAttribute);
               }
 
-              return newAttributes;
+              editedScenario.customAttributes = newAttributes;
+
+              return {
+                count: edits.count + 1,
+                edits: [
+                  ...edits.edits.slice(0, index),
+                  editedScenario,
+                  ...edits.edits.slice(index + 1),
+                ],
+              };
             });
 
             onSave();
@@ -824,9 +1126,7 @@ function EditAttributePopup({
             <InfoIcon
               id="field-name-input-icon"
               cssStyles={infoIconStyles}
-              tooltip="Field names should not contain special characters, such as spaces, hyphens, parentheses, brackets, or characters such as $, %, and #."
-              place="right"
-              type="info"
+              tooltip="Field names should not contain<br/>special characters, such as spaces,<br/>hyphens, parentheses, brackets, or<br/>characters such as $, %, and #."
             />
             <input
               id="attribute-name-input"
@@ -842,9 +1142,7 @@ function EditAttributePopup({
             <InfoIcon
               id="display-name-input-icon"
               cssStyles={infoIconStyles}
-              tooltip="An alternative name or alias for a field that is more descriptive and user-friendly than the name."
-              place="right"
-              type="info"
+              tooltip="An alternative name or alias for<br/>a field that is more descriptive<br/>and user-friendly than the name."
             />
             <input
               id="attribute-label-input"
@@ -893,6 +1191,7 @@ function EditAttributePopup({
                 css={inputStyles}
                 value={length}
                 onChange={(ev) => setLength(Number(ev.target.value))}
+                required
               />
             </div>
           )}
@@ -905,9 +1204,8 @@ function EditAttributePopup({
               <InfoIcon
                 id="domain-type-input-icon"
                 cssStyles={infoIconStyles}
-                tooltip="Used for limiting the values users can input into this field. This can either be a predefined list of values (Coded Values) or a numerical range (Range). The Coded Values option allows for drop-down, radio button, and switch options when creating surveys in Esri Field Maps."
-                place="right"
-                type="info"
+                tooltip="Used for limiting the values users can input into this field.<br/>This can either be a predefined list of values (Coded Values) or<br/>a numerical range (Range). The Coded Values option allows<br/>for drop-down, radio button, and switch options when creating<br/>surveys in Esri Field Maps."
+                place="top"
               />
               <Select
                 id="domain-type-select"
@@ -921,6 +1219,14 @@ function EditAttributePopup({
                 menuPosition={'fixed'}
                 menuPlacement={'bottom'}
               />
+              {/* This is a workaround for an issue where react-select does not
+                allow the required attribute to be passed in. */}
+              <input
+                css={hiddenInput}
+                aria-hidden="true"
+                value={domainType?.label}
+                required
+              />
 
               {domainType?.value === 'range' && (
                 <div css={rangeContainerStyles}>
@@ -933,6 +1239,7 @@ function EditAttributePopup({
                       css={inputStyles}
                       value={min}
                       onChange={(ev) => setMin(Number(ev.target.value))}
+                      required
                     />
                   </div>
                   <div>
@@ -944,6 +1251,7 @@ function EditAttributePopup({
                       css={inputStyles}
                       value={max}
                       onChange={(ev) => setMax(Number(ev.target.value))}
+                      required
                     />
                   </div>
                 </div>
@@ -979,6 +1287,14 @@ function EditAttributePopup({
                         },
                       ];
                     }}
+                  />
+                  {/* This is a workaround for an issue where react-select does not
+                    allow the required attribute to be passed in. */}
+                  <input
+                    css={hiddenInput}
+                    aria-hidden="true"
+                    value={codes.filter((c) => c.id !== -1)[0]?.label}
+                    required
                   />
                 </div>
               )}

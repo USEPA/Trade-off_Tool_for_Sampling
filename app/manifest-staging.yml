@@ -13,6 +13,6 @@ applications:
       NODE_ENV: staging
       LOGGER_LEVEL: ERROR
       OPTIMIZE_MEMORY: true
-      S3_PUB_BIND_NAME: s3-priv-tots-staging
+      S3_PUB_BIND_NAME: s3-pub-tots-staging
     services:
-      - s3-priv-tots-staging
+      - s3-pub-tots-staging

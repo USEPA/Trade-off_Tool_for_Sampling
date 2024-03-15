@@ -9,6 +9,7 @@ import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { settingDefaults } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
 import { PublishContext } from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
@@ -242,6 +243,10 @@ function EditScenario({
                 groupLayer.add(layer.pointsLayer);
                 map.layers.remove(layer.pointsLayer);
               }
+              if (layer.hybridLayer) {
+                groupLayer.add(layer.hybridLayer);
+                map.layers.remove(layer.hybridLayer);
+              }
             });
 
             return layers;
@@ -270,6 +275,12 @@ function EditScenario({
         scenarioDescription: scenarioDescription,
         layers: newLayers,
         table: null,
+        referenceLayersTable: {
+          id: -1,
+          referenceLayers: [],
+        },
+        customAttributes: [],
+        calculateSettings: { current: settingDefaults },
       };
 
       // make a copy of the edits context variable
@@ -307,6 +318,9 @@ function EditScenario({
         groupLayer.add(tempSketchLayer.sketchLayer);
         if (tempSketchLayer.pointsLayer) {
           groupLayer.add(tempSketchLayer.pointsLayer);
+        }
+        if (tempSketchLayer.hybridLayer) {
+          groupLayer.add(tempSketchLayer.hybridLayer);
         }
 
         // update layers (set parent layer)
@@ -528,6 +542,7 @@ function EditLayer({
       const mapLayer = layers.find((layer) => layer.layerId === layerId);
       if (mapLayer) mapLayer.sketchLayer.title = layerName;
       if (mapLayer?.pointsLayer) mapLayer.pointsLayer.title = layerName;
+      if (mapLayer?.hybridLayer) mapLayer.hybridLayer.title = layerName;
 
       // update the active sketchLayer
       setSketchLayer((sketchLayer) => {
@@ -595,6 +610,9 @@ function EditLayer({
         tempGroupLayer.add(tempLayer.sketchLayer);
         if (tempLayer.pointsLayer) {
           tempGroupLayer.add(tempLayer.pointsLayer);
+        }
+        if (tempLayer.hybridLayer) {
+          tempGroupLayer.add(tempLayer.hybridLayer);
         }
       }
 

@@ -1,0 +1,494 @@
+{
+  "count": 7,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1884e996f6a-layer-43",
+      "portalId": "",
+      "name": "demo",
+      "label": "demo",
+      "value": "1884e996f6a-layer-43",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "demo",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "layerId": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
+                "GLOBALID": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
+                "TYPEUUID": "Aggressive Air",
+                "TYPE": "Aggressive Air",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "triangle",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.5,
+                "TTA": 0.5,
+                "TTPS": 1.12,
+                "LOD_P": 0,
+                "LOD_NON": 0,
+                "MCPS": 207,
+                "TCPS": 267,
+                "WVPS": 0.1,
+                "WWPS": 5,
+                "ALC": 118,
+                "AMC": 200,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 11:31:37.274",
+                "UPDATEDDATE": "2023/05/24 11:31:37.274",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -11620704.42418879,
+                      4690737.4843653245,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11655253.96097369,
+                      4646709.756073065,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11719461.064733233,
+                      4692266.224931029,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11660451.678897081,
+                      4729261.746621052,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11620704.42418879,
+                      4690737.4843653245,
+                      1788.8169694010046
+                    ]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{4123610D-BD18-41A4-8F18-4AAC3B42749B}",
+                "GLOBALID": "{4123610D-BD18-41A4-8F18-4AAC3B42749B}",
+                "TYPEUUID": "Robot",
+                "TYPE": "Robot",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "square",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.3,
+                "TTA": 0.7,
+                "TTPS": 1.12,
+                "LOD_P": 105,
+                "LOD_NON": 140,
+                "MCPS": 400,
+                "TCPS": 267,
+                "WVPS": 0.5,
+                "WWPS": 10.5,
+                "ALC": 200,
+                "AMC": 288,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 11:45:18.184",
+                "UPDATEDDATE": "2023/05/24 11:45:18.184",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -11137622.4054266,
+                      4791328.6135885855,
+                      756.4721069335938
+                    ],
+                    [
+                      -10464976.556517228,
+                      5072616.877677959,
+                      756.4721069335938
+                    ],
+                    [
+                      -10455192.616896728,
+                      4529608.228740212,
+                      756.4721069335938
+                    ],
+                    [
+                      -11257475.665777724,
+                      4510040.349499212,
+                      756.4721069335938
+                    ],
+                    [
+                      -11137622.4054266,
+                      4791328.6135885855,
+                      756.4721069335938
+                    ]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{66021DB5-D9C1-4593-BC24-1D427BD15F3A}",
+                "GLOBALID": "{66021DB5-D9C1-4593-BC24-1D427BD15F3A}",
+                "TYPEUUID": "Sponge",
+                "TYPE": "Sponge",
+                "ShapeType": "point",
+                "POINT_STYLE": "circle",
+                "SA": 100,
+                "AA": null,
+                "TTPK": 0.12,
+                "TTC": 0.09,
+                "TTA": 0.7,
+                "TTPS": 0.99,
+                "LOD_P": 14,
+                "LOD_NON": 0,
+                "MCPS": 46.87,
+                "TCPS": 343.03,
+                "WVPS": 0.1,
+                "WWPS": 4.3,
+                "ALC": 118,
+                "AMC": 239,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 12:01:52.652",
+                "UPDATEDDATE": "2023/05/24 12:01:52.652",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -11198772.177735902,
+                      3952355.6360455053,
+                      561.4630620700086
+                    ],
+                    [
+                      -11198772.182415344,
+                      3952355.9415145144,
+                      561.4630620700086
+                    ],
+                    [
+                      -11198771.878373541,
+                      3952355.9462159188,
+                      561.4630620700086
+                    ],
+                    [
+                      -11198771.873694107,
+                      3952355.6407469106,
+                      561.4630620700086
+                    ],
+                    [
+                      -11198772.177735902,
+                      3952355.6360455053,
+                      561.4630620700086
+                    ]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{3AE48E0D-2246-4912-8901-502657BA0DFC}",
+                "GLOBALID": "{3AE48E0D-2246-4912-8901-502657BA0DFC}",
+                "TYPEUUID": "Micro Vac",
+                "TYPE": "Micro Vac",
+                "ShapeType": "point",
+                "POINT_STYLE": "cross",
+                "SA": 144,
+                "AA": null,
+                "TTPK": 0.18,
+                "TTC": 0.15,
+                "TTA": 0.8,
+                "TTPS": 1.21,
+                "LOD_P": 105,
+                "LOD_NON": 0,
+                "MCPS": 34.28,
+                "TCPS": 395.84,
+                "WVPS": 0.02,
+                "WWPS": 4.3,
+                "ALC": 151,
+                "AMC": 288,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 12:02:00.480",
+                "UPDATEDDATE": "2023/05/24 12:02:00.480",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10259514.012930317,
+                      4221413.944587017,
+                      212.2328172476934
+                    ],
+                    [
+                      -10259514.009764964,
+                      4221414.319981432,
+                      212.2328172476934
+                    ],
+                    [
+                      -10259513.636043126,
+                      4221414.316801906,
+                      212.2328172476934
+                    ],
+                    [
+                      -10259513.639208492,
+                      4221413.941407491,
+                      212.2328172476934
+                    ],
+                    [
+                      -10259514.012930317,
+                      4221413.944587017,
+                      212.2328172476934
+                    ]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{4A9FE834-B7FA-4B8F-BA73-EA7968EC1414}",
+                "GLOBALID": "{4A9FE834-B7FA-4B8F-BA73-EA7968EC1414}",
+                "TYPEUUID": "Wet Vac",
+                "TYPE": "Wet Vac",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "diamond",
+                "SA": 28800,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.46,
+                "TTA": 0.8,
+                "TTPS": 1.07,
+                "LOD_P": 105,
+                "LOD_NON": 40,
+                "MCPS": 167,
+                "TCPS": 220,
+                "WVPS": 5,
+                "WWPS": 28.5,
+                "ALC": 151,
+                "AMC": 200,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 12:02:12.229",
+                "UPDATEDDATE": "2023/05/24 12:02:12.229",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -11032445.054506222,
+                      4055087.157145962,
+                      2788.535043624245
+                    ],
+                    [
+                      -11007985.205454972,
+                      4302131.632563586,
+                      2788.535043624245
+                    ],
+                    [
+                      -10719358.986650223,
+                      4155372.538256087,
+                      2788.535043624245
+                    ],
+                    [
+                      -11032445.054506222,
+                      4055087.157145962,
+                      2788.535043624245
+                    ]
+                  ]
+                ]
+              }
+            },
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{D8C4371B-2E4C-400E-A5D9-4FF7857E4F93}",
+                "GLOBALID": "{D8C4371B-2E4C-400E-A5D9-4FF7857E4F93}",
+                "TYPEUUID": "Swab",
+                "TYPE": "Swab",
+                "ShapeType": "point",
+                "POINT_STYLE": "x",
+                "SA": 4,
+                "AA": null,
+                "TTPK": 0.12,
+                "TTC": 0.07,
+                "TTA": 0.7,
+                "TTPS": 0.89,
+                "LOD_P": 25,
+                "LOD_NON": 0,
+                "MCPS": 21,
+                "TCPS": 219,
+                "WVPS": 0.01,
+                "WWPS": 2,
+                "ALC": 118,
+                "AMC": 239,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 12:02:16.375",
+                "UPDATEDDATE": "2023/05/24 12:02:16.375",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -10063835.064719815,
+                      4448890.6958316,
+                      134.65913367710647
+                    ],
+                    [
+                      -10063835.0629836,
+                      4448890.759654232,
+                      134.65913367710647
+                    ],
+                    [
+                      -10063834.999433637,
+                      4448890.757910572,
+                      134.65913367710647
+                    ],
+                    [
+                      -10063835.00116985,
+                      4448890.6940879375,
+                      134.65913367710647
+                    ],
+                    [
+                      -10063835.064719815,
+                      4448890.6958316,
+                      134.65913367710647
+                    ]
+                  ]
+                ]
+              }
+            }
+          ],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": {
+        "id": -1,
+        "referenceLayers": []
+      },
+      "customAttributes": [],
+      "calculateSettings": {
+        "current": {
+          "NUM_LABS": 1,
+          "NUM_LAB_HOURS": 24,
+          "NUM_SAMPLING_HOURS": 5,
+          "NUM_SAMPLING_PERSONNEL": 3,
+          "NUM_SAMPLING_SHIFTS": 1,
+          "NUM_SAMPLING_TEAMS": 1,
+          "SAMPLING_LABOR_COST": 420,
+          "SURFACE_AREA": 0
+        }
+      }
+    }
+  ]
+}

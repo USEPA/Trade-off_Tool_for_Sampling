@@ -36,4 +36,19 @@ describe("Alert message tests", () => {
       .should("exist")
       .contains(notificationMessage);
   });
+
+  it("Verify Error message", () => {
+    cy.loadPage(true);
+    cy.findByRole("button", { name: "OK" })
+      .should("exist")
+      .click({ force: true });
+
+    cy.findByRole("button", { name: "Add Data" })
+      .should("exist")
+      .click({ force: true });
+    cy.get("#add-data-select").type("Add Layer from Web{enter}");
+    cy.get("#url-type-select").type("An ArcGIS Server{enter}");
+    cy.findByRole("button", { name: "ADD" }).click({ force: true });
+    cy.findByText("Failed to Add Layer");
+  });
 });

@@ -7,23 +7,15 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
     "moduleResolution": "node",
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "es5",
+    "target": "es6",
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "src",
-    "./node_modules/cypress",
-    "cypress/**/*.*"
-  ]
+  "include": ["src", "./node_modules/cypress", "cypress/**/*.*"]
 }

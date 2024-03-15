@@ -1,3 +1,63 @@
+# Change Log
+
+## 3.0.0 (March 2024)
+
+### Added
+
+- Added a 3D mode. Users can now sketch samples on 3D terrain and 3D feature layers (i.e., 3D building layers).
+
+- Added a hybrid shape mode to help support 3D mode.
+
+- Added the ability to publish supporting reference layers with a plan.
+
+- Added the ability to publish Web Map/Scene with a plan.
+
+- Added automated integration tests.
+
+- Added a measurement widget to the map for both 2D and 3D modes.
+
+- Added the ability to select multiple samples by drawing a rectangle/polygon on the map. This is only supported in 2D mode or by holding shift/ctrl and clicking on samples.
+
+- Added ability to clone layers and plans.
+
+### Changed
+
+- Updated One EPA template.
+
+- Updated Google Analytics code to work with the new GA4 tags.
+
+- Updated dependencies to the latest versions including: ArcGIS JS API, NodeJS and React.
+
+- Updated file upload to preserve notes in the layer.
+
+- Updated publishing logic to also save the Calculate Resource settings.
+
+- Updated popups such that they are closed when the escape key is clicked.
+
+- Updated file upload logic such that the attribute names are case insensitive.
+
+- Updated "Add Multiple Random Samples" UI such that controls are co-located.
+
+- Updated "Next" buttons such that they scroll the next tab to the top.
+
+- Updated the Generate Random logic to have more robust batching logic.
+
+- Updated login workflow to use popups rather than redirects. This makes the login process faster.
+
+- Fixed issue of "Unsupported browser..." message displaying and disappearing on slow networks.
+
+- Fixed issue of points persisting after deleting the associated polygon version of the sample.
+
+- Fixed issue with publishing edits to custom attributes of an already published plan not working.
+
+- Fixed issue of confusing error being returned when a plan name is already taken.
+
+- Fixed issue of escape key canceling sketch without restarting it. Now hitting the escape key while sketching will cancel the current sketch and start a new one.
+
+- Fixed issue of Resource Tally overflowing the EPA template footer.
+
+- Fixed issue of blank row in coded values causing a blank row in ArcGIS field data collection apps.
+
 ## 2.0.0 (August 2022)
 
 ### Added

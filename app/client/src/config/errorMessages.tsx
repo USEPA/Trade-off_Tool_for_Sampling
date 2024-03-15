@@ -5,6 +5,8 @@ import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
+// utils
+import { generateUUID } from 'utils/sketchUtils';
 // config
 import { SampleIssuesOutput } from 'config/sampleAttributes';
 // types
@@ -22,7 +24,7 @@ export const webServiceErrorMessage = (
   },
   title: string = 'Web Service Error',
 ) => {
-  const id = `error-copy-input-${Date.now() + Math.random()}`;
+  const id = `error-copy-input-${generateUUID()}`;
 
   return (
     <MessageBox
@@ -214,6 +216,14 @@ export const cantUseWithVspMessage = (
     severity="warning"
     title="Cannot Use With VSP"
     message="Multiple Random Samples cannot be used in combination with VSP-Created Sampling Plans"
+  />
+);
+
+export const cantUseWith3dMessage = (
+  <MessageBox
+    severity="warning"
+    title="Not Available in 3D View"
+    message="Multiple Random Samples cannot be used in 3D mode"
   />
 );
 

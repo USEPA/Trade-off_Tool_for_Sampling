@@ -93,8 +93,15 @@ function CalculateResults() {
     calculateResults,
     contaminationMap, //
   } = useContext(CalculateContext);
-  const { aoiSketchLayer, layers, map, mapView, selectedScenario } =
-    useContext(SketchContext);
+  const {
+    aoiSketchLayer,
+    displayDimensions,
+    layers,
+    map,
+    mapView,
+    sceneView,
+    selectedScenario,
+  } = useContext(SketchContext);
 
   const [
     downloadStatus,
@@ -112,11 +119,19 @@ function CalculateResults() {
   ] = useState<__esri.Screenshot | null>(null);
   useEffect(() => {
     if (screenshotInitialized) return;
-    if (!map || !mapView || !selectedScenario || downloadStatus !== 'fetching')
+    if (
+      !map ||
+      !mapView ||
+      !sceneView ||
+      !selectedScenario ||
+      downloadStatus !== 'fetching'
+    )
       return;
 
+    const view = displayDimensions === '3d' ? sceneView : mapView;
+
     // save the current extent
-    const initialExtent = mapView.extent;
+    const initialExtent = view.extent;
 
     const originalVisiblity: { [key: string]: boolean } = {};
     // store current visiblity settings
@@ -157,17 +172,17 @@ function CalculateResults() {
       contaminationMap?.visible ? contaminationMap : null,
     ]);
     if (zoomGraphics.length > 0) {
-      mapView.goTo(zoomGraphics, { animate: false }).then(() => {
+      view.goTo(zoomGraphics, { animate: false }).then(() => {
         // allow some time for the layers to load in prior to taking the screenshot
         setTimeout(() => {
           // const mapImageRes = await printTask.execute(params);
-          mapView
+          view
             .takeScreenshot()
             .then((data) => {
               setScreenshot(data);
 
               // zoom back to the initial extent
-              mapView.goTo(initialExtent, { animate: false });
+              view.goTo(initialExtent, { animate: false });
 
               // set the visiblity back
               map.layers.forEach((layer) => {
@@ -179,7 +194,7 @@ function CalculateResults() {
               setDownloadStatus('screenshot-failure');
 
               // zoom back to the initial extent
-              mapView.goTo(initialExtent, { animate: false });
+              view.goTo(initialExtent, { animate: false });
 
               // set the visiblity back
               map.layers.forEach((layer) => {
@@ -196,10 +211,12 @@ function CalculateResults() {
   }, [
     aoiSketchLayer,
     contaminationMap,
+    displayDimensions,
     downloadStatus,
     layers,
     map,
     mapView,
+    sceneView,
     screenshotInitialized,
     selectedScenario,
   ]);
@@ -716,6 +733,8 @@ function CalculateResults() {
 
       // setup column widths
       samplesSheet.columns = [
+        { width: 26.71 },
+        { width: 47.71 },
         { width: 47.71 },
         { width: 15.43 },
         { width: 26.71 },
@@ -729,45 +748,62 @@ function CalculateResults() {
 
       // add in column headers
       samplesSheet.getCell(3, 1).font = labelFont;
-      samplesSheet.getCell(3, 1).value = 'Sample ID';
+      samplesSheet.getCell(3, 1).value = 'Layer Name';
       samplesSheet.getCell(3, 2).font = labelFont;
-      samplesSheet.getCell(3, 2).value = 'Sample Type';
+      samplesSheet.getCell(3, 2).value = 'Layer ID';
       samplesSheet.getCell(3, 3).font = labelFont;
-      samplesSheet.getCell(3, 3).value = 'Measured Contamination';
+      samplesSheet.getCell(3, 3).value = 'Sample ID';
       samplesSheet.getCell(3, 4).font = labelFont;
-      samplesSheet.getCell(3, 4).value = 'Units';
+      samplesSheet.getCell(3, 4).value = 'Sample Type';
       samplesSheet.getCell(3, 5).font = labelFont;
-      samplesSheet.getCell(3, 5).value = 'Notes';
+      samplesSheet.getCell(3, 5).value = 'Measured Contamination';
+      samplesSheet.getCell(3, 6).font = labelFont;
+      samplesSheet.getCell(3, 6).value = 'Units';
+      samplesSheet.getCell(3, 7).font = labelFont;
+      samplesSheet.getCell(3, 7).value = 'Notes';
 
       // add in the rows
       let currentRow = 4;
       scenarioGroupLayer.layers.forEach((layer) => {
-        if (layer.type !== 'graphics') return;
+        if (
+          layer.type !== 'graphics' ||
+          layer.id.endsWith('-points') ||
+          layer.id.endsWith('-hybrid')
+        )
+          return;
 
         const graphicsLayer = layer as __esri.GraphicsLayer;
         graphicsLayer.graphics.forEach((graphic) => {
           const { PERMANENT_IDENTIFIER, TYPE, CONTAMVAL, CONTAMUNIT, Notes } =
             graphic.attributes;
 
-          if (PERMANENT_IDENTIFIER) {
+          if (layer.title) {
             samplesSheet.getCell(currentRow, 1).font = defaultFont;
-            samplesSheet.getCell(currentRow, 1).value = PERMANENT_IDENTIFIER;
+            samplesSheet.getCell(currentRow, 1).value = layer.title;
+          }
+          if (layer.id) {
+            samplesSheet.getCell(currentRow, 2).font = defaultFont;
+            samplesSheet.getCell(currentRow, 2).value = layer.id;
+          }
+          if (PERMANENT_IDENTIFIER) {
+            samplesSheet.getCell(currentRow, 3).font = defaultFont;
+            samplesSheet.getCell(currentRow, 3).value = PERMANENT_IDENTIFIER;
           }
           if (TYPE) {
-            samplesSheet.getCell(currentRow, 2).font = defaultFont;
-            samplesSheet.getCell(currentRow, 2).value = TYPE;
+            samplesSheet.getCell(currentRow, 4).font = defaultFont;
+            samplesSheet.getCell(currentRow, 4).value = TYPE;
           }
           if (CONTAMVAL) {
-            samplesSheet.getCell(currentRow, 3).font = defaultFont;
-            samplesSheet.getCell(currentRow, 3).value = CONTAMVAL;
+            samplesSheet.getCell(currentRow, 5).font = defaultFont;
+            samplesSheet.getCell(currentRow, 5).value = CONTAMVAL;
           }
           if (CONTAMUNIT) {
-            samplesSheet.getCell(currentRow, 4).font = defaultFont;
-            samplesSheet.getCell(currentRow, 4).value = CONTAMUNIT;
+            samplesSheet.getCell(currentRow, 6).font = defaultFont;
+            samplesSheet.getCell(currentRow, 6).value = CONTAMUNIT;
           }
           if (Notes) {
-            samplesSheet.getCell(currentRow, 5).font = defaultFont;
-            samplesSheet.getCell(currentRow, 5).value = Notes;
+            samplesSheet.getCell(currentRow, 7).font = defaultFont;
+            samplesSheet.getCell(currentRow, 7).value = Notes;
           }
 
           currentRow += 1;

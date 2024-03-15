@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
 } from 'react';
 import { css } from '@emotion/react';
 // components
@@ -161,6 +162,8 @@ const navPanelContainerStyles = css`
   justify-content: space-between;
   height: 100%;
   padding: 15px 0;
+  overflow: hidden auto;
+  gap: 10px;
 `;
 
 const resourceTallyStyles = css`
@@ -399,6 +402,14 @@ function NavBar({ height }: Props) {
   // run calculations to update the running tally
   useCalculatePlan();
 
+  const pannelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pannelRef.current) {
+      pannelRef.current.scroll({ top: 0, left: 0, behavior: 'smooth' });
+    }
+  }, [currentPanel]);
+
   return (
     <Fragment>
       <GettingStarted isOpen={gettingStartedOpen}>
@@ -508,6 +519,7 @@ function NavBar({ height }: Props) {
         >
           <div css={floatPanelContentStyles(false)}>
             <div
+              ref={pannelRef}
               id="tots-panel-scroll-container"
               css={floatPanelScrollContainerStyles}
             >

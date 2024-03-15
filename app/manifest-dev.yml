@@ -12,6 +12,6 @@ applications:
       NODE_ENV: development
       LOGGER_LEVEL: DEBUG
       OPTIMIZE_MEMORY: true
-      S3_PUB_BIND_NAME: s3-priv-tots-dev
+      S3_PUB_BIND_NAME: s3-pub-tots-dev
     services:
-      - s3-priv-tots-dev
+      - s3-pub-tots-dev

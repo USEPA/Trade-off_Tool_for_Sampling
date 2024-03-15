@@ -66,22 +66,29 @@ const searchBoxStyles = css`
 
 // --- components (Search) ---
 function Search() {
-  const { mapView } = useContext(SketchContext);
+  const { displayDimensions, mapView, sceneView } = useContext(SketchContext);
 
-  const [searchInitialized, setSearchInitialized] = useState(false);
+  const [searchWidget, setSearchWidget] = useState<EsriSearch | null>(null);
   useEffect(() => {
-    if (!mapView || searchInitialized) return;
+    if (!mapView || searchWidget) return;
 
-    new EsriSearch({
-      view: mapView,
-      container: 'search-container',
-      locationEnabled: false,
-      label: 'Search',
-      popupEnabled: false,
-    });
+    setSearchWidget(
+      new EsriSearch({
+        view: mapView,
+        container: 'search-container',
+        locationEnabled: false,
+        label: 'Search',
+        popupEnabled: false,
+      }),
+    );
+  }, [mapView, searchWidget]);
 
-    setSearchInitialized(true);
-  }, [mapView, searchInitialized]);
+  // Switches the search widget between 2D and 3D
+  useEffect(() => {
+    if (!mapView || !sceneView || !searchWidget) return;
+
+    searchWidget.view = displayDimensions === '2d' ? mapView : sceneView;
+  }, [displayDimensions, mapView, sceneView, searchWidget]);
 
   // Starts a poll which eventually sets the id of the esri search input.
   // This code is needed to work aroudn a 508 compliance issue. Adding the
