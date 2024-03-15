@@ -34,8 +34,6 @@ class ErrorBoundary extends ReactComponent<Props, State> {
     try {
       throw error;
     } catch (err) {
-      if (!window.gaTarget) return;
-
       window.logErrorToGa(err, true);
     }
   }

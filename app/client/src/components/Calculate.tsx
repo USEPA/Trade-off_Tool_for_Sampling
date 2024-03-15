@@ -39,7 +39,7 @@ import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
 import { CalculateResultsType } from 'types/CalculateResults';
 import { geoprocessorFetch } from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { removeZValues, updateLayerEdits } from 'utils/sketchUtils';
 import { chunkArray, createErrorObject } from 'utils/utils';
 // styles
 import { reactSelectStyles } from 'styles';
@@ -70,10 +70,18 @@ function getGraphics(map: __esri.Map, layerId: string) {
   if (tempGroupLayer) {
     groupLayer = tempGroupLayer as __esri.GroupLayer;
     groupLayer.layers.forEach((layer) => {
-      if (layer.type !== 'graphics' || layer.id.includes('-points')) return;
+      if (
+        layer.type !== 'graphics' ||
+        layer.id.includes('-points') ||
+        layer.id.includes('-hybrid')
+      )
+        return;
 
       const graphicsLayer = layer as __esri.GraphicsLayer;
-      graphics.push(...graphicsLayer.graphics.toArray());
+
+      const fullGraphics = graphicsLayer.graphics.clone();
+      fullGraphics.forEach((graphic) => removeZValues(graphic));
+      graphics.push(...fullGraphics.toArray());
     });
   }
 
@@ -147,39 +155,72 @@ function Calculate() {
     getGpMaxRecordCount,
   } = useContext(SketchContext);
   const {
-    contaminationMap,
-    setContaminationMap,
     calculateResults,
-    setCalculateResults,
-    numLabs,
-    numLabHours,
-    numSamplingHours,
-    numSamplingPersonnel,
-    numSamplingShifts,
-    numSamplingTeams,
-    samplingLaborCost,
-    surfaceArea,
-    inputNumLabs,
-    setInputNumLabs,
+    contaminationMap,
     inputNumLabHours,
-    setInputNumLabHours,
+    inputNumLabs,
     inputNumSamplingHours,
-    setInputNumSamplingHours,
     inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
     inputNumSamplingShifts,
-    setInputNumSamplingShifts,
     inputNumSamplingTeams,
-    setInputNumSamplingTeams,
     inputSamplingLaborCost,
-    setInputSamplingLaborCost,
     inputSurfaceArea,
+    resetCalculateContext,
+    setCalculateResults,
+    setContaminationMap,
+    setInputNumLabHours,
+    setInputNumLabs,
+    setInputNumSamplingHours,
+    setInputNumSamplingPersonnel,
+    setInputNumSamplingShifts,
+    setInputNumSamplingTeams,
+    setInputSamplingLaborCost,
     setInputSurfaceArea,
     setUpdateContextValues,
   } = useContext(CalculateContext);
 
   const getPopupTemplate = useDynamicPopup();
   const services = useServicesContext();
+
+  // sync the inputs with settings pulled from AGO
+  const [pageInitialized, setPageInitialized] = useState(false);
+  useEffect(() => {
+    if (!selectedScenario || pageInitialized) return;
+    setPageInitialized(true);
+
+    const {
+      NUM_LAB_HOURS: numLabHours,
+      NUM_LABS: numLabs,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
+
+    setInputNumLabHours(numLabHours);
+    setInputNumLabs(numLabs);
+    setInputNumSamplingHours(numSamplingHours);
+    setInputNumSamplingPersonnel(numSamplingPersonnel);
+    setInputNumSamplingShifts(numSamplingShifts);
+    setInputNumSamplingTeams(numSamplingTeams);
+    setInputSamplingLaborCost(samplingLaborCost);
+    setInputSurfaceArea(surfaceArea);
+  }, [
+    edits,
+    pageInitialized,
+    resetCalculateContext,
+    selectedScenario,
+    setInputNumLabHours,
+    setInputNumLabs,
+    setInputNumSamplingHours,
+    setInputNumSamplingPersonnel,
+    setInputNumSamplingShifts,
+    setInputNumSamplingTeams,
+    setInputSamplingLaborCost,
+    setInputSurfaceArea,
+  ]);
 
   // callback for closing the results panel when leaving this tab
   const closePanel = useCallback(() => {
@@ -248,6 +289,17 @@ function Calculate() {
       });
       return;
     }
+
+    const {
+      NUM_LABS: numLabs,
+      NUM_LAB_HOURS: numLabHours,
+      NUM_SAMPLING_HOURS: numSamplingHours,
+      NUM_SAMPLING_PERSONNEL: numSamplingPersonnel,
+      NUM_SAMPLING_SHIFTS: numSamplingShifts,
+      NUM_SAMPLING_TEAMS: numSamplingTeams,
+      SAMPLING_LABOR_COST: samplingLaborCost,
+      SURFACE_AREA: surfaceArea,
+    } = selectedScenario.calculateSettings.current;
 
     // if the inputs are the same as context
     // fake a loading spinner and open the panel
@@ -319,7 +371,10 @@ function Calculate() {
     let contamMapSet: __esri.FeatureSet | null = null;
     let graphics: __esri.GraphicProperties[] = [];
     if (contaminationMap?.sketchLayer?.type === 'graphics') {
-      graphics = contaminationMap.sketchLayer.graphics.toArray();
+      const fullGraphics = contaminationMap.sketchLayer.graphics.clone();
+      fullGraphics.forEach((graphic) => removeZValues(graphic));
+
+      graphics = fullGraphics.toArray();
     }
     if (graphics.length === 0) {
       // display the no graphics on contamination map warning
@@ -378,11 +433,11 @@ function Calculate() {
       ],
     });
 
-    const { groupLayer, graphics: sketchedGraphics } = getGraphics(
+    const { groupLayer, graphics: sketchedGraphicsTmp } = getGraphics(
       map,
       selectedScenario.layerId,
     );
-    if (sketchedGraphics.length === 0 || !groupLayer) {
+    if (sketchedGraphicsTmp.length === 0 || !groupLayer) {
       // display the no-graphics warning
       setContaminationResults({
         status: 'no-graphics',
@@ -390,6 +445,21 @@ function Calculate() {
       });
       return;
     }
+
+    function addBraces(str: string) {
+      if (!str.includes('{') && !str.includes('}')) return `{${str}}`;
+      else if (!str.includes('{') && str.includes('}')) return `{${str}`;
+      else if (str.includes('{') && !str.includes('}')) return `${str}}`;
+      else return str;
+    }
+
+    const sketchedGraphics = [...sketchedGraphicsTmp];
+    sketchedGraphics.forEach((g) => {
+      g.attributes.GLOBALID = addBraces(g.attributes.GLOBALID);
+      g.attributes.PERMANENT_IDENTIFIER = addBraces(
+        g.attributes.PERMANENT_IDENTIFIER,
+      );
+    });
 
     // display the loading spinner
     setContaminationResults({
@@ -624,8 +694,12 @@ function Calculate() {
                 tempLayer.graphics.forEach((graphic) => {
                   const resFeature = resFeatures.find(
                     (feature: any) =>
-                      graphic.attributes.PERMANENT_IDENTIFIER ===
-                      feature.attributes.PERMANENT_IDENTIFIER,
+                      graphic.attributes.PERMANENT_IDENTIFIER.toLowerCase()
+                        .replace('{', '')
+                        .replace('}', '') ===
+                      feature.attributes.PERMANENT_IDENTIFIER.toLowerCase()
+                        .replace('{', '')
+                        .replace('}', ''),
                   );
 
                   // if the graphic was not found in the response, set contam value to null,

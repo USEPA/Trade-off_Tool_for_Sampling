@@ -1,39 +1,30 @@
 /** @jsxImportSource @emotion/react */
 
 import React, { Fragment } from 'react';
-import ReactTooltip from 'react-tooltip';
+import { Tooltip } from 'react-tooltip';
 
 type Props = {
   id: string;
   tooltip: string;
   cssStyles?: any;
-  type?: 'dark' | 'success' | 'warning' | 'error' | 'info' | 'light';
   place?: 'top' | 'right' | 'bottom' | 'left';
-  effect?: 'float' | 'solid';
 };
 
-function InfoIcon({
-  id,
-  tooltip,
-  cssStyles,
-  type = 'dark',
-  place = 'top',
-  effect = 'float',
-}: Props) {
+function InfoIcon({ id, tooltip, cssStyles, place = 'right' }: Props) {
   return (
     <Fragment>
-      <ReactTooltip
+      <Tooltip
         id={id}
         place={place}
-        type={type}
-        effect={effect}
-        multiline={true}
+        positionStrategy="fixed"
+        style={{ zIndex: 101 }}
+        variant="info"
       />
       <i
         className="fas fa-info-circle"
         css={cssStyles}
-        data-for={id}
-        data-tip={tooltip}
+        data-tooltip-id={id}
+        data-tooltip-html={tooltip}
       ></i>
     </Fragment>
   );

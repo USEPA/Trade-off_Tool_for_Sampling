@@ -35,7 +35,7 @@ import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
 import { useSessionStorage } from 'utils/hooks';
 import { getSampleTableColumns } from 'utils/sketchUtils';
 // config
-import { epaMarginOffset, navPanelWidth } from 'config/appConfig';
+import { navPanelWidth } from 'config/appConfig';
 // styles
 import '@reach/dialog/styles.css';
 import '@arcgis/core/assets/esri/themes/light/main.css';
@@ -44,19 +44,17 @@ const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
 const minMapHeight = 180;
-var startY = 0;
+let startY = 0;
 
 declare global {
   interface Window {
-    ga: Function;
-    gaTarget: string;
     googleAnalyticsMapping: any[];
     logErrorToGa: Function;
     logToGa: Function;
   }
 }
 
-const gloablStyles = css`
+const globalStyles = css`
   html {
     /* overwrite EPA's html font-size so rem units are based on 16px */
     font-size: 100%;
@@ -97,12 +95,18 @@ const gloablStyles = css`
   }
 
   .esri-popup__main-container {
-    max-height: 465px !important;
     min-width: 460px !important;
   }
 
   .esri-popup__action-text {
     display: none;
+  }
+
+  .esri-widget,
+  .esri-widget--button {
+    &:focus {
+      outline: none;
+    }
   }
 `;
 
@@ -111,8 +115,7 @@ const appStyles = (offset: number) => css`
   flex-direction: column;
   height: calc(100vh - ${offset}px);
   min-height: 675px;
-  width: calc(100% + ${epaMarginOffset * 2 + 'px'});
-  margin-left: -${epaMarginOffset}px;
+  width: 100%;
 `;
 
 const containerStyles = css`
@@ -120,18 +123,16 @@ const containerStyles = css`
   position: relative;
 `;
 
-const mapPanelStyles = css`
+const mapPanelStyles = (tableHeight: number) => css`
   float: right;
   position: relative;
-  height: 100%;
+  height: calc(100% - ${tableHeight}px);
   width: calc(100% - ${navPanelWidth});
 `;
 
-const mapHeightStyles = (tableHeight: number) => {
-  return css`
-    height: calc(100% - ${tableHeight}px);
-  `;
-};
+const mapHeightStyles = css`
+  height: 100%;
+`;
 
 const floatPanelStyles = ({
   width,
@@ -269,8 +270,10 @@ function App() {
     trainingMode,
   } = useContext(NavigationContext);
   const {
-    mapView,
+    displayDimensions,
     layers,
+    mapView,
+    sceneView,
     selectedSampleIds,
     setSelectedSampleIds,
     selectedScenario,
@@ -287,9 +290,6 @@ function App() {
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!mapRef?.current) return;
-
-    const mapHeight = mapRef.current.getBoundingClientRect().height;
-    if (contentHeight !== mapHeight) setContentHeight(mapHeight);
 
     // adjust the table height if necessary
     const maxTableHeight =
@@ -341,8 +341,11 @@ function App() {
   useEffect(() => {
     if (!totsRef?.current) return;
 
-    setOffset(totsRef.current.offsetTop);
-  }, [totsRef]);
+    const offsetTop = totsRef.current.offsetTop;
+    const clientHeight = totsRef.current.clientHeight;
+    if (contentHeight !== clientHeight) setContentHeight(clientHeight);
+    if (offset !== offsetTop) setOffset(offsetTop);
+  }, [contentHeight, height, offset, totsRef, width]);
 
   // count the number of samples
   const sampleData: any[] = [];
@@ -401,18 +404,14 @@ function App() {
   useEffect(() => {
     if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
 
-    var callId = 0;
-    var callDurations: any = {};
+    let callId = 0;
+    let callDurations: any = {};
 
     if (services.status === 'success') {
       // Have ESRI use the proxy for communicating with the TOTS GP Server
       urlUtils.addProxyRule({
         proxyUrl: services.data.proxyUrl,
         urlPrefix: 'https://ags.erg.com',
-      });
-      urlUtils.addProxyRule({
-        proxyUrl: services.data.proxyUrl,
-        urlPrefix: 'http://ags.erg.com',
       });
     }
 
@@ -476,7 +475,7 @@ function App() {
 
   return (
     <Fragment>
-      <Global styles={gloablStyles} />
+      <Global styles={globalStyles} />
 
       <div className="tots" ref={totsRef}>
         <ErrorBoundary>
@@ -484,23 +483,31 @@ function App() {
             <SplashScreen />
             <AlertDialog />
             <AlertMessage />
-            {window.location.search.includes('devMode=true') && (
-              <TestingToolbar />
-            )}
             <div css={appStyles(offset)}>
               <div css={containerStyles}>
                 <div ref={toolbarRef}>
+                  {window.location.search.includes('devMode=true') && (
+                    <TestingToolbar />
+                  )}
                   <Toolbar />
                 </div>
                 <NavBar height={contentHeight - toolbarHeight} />
-                <div css={mapPanelStyles} ref={mapRef}>
-                  <div
-                    id="tots-map-div"
-                    css={mapHeightStyles(
-                      tablePanelExpanded ? tablePanelHeight : 0,
+                <div
+                  css={mapPanelStyles(
+                    toolbarHeight + (tablePanelExpanded ? tablePanelHeight : 0),
+                  )}
+                  ref={mapRef}
+                >
+                  <div id="tots-map-div" css={mapHeightStyles}>
+                    {toolbarHeight && (
+                      <Map
+                        height={
+                          contentHeight -
+                          (tablePanelExpanded ? tablePanelHeight : 0) -
+                          toolbarHeight
+                        }
+                      />
                     )}
-                  >
-                    {toolbarHeight && <Map height={toolbarHeight} />}
                   </div>
                 </div>
                 {sampleData.length > 0 && (
@@ -546,7 +553,6 @@ function App() {
                       <div
                         css={resizerContainerStyles}
                         onMouseDown={(e) => {
-                          e = e || window.event;
                           e.preventDefault();
                           startY = e.clientY;
 
@@ -572,9 +578,6 @@ function App() {
                             document.onmouseup = null;
                             document.onmousemove = null;
 
-                            // set the table panel height
-                            setTablePanelHeight(tableDiv.clientHeight);
-
                             // clear the styles set
                             tableDiv.style.height = '';
                             mapDiv.style.height = '';
@@ -582,7 +585,6 @@ function App() {
                           };
                           // call a function whenever the cursor moves:
                           document.onmousemove = (e: MouseEvent) => {
-                            e = e || window.event;
                             e.preventDefault();
 
                             if (!mapDiv || !tableDiv || !buttonDiv) return;
@@ -618,6 +620,8 @@ function App() {
                                 newTableHeight - resizerHeight - 30
                               }px`;
                             }
+
+                            setTablePanelHeight(tableDiv.clientHeight);
                           };
                         }}
                       >
@@ -719,9 +723,20 @@ function App() {
                                           ]);
 
                                           // zoom to the graphic
-                                          if (!mapView) return;
-                                          mapView.goTo(row.original.graphic);
-                                          mapView.zoom = mapView.zoom - 1;
+                                          if (
+                                            displayDimensions === '2d' &&
+                                            mapView
+                                          ) {
+                                            mapView.goTo(row.original.graphic);
+                                            mapView.zoom = mapView.zoom - 1;
+                                          } else if (
+                                            displayDimensions === '3d' &&
+                                            sceneView
+                                          ) {
+                                            sceneView.goTo(
+                                              row.original.graphic,
+                                            );
+                                          }
                                         }}
                                       >
                                         <i className="fas fa-search-plus" />
