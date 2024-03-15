@@ -10,6 +10,7 @@ import React, {
 import { css } from '@emotion/react';
 import EsriMap from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
+import SceneView from '@arcgis/core/views/SceneView';
 import Viewpoint from '@arcgis/core/Viewpoint';
 // components
 import MapMouseEvents from 'components/MapMouseEvents';
@@ -22,8 +23,17 @@ import { getGraphicsArray } from 'utils/sketchUtils';
 // --- styles (Map) ---
 const mapStyles = (height: number) => {
   return css`
-    height: calc(100% - ${height}px);
+    height: ${height}px;
     background-color: whitesmoke;
+
+    .esri-sketch__info-section,
+    .esri-sketch__feature-count-badge {
+      width: 100%;
+    }
+
+    .esri-sketch__info-section:last-of-type {
+      display: none !important;
+    }
   `;
 };
 
@@ -37,11 +47,15 @@ function Map({ height }: Props) {
 
   const {
     autoZoom,
+    displayDimensions,
     homeWidget,
     map,
     setMap,
     mapView,
     setMapView,
+    sceneView,
+    setSceneView,
+    setSceneViewForArea,
     sketchLayer,
     aoiSketchLayer,
   } = useContext(SketchContext);
@@ -49,15 +63,16 @@ function Map({ height }: Props) {
   // Creates the map and view
   useEffect(() => {
     if (!mapRef.current) return;
-    if (mapView) return;
+    if (mapView || sceneView) return;
 
     const newMap = new EsriMap({
       basemap: 'streets-vector',
+      ground: 'world-elevation',
       layers: [],
     });
     setMap(newMap);
 
-    const view = new MapView({
+    const viewParams: any = {
       container: mapRef.current,
       map: newMap,
       center: [-95, 37],
@@ -70,10 +85,43 @@ function Map({ height }: Props) {
         color: '#32C5FD',
         fillOpacity: 1,
       },
-    });
+    };
+
+    const view = new MapView(viewParams);
 
     setMapView(view);
-  }, [mapView, setMap, setMapView]);
+
+    viewParams.map = undefined as any;
+    viewParams.container = undefined as any;
+    const scene = new SceneView({
+      ...viewParams,
+      qualityProfile: 'high',
+    });
+
+    setSceneView(scene);
+
+    // Create a hidden scene view that is only for calculating
+    // area of 3D geometry. This is to work around an issue
+    // where area of 3D geometry could not be calculated when
+    // 2D mode is selected.
+    setSceneViewForArea(
+      new SceneView({
+        container: 'hidden-scene-view',
+        map: new EsriMap({
+          ground: 'world-elevation',
+          layers: [],
+        }),
+        qualityProfile: 'low',
+      }),
+    );
+  }, [
+    mapView,
+    sceneView,
+    setMap,
+    setMapView,
+    setSceneView,
+    setSceneViewForArea,
+  ]);
 
   // Creates a watch event that is used for reordering the layers
   const [watchInitialized, setWatchInitialized] = useState(false);
@@ -86,7 +134,7 @@ function Map({ height }: Props) {
 
       // gets a layer type value used for sorting
       function getLayerType(layer: __esri.Layer) {
-        const imageryTypes = ['imagery', 'tile', 'vector-tile'];
+        const imageryTypes = ['imagery', 'imagery-tile', 'tile', 'vector-tile'];
         let type = 'other';
 
         let groupType = '';
@@ -110,6 +158,10 @@ function Map({ height }: Props) {
           type = 'graphics';
         } else if (layer.type === 'feature' || groupType === 'feature') {
           type = 'feature';
+        } else if (layer.type === 'map-image') {
+          type = 'map-image';
+        } else if (['csv', 'geo-rss', 'kml', 'wms'].includes(layer.type)) {
+          type = 'file';
         } else if (
           imageryTypes.includes(type) ||
           imageryTypes.includes(groupType)
@@ -125,7 +177,14 @@ function Map({ height }: Props) {
       // featureLayers
       // otherLayers
       // imageryLayers (bottom)
-      const sortBy = ['other', 'imagery', 'feature', 'graphics'];
+      const sortBy = [
+        'other',
+        'imagery',
+        'map-image',
+        'file',
+        'feature',
+        'graphics',
+      ];
       map.layers.sort((a: __esri.Layer, b: __esri.Layer) => {
         return (
           sortBy.indexOf(getLayerType(a)) - sortBy.indexOf(getLayerType(b))
@@ -138,30 +197,46 @@ function Map({ height }: Props) {
 
   // Zooms to the graphics whenever the sketchLayer changes
   useEffect(() => {
-    if (!map || !mapView || !homeWidget || !autoZoom) return;
+    if (!map || !mapView || !sceneView || !homeWidget || !autoZoom) return;
     if (!sketchLayer?.sketchLayer) return;
 
     const zoomGraphics = getGraphicsArray([sketchLayer, aoiSketchLayer]);
 
     if (zoomGraphics.length > 0) {
-      mapView.goTo(zoomGraphics).then(() => {
+      const view = displayDimensions === '3d' ? sceneView : mapView;
+      view.goTo(zoomGraphics).then(() => {
         // set map zoom and home widget's viewpoint
-        homeWidget.viewpoint = new Viewpoint({
-          targetGeometry: mapView.extent,
+        homeWidget['2d'].viewpoint = new Viewpoint({
+          targetGeometry: view.extent,
+        });
+        homeWidget['3d'].viewpoint = new Viewpoint({
+          targetGeometry: view.extent,
         });
       });
     }
-  }, [autoZoom, map, mapView, aoiSketchLayer, sketchLayer, homeWidget]);
+  }, [
+    autoZoom,
+    displayDimensions,
+    map,
+    mapView,
+    aoiSketchLayer,
+    sceneView,
+    sketchLayer,
+    homeWidget,
+  ]);
 
   return (
-    <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
-      {mapView && (
-        <Fragment>
-          <MapWidgets mapView={mapView} />
-          <MapMouseEvents mapView={mapView} />
-        </Fragment>
-      )}
-    </div>
+    <Fragment>
+      <div ref={mapRef} css={mapStyles(height)} data-testid="tots-map">
+        {mapView && sceneView && (
+          <Fragment>
+            <MapWidgets mapView={mapView} sceneView={sceneView} />
+            <MapMouseEvents mapView={mapView} sceneView={sceneView} />
+          </Fragment>
+        )}
+      </div>
+      <div id="hidden-scene-view" className="sr-only" />
+    </Fragment>
   );
 }
 

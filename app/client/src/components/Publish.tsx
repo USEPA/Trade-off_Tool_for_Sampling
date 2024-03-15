@@ -10,6 +10,7 @@ import React, {
 import { css } from '@emotion/react';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import IdentityManager from '@arcgis/core/identity/IdentityManager';
+import Portal from '@arcgis/core/portal/Portal';
 // components
 import {
   EditCustomSampleTypesTable,
@@ -23,7 +24,11 @@ import ShowLessMore from 'components/ShowLessMore';
 import { AuthenticationContext } from 'contexts/Authentication';
 import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
+import {
+  defaultPlanAttributes,
+  PublishContext,
+  trainingModePlanAttributes,
+} from 'contexts/Publish';
 import { SketchContext } from 'contexts/Sketch';
 // utils
 import {
@@ -107,6 +112,10 @@ const layerInfo = css`
   padding-bottom: 0.5em;
 `;
 
+const totsOutputContainer = css`
+  padding-bottom: 1.5em;
+`;
+
 const checkedStyles = css`
   color: green;
   margin-right: 10px;
@@ -123,34 +132,37 @@ const webMapContainerCheckboxStyles = css`
 
 // --- components (Publish) ---
 function Publish() {
+  const { oAuthInfo, portal, setSignedIn, setPortal, signedIn } = useContext(
+    AuthenticationContext,
+  );
+  const { goToOptions, setGoToOptions, trainingMode } =
+    useContext(NavigationContext);
   const {
-    oAuthInfo,
-    portal,
-    signedIn, //
-  } = useContext(AuthenticationContext);
-  const { goToOptions, setGoToOptions } = useContext(NavigationContext);
-  const {
-    publishSamplesMode,
-    publishSampleTableMetaData,
-    sampleTableDescription,
-    setSampleTableDescription,
-    sampleTableName,
-    setSampleTableName,
-    sampleTypeSelections,
-    selectedService,
-    setSelectedService,
+    includeCustomSampleTypes,
     includeFullPlan,
     includeFullPlanWebMap,
     includePartialPlan,
     includePartialPlanWebMap,
-    includeCustomSampleTypes,
-    partialPlanAttributes,
+    includePartialPlanWebScene,
+    publishSamplesMode,
+    publishSampleTableMetaData,
+    sampleTableDescription,
+    sampleTableName,
+    sampleTypeSelections,
+    selectedService,
+    setSampleTableDescription,
+    setSampleTableName,
+    setSelectedService,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
+    defaultSymbols,
     edits,
     setEdits,
     layers,
     setLayers,
+    map,
     sampleAttributes,
     selectedScenario,
     setSelectedScenario,
@@ -189,9 +201,33 @@ function Publish() {
     // have the user login if necessary
     if (!portal || !signedIn) {
       setGoToOptions({ continuePublish: true });
-      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+      IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`, {
+        oAuthPopupConfirmation: false,
+      })
+        .then(() => {
+          setSignedIn(true);
+
+          const portal = new Portal();
+          portal.authMode = 'immediate';
+          portal.load().then(() => {
+            setPortal(portal);
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          setSignedIn(false);
+          setPortal(null);
+        });
     }
-  }, [setGoToOptions, portal, signedIn, oAuthInfo, publishButtonClicked]);
+  }, [
+    oAuthInfo,
+    portal,
+    publishButtonClicked,
+    setGoToOptions,
+    setPortal,
+    setSignedIn,
+    signedIn,
+  ]);
 
   // Check if the scenario name is available
   const [hasNameBeenChecked, setHasNameBeenChecked] = useState(false);
@@ -203,11 +239,19 @@ function Publish() {
       !includeFullPlan ||
       selectedScenario?.status === 'edited' ||
       selectedScenario?.status === 'published';
+    const partialPlanNameChecked =
+      !includePartialPlan ||
+      selectedScenario?.status === 'edited' ||
+      selectedScenario?.status === 'published';
     const sampleTypesNameChecked =
       !includeCustomSampleTypes ||
       (publishSamplesMode === 'existing' && publishSampleTableMetaData?.value);
 
-    if (fullPlanNameChecked && sampleTypesNameChecked) {
+    if (
+      fullPlanNameChecked &&
+      partialPlanNameChecked &&
+      sampleTypesNameChecked
+    ) {
       setHasNameBeenChecked(true);
       return;
     }
@@ -215,6 +259,7 @@ function Publish() {
     // fire off requests to check if service names are available
     const requests = [];
     let fullPlanIndex = -1,
+      partialPlanIndex = -1,
       sampleTypesIndex = -1;
     if (!fullPlanNameChecked && selectedScenario) {
       setPublishResponse({
@@ -228,6 +273,19 @@ function Publish() {
       );
       requests.push(request);
       fullPlanIndex = requests.length - 1;
+    }
+    if (!partialPlanNameChecked && selectedScenario) {
+      setPublishPartialResponse({
+        status: 'fetching',
+        summary: { success: '', failed: '' },
+        rawData: null,
+      });
+      const request = isServiceNameAvailable(
+        portal,
+        selectedScenario.scenarioName,
+      );
+      requests.push(request);
+      partialPlanIndex = requests.length - 1;
     }
     if (!sampleTypesNameChecked && publishSampleTableMetaData) {
       setPublishSamplesResponse({
@@ -268,13 +326,15 @@ function Publish() {
               summary: { success: '', failed: '' },
               rawData: null,
             });
-            return;
           }
         }
 
         // check responses for errors
         if (fullPlanIndex > -1) {
           checkResponse(responses[fullPlanIndex], setPublishResponse);
+        }
+        if (partialPlanIndex > -1) {
+          checkResponse(responses[partialPlanIndex], setPublishPartialResponse);
         }
         if (sampleTypesIndex > -1) {
           checkResponse(responses[sampleTypesIndex], setPublishSamplesResponse);
@@ -301,6 +361,7 @@ function Publish() {
   }, [
     includeCustomSampleTypes,
     includeFullPlan,
+    includePartialPlan,
     portal,
     selectedScenario,
     sketchLayer,
@@ -319,7 +380,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishFullPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -477,17 +538,25 @@ function Publish() {
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includeFullPlanWebMap,
-      table: editsScenario.table,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
       },
+      layerProps,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includeFullPlanWebMap,
+        createWebScene: false,
+        webMapReferenceLayerSelections: [],
+        webSceneReferenceLayerSelections: [],
+      },
+      calculateSettings: editsScenario.calculateSettings,
     })
       .then((res: any) => {
         const portalId = res.portalId;
@@ -753,6 +822,22 @@ function Publish() {
           });
           editsScenario.table = res.table;
 
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            editsScenario.calculateSettings.current = {
+              ...editsScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          editsScenario.calculateSettings.published =
+            editsScenario.calculateSettings.current;
+
           return {
             count: edits.count + 1,
             edits: [
@@ -789,6 +874,23 @@ function Publish() {
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
+
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            selectedScenario.calculateSettings.current = {
+              ...selectedScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          selectedScenario.calculateSettings.published =
+            selectedScenario.calculateSettings.current;
+
           return selectedScenario;
         });
       })
@@ -812,6 +914,7 @@ function Publish() {
     includeFullPlanWebMap,
     includePartialPlan,
     setLayers,
+    map,
     portal,
     layers,
     layerProps,
@@ -828,7 +931,7 @@ function Publish() {
 
   // publishes a plan with all of the attributes
   const publishPartialPlan = useCallback(() => {
-    if (!portal || !selectedScenario) return;
+    if (!map || !portal || !selectedScenario) return;
 
     const { scenarioIndex, editsScenario } = findLayerInEdits(
       edits.edits,
@@ -906,7 +1009,7 @@ function Publish() {
     let layerEdits: LayerEditsType = {
       type: 'layer',
       id: editsScenario.id,
-      pointsId: -1,
+      pointsId: editsScenario.pointsId,
       uuid: '', // no need for a uuid since this is combining layers into one
       layerId: editsScenario.layerId,
       portalId: editsScenario.portalId,
@@ -926,6 +1029,16 @@ function Publish() {
       published: [],
     };
 
+    // get the attributes to be published
+    const attributesToInclude = [
+      ...defaultPlanAttributes,
+      ...(trainingMode ? trainingModePlanAttributes : []),
+      ...editsScenario.customAttributes,
+    ];
+    attributesToInclude.forEach((item, index) => {
+      item.id = index + 1;
+    });
+
     // add graphics to the layer to publish while also setting
     // the DECISIONUNIT, DECISIONUNITUUID and DECISIONUNITSORT attributes
     editsScenario.layers.forEach((layer) => {
@@ -942,7 +1055,8 @@ function Publish() {
 
           attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
           attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
+
+          attributesToInclude.forEach((attribute) => {
             attributes[attribute.name] =
               graphic.attributes[attribute.name] || null;
           });
@@ -957,7 +1071,9 @@ function Publish() {
           attributes,
         });
       });
-      layer.updates.forEach((item) => {
+
+      const combinedUpdates = [...layer.updates, ...layer.published];
+      combinedUpdates.forEach((item) => {
         let attributes: any = {};
         if (publishLayer?.sketchLayer.type === 'graphics') {
           const graphic = publishLayer.sketchLayer.graphics.find(
@@ -966,22 +1082,33 @@ function Publish() {
               item.attributes.PERMANENT_IDENTIFIER,
           );
 
-          attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
-          attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
-          partialPlanAttributes.forEach((attribute) => {
-            attributes[attribute.name] =
-              graphic.attributes[attribute.name] || null;
-          });
+          if (graphic) {
+            attributes['GLOBALID'] = graphic.attributes['GLOBALID'];
+            attributes['OBJECTID'] = graphic.attributes['OBJECTID'];
+
+            attributesToInclude.forEach((attribute) => {
+              attributes[attribute.name] =
+                graphic.attributes[attribute.name] || null;
+            });
+          }
         }
 
         if (attributes.length === 0) {
           attributes = { ...item.attributes };
         }
 
-        layerEdits.updates.push({
-          ...item,
-          attributes,
-        });
+        const inDeletes =
+          layer.deletes.findIndex(
+            (feat) =>
+              feat.PERMANENT_IDENTIFIER ===
+              item.attributes.PERMANENT_IDENTIFIER,
+          ) !== -1;
+        if (!inDeletes) {
+          layerEdits.updates.push({
+            ...item,
+            attributes,
+          });
+        }
       });
       layer.deletes.forEach((item) => {
         layerEdits.deletes.push({
@@ -991,39 +1118,34 @@ function Publish() {
       });
     });
 
-    if (
-      layerEdits.adds.length === 0 &&
-      layerEdits.updates.length === 0 &&
-      layerEdits.deletes.length === 0
-    ) {
-      setPublishPartialResponse({
-        status: 'success',
-        summary: { success: '', failed: '' },
-        rawData: {},
-      });
-      return;
-    } else {
-      setPublishPartialResponse({
-        status: 'fetching',
-        summary: { success: '', failed: '' },
-        rawData: null,
-      });
-    }
+    setPublishPartialResponse({
+      status: 'fetching',
+      summary: { success: '', failed: '' },
+      rawData: null,
+    });
 
     publish({
       portal,
+      map,
       layers: publishLayers,
       edits: [layerEdits],
-      createWebMap: includePartialPlanWebMap,
-      table: editsScenario.table,
-      attributesToInclude: partialPlanAttributes,
-      layerProps,
       serviceMetaData: {
         value: '',
         label: editsScenario.scenarioName,
         description: editsScenario.scenarioDescription,
         url: '',
       },
+      layerProps,
+      attributesToInclude,
+      table: editsScenario.table,
+      referenceLayersTable: editsScenario.referenceLayersTable,
+      referenceMaterials: {
+        createWebMap: includePartialPlanWebMap,
+        createWebScene: includePartialPlanWebScene,
+        webMapReferenceLayerSelections,
+        webSceneReferenceLayerSelections,
+      },
+      calculateSettings: editsScenario.calculateSettings,
     })
       .then((res: any) => {
         const portalId = res.portalId;
@@ -1037,11 +1159,8 @@ function Publish() {
         };
         const changes: PublishResults = {};
 
-        res.edits.forEach((layerRes: any, index: number) => {
-          // odd layers are points layers so ignore those
-          const isOdd = index % 2 === 1;
-          if (isOdd) return;
-          if (layerRes.id === res.table.id) return;
+        res.edits.forEach((layerRes: any) => {
+          if (layerRes.id !== 0) return;
 
           // need to loop through each array and check the success flag
           if (layerRes.addResults) {
@@ -1051,10 +1170,12 @@ function Publish() {
               // update the edits arrays
               const origItem = layerEdits.adds[index];
               const decisionUUID = origItem.attributes.DECISIONUNITUUID;
+              const permanentId = origItem.attributes.PERMANENT_IDENTIFIER;
               if (item.success) {
                 const type = origItem.attributes.TYPE;
                 origItem.attributes = { ...sampleAttributes[type] };
                 origItem.attributes.DECISIONUNITUUID = decisionUUID;
+                origItem.attributes.PERMANENT_IDENTIFIER = permanentId;
                 origItem.attributes.OBJECTID = item.objectId;
                 origItem.attributes.GLOBALID = item.globalId;
 
@@ -1294,6 +1415,22 @@ function Publish() {
           });
           editsScenario.table = res.table;
 
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            editsScenario.calculateSettings.current = {
+              ...editsScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          editsScenario.calculateSettings.published =
+            editsScenario.calculateSettings.current;
+
           return {
             count: edits.count + 1,
             edits: [
@@ -1330,6 +1467,23 @@ function Publish() {
 
           selectedScenario.status = 'published';
           selectedScenario.portalId = portalId;
+
+          // find the response for the calculateSettings applyEdits response
+          const calcId = res.calculateSettings.id;
+          const calcRes = res.edits.find((l: any) => l.id === calcId)
+            ?.addResults?.[0];
+
+          if (calcRes) {
+            selectedScenario.calculateSettings.current = {
+              ...selectedScenario.calculateSettings.current,
+              OBJECTID: calcRes.objectId,
+              GLOBALID: calcRes.globalId,
+            };
+          }
+
+          selectedScenario.calculateSettings.published =
+            selectedScenario.calculateSettings.current;
+
           return selectedScenario;
         });
       })
@@ -1349,16 +1503,20 @@ function Publish() {
       });
   }, [
     edits,
-    setEdits,
     includePartialPlanWebMap,
-    setLayers,
-    partialPlanAttributes,
-    portal,
+    includePartialPlanWebScene,
     layers,
     layerProps,
+    map,
+    portal,
     sampleAttributes,
     selectedScenario,
+    setEdits,
+    setLayers,
     setSelectedScenario,
+    trainingMode,
+    webMapReferenceLayerSelections,
+    webSceneReferenceLayerSelections,
   ]);
 
   const [publishSamplesResponse, setPublishSamplesResponse] =
@@ -1543,8 +1701,20 @@ function Publish() {
         if (!type.value) return;
 
         const sampleType = userDefinedAttributes.sampleTypes[type.value];
+        const symbolTypeUuid = sampleType.attributes.TYPEUUID ?? 'Samples';
+        const defaultSymbol =
+          defaultSymbols.symbols[
+            defaultSymbols.symbols.hasOwnProperty(symbolTypeUuid)
+              ? symbolTypeUuid
+              : 'Samples'
+          ];
         const item = {
-          attributes: sampleType.attributes,
+          attributes: {
+            ...sampleType.attributes,
+            SYMBOLCOLOR: JSON.stringify(defaultSymbol.color),
+            SYMBOLOUTLINE: JSON.stringify(defaultSymbol.outline),
+            SYMBOLTYPE: defaultSymbol.type,
+          },
         };
         if (publishSamplesMode === 'new') {
           changes.adds.push(item);
@@ -1592,8 +1762,21 @@ function Publish() {
               if (!type.value) return;
 
               const sampleType = userDefinedAttributes.sampleTypes[type.value];
+              const symbolTypeUuid =
+                sampleType.attributes.TYPEUUID ?? 'Samples';
+              const defaultSymbol =
+                defaultSymbols.symbols[
+                  defaultSymbols.symbols.hasOwnProperty(symbolTypeUuid)
+                    ? symbolTypeUuid
+                    : 'Samples'
+                ];
               const item = {
-                attributes: sampleType.attributes,
+                attributes: {
+                  ...sampleType.attributes,
+                  SYMBOLCOLOR: JSON.stringify(defaultSymbol.color),
+                  SYMBOLOUTLINE: JSON.stringify(defaultSymbol.outline),
+                  SYMBOLTYPE: defaultSymbol.type,
+                },
               };
               const typeUuid = item.attributes.TYPEUUID || '';
 
@@ -1625,6 +1808,7 @@ function Publish() {
         });
       });
   }, [
+    defaultSymbols,
     layerProps,
     portal,
     publishSampleTableMetaData,
@@ -1645,6 +1829,12 @@ function Publish() {
     if (layerProps.status !== 'success') return;
     if (
       includeFullPlan &&
+      (!layers || layers.length === 0 || !selectedScenario)
+    ) {
+      return;
+    }
+    if (
+      includePartialPlan &&
       (!layers || layers.length === 0 || !selectedScenario)
     ) {
       return;
@@ -1725,6 +1915,17 @@ function Publish() {
       (publishNameCheck.status === 'none' ||
         publishNameCheck.status === 'success'));
 
+  const isPublishPartialPlanReady =
+    (!includeFullPlan && !includePartialPlan) ||
+    // verify the service name is available
+    ((publishPartialResponse.status !== 'name-not-available' ||
+      (publishPartialResponse.status === 'name-not-available' &&
+        publishNameCheck.status === 'success')) &&
+      sampleCount !== 0 && // verify there are samples to publish
+      // verify service name availbility if changed
+      (publishNameCheck.status === 'none' ||
+        publishNameCheck.status === 'success'));
+
   const isPublishSamplesReady =
     !includeCustomSampleTypes ||
     // verify the service name is available
@@ -1790,7 +1991,8 @@ function Publish() {
             EXIT
           </a>
         </p>
-        {publishResponse.status === 'name-not-available' && (
+        {(publishResponse.status === 'name-not-available' ||
+          publishPartialResponse.status === 'name-not-available') && (
           <EditScenario
             initialScenario={selectedScenario}
             initialStatus="name-not-available"
@@ -1801,26 +2003,27 @@ function Publish() {
             }}
           />
         )}
-        {publishResponse.status !== 'name-not-available' && (
-          <Fragment>
-            <p css={layerInfo}>
-              <strong>Plan Name: </strong>
-              {selectedScenario?.scenarioName}
-            </p>
-            <p css={layerInfo}>
-              <strong>Plan Description: </strong>
-              <ShowLessMore
-                text={selectedScenario?.scenarioDescription}
-                charLimit={20}
-              />
-            </p>
-          </Fragment>
-        )}
+        {publishResponse.status !== 'name-not-available' &&
+          publishPartialResponse.status !== 'name-not-available' && (
+            <Fragment>
+              <p css={layerInfo}>
+                <strong>Plan Name: </strong>
+                {selectedScenario?.scenarioName}
+              </p>
+              <p css={layerInfo}>
+                <strong>Plan Description: </strong>
+                <ShowLessMore
+                  text={selectedScenario?.scenarioDescription}
+                  charLimit={20}
+                />
+              </p>
+            </Fragment>
+          )}
       </div>
 
       <div>
         <h3>Publish Summary</h3>
-        <p>
+        <div css={totsOutputContainer}>
           <strong>
             {includePartialPlan ? (
               <i className="fas fa-check" css={checkedStyles}></i>
@@ -1830,19 +2033,55 @@ function Publish() {
             Include Tailored TOTS Output Files:
           </strong>
           {includePartialPlan && (
-            <Fragment>
-              <br />
-              <strong css={webMapContainerCheckboxStyles}>
-                {includePartialPlanWebMap ? (
-                  <i className="fas fa-check" css={checkedStyles}></i>
-                ) : (
-                  <i className="fas fa-times" css={unCheckedStyles}></i>
-                )}
-                Include Web Map:
-              </strong>
-            </Fragment>
+            <div>
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebMap ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Map:
+                </strong>
+              </div>
+              {webMapReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webMapReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <strong css={webMapContainerCheckboxStyles}>
+                  {includePartialPlanWebScene ? (
+                    <i className="fas fa-check" css={checkedStyles}></i>
+                  ) : (
+                    <i className="fas fa-times" css={unCheckedStyles}></i>
+                  )}
+                  Include Web Scene:
+                </strong>
+              </div>
+              {webSceneReferenceLayerSelections.length > 0 && (
+                <div css={webMapContainerCheckboxStyles}>
+                  Reference layers to include:
+                  <ul>
+                    {webSceneReferenceLayerSelections
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((l, index) => (
+                        <li key={index}>{l.label}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
-        </p>
+        </div>
 
         {includeCustomSampleTypes && (
           <div>
@@ -1952,6 +2191,7 @@ function Publish() {
         )}
       {(includeFullPlan || includePartialPlan || includeCustomSampleTypes) &&
         isPublishPlanReady &&
+        isPublishPartialPlanReady &&
         isPublishSamplesReady && (
           <div css={publishButtonContainerStyles}>
             <button
