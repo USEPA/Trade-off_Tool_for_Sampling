@@ -12,12 +12,15 @@ import CSVLayer from '@arcgis/core/layers/CSVLayer';
 import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
 import KMLLayer from '@arcgis/core/layers/KMLLayer';
 import Layer from '@arcgis/core/layers/Layer';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import WMSLayer from '@arcgis/core/layers/WMSLayer';
 // components
 import LoadingSpinner from 'components/LoadingSpinner';
 import Select from 'components/Select';
 // contexts
 import { SketchContext } from 'contexts/Sketch';
+// types
+import { UrlLayerTypes } from 'types/Layer';
 // config
 import {
   unsupportedLayerMessage,
@@ -80,34 +83,38 @@ function URLPanel() {
   useEffect(() => {
     if (!map || !layer) return;
 
-    // keep the original set of url layers in case the layer errors out
-    const originalUrlLayers = urlLayers;
+    // setup the watch event to see when the layer finishes loading
+    const watcher = reactiveUtils.watch(
+      () => layer.loadStatus,
+      () => {
+        // set the status based on the load status
+        if (layer.loadStatus === 'loaded') {
+          const urlLayer = {
+            label: layer.title,
+            layerId: layer.id,
+            layerType: layer.type,
+            type: urlType.value as UrlLayerTypes,
+            url,
+          };
+          setUrlLayers((urlLayers) => {
+            let tmpUrlLayer = urlLayers.find((l) => l.url === url);
+            if (!tmpUrlLayer) return [...urlLayers, urlLayer];
+            else {
+              tmpUrlLayer = urlLayer;
+              return urlLayers;
+            }
+          });
+          setStatus('success');
+          watcher.remove();
+        } else if (layer.loadStatus === 'failed') {
+          setStatus('failure');
+          watcher.remove();
+        }
+      },
+    );
 
     // add the layer to the map
     map.add(layer);
-
-    layer.on('layerview-create', (event) => {
-      setUrlLayers((urlLayers) => {
-        urlLayers.forEach((urlLayer) => {
-          if (urlLayer.url === url && urlLayer.type === urlType.value) {
-            urlLayer.layerId = layer.id;
-          }
-        });
-
-        return urlLayers;
-      });
-      setStatus('success');
-    });
-
-    layer.on('layerview-create-error', (event) => {
-      console.error('create error event: ', event);
-
-      map.remove(layer);
-
-      setUrlLayers(originalUrlLayers);
-
-      setStatus('failure');
-    });
 
     setLayer(null);
   }, [map, layer, setUrlLayers, url, urlLayers, urlType]);
@@ -130,10 +137,6 @@ function URLPanel() {
 
     let layer: SupportedUrlLayerTypes | null = null;
     if (type === 'ArcGIS') {
-      // add this layer to the url layers
-      const urlLayer = { url, type: urlType.value, layerId: '' };
-      setUrlLayers([...urlLayers, urlLayer]);
-
       Layer.fromArcGISServerUrl({ url })
         .then((layer) => {
           setLayer(layer);
@@ -165,10 +168,6 @@ function URLPanel() {
 
     // unsupported layer type
     if (layer) {
-      // add this layer to the url layers
-      const urlLayer = { url, type: urlType.value, layerId: layer.id };
-      setUrlLayers([...urlLayers, urlLayer]);
-
       setLayer(layer);
     } else {
       setStatus('unsupported');
@@ -183,24 +182,24 @@ function URLPanel() {
     >
       <p>You can add the following types of layers through a URL:</p>
       <p css={layerInfo}>
-        <strong>ArcGIS Server web service</strong> - map, image, or feature
-        resource that is located on an ArcGIS Server site
+        <strong>ArcGIS Server web service</strong> - Map, image, or feature
+        resource that is located on an ArcGIS Server site.
       </p>
       <p css={layerInfo}>
-        <strong>WMS OGC web service</strong> - feature service that follows the
-        OGC Web Feature Service specification
+        <strong>WMS OGC web service</strong> - Feature service that follows the
+        OGC Web Feature Service specification.
       </p>
       <p css={layerInfo}>
         <strong>KML file</strong> - File containing a set of geographic
         features.
       </p>
       <p css={layerInfo}>
-        <strong>GeoRSS file</strong> - web feed that includes geographic
+        <strong>GeoRSS file</strong> - Web feed that includes geographic
         features and locations.
       </p>
       <p>
-        <strong>CSV file</strong> - web-based, comma-separated values text file
-        that includes location information
+        <strong>CSV file</strong> - Web-based, comma-separated values text file
+        that includes location information.
       </p>
       <label htmlFor="url-type-select">Type</label>
       <Select
@@ -262,7 +261,7 @@ function URLPanel() {
           {urlType.value === 'WMS' && (
             <div>
               <p>
-                http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?service=WMS&request=GetCapabilities
+                https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?service=WMS&request=GetCapabilities
               </p>
             </div>
           )}
@@ -276,19 +275,19 @@ function URLPanel() {
           {urlType.value === 'KML' && (
             <div>
               <p>
-                http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month_age_animated.kml
+                https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month_age_animated.kml
               </p>
             </div>
           )}
           {urlType.value === 'GeoRSS' && (
             <div>
-              <p>http://www.gdacs.org/xml/rss.xml</p>
+              <p>https://www.gdacs.org/xml/rss.xml</p>
             </div>
           )}
           {urlType.value === 'CSV' && (
             <div>
               <p>
-                http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv
+                https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv
               </p>
             </div>
           )}

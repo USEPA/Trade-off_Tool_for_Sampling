@@ -75,6 +75,7 @@ module.exports = function (app) {
       url: parsedUrl,
       headers: request_headers,
       timeout: 10000,
+      responseType: 'arraybuffer',
     })
       .then((response) => {
         if (response.status !== 200) {

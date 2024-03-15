@@ -1,4 +1,5 @@
 import { AddedFrom, LayerTypeName, PublishStatus } from 'types/Layer';
+import { AttributesType } from 'types/Publish';
 
 export type EditsType = {
   count: number;
@@ -16,6 +17,42 @@ export type EditType =
 export type TableType = {
   id: number; // esri layer id
   sampleTypes: any; // <sample type name>: { attributes: any };
+};
+
+export type ReferenceLayerTableType = {
+  globalId: string;
+  layerId: string;
+  label: string;
+  layerType: string;
+  objectId: number;
+  onWebMap: number;
+  onWebScene: number;
+  type: string;
+  url: string;
+  urlType: string;
+};
+
+export type ReferenceLayersTableType = {
+  id: number; // esri layer id
+  referenceLayers: ReferenceLayerTableType[];
+};
+
+export type CalculateSettingsBaseType = {
+  OBJECTID?: number;
+  GLOBALID?: string;
+  NUM_LABS: number;
+  NUM_LAB_HOURS: number;
+  NUM_SAMPLING_HOURS: number;
+  NUM_SAMPLING_PERSONNEL: number;
+  NUM_SAMPLING_SHIFTS: number;
+  NUM_SAMPLING_TEAMS: number;
+  SAMPLING_LABOR_COST: number;
+  SURFACE_AREA: number;
+};
+
+export type CalculateSettingsType = {
+  current: CalculateSettingsBaseType;
+  published?: CalculateSettingsBaseType;
 };
 
 export type ScenarioEditsType = {
@@ -38,6 +75,9 @@ export type ScenarioEditsType = {
   scenarioDescription: string; // user defined scenario description  adds: FeatureEditsType[]; // features to add
   layers: LayerEditsType[];
   table: TableType | null;
+  referenceLayersTable: ReferenceLayersTableType;
+  customAttributes: AttributesType[];
+  calculateSettings: CalculateSettingsType;
 };
 
 export type LayerEditsType = {

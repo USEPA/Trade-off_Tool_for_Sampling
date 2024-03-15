@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import * as serviceWorker from './serviceWorker';
 // components
 import App from 'components/App';
+// styles
+import '@arcgis/core/assets/esri/themes/light/main.css';
 
 const rootElement = document.getElementById('root') as HTMLElement;
 createRoot(rootElement).render(<App />);

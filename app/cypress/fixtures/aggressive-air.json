@@ -1,0 +1,139 @@
+{
+  "count": 2,
+  "edits": [
+    {
+      "type": "scenario",
+      "id": -1,
+      "pointsId": -1,
+      "layerId": "1884e996f6a-layer-43",
+      "portalId": "",
+      "name": "demo",
+      "label": "demo",
+      "value": "1884e996f6a-layer-43",
+      "layerType": "Samples",
+      "addedFrom": "sketch",
+      "hasContaminationRan": false,
+      "status": "added",
+      "editType": "add",
+      "visible": true,
+      "listMode": "show",
+      "scenarioName": "demo",
+      "scenarioDescription": "",
+      "layers": [
+        {
+          "type": "layer",
+          "id": -1,
+          "pointsId": -1,
+          "uuid": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "layerId": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+          "portalId": "",
+          "name": "Default Sample Layer",
+          "label": "Default Sample Layer",
+          "layerType": "Samples",
+          "hasContaminationRan": false,
+          "addedFrom": "sketch",
+          "status": "added",
+          "editType": "add",
+          "visible": true,
+          "listMode": "show",
+          "sort": 0,
+          "adds": [
+            {
+              "attributes": {
+                "OBJECTID": -1,
+                "PERMANENT_IDENTIFIER": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
+                "GLOBALID": "{D47044FE-D971-4E62-AF6D-E03FF00536E6}",
+                "TYPEUUID": "Aggressive Air",
+                "TYPE": "Aggressive Air",
+                "ShapeType": "polygon",
+                "POINT_STYLE": "triangle",
+                "SA": 144000,
+                "AA": null,
+                "TTPK": 0.33,
+                "TTC": 0.5,
+                "TTA": 0.5,
+                "TTPS": 1.12,
+                "LOD_P": 0,
+                "LOD_NON": 0,
+                "MCPS": 207,
+                "TCPS": 267,
+                "WVPS": 0.1,
+                "WWPS": 5,
+                "ALC": 118,
+                "AMC": 200,
+                "Notes": "",
+                "CONTAMTYPE": null,
+                "CONTAMVAL": null,
+                "CONTAMUNIT": null,
+                "CREATEDDATE": "2023/05/24 11:31:37.274",
+                "UPDATEDDATE": "2023/05/24 11:31:37.274",
+                "USERNAME": "",
+                "ORGANIZATION": "",
+                "DECISIONUNITUUID": "{76A22E23-F75F-4736-B275-0252140F6F19}",
+                "DECISIONUNIT": "Default Sample Layer",
+                "DECISIONUNITSORT": 0
+              },
+              "geometry": {
+                "hasZ": true,
+                "spatialReference": {
+                  "latestWkid": 3857,
+                  "wkid": 102100
+                },
+                "rings": [
+                  [
+                    [
+                      -11620704.42418879,
+                      4690737.4843653245,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11655253.96097369,
+                      4646709.756073065,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11719461.064733233,
+                      4692266.224931029,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11660451.678897081,
+                      4729261.746621052,
+                      1788.8169694010046
+                    ],
+                    [
+                      -11620704.42418879,
+                      4690737.4843653245,
+                      1788.8169694010046
+                    ]
+                  ]
+                ]
+              }
+            }
+          ],
+          "updates": [],
+          "deletes": [],
+          "published": []
+        }
+      ],
+      "table": null,
+      "referenceLayersTable": {
+        "id": -1,
+        "referenceLayers": []
+      },
+      "customAttributes": [],
+      "calculateSettings": {
+        "current": {
+          "NUM_LABS": 1,
+          "NUM_LAB_HOURS": 24,
+          "NUM_SAMPLING_HOURS": 5,
+          "NUM_SAMPLING_PERSONNEL": 3,
+          "NUM_SAMPLING_SHIFTS": 1,
+          "NUM_SAMPLING_TEAMS": 1,
+          "SAMPLING_LABOR_COST": 420,
+          "SURFACE_AREA": 0
+        }
+      }
+    }
+  ]
+}

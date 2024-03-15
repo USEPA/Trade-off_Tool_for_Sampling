@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
@@ -11,6 +11,7 @@ import Legend from '@arcgis/core/widgets/Legend';
 import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
 import Portal from '@arcgis/core/portal/Portal';
 import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Slider from '@arcgis/core/widgets/Slider';
 // components
 import InfoIcon from 'components/InfoIcon';
@@ -23,7 +24,11 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
-import { findLayerInEdits, getNextScenarioLayer } from 'utils/sketchUtils';
+import {
+  findLayerInEdits,
+  getElevationLayer,
+  getNextScenarioLayer,
+} from 'utils/sketchUtils';
 // types
 import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
 // styles
@@ -40,7 +45,7 @@ const toolBarHeight = '40px';
 // Builds the legend item for a layer
 function buildLegendListItem(event: any) {
   const item = event.item;
-  const mapView = event.view;
+  const view = event.view;
 
   // create the slider
   const sliderContainer = document.createElement('div');
@@ -66,10 +71,12 @@ function buildLegendListItem(event: any) {
   const layer = (window as any).totsLayers?.find(
     (layer: LayerType) =>
       layer.layerId === item?.layer?.id ||
-      layer.pointsLayer?.id === item?.layer?.id,
+      layer.pointsLayer?.id === item?.layer?.id ||
+      layer.hybridLayer?.id === item?.layer?.id,
   );
 
   const isPoints = item.layer.id?.toString().includes('-points');
+  const isHybrid = item.layer.id?.toString().includes('-hybrid');
 
   const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
 
@@ -98,10 +105,11 @@ function buildLegendListItem(event: any) {
 
     (window as any).totsAllSampleOptions?.forEach(
       (option: SampleSelectType) => {
-        const style = isPoints
-          ? (window as any).totsSampleAttributes[option.value]?.POINT_STYLE ||
-            null
-          : null;
+        const attributes = (window as any).totsSampleAttributes[option.value];
+        const style =
+          isPoints || (isHybrid && attributes.ShapeType === 'point')
+            ? attributes?.POINT_STYLE || null
+            : null;
         if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
           legendItems.push({
             value: option.value,
@@ -206,7 +214,7 @@ function buildLegendListItem(event: any) {
     const legendContainer = document.createElement('div');
     const legend: any = new Legend({
       container: legendContainer,
-      view: mapView,
+      view,
       layerInfos: [
         {
           layer: item.layer,
@@ -287,16 +295,37 @@ const toolBarTitle = css`
   line-height: 1.3;
 `;
 
-const switchLabelContainer = css`
-  display: flex;
-  align-items: center;
-  color: white;
+const settingContainerStyles = css`
   margin: 0;
-  font-weight: bold;
+  margin-bottom: 10px;
 `;
 
 const switchLabel = css`
-  margin: 0 10px;
+  margin-right: 10px;
+`;
+
+const switchLabelContainer = css`
+  ${settingContainerStyles}
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+`;
+
+const fieldsetStyles = css`
+  ${settingContainerStyles}
+  margin: 0 2px 1.5em;
+  padding: 0.35em 1em 0.75em;
+  border: 2px groove rgb(192, 192, 192);
+
+  legend {
+    font-weight: bold;
+    line-height: 1.3;
+    padding: 0 2px;
+  }
+`;
+
+const infoIconStyles = css`
+  margin-left: 10px;
 `;
 
 const toolBarStyles = css`
@@ -313,32 +342,35 @@ const toolBarButtonsStyles = css`
   justify-content: flex-end;
 `;
 
-const toolBarButtonStyles = css`
-  height: ${toolBarHeight};
-  margin-bottom: 0;
-  padding: 0.75em 1em;
-  color: white;
-  background-color: ${colors.darkblue()};
-  border-radius: 0;
-  line-height: 16px;
-  text-decoration: none;
-  font-weight: bold;
-
-  &:hover {
-    background-color: ${colors.darkblue()};
-  }
-
-  &:visited {
+const toolBarButtonStyles = (width?: string) => {
+  return css`
+    height: ${toolBarHeight};
+    margin-bottom: 0;
+    padding: 0.75em 1em;
     color: white;
-  }
+    background-color: ${colors.darkblue()};
+    border-radius: 0;
+    line-height: 16px;
+    text-decoration: none;
+    font-weight: bold;
+    ${width ? `width: ${width};` : ''}
 
-  &.tots-button-selected {
-    background-color: #004f83;
-    border-top: 2px solid #8491a1;
-  }
-`;
+    &:hover {
+      background-color: ${colors.darkblue()};
+    }
 
-const floatContainerStyles = (containerVisible: boolean) => {
+    &:visited {
+      color: white;
+    }
+
+    &.tots-button-selected {
+      background-color: #004f83;
+      border-top: 2px solid #8491a1;
+    }
+  `;
+};
+
+const floatContainerStyles = (containerVisible: boolean, right: string) => {
   return css`
     display: ${containerVisible ? 'block' : 'none'} !important;
     width: 310px;
@@ -353,13 +385,23 @@ const floatContainerStyles = (containerVisible: boolean) => {
 
     /* Float the menu over the map */
     position: absolute;
-    right: 60px;
+    right: ${right};
+
+    input {
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+
+    h3 {
+      padding-top: 10px;
+      padding-bottom: 0;
+    }
   `;
 };
 
-const legendStyles = (legendVisible: boolean) => {
+const legendStyles = (legendVisible: boolean, right: string) => {
   return css`
-    ${floatContainerStyles(legendVisible)}
+    ${floatContainerStyles(legendVisible, right)}
 
     /* Hide/show the actions panel */
     .esri-layer-list__item-actions[hidden] {
@@ -378,11 +420,21 @@ const legendStyles = (legendVisible: boolean) => {
   `;
 };
 
+const navIconStyles = css`
+  color: white;
+  width: 10px;
+  margin-left: -2px;
+  margin-right: 10px;
+`;
+
 // --- components (Toolbar) ---
 function Toolbar() {
   const { setContaminationMap } = useContext(CalculateContext);
-  const { trainingMode } = useContext(NavigationContext);
+  const { trainingMode, setTrainingMode } = useContext(NavigationContext);
   const {
+    autoZoom,
+    setAutoZoom,
+    basemapWidget,
     setBasemapWidget,
     defaultSymbols,
     edits,
@@ -401,9 +453,18 @@ function Toolbar() {
     setUrlLayers,
     sketchLayer,
     setSketchLayer,
-    showAsPoints,
-    setShowAsPoints,
+    displayGeometryType,
+    setDisplayGeometryType,
     userDefinedAttributes,
+    sceneView,
+    displayDimensions,
+    setDisplayDimensions,
+    terrain3dUseElevation,
+    setTerrain3dUseElevation,
+    terrain3dVisible,
+    setTerrain3dVisible,
+    viewUnderground3d,
+    setViewUnderground3d,
   } = useContext(SketchContext);
   const {
     signedIn,
@@ -422,7 +483,9 @@ function Toolbar() {
 
     const info = new OAuthInfo({
       appId: process.env.REACT_APP_ARCGIS_APP_ID,
-      popup: false,
+      popup: true,
+      flowType: 'authorization-code',
+      popupCallbackUrl: `${window.location.origin}/oauth-callback.html`,
     });
     IdentityManager.registerOAuthInfos([info]);
 
@@ -469,6 +532,8 @@ function Toolbar() {
       .catch((err) => console.error(err));
   }, [portal, userInfo, setUserInfo]);
 
+  const [settingsVisible, setSettingsVisible] = useState(false);
+
   // Create the layer list toolbar widget
   const [legendVisible, setLegendVisible] = useState(false);
   const [layerList, setLayerList] = useState<__esri.LayerList | null>(null);
@@ -502,7 +567,7 @@ function Toolbar() {
       if (id === 'zoom-layer') {
         if (event.item.layer.type === 'graphics') {
           const graphicsLayer = event.item.layer as __esri.GraphicsLayer;
-          mapView.goTo(graphicsLayer.graphics);
+          newLayerList.view.goTo(graphicsLayer.graphics);
           return;
         }
         if (event.item.layer.type === 'group') {
@@ -514,7 +579,7 @@ function Toolbar() {
               else fullExtent.union(layer.fullExtent);
             });
 
-            if (fullExtent) mapView.goTo(fullExtent);
+            if (fullExtent) newLayerList.view.goTo(fullExtent);
           } else {
             const groupLayer = event.item.layer as __esri.GroupLayer;
             const graphics = new Collection<__esri.Graphic>();
@@ -525,13 +590,13 @@ function Toolbar() {
               graphics.addMany(tempLayer.graphics);
             });
 
-            if (graphics.length > 0) mapView.goTo(graphics);
+            if (graphics.length > 0) newLayerList.view.goTo(graphics);
           }
           return;
         }
 
         const fullExtent = event.item.layer.fullExtent;
-        if (fullExtent) mapView.goTo(fullExtent);
+        if (fullExtent) newLayerList.view.goTo(fullExtent);
       }
       if (id === 'delete-layer') {
         // remove the layer from the map
@@ -557,8 +622,17 @@ function Toolbar() {
 
     setLayerToRemove(null);
 
+    // gather each layer type
+    const layersToRemove = map.layers
+      .filter(
+        (l) =>
+          l.id.replace('-points', '').replace('-hybrid', '') ===
+          layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
+      )
+      .toArray();
+
     // remove it from the map
-    map.remove(layerToRemove);
+    map.removeMany(layersToRemove);
 
     // Workaround for layer type specific properties
     const tempLayerToRemove = layerToRemove as any;
@@ -578,7 +652,9 @@ function Toolbar() {
       const newEdits = {
         count: edits.count + 1,
         edits: edits.edits.filter(
-          (layer) => layer.layerId !== layerToRemove.id,
+          (layer) =>
+            layer.layerId !==
+            layerToRemove.id.replace('-points', '').replace('-hybrid', ''),
         ),
       };
 
@@ -604,8 +680,8 @@ function Toolbar() {
           null,
           null,
         );
-        if (nextScenario) setSelectedScenario(nextScenario);
-        if (nextLayer) setSketchLayer(nextLayer);
+        setSelectedScenario(nextScenario ?? null);
+        setSketchLayer(nextLayer ?? null);
       }
       if (layerType === 'Contamination Map') {
         const newContamLayer = layers.find(
@@ -617,9 +693,14 @@ function Toolbar() {
       }
 
       // remove from layers
-      setLayers((layers) =>
-        layers.filter((layer) => layer.layerId !== layerToRemove.id),
-      );
+      setLayers((layers) => {
+        const newLayers = layers.filter(
+          (layer) =>
+            layer.layerId !== layerToRemove.id &&
+            layer.parentLayer?.id !== layerToRemove.id,
+        );
+        return newLayers;
+      });
 
       // also remove the layer from portalLayers if this layer was added
       // from arcgis online
@@ -700,87 +781,336 @@ function Toolbar() {
     setBasemapInitialized(true);
   }, [mapView, basemapInitialized, setBasemapWidget]);
 
+  // Switches the layer list and basemap widgets between 2D and 3D
+  useEffect(() => {
+    if (!basemapWidget || !layerList || !mapView || !sceneView) return;
+
+    layerList.view = displayDimensions === '2d' ? mapView : sceneView;
+    basemapWidget.view = displayDimensions === '2d' ? mapView : sceneView;
+  }, [basemapWidget, displayDimensions, layerList, mapView, sceneView]);
+
   // Switches between point and polygon representations
   useEffect(() => {
     // Loop through the layers and switch between point/polygon representations
     layers.forEach((layer) => {
       if (
-        showAsPoints &&
+        displayGeometryType === 'points' &&
         layer.pointsLayer &&
-        layer.sketchLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make points layers visible
-        layer.pointsLayer.listMode = layer.sketchLayer.listMode;
-        layer.pointsLayer.visible = layer.sketchLayer.visible;
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.sketchLayer.listMode;
+          layer.pointsLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.pointsLayer.listMode = layer.hybridLayer.listMode;
+          layer.pointsLayer.visible = layer.hybridLayer.visible;
+        }
         layer.sketchLayer.listMode = 'hide';
         layer.sketchLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
       } else if (
-        !showAsPoints &&
+        displayGeometryType === 'polygons' &&
         layer.pointsLayer &&
-        layer.pointsLayer.listMode === 'show'
+        layer.hybridLayer
       ) {
         // make polygons layer visible
-        layer.sketchLayer.listMode = layer.pointsLayer.listMode;
-        layer.sketchLayer.visible = layer.pointsLayer.visible;
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.pointsLayer.listMode;
+          layer.sketchLayer.visible = layer.pointsLayer.visible;
+        }
+        if (layer.hybridLayer.listMode === 'show') {
+          layer.sketchLayer.listMode = layer.hybridLayer.listMode;
+          layer.sketchLayer.visible = layer.hybridLayer.visible;
+        }
+        layer.pointsLayer.listMode = 'hide';
+        layer.pointsLayer.visible = false;
+        layer.hybridLayer.listMode = 'hide';
+        layer.hybridLayer.visible = false;
+      } else if (
+        displayGeometryType === 'hybrid' &&
+        layer.pointsLayer &&
+        layer.hybridLayer
+      ) {
+        // make points layers visible
+        if (layer.sketchLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.sketchLayer.listMode;
+          layer.hybridLayer.visible = layer.sketchLayer.visible;
+        }
+        if (layer.pointsLayer.listMode === 'show') {
+          layer.hybridLayer.listMode = layer.pointsLayer.listMode;
+          layer.hybridLayer.visible = layer.pointsLayer.visible;
+        }
+        layer.sketchLayer.listMode = 'hide';
+        layer.sketchLayer.visible = false;
         layer.pointsLayer.listMode = 'hide';
         layer.pointsLayer.visible = false;
       }
     });
-  }, [showAsPoints, layers]);
+  }, [displayGeometryType, layers]);
+
+  // Switches between 2d and 3d
+  useEffect(() => {
+    if (!mapView || !sceneView) return;
+
+    if (displayDimensions === '2d') {
+      if (!sceneView.viewpoint || !sceneView.container || !sceneView.map)
+        return;
+      mapView.viewpoint = sceneView.viewpoint.clone();
+      mapView.container = sceneView.container;
+      mapView.map = sceneView.map;
+
+      sceneView.container = null as any;
+      sceneView.map = null as any;
+    } else {
+      if (!mapView.container || !mapView.map) return;
+      if (mapView.viewpoint) sceneView.viewpoint = mapView.viewpoint?.clone();
+      if (sceneView.camera) sceneView.camera.tilt = 0.5;
+      sceneView.container = mapView.container;
+      sceneView.map = mapView.map;
+
+      mapView.container = null as any;
+      mapView.map = null as any;
+    }
+  }, [mapView, sceneView, displayDimensions]);
+
+  // Get the elevation layer
+  const [elevLayer, setElevLayer] = useState<__esri.ElevationLayer | null>(
+    null,
+  );
+  const [elevLayerWatcher, setElevLayerWatcher] = useState<IHandle | null>(
+    null,
+  );
+  useEffect(() => {
+    if (elevLayerWatcher || !map) return;
+
+    const handle = reactiveUtils.watch(
+      () => map.ground.loaded,
+      () => {
+        if (!map.ground.loaded) return;
+
+        const elevationLayer = getElevationLayer(map);
+        if (!elevationLayer) return;
+
+        setElevLayer(elevationLayer);
+        handle.remove();
+      },
+    );
+    setElevLayerWatcher(handle);
+  }, [elevLayerWatcher, map]);
+
+  // Toggle the 3D terrain visibility
+  useEffect(() => {
+    if (!elevLayer || !map) return;
+
+    elevLayer.visible = terrain3dVisible;
+  }, [elevLayer, map, terrain3dVisible]);
+
+  // Toggle the 3D view underground feature
+  useEffect(() => {
+    if (!map) return;
+
+    map.ground.navigationConstraint = {
+      type: viewUnderground3d ? 'none' : 'stay-above',
+    };
+  }, [map, viewUnderground3d]);
 
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
-      <h2 css={toolBarTitle}>
+      <h1 css={toolBarTitle}>
         Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
-      </h2>
-      <div css={switchLabelContainer}>
-        <span css={switchLabel}>Polygons</span>
-        <Switch
-          checked={showAsPoints}
-          onChange={(checked) => setShowAsPoints(checked)}
-          ariaLabel="Points or Polygons"
-          offColor="#90ee90"
-          offHandleColor="#129c12"
-        />
-        <span css={switchLabel}>Points</span>
-        <InfoIcon
-          id="poly-points-switch"
-          tooltip={
-            'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area.'
-          }
-          place="bottom"
-          type="info"
-        />
-      </div>
+      </h1>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles()}
+            className={settingsVisible ? 'tots-button-selected' : ''}
+            onClick={(ev) => {
+              setSettingsVisible(!settingsVisible);
+              setBasemapVisible(false);
+              setLegendVisible(false);
+            }}
+          >
+            <i className="esri-icon-settings2" css={navIconStyles} />
+            Settings{' '}
+          </button>
+          <div css={floatContainerStyles(settingsVisible, '242px')}>
+            <fieldset css={fieldsetStyles}>
+              <legend>
+                Dimension
+                <InfoIcon
+                  cssStyles={infoIconStyles}
+                  id="3d-view-switch"
+                  tooltip={
+                    'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
+                  }
+                  place="bottom"
+                />
+              </legend>
+              <input
+                id="dimension-2d"
+                type="radio"
+                name="dimension"
+                value="2d"
+                checked={displayDimensions === '2d'}
+                onChange={(ev) => setDisplayDimensions('2d')}
+              />
+              <label htmlFor="dimension-2d">2D</label>
+              <br />
+
+              <input
+                id="dimension-3d"
+                type="radio"
+                name="dimension"
+                value="3d"
+                checked={displayDimensions === '3d'}
+                onChange={(ev) => {
+                  setDisplayDimensions('3d');
+                  setDisplayGeometryType('points');
+                }}
+              />
+              <label htmlFor="dimension-3d">3D</label>
+            </fieldset>
+
+            <fieldset css={fieldsetStyles}>
+              <legend>
+                Shape
+                <InfoIcon
+                  cssStyles={infoIconStyles}
+                  id="poly-points-switch"
+                  tooltip={
+                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
+                  }
+                  place="bottom"
+                />
+              </legend>
+              <input
+                id="shape-points"
+                type="radio"
+                name="shape"
+                value="points"
+                checked={displayGeometryType === 'points'}
+                onChange={(ev) => setDisplayGeometryType('points')}
+              />
+              <label htmlFor="shape-points">Points</label>
+              <br />
+
+              <input
+                id="shape-polygons"
+                type="radio"
+                name="shape"
+                value="polygons"
+                checked={displayGeometryType === 'polygons'}
+                onChange={(ev) => setDisplayGeometryType('polygons')}
+              />
+              <label htmlFor="shape-polygons">Polygons</label>
+              <br />
+
+              <input
+                id="shape-hybrid"
+                type="radio"
+                name="shape"
+                value="hybrid"
+                checked={displayGeometryType === 'hybrid'}
+                onChange={(ev) => setDisplayGeometryType('hybrid')}
+              />
+              <label htmlFor="shape-hybrid">Hybrid</label>
+            </fieldset>
+
+            {displayDimensions === '3d' && (
+              <Fragment>
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Terrain Visible</span>
+                  <Switch
+                    checked={terrain3dVisible}
+                    onChange={(checked) => setTerrain3dVisible(checked)}
+                    ariaLabel="3D Terrain Visible"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </label>
+
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D Use Terrain Elevation</span>
+                  <Switch
+                    checked={terrain3dUseElevation}
+                    onChange={(checked) => setTerrain3dUseElevation(checked)}
+                    ariaLabel="3D Use Terrain Elevation"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </label>
+
+                <label css={switchLabelContainer}>
+                  <span css={switchLabel}>3D View Underground</span>
+                  <Switch
+                    checked={viewUnderground3d}
+                    onChange={(checked) => setViewUnderground3d(checked)}
+                    ariaLabel="3D View Underground"
+                    onColor="#90ee90"
+                    onHandleColor="#129c12"
+                  />
+                </label>
+              </Fragment>
+            )}
+
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Training Mode</span>
+              <Switch
+                checked={trainingMode}
+                onChange={(checked) => setTrainingMode(checked)}
+                ariaLabel="Training Mode"
+                onColor="#90ee90"
+                onHandleColor="#129c12"
+              />
+            </label>
+
+            <label css={switchLabelContainer}>
+              <span css={switchLabel}>Auto Zoom</span>
+              <Switch
+                checked={autoZoom}
+                onChange={(checked) => setAutoZoom(checked)}
+                ariaLabel="Auto Zoom"
+                onColor="#90ee90"
+                onHandleColor="#129c12"
+              />
+            </label>
+          </div>
+        </div>
+        <div>
+          <button
+            css={toolBarButtonStyles()}
             className={basemapVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setBasemapVisible(!basemapVisible);
               setLegendVisible(false);
+              setSettingsVisible(false);
             }}
           >
+            <i className="esri-icon-basemap" css={navIconStyles} />
             Basemap{' '}
           </button>
           <div
-            css={floatContainerStyles(basemapVisible)}
+            css={floatContainerStyles(basemapVisible, '131px')}
             id="basemap-container"
           />
         </div>
         <div>
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles()}
             className={legendVisible ? 'tots-button-selected' : ''}
             onClick={(ev) => {
               setLegendVisible(!legendVisible);
               setBasemapVisible(false);
+              setSettingsVisible(false);
             }}
           >
+            <i className="esri-icon-legend" css={navIconStyles} />
             Legend{' '}
           </button>
-          <div css={legendStyles(legendVisible)} id="legend-container">
+          <div css={legendStyles(legendVisible, '13px')} id="legend-container">
             <div className="esri-layer-list__no-items">
               There are currently no items to display.
             </div>
@@ -788,16 +1118,40 @@ function Toolbar() {
         </div>
         {oAuthInfo && (
           <button
-            css={toolBarButtonStyles}
+            css={toolBarButtonStyles('105px')}
             onClick={(ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();
-                window.location.reload();
+                setSignedIn(false);
+                setPortal(null);
               } else {
-                IdentityManager.getCredential(`${oAuthInfo.portalUrl}/sharing`);
+                IdentityManager.getCredential(
+                  `${oAuthInfo.portalUrl}/sharing`,
+                  {
+                    oAuthPopupConfirmation: false,
+                  },
+                )
+                  .then(() => {
+                    setSignedIn(true);
+
+                    const portal = new Portal();
+                    portal.authMode = 'immediate';
+                    portal.load().then(() => {
+                      setPortal(portal);
+                    });
+                  })
+                  .catch((err) => {
+                    console.error(err);
+                    setSignedIn(false);
+                    setPortal(null);
+                  });
               }
             }}
           >
+            <i
+              className={`fas fa-sign-${signedIn ? 'out' : 'in'}-alt`}
+              css={navIconStyles}
+            />
             {signedIn ? 'Logout' : 'Login'}
           </button>
         )}
@@ -807,7 +1161,7 @@ function Toolbar() {
           }
           target="_blank"
           rel="noopener noreferrer"
-          css={toolBarButtonStyles}
+          css={toolBarButtonStyles()}
         >
           Contact Us
         </a>

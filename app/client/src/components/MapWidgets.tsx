@@ -8,37 +8,51 @@ import {
   useEffect,
   useState,
 } from 'react';
+import { createRoot } from 'react-dom/client';
+import { css } from '@emotion/react';
+import Collection from '@arcgis/core/core/Collection';
 import Handles from '@arcgis/core/core/Handles';
 import Home from '@arcgis/core/widgets/Home';
 import Locate from '@arcgis/core/widgets/Locate';
+import Measurement from '@arcgis/core/widgets/Measurement';
+import Point from '@arcgis/core/geometry/Point';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import Popup from '@arcgis/core/widgets/Popup';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
+import Sketch from '@arcgis/core/widgets/Sketch';
 import SketchViewModel from '@arcgis/core/widgets/Sketch/SketchViewModel';
+// components
+import MapPopup from 'components/MapPopup';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { useLayerProps } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
 import { SketchContext } from 'contexts/Sketch';
 // types
 import { LayerType, LayerTypeName } from 'types/Layer';
+import { PolygonSymbol, SelectedSampleType } from 'config/sampleAttributes';
 // utils
-import { useDynamicPopup, useGeometryTools } from 'utils/hooks';
+import { use3dSketch, useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
+  createBuffer,
+  deactivateButtons,
   generateUUID,
   getCurrentDateTime,
+  getPointSymbol,
+  handlePopupClick,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
 import { ScenarioEditsType } from 'types/Edits';
 
-// Makes all sketch buttons no longer active by removing
-// the sketch-button-selected class.
-function deactivateButtons() {
-  const buttons = document.querySelectorAll('.sketch-button');
+type SketchWidgetType = {
+  '2d': Sketch;
+  '3d': Sketch;
+};
 
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].classList.remove('sketch-button-selected');
-  }
-}
+let terrain3dUseElevationGlobal = true;
 
 // Replaces the prevClassName with nextClassName for all elements with
 // prevClassName on the DOM.
@@ -95,12 +109,70 @@ function getUpdateEventInfo(
   };
 }
 
+const buttonSharedStyles = css`
+  margin: 8.5px;
+  font-size: 15px;
+  text-align: center;
+  vertical-align: middle;
+`;
+
+const buttonStyle = css`
+  ${buttonSharedStyles}
+  background-color: white;
+  color: #6e6e6e;
+`;
+
+const buttonActiveStyle = css`
+  ${buttonSharedStyles}
+  background-color: #999696;
+  color: black;
+`;
+
+const buttonHoverStyle = css`
+  ${buttonSharedStyles}
+  background-color: #f0f0f0;
+  color: black;
+  cursor: pointer;
+`;
+
+const divSharedStyles = css`
+  height: 32px;
+  width: 32px;
+`;
+
+const divStyle = css`
+  ${divSharedStyles}
+  background-color: white;
+`;
+
+const divActiveStyle = css`
+  ${divSharedStyles}
+  background-color: #999696;
+  color: black;
+
+  &:focus {
+    outline: none;
+  }
+`;
+
+const divHoverStyle = css`
+  ${divSharedStyles}
+  background-color: #f0f0f0;
+  cursor: pointer;
+`;
+
+const measurementContainerStyles = css`
+  display: flex;
+  gap: 5px;
+`;
+
 // --- components (MapWidgets) ---
 type Props = {
   mapView: __esri.MapView;
+  sceneView: __esri.SceneView;
 };
 
-function MapWidgets({ mapView }: Props) {
+function MapWidgets({ mapView, sceneView }: Props) {
   const { userInfo } = useContext(AuthenticationContext);
   const { currentPanel, trainingMode, getTrainingMode } =
     useContext(NavigationContext);
@@ -110,6 +182,7 @@ function MapWidgets({ mapView }: Props) {
     setEdits,
     homeWidget,
     setHomeWidget,
+    sampleAttributes,
     selectedSampleIds,
     sketchVM,
     setSketchVM,
@@ -121,26 +194,316 @@ function MapWidgets({ mapView }: Props) {
     setAoiSketchLayer,
     selectedScenario,
     setSelectedScenario,
-    showAsPoints,
+    displayGeometryType,
     layers,
     setLayers,
     map,
+    setSelectedSampleIds,
+    displayDimensions,
+    terrain3dUseElevation,
   } = useContext(SketchContext);
-  const { createBuffer, loadedProjection } = useGeometryTools();
+  const { startSketch } = use3dSketch();
   const getPopupTemplate = useDynamicPopup();
+  const layerProps = useLayerProps();
+
+  // Workaround for esri not recognizing React context.
+  // Syncs a global variable with React context.
+  useEffect(() => {
+    terrain3dUseElevationGlobal = terrain3dUseElevation;
+  }, [terrain3dUseElevation]);
 
   // Creates and adds the home widget to the map.
   // Also moves the zoom widget to the top-right
   useEffect(() => {
-    if (!mapView || !setHomeWidget || homeWidget) return;
+    if (!mapView || !sceneView || !setHomeWidget || homeWidget) return;
 
-    const widget = new Home({ view: mapView });
+    const widget2d = new Home({ view: mapView });
+    mapView.ui.add(widget2d, { position: 'top-right', index: 1 });
 
-    mapView.ui.add(widget, { position: 'top-right', index: 1 });
-    mapView.ui.move('zoom', 'top-right');
+    const widget3d = new Home({ view: sceneView });
+    sceneView.ui.add(widget3d, { position: 'top-right', index: 1 });
 
-    setHomeWidget(widget);
-  }, [mapView, homeWidget, setHomeWidget]);
+    setHomeWidget({
+      '2d': widget2d,
+      '3d': widget3d,
+    });
+  }, [mapView, homeWidget, setHomeWidget, sceneView]);
+
+  // Initialize the measurement widget
+  const [measurementWidget, setMeasurementWidget] =
+    useState<Measurement | null>(null);
+  useEffect(() => {
+    if (!mapView || !sceneView || measurementWidget) return;
+
+    const widget = new Measurement({
+      areaUnit: 'imperial',
+      linearUnit: 'imperial',
+      view: mapView,
+    });
+
+    setMeasurementWidget(widget);
+  }, [displayDimensions, mapView, measurementWidget, sceneView]);
+
+  // Display the measurement widget on the screen
+  useEffect(() => {
+    if (!mapView || !sceneView || !measurementWidget) return;
+
+    // sync the measurement widget settings to 2d/3d
+    measurementWidget.clear();
+    measurementWidget.view = displayDimensions === '3d' ? sceneView : mapView;
+    if (displayDimensions === '3d') {
+      mapView.ui.remove(measurementWidget);
+      sceneView.ui.add(measurementWidget, {
+        position: 'bottom-right',
+        index: 0,
+      });
+    } else {
+      sceneView.ui.remove(measurementWidget);
+      mapView.ui.add(measurementWidget, { position: 'bottom-right', index: 0 });
+    }
+
+    // add measurement widget to 2d view
+    const node2d = document.createElement('div');
+    mapView.ui.add(node2d, { position: 'top-right', index: 0 });
+    createRoot(node2d).render(
+      <CustomMeasurementWidget
+        displayDimensions={displayDimensions}
+        measurementWidget={measurementWidget}
+      />,
+    );
+
+    // add measurement widget to 3d view
+    const node3d = document.createElement('div');
+    sceneView.ui.add(node3d, { position: 'top-right', index: 0 });
+    createRoot(node3d).render(
+      <CustomMeasurementWidget
+        displayDimensions={displayDimensions}
+        measurementWidget={measurementWidget}
+      />,
+    );
+
+    return function cleanup() {
+      mapView?.ui.remove(node2d);
+      sceneView?.ui.remove(node3d);
+    };
+  }, [displayDimensions, mapView, measurementWidget, sceneView]);
+
+  // Creates the sketch widget used for selecting/moving/deleting samples
+  // Also creates an event handler for keeping track of changes
+  const [sketchWidget, setSketchWidget] = useState<SketchWidgetType | null>(
+    null,
+  );
+  const [updateGraphics, setUpdateGraphics] = useState<__esri.Graphic[]>([]);
+  useEffect(() => {
+    if (!mapView || !sketchLayer || sketchWidget) return;
+
+    function buildWidget(
+      view: __esri.MapView | __esri.SceneView,
+      layer: LayerType,
+      svm: __esri.SketchViewModel,
+    ) {
+      const tempSvm = svm as any;
+      const tempWindow = window as any;
+      tempWindow.sampleSketchVmInternalLayerId =
+        tempSvm._internalGraphicsLayer.id;
+
+      const widget = new Sketch({
+        availableCreateTools: [],
+        layer: layer.sketchLayer,
+        view,
+        viewModel: svm as any,
+        visibleElements: {
+          duplicateButton: false,
+          settingsMenu: false,
+          undoRedoMenu: false,
+        },
+      });
+
+      reactiveUtils.watch(
+        () => widget.updateGraphics.length,
+        () => {
+          setUpdateGraphics(widget.updateGraphics.toArray());
+        },
+      );
+
+      return widget;
+    }
+
+    const svm2d = new SketchViewModel({
+      layer: sketchLayer.sketchLayer,
+      view: mapView,
+      polygonSymbol: defaultSymbols.symbols['Samples'],
+      pointSymbol: defaultSymbols.symbols['Samples'] as any,
+      defaultCreateOptions: {
+        hasZ: false,
+      },
+      defaultUpdateOptions: {
+        enableZ: false,
+      },
+      snappingOptions: {
+        featureSources: [],
+      },
+    });
+    const widget2d = buildWidget(mapView, sketchLayer, svm2d);
+    mapView.ui.add(widget2d, { position: 'top-right', index: 0 });
+
+    const svm3d = new SketchViewModel({
+      layer: sketchLayer.sketchLayer,
+      view: sceneView,
+      polygonSymbol: defaultSymbols.symbols['Samples'],
+      pointSymbol: defaultSymbols.symbols['Samples'] as any,
+      defaultCreateOptions: {
+        hasZ: true,
+      },
+      defaultUpdateOptions: {
+        enableZ: true,
+      },
+      snappingOptions: {
+        featureSources: [{ layer: sketchLayer.sketchLayer }],
+      },
+    });
+    const widget3d = buildWidget(sceneView, sketchLayer, svm3d);
+
+    setSketchVM({
+      '2d': svm2d,
+      '3d': svm3d,
+    });
+    setSketchWidget({
+      '2d': widget2d,
+      '3d': widget3d,
+    });
+  }, [
+    defaultSymbols,
+    mapView,
+    sceneView,
+    sketchLayer,
+    setSketchVM,
+    sketchWidget,
+  ]);
+
+  // Opens a popup for when multiple samples are selected at once
+  useEffect(() => {
+    if (!mapView || !sceneView || !sketchLayer || !sketchWidget) return;
+    if (layerProps.status !== 'success') return;
+
+    const sketchWidgetLocal = sketchWidget[displayDimensions];
+
+    const newSelectedSampleIds = updateGraphics.map((feature) => {
+      return {
+        PERMANENT_IDENTIFIER: feature.attributes.PERMANENT_IDENTIFIER,
+        DECISIONUNITUUID: feature.attributes.DECISIONUNITUUID,
+        selection_method: 'sample-click',
+      } as SelectedSampleType;
+    });
+    setSelectedSampleIds(newSelectedSampleIds);
+
+    // get all of the graphics within the click except for those associated
+    // with the sketch tools
+    const popupItems: __esri.Graphic[] = [];
+    const newIds: string[] = [];
+    sketchWidgetLocal.updateGraphics.forEach((graphic: any) => {
+      popupItems.push(graphic);
+
+      // get a list of graphic ids
+      if (graphic.attributes?.PERMANENT_IDENTIFIER) {
+        newIds.push(graphic.attributes.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    const view = displayDimensions === '2d' ? mapView : sceneView;
+
+    // get list of graphic ids currently in the popup
+    const curIds: string[] = [];
+    view.popup?.features?.forEach((feature: any) => {
+      if (feature.attributes?.PERMANENT_IDENTIFIER) {
+        curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
+      }
+    });
+
+    // sort the id arrays
+    newIds.sort();
+    curIds.sort();
+
+    // open the popup
+    if (popupItems.length > 0 && curIds.toString() !== newIds.toString()) {
+      const firstGeometry = popupItems[0].geometry as any;
+      if (popupItems.length === 1) {
+        const popupProps = {
+          location:
+            firstGeometry.type === 'point'
+              ? firstGeometry
+              : firstGeometry.centroid,
+          features: popupItems,
+          visible: true,
+        };
+        view.popup = new Popup(popupProps);
+      } else {
+        const content = (
+          <MapPopup
+            features={popupItems.map((item) => {
+              return {
+                graphic: item,
+              };
+            })}
+            edits={edits}
+            setEdits={setEdits}
+            layers={layers}
+            fieldInfos={[]}
+            layerProps={layerProps}
+            onClick={handlePopupClick}
+          />
+        );
+
+        // wrap the content for esri
+        const contentContainer = document.createElement('div');
+        createRoot(contentContainer).render(content);
+
+        view.popup = new Popup({
+          location:
+            firstGeometry.type === 'point'
+              ? firstGeometry
+              : firstGeometry.centroid,
+          content: contentContainer,
+          title: 'Edit Multiple',
+          visible: true,
+        });
+
+        const deleteMultiAction = view.popup.actions.find(
+          (action) => action.id === 'delete-multi',
+        );
+        if (!deleteMultiAction) {
+          view.popup.actions.add({
+            title: 'Delete Samples',
+            id: 'delete-multi',
+            className: 'esri-icon-trash',
+          } as __esri.ActionButton);
+        }
+
+        const tableMultiAction = view.popup.actions.find(
+          (action) => action.id === 'table-multi',
+        );
+        if (!tableMultiAction) {
+          view.popup.actions.add({
+            title: 'View In Table',
+            id: 'table-multi',
+            className: 'esri-icon-table',
+          } as __esri.ActionButton);
+        }
+      }
+    }
+  }, [
+    displayDimensions,
+    edits,
+    layerProps,
+    layers,
+    mapView,
+    sceneView,
+    setEdits,
+    setSelectedSampleIds,
+    sketchLayer,
+    sketchWidget,
+    updateGraphics,
+  ]);
 
   // Creates and adds the scale bar widget to the map
   const [scaleBar, setScaleBar] = useState<__esri.ScaleBar | null>(null);
@@ -163,40 +526,34 @@ function MapWidgets({ mapView }: Props) {
   useEffect(() => {
     if (!mapView || locateWidget) return;
 
-    const widget = new Locate({ view: mapView });
+    function buildWidget(view: __esri.MapView | __esri.SceneView) {
+      const widget = new Locate({ view });
 
-    // show the locate icon on success
-    widget.on('locate', (event) => {
-      replaceClassName('esri-icon-error2', 'esri-icon-locate');
-    });
+      // show the locate icon on success
+      widget.on('locate', (event) => {
+        replaceClassName('esri-icon-error2', 'esri-icon-locate');
+      });
 
-    // show the error icon on failure
-    widget.on('locate-error', (event) => {
-      replaceClassName('esri-icon-locate', 'esri-icon-error2');
-    });
+      // show the error icon on failure
+      widget.on('locate-error', (event) => {
+        replaceClassName('esri-icon-locate', 'esri-icon-error2');
+      });
 
-    mapView.ui.add(widget, { position: 'top-right', index: 2 });
-    setLocateWidget(widget);
-  }, [mapView, locateWidget]);
+      return widget;
+    }
 
-  // Creates the SketchViewModel
-  useEffect(() => {
-    if (!sketchLayer) return;
-    if (sketchVM) return;
-    const svm = new SketchViewModel({
-      layer: sketchLayer.sketchLayer,
-      view: mapView,
-      polygonSymbol: defaultSymbols.symbols['Samples'],
-      pointSymbol: defaultSymbols.symbols['Samples'] as any,
-    });
+    const widget2d = buildWidget(mapView);
+    mapView.ui.add(widget2d, { position: 'top-right', index: 2 });
+    mapView.ui.move('zoom', { position: 'top-right', index: 3 });
 
-    const tempSvm = svm as any;
-    const tempWindow = window as any;
-    tempWindow.sampleSketchVmInternalLayerId =
-      tempSvm._internalGraphicsLayer.id;
+    const widget3d = buildWidget(sceneView);
+    sceneView.ui.add(widget3d, { position: 'top-right', index: 2 });
+    sceneView.ui.move('zoom', { position: 'top-right', index: 3 });
+    sceneView.ui.move('navigation-toggle', { position: 'top-right', index: 4 });
+    sceneView.ui.move('compass', { position: 'top-right', index: 5 });
 
-    setSketchVM(svm);
-  }, [defaultSymbols, mapView, sketchVM, setSketchVM, sketchLayer]);
+    setLocateWidget(widget2d);
+  }, [mapView, sceneView, locateWidget]);
 
   // Creates the SketchViewModel
   useEffect(() => {
@@ -224,12 +581,73 @@ function MapWidgets({ mapView }: Props) {
       currentPanel?.value === 'locateSamples' &&
       sketchLayer?.sketchLayer?.type === 'graphics'
     ) {
-      sketchVM.layer = sketchLayer.sketchLayer;
+      sketchVM['2d'].layer = sketchLayer.sketchLayer;
+      sketchVM['3d'].layer = sketchLayer.sketchLayer;
+      if (sketchWidget) sketchWidget['2d'].layer = sketchLayer.sketchLayer;
+      if (sketchWidget) sketchWidget['3d'].layer = sketchLayer.sketchLayer;
     } else {
       // disable the sketch vm for any panel other than locateSamples
-      sketchVM.layer = null as unknown as __esri.GraphicsLayer;
+      sketchVM['2d'].layer = null as unknown as __esri.GraphicsLayer;
+      sketchVM['3d'].layer = null as unknown as __esri.GraphicsLayer;
     }
-  }, [currentPanel, defaultSymbols, sketchVM, sketchLayer]);
+  }, [currentPanel, defaultSymbols, sketchWidget, sketchVM, sketchLayer]);
+
+  // Updates the selected layer of the sketchViewModel
+  const [lastDisplayDimensions, setLastDisplayDimensions] =
+    useState(displayDimensions);
+  useEffect(() => {
+    if (!sketchVM || !sketchLayer?.sketchLayer || !mapView || !sceneView)
+      return;
+
+    sketchVM['2d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+    sketchVM['2d'].pointSymbol = {
+      ...defaultSymbols.symbols['Samples'],
+      type: 'simple-marker',
+    } as any;
+    sketchVM['3d'].polygonSymbol = defaultSymbols.symbols['Samples'] as any;
+    sketchVM['3d'].pointSymbol = {
+      ...defaultSymbols.symbols['Samples'],
+      type: 'simple-marker',
+    } as any;
+
+    sketchLayer.sketchLayer.elevationInfo =
+      displayDimensions === '3d' ? { mode: 'absolute-height' } : (null as any);
+
+    // get the button and it's id
+    const button = document.querySelector('.sketch-button-selected');
+    const id = button && button.id;
+    if (id && sampleAttributes.hasOwnProperty(id)) {
+      // determine whether the sketch button draws points or polygons
+      const attributes = sampleAttributes[id as any];
+      if (attributes.POINT_STYLE.includes('path|')) {
+        (sketchVM['2d'].pointSymbol as any).style = 'path';
+        (sketchVM['2d'].pointSymbol as any).path =
+          attributes.POINT_STYLE.replace('path|', '');
+        (sketchVM['3d'].pointSymbol as any).style = 'path';
+        (sketchVM['3d'].pointSymbol as any).path =
+          attributes.POINT_STYLE.replace('path|', '');
+      } else {
+        (sketchVM['2d'].pointSymbol as any).style = attributes.POINT_STYLE;
+        (sketchVM['3d'].pointSymbol as any).style = attributes.POINT_STYLE;
+      }
+
+      if (displayDimensions !== lastDisplayDimensions) {
+        let shapeType = attributes.ShapeType;
+        startSketch(shapeType);
+        setLastDisplayDimensions(displayDimensions);
+      }
+    }
+  }, [
+    defaultSymbols,
+    displayDimensions,
+    lastDisplayDimensions,
+    mapView,
+    sceneView,
+    sampleAttributes,
+    sketchLayer,
+    sketchVM,
+    startSketch,
+  ]);
 
   // Updates the selected layer of the aoiSketchViewModel
   useEffect(() => {
@@ -247,11 +665,45 @@ function MapWidgets({ mapView }: Props) {
       aoiSketchVM.pointSymbol = defaultSymbols.symbols[
         'Area of Interest'
       ] as any;
+
+      if (displayDimensions === '2d') {
+        aoiSketchVM.view = mapView;
+        aoiSketchVM.layer.elevationInfo = null as any;
+        aoiSketchVM.snappingOptions = {
+          featureSources: [],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: false,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: false,
+        };
+      } else {
+        aoiSketchVM.view = sceneView;
+        aoiSketchVM.layer.elevationInfo = { mode: 'absolute-height' };
+        aoiSketchVM.snappingOptions = {
+          featureSources: [{ layer: aoiSketchVM.layer }],
+        } as any;
+        aoiSketchVM.defaultCreateOptions = {
+          hasZ: true,
+        };
+        aoiSketchVM.defaultUpdateOptions = {
+          enableZ: true,
+        };
+      }
     } else {
       // disable the sketch vm for any panel other than locateSamples
       aoiSketchVM.layer = null as unknown as __esri.GraphicsLayer;
     }
-  }, [currentPanel, defaultSymbols, aoiSketchVM, aoiSketchLayer]);
+  }, [
+    aoiSketchLayer,
+    aoiSketchVM,
+    currentPanel,
+    defaultSymbols,
+    displayDimensions,
+    mapView,
+    sceneView,
+  ]);
 
   // Creates the sketchVM events for placing the graphic on the map
   const setupEvents = useCallback(
@@ -260,11 +712,30 @@ function MapWidgets({ mapView }: Props) {
       setter: Dispatch<SetStateAction<boolean>>,
       sketchEventSetter: Dispatch<any>,
     ) => {
+      let firstPoint: __esri.Point | null = null;
+
       sketchViewModel.on('create', (event) => {
         const { graphic } = event;
+        if (!graphic) return;
 
-        // place the graphic on the map when the drawing is complete
-        if (event.state === 'complete') {
+        if (!firstPoint && graphic.geometry) {
+          if (graphic.geometry.type === 'point') {
+            firstPoint = graphic.geometry as __esri.Point;
+          }
+          if (graphic.geometry.type === 'polygon') {
+            const poly = graphic.geometry as __esri.Polygon;
+            const firstCoordinate = poly.rings?.[0]?.[0];
+            firstPoint = new Point({
+              x: firstCoordinate[0],
+              y: firstCoordinate[1],
+              spatialReference: {
+                wkid: poly.spatialReference.wkid,
+              },
+            });
+          }
+        }
+
+        async function processSketchEvent() {
           // get the button and it's id
           const button = document.querySelector('.sketch-button-selected');
           const id = button && button.id;
@@ -313,11 +784,21 @@ function MapWidgets({ mapView }: Props) {
             getPopupTemplate(layerType, getTrainingMode()),
           );
 
+          // update the z values
+          await setZValues({
+            map: sketchViewModel.view.map,
+            graphic,
+            zRefParam: firstPoint,
+            zOverride: terrain3dUseElevationGlobal ? null : 0,
+          });
+
           // predefined boxes (sponge, micro vac and swab) need to be
           // converted to a box of a specific size.
           if (graphic.attributes.ShapeType === 'point') {
-            createBuffer(graphic);
+            await createBuffer(graphic);
           }
+
+          graphic.symbol = sketchViewModel.polygonSymbol;
 
           if (id !== 'sampling-mask') {
             // find the points version of the layer
@@ -328,16 +809,36 @@ function MapWidgets({ mapView }: Props) {
             if (pointLayer) {
               pointLayer.add(convertToPoint(graphic));
             }
+
+            const hybridLayer = (graphic.layer as any).parent.layers.find(
+              (layer: any) => `${layerId}-hybrid` === layer.id,
+            );
+            if (hybridLayer) {
+              hybridLayer.add(
+                graphic.attributes.ShapeType === 'point'
+                  ? convertToPoint(graphic)
+                  : graphic.clone(),
+              );
+            }
           }
 
           // save the graphic
-          sketchViewModel.complete();
           sketchEventSetter(event);
+
+          firstPoint = null;
 
           if (id !== 'sampling-mask') {
             // start next graphic
-            sketchViewModel.create(graphic.attributes.ShapeType);
+            setTimeout(() => {
+              sketchViewModel.create(graphic.attributes.ShapeType);
+            }, 100);
           }
+        }
+
+        // place the graphic on the map when the drawing is complete
+        if (event.state === 'complete') {
+          sketchViewModel.complete();
+          processSketchEvent();
         }
       });
 
@@ -368,35 +869,63 @@ function MapWidgets({ mapView }: Props) {
             const layerId = graphic.layer?.id;
             const pointLayer: __esri.GraphicsLayer = (
               graphic.layer as any
-            ).parent.layers.find(
+            )?.parent?.layers?.find(
               (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
             );
-            if (!pointLayer) return;
+            if (pointLayer) {
+              // Find the original point graphic and remove it
+              const graphicsToRemove: __esri.Graphic[] = [];
+              pointLayer.graphics.forEach((pointVersion) => {
+                if (
+                  graphic.attributes.PERMANENT_IDENTIFIER ===
+                  pointVersion.attributes.PERMANENT_IDENTIFIER
+                ) {
+                  graphicsToRemove.push(pointVersion);
+                }
+              });
+              pointLayer.removeMany(graphicsToRemove);
 
-            // Find the original point graphic and remove it
-            const graphicsToRemove: __esri.Graphic[] = [];
-            pointLayer.graphics.forEach((pointVersion) => {
-              if (
-                graphic.attributes.PERMANENT_IDENTIFIER ===
-                pointVersion.attributes.PERMANENT_IDENTIFIER
-              ) {
-                graphicsToRemove.push(pointVersion);
+              // Re-add the point version of the graphic
+              const symbol = graphic.symbol as any as PolygonSymbol;
+              (pointLayer as any).add({
+                attributes: graphic.attributes,
+                geometry: (graphic.geometry as __esri.Polygon).centroid,
+                popupTemplate: graphic.popupTemplate,
+                symbol: getPointSymbol(graphic, symbol),
+              });
+            }
+
+            const hybridLayer: __esri.GraphicsLayer = (
+              graphic.layer as any
+            )?.parent?.layers?.find(
+              (layer: __esri.GraphicsLayer) => `${layerId}-hybrid` === layer.id,
+            );
+            if (hybridLayer) {
+              // Find the original point graphic and remove it
+              const graphicsToRemove: __esri.Graphic[] = [];
+              hybridLayer.graphics.forEach((hybridVersion) => {
+                if (
+                  graphic.attributes.PERMANENT_IDENTIFIER ===
+                  hybridVersion.attributes.PERMANENT_IDENTIFIER
+                ) {
+                  graphicsToRemove.push(hybridVersion);
+                }
+              });
+              hybridLayer.removeMany(graphicsToRemove);
+
+              // Re-add the point version of the graphic
+              const symbol = graphic.symbol as any as PolygonSymbol;
+              if (graphic.attributes.ShapeType === 'point') {
+                (hybridLayer as any).add({
+                  attributes: graphic.attributes,
+                  geometry: (graphic.geometry as __esri.Polygon).centroid,
+                  popupTemplate: graphic.popupTemplate,
+                  symbol: getPointSymbol(graphic, symbol),
+                });
+              } else {
+                (hybridLayer as any).add(graphic.clone());
               }
-            });
-            pointLayer.removeMany(graphicsToRemove);
-
-            // Re-add the point version of the graphic
-            const symbol = graphic.symbol as __esri.SimpleFillSymbol;
-            (pointLayer as any).add({
-              attributes: graphic.attributes,
-              geometry: (graphic.geometry as __esri.Polygon).centroid,
-              popupTemplate: graphic.popupTemplate,
-              symbol: {
-                color: symbol.color,
-                outline: symbol.outline,
-                type: 'simple-marker',
-              },
-            });
+            }
           });
         }
 
@@ -415,7 +944,7 @@ function MapWidgets({ mapView }: Props) {
         // prevent scale and reshape changes on the predefined graphics
         // allow moves and rotates
         if (isShapeChange && hasPredefinedBoxes) {
-          sketchViewModel.cancel();
+          sketchViewModel.undo();
         }
 
         setter(isActive);
@@ -436,25 +965,44 @@ function MapWidgets({ mapView }: Props) {
           ).parent.layers.find(
             (layer: __esri.GraphicsLayer) => `${layerId}-points` === layer.id,
           );
-          if (!pointLayer) return;
+          if (pointLayer) {
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            pointLayer.graphics.forEach((pointVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                pointVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(pointVersion);
+              }
+            });
+            pointLayer.removeMany(graphicsToRemove);
+          }
 
-          // Find the original point graphic and remove it
-          const graphicsToRemove: __esri.Graphic[] = [];
-          pointLayer.graphics.forEach((pointVersion) => {
-            if (
-              graphic.attributes.PERMANENT_IDENTIFIER ===
-              pointVersion.attributes.PERMANENT_IDENTIFIER
-            ) {
-              graphicsToRemove.push(pointVersion);
-            }
-          });
-          pointLayer.removeMany(graphicsToRemove);
+          const hybridLayer: __esri.GraphicsLayer = (
+            tempSketchVM.layer as any
+          ).parent.layers.find(
+            (layer: __esri.GraphicsLayer) => `${layerId}-hybrid` === layer.id,
+          );
+          if (hybridLayer) {
+            // Find the original point graphic and remove it
+            const graphicsToRemove: __esri.Graphic[] = [];
+            hybridLayer.graphics.forEach((hybridVersion) => {
+              if (
+                graphic.attributes.PERMANENT_IDENTIFIER ===
+                hybridVersion.attributes.PERMANENT_IDENTIFIER
+              ) {
+                graphicsToRemove.push(hybridVersion);
+              }
+            });
+            hybridLayer.removeMany(graphicsToRemove);
+          }
         });
 
         sketchEventSetter(event);
       });
     },
-    [createBuffer, getPopupTemplate, getTrainingMode, userInfo],
+    [getPopupTemplate, getTrainingMode, userInfo],
   );
 
   // Setup the sketch view model events for the base sketchVM
@@ -465,8 +1013,9 @@ function MapWidgets({ mapView }: Props) {
   ] = useState(false);
   const [updateSketchEvent, setUpdateSketchEvent] = useState<any>(null);
   useEffect(() => {
-    if (!sketchVM || !loadedProjection || sketchEventsInitialized) return;
-    setupEvents(sketchVM, setSketchVMActive, setUpdateSketchEvent);
+    if (!sketchVM || sketchEventsInitialized) return;
+    setupEvents(sketchVM['2d'], setSketchVMActive, setUpdateSketchEvent);
+    setupEvents(sketchVM['3d'], setSketchVMActive, setUpdateSketchEvent);
 
     setSketchEventsInitialized(true);
   }, [
@@ -474,7 +1023,6 @@ function MapWidgets({ mapView }: Props) {
     setupEvents,
     sketchEventsInitialized,
     setSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Setup the sketch view model events for the Sampling Mask sketchVM
@@ -488,7 +1036,7 @@ function MapWidgets({ mapView }: Props) {
     setAoiUpdateSketchEvent, //
   ] = useState<any>(null);
   useEffect(() => {
-    if (!aoiSketchVM || !loadedProjection || aoiSketchEventsInitialized) return;
+    if (!aoiSketchVM || aoiSketchEventsInitialized) return;
     setupEvents(aoiSketchVM, setAoiSketchVMActive, setAoiUpdateSketchEvent);
 
     setAoiSketchEventsInitialized(true);
@@ -497,7 +1045,6 @@ function MapWidgets({ mapView }: Props) {
     setupEvents,
     aoiSketchEventsInitialized,
     setAoiSketchEventsInitialized,
-    loadedProjection,
   ]);
 
   // Get the active sketchVM
@@ -642,15 +1189,19 @@ function MapWidgets({ mapView }: Props) {
     if (
       aoiUpdateSketchEvent ||
       !sketchVM ||
-      sketchVM.layer ||
+      sketchVM['2d'].layer ||
+      sketchVM['3d'].layer ||
       sketchLayer?.sketchLayer?.type !== 'graphics' ||
       currentPanel?.value !== 'locateSamples'
     ) {
       return;
     }
 
-    sketchVM.layer = sketchLayer.sketchLayer;
-  }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer]);
+    sketchVM['2d'].layer = sketchLayer.sketchLayer;
+    sketchVM['3d'].layer = sketchLayer.sketchLayer;
+    if (sketchWidget) sketchWidget['2d'].layer = sketchLayer.sketchLayer;
+    if (sketchWidget) sketchWidget['3d'].layer = sketchLayer.sketchLayer;
+  }, [currentPanel, aoiUpdateSketchEvent, sketchVM, sketchLayer, sketchWidget]);
 
   // Updates the popupTemplates when trainingMode is toggled on/off
   useEffect(() => {
@@ -669,6 +1220,11 @@ function MapWidgets({ mapView }: Props) {
         }
         if (layer.pointsLayer?.type === 'graphics') {
           layer.pointsLayer.graphics.forEach((graphic) => {
+            graphic.popupTemplate = popupTemplate;
+          });
+        }
+        if (layer.hybridLayer?.type === 'graphics') {
+          layer.hybridLayer.graphics.forEach((graphic) => {
             graphic.popupTemplate = popupTemplate;
           });
         }
@@ -709,13 +1265,23 @@ function MapWidgets({ mapView }: Props) {
         // Highlight the graphics with a contam value
         if (highlightGraphics.length === 0) return;
 
-        mapView.whenLayerView(tempLayer).then((layerView) => {
+        const view = displayDimensions === '3d' ? sceneView : mapView;
+        view.whenLayerView(tempLayer).then((layerView) => {
           const handle = layerView.highlight(highlightGraphics);
           handles.add(handle, group);
         });
       });
     }
-  }, [map, handles, edits, selectedScenario, mapView, trainingMode]);
+  }, [
+    displayDimensions,
+    map,
+    handles,
+    edits,
+    selectedScenario,
+    mapView,
+    sceneView,
+    trainingMode,
+  ]);
 
   useEffect(() => {
     if (!map) {
@@ -746,10 +1312,14 @@ function MapWidgets({ mapView }: Props) {
       // Highlight the graphics with a contam value
       if (itemsToHighlight.length === 0) return;
 
-      mapView.whenLayerView(tempLayer).then((layerView) => {
-        const handle = layerView.highlight(itemsToHighlight);
-        handles.add(handle, group);
-      });
+      const view = displayDimensions === '3d' ? sceneView : mapView;
+      view
+        .whenLayerView(tempLayer)
+        .then((layerView) => {
+          const handle = layerView.highlight(itemsToHighlight);
+          handles.add(handle, group);
+        })
+        .catch((err) => console.error(err));
     }
 
     const samples: any = {};
@@ -770,10 +1340,233 @@ function MapWidgets({ mapView }: Props) {
 
       highlightGraphics(layer.sketchLayer, sampleUuids);
       highlightGraphics(layer.pointsLayer, sampleUuids);
+      highlightGraphics(layer.hybridLayer, sampleUuids);
     });
-  }, [map, handles, layers, mapView, selectedSampleIds, showAsPoints]);
+  }, [
+    map,
+    handles,
+    layers,
+    mapView,
+    sceneView,
+    selectedSampleIds,
+    displayDimensions,
+    displayGeometryType,
+  ]);
+
+  const { setTablePanelExpanded } = useContext(NavigationContext);
+
+  const [samplesToDelete, setSamplesToDelete] = useState<
+    __esri.Graphic[] | null
+  >(null);
+  useEffect(() => {
+    if (!samplesToDelete || samplesToDelete.length === 0) return;
+
+    const changes = new Collection<__esri.Graphic>();
+    changes.addMany(samplesToDelete);
+
+    // find the layer
+    const layer = layers.find(
+      (layer) =>
+        layer.layerId ===
+        samplesToDelete[0].layer.id
+          .replace('-points', '')
+          .replace('-hybrid', ''),
+    );
+    if (!layer || layer.sketchLayer.type !== 'graphics') return;
+
+    // make a copy of the edits context variable
+    const editsCopy = updateLayerEdits({
+      edits,
+      layer,
+      type: 'delete',
+      changes,
+    });
+
+    setEdits(editsCopy);
+
+    const idsToDelete = samplesToDelete.map(
+      (sample) => sample.attributes.PERMANENT_IDENTIFIER,
+    );
+
+    // Find the original point graphic and remove it
+    let graphicsToRemove: __esri.Graphic[] = [];
+    layer.sketchLayer.graphics.forEach((polygonVersion) => {
+      if (
+        idsToDelete.includes(polygonVersion.attributes.PERMANENT_IDENTIFIER)
+      ) {
+        graphicsToRemove.push(polygonVersion);
+      }
+    });
+    layer.sketchLayer.removeMany(graphicsToRemove);
+
+    if (!layer.pointsLayer || !layer.hybridLayer) return;
+
+    // Find the original point graphic and remove it
+    graphicsToRemove = [];
+    layer.pointsLayer.graphics.forEach((pointVersion) => {
+      if (idsToDelete.includes(pointVersion.attributes.PERMANENT_IDENTIFIER)) {
+        graphicsToRemove.push(pointVersion);
+      }
+    });
+    layer.pointsLayer.removeMany(graphicsToRemove);
+
+    layer.hybridLayer.graphics.forEach((hybridVersion) => {
+      if (idsToDelete.includes(hybridVersion.attributes.PERMANENT_IDENTIFIER)) {
+        graphicsToRemove.push(hybridVersion);
+      }
+    });
+    layer.hybridLayer.removeMany(graphicsToRemove);
+
+    // close the popup
+    if (mapView) mapView.closePopup();
+    if (sceneView) sceneView.closePopup();
+
+    setSamplesToDelete(null);
+  }, [edits, setEdits, layers, mapView, sceneView, samplesToDelete]);
+
+  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  useEffect(() => {
+    if (!mapView || !sceneView || !sketchVM || popupActionsInitialized) return;
+
+    setPopupActionsInitialized(true);
+
+    function setupPopupWatchers(
+      view: __esri.MapView | __esri.SceneView,
+      sketchVM: SketchViewModel,
+    ) {
+      const tempMapView = view as any;
+      tempMapView.popup._displayActionTextLimit = 1;
+
+      reactiveUtils.watch(
+        () => view.popup,
+        () => {
+          view.popup.on('trigger-action', (event) => {
+            // Workaround for target not being on the PopupTriggerActionEvent
+            if (event.action.id === 'delete' && view?.popup?.selectedFeature) {
+              setSamplesToDelete([view.popup.selectedFeature]);
+            }
+            if (event.action.id === 'delete-multi') {
+              setSamplesToDelete(sketchVM.updateGraphics.toArray());
+            }
+            if (['table', 'table-multi'].includes(event.action.id)) {
+              setTablePanelExpanded(true);
+            }
+          });
+
+          view.popup.watch('selectedFeature', (graphic) => {
+            if (view.popup.title !== 'Edit Multiple') {
+              const deleteMultiAction = view.popup.actions.find(
+                (action) => action.id === 'delete-multi',
+              );
+              if (deleteMultiAction)
+                view.popup.actions.remove(deleteMultiAction);
+
+              const tableMultiAction = view.popup.actions.find(
+                (action) => action.id === 'table-multi',
+              );
+              if (tableMultiAction) view.popup.actions.remove(tableMultiAction);
+            }
+          });
+        },
+      );
+    }
+
+    setupPopupWatchers(mapView, sketchVM['2d']);
+    setupPopupWatchers(sceneView, sketchVM['3d']);
+  }, [
+    mapView,
+    popupActionsInitialized,
+    sceneView,
+    setTablePanelExpanded,
+    sketchVM,
+  ]);
 
   return null;
+}
+
+type CustomWidgetButtonProps = {
+  active: boolean;
+  iconClass: string;
+  onClick: Function;
+  title: string;
+};
+
+function CustomWidgetButton({
+  active,
+  iconClass,
+  onClick,
+  title,
+}: CustomWidgetButtonProps) {
+  const [hover, setHover] = useState(false);
+
+  return (
+    <div
+      title={title}
+      css={active ? divActiveStyle : hover ? divHoverStyle : divStyle}
+      onMouseOver={() => setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onClick={() => onClick()}
+      onKeyDown={() => onClick()}
+      role="button"
+      tabIndex={0}
+    >
+      <span
+        aria-hidden="true"
+        className={iconClass}
+        css={
+          active ? buttonActiveStyle : hover ? buttonHoverStyle : buttonStyle
+        }
+      />
+    </div>
+  );
+}
+
+type CustomMeasurementWidgetProps = {
+  displayDimensions: '2d' | '3d';
+  measurementWidget: Measurement;
+};
+
+function CustomMeasurementWidget({
+  displayDimensions,
+  measurementWidget,
+}: CustomMeasurementWidgetProps) {
+  const [activeTool, setActiveTool] = useState<'area' | 'distance' | null>(
+    null,
+  );
+
+  return (
+    <div css={measurementContainerStyles}>
+      <CustomWidgetButton
+        active={activeTool === 'distance'}
+        iconClass="esri-icon esri-icon-measure-line"
+        title="Distance Measurement Tool"
+        onClick={() => {
+          setActiveTool('distance');
+
+          measurementWidget.activeTool =
+            displayDimensions === '2d' ? 'distance' : 'direct-line';
+        }}
+      />
+      <CustomWidgetButton
+        active={activeTool === 'area'}
+        iconClass="esri-icon esri-icon-measure-area"
+        title="Area Measurement Tool"
+        onClick={() => {
+          setActiveTool('area');
+          measurementWidget.activeTool = 'area';
+        }}
+      />
+      <CustomWidgetButton
+        active={false}
+        iconClass="esri-icon esri-icon-close"
+        title="Clear Measurements"
+        onClick={() => {
+          setActiveTool(null);
+          measurementWidget.clear();
+        }}
+      />
+    </div>
+  );
 }
 
 export default MapWidgets;

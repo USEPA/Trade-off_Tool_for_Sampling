@@ -1,33 +1,5 @@
-/**
- * Script from ESRI for escaping an ArcGIS Online usernames and
- * organization ids.
- *
- * @param value The ArcGIS Online username or organization id
- * @returns The escaped version of the username or org id.
- */
-export function escapeForLucene(value: string) {
-  var a = [
-    '+',
-    '-',
-    '&',
-    '!',
-    '(',
-    ')',
-    '{',
-    '}',
-    '[',
-    ']',
-    '^',
-    '"',
-    '~',
-    '*',
-    '?',
-    ':',
-    '\\',
-  ];
-  var r = new RegExp('(\\' + a.join('|\\') + ')', 'g');
-  return value.replace(r, '\\$1');
-}
+import { EditsType } from 'types/Edits';
+import { LayerType } from 'types/Layer';
 
 /**
  * Utility function to split up an array into chunks of a designated length.
@@ -72,6 +44,37 @@ export function createErrorObject(error: any) {
 }
 
 /**
+ * Script from ESRI for escaping an ArcGIS Online usernames and
+ * organization ids.
+ *
+ * @param value The ArcGIS Online username or organization id
+ * @returns The escaped version of the username or org id.
+ */
+export function escapeForLucene(value: string) {
+  var a = [
+    '+',
+    '-',
+    '&',
+    '!',
+    '(',
+    ')',
+    '{',
+    '}',
+    '[',
+    ']',
+    '^',
+    '"',
+    '~',
+    '*',
+    '?',
+    ':',
+    '\\',
+  ];
+  var r = new RegExp('(\\' + a.join('|\\') + ')', 'g');
+  return value.replace(r, '\\$1');
+}
+
+/**
  * Sanitizes regex strings.
  *
  * @param str The regex string to be sanitized
@@ -79,4 +82,80 @@ export function createErrorObject(error: any) {
  */
 export function escapeRegex(str: string) {
   return str.replace(/([.*+?^=!:${}()|\]\\])/g, '\\$1');
+}
+
+/**
+ * Determines if the desired name has already been used as a layer name.
+ * If it has it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+export function getLayerName(layers: LayerType[], desiredName: string) {
+  const numInDesiredName = getNumberFromParen(desiredName);
+  let newName =
+    numInDesiredName || numInDesiredName === 0
+      ? desiredName.replace(`(${numInDesiredName})`, '').trim()
+      : desiredName;
+
+  // get a list of names in use
+  let duplicateCount = 0;
+  layers.forEach((layer) => {
+    // remove any counts from the end of the name to ge an accurate count
+    // for the new name
+    const numInParen = getNumberFromParen(layer.label);
+    const possibleName =
+      numInParen || numInParen === 0
+        ? layer.label.replaceAll(`(${numInParen})`, '').trim()
+        : layer.label;
+
+    if (possibleName === newName) duplicateCount += 1;
+  });
+
+  if (duplicateCount === 0) return newName;
+  else
+    return `${newName} (${
+      duplicateCount === numInDesiredName ? duplicateCount + 1 : duplicateCount
+    })`;
+}
+
+/**
+ * Gets the number from the last parentheses. If the value
+ * is not a number NaN is returned.
+ *
+ * @param str String to get number in last parentheses
+ * @returns
+ */
+function getNumberFromParen(str: string) {
+  const splitLabel = str.split('(');
+  return parseInt(splitLabel[splitLabel.length - 1].replace(')', ''));
+}
+
+/**
+ * Determines if the desired name has already been used as a scenario name.
+ * If it has it appends in index to the end (i.e. '<desiredName> (2)').
+ */
+export function getScenarioName(edits: EditsType, desiredName: string) {
+  const numInDesiredName = getNumberFromParen(desiredName);
+  let newName =
+    numInDesiredName || numInDesiredName === 0
+      ? desiredName.replace(`(${numInDesiredName})`, '').trim()
+      : desiredName;
+
+  // get a list of names in use
+  let duplicateCount = 0;
+  edits.edits.forEach((scenario) => {
+    // remove any counts from the end of the name to ge an accurate count
+    // for the new name
+    const numInParen = getNumberFromParen(scenario.label);
+    const possibleName =
+      numInParen || numInParen === 0
+        ? scenario.label.replaceAll(`(${numInParen})`, '').trim()
+        : scenario.label;
+
+    if (possibleName === newName) duplicateCount += 1;
+  });
+
+  if (duplicateCount === 0) return newName;
+  else
+    return `${newName} (${
+      duplicateCount === numInDesiredName ? duplicateCount + 1 : duplicateCount
+    })`;
 }

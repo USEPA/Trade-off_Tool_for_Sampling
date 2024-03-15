@@ -1,10 +1,16 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
-import Collection from '@arcgis/core/core/Collection';
+import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
+import Popup from '@arcgis/core/widgets/Popup';
 // contexts
-import { NavigationContext } from 'contexts/Navigation';
-import { SketchContext } from 'contexts/Sketch';
+import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
 // utils
-import { updateLayerEdits } from 'utils/sketchUtils';
+import { use3dSketch } from 'utils/hooks';
+
+let ctrl = false;
+let shift = false;
+let sampleAttributesG: any[] = [];
+let sketchVMG: __esri.SketchViewModel | null = null;
+let updateGraphics: __esri.Graphic[] = [];
 
 // Gets the graphic from the hittest
 function getGraphicFromResponse(res: any) {
@@ -23,17 +29,22 @@ function getGraphicFromResponse(res: any) {
 // --- components ---
 type Props = {
   mapView: __esri.MapView;
+  sceneView: __esri.SceneView;
 };
 
-function MapMouseEvents({ mapView }: Props) {
-  const { setTablePanelExpanded } = useContext(NavigationContext);
-  const { edits, setEdits, layers, setSelectedSampleIds } =
-    useContext(SketchContext);
+function MapMouseEvents({ mapView, sceneView }: Props) {
+  const {
+    displayDimensions,
+    sampleAttributes,
+    setSelectedSampleIds,
+    sketchVM,
+  } = useContext(SketchContext);
+  const { startSketch } = use3dSketch();
 
   const handleMapClick = useCallback(
-    (event: any, mapView: __esri.MapView) => {
+    (event: any, view: __esri.MapView | __esri.SceneView) => {
       // perform a hittest on the click location
-      mapView
+      view
         .hitTest(event)
         .then((res: any) => {
           const graphic = getGraphicFromResponse(res);
@@ -85,11 +96,27 @@ function MapMouseEvents({ mapView }: Props) {
             }
           });
 
-          // get list of graphic ids currently in the popup
+          // get list of graphic ids currently in the popup and sketch widget
           const curIds: string[] = [];
-          mapView.popup.features.forEach((feature: any) => {
-            if (feature.attributes?.PERMANENT_IDENTIFIER) {
-              curIds.push(feature.attributes.PERMANENT_IDENTIFIER);
+          const popupFeatures: __esri.Graphic[] = view.popup.features;
+          updateGraphics.forEach((g) => {
+            const popup = popupFeatures?.find(
+              (f) =>
+                f.attributes.PERMANENT_IDENTIFIER ===
+                g.attributes.PERMANENT_IDENTIFIER,
+            );
+
+            if (!popup) popupFeatures.push(g);
+          });
+          popupFeatures.forEach((feature: any) => {
+            const permId = feature.attributes?.PERMANENT_IDENTIFIER;
+            if (permId) {
+              curIds.push(permId);
+
+              if ((ctrl || shift) && !newIds.includes(permId)) {
+                newIds.push(permId);
+                popupItems.push(feature);
+              }
             }
           });
 
@@ -102,13 +129,21 @@ function MapMouseEvents({ mapView }: Props) {
             popupItems.length > 0 &&
             curIds.toString() !== newIds.toString()
           ) {
+            // find these graphics in the sketchLayer and open them
+            const sketchPopupItems = sketchVMG?.layer.graphics.filter((g) =>
+              newIds.includes(g.attributes.PERMANENT_IDENTIFIER),
+            );
+            if (sketchPopupItems && sketchPopupItems.length > 0)
+              sketchVMG?.update(sketchPopupItems.toArray());
+
             const firstGeometry = popupItems[0].geometry as any;
-            mapView.popup.open({
+            view.popup = new Popup({
               location:
                 firstGeometry.type === 'point'
                   ? firstGeometry
                   : firstGeometry.centroid,
               features: popupItems,
+              visible: true,
             });
           }
         })
@@ -126,91 +161,104 @@ function MapMouseEvents({ mapView }: Props) {
   useEffect(() => {
     if (initialized) return;
 
+    const handleKeyDown = (event: __esri.ViewKeyDownEvent) => {
+      if (event.key === 'Control') ctrl = true;
+      else if (event.key === 'Shift') shift = true;
+
+      if (event.key === 'Escape') {
+        if (mapView) mapView.closePopup();
+        if (sceneView) sceneView.closePopup();
+
+        // re-activate sketch tools if necessary
+        const button = document.querySelector('.sketch-button-selected');
+        if (button?.id && sketchVMG) {
+          const id = button.id;
+
+          // determine whether the sketch button draws points or polygons
+          let shapeType =
+            id === 'sampling-mask'
+              ? 'polygon'
+              : sampleAttributesG[id as any].ShapeType;
+          startSketch(shapeType);
+        }
+      }
+    };
+
+    const handleKeyUp = (event: __esri.ViewKeyUpEvent) => {
+      if (event.key === 'Control') ctrl = false;
+      else if (event.key === 'Shift') shift = false;
+    };
+
     // setup the mouse click and mouse over events
     mapView.on('click', (event) => {
       handleMapClick(event, mapView);
     });
+    sceneView.on('click', (event) => {
+      handleMapClick(event, sceneView);
+    });
+
+    mapView.on('key-down', handleKeyDown);
+    sceneView.on('key-down', handleKeyDown);
+    mapView.on('key-up', handleKeyUp);
+    sceneView.on('key-up', handleKeyUp);
 
     setInitialized(true);
-  }, [mapView, handleMapClick, initialized]);
+  }, [handleMapClick, initialized, mapView, sceneView, startSketch]);
 
-  const [sampleToDelete, setSampleToDelete] = useState<__esri.Graphic | null>(
-    null,
-  );
+  // syncs the sampleAttributesG variable with the sampleAttributes context value
   useEffect(() => {
-    if (!sampleToDelete) return;
+    sampleAttributesG = sampleAttributes;
+  }, [sampleAttributes]);
 
-    const changes = new Collection<__esri.Graphic>();
-    changes.add(sampleToDelete);
-
-    // find the layer
-    const layer = layers.find(
-      (layer) =>
-        layer.layerId === sampleToDelete.layer.id.replace('-points', ''),
-    );
-    if (!layer || layer.sketchLayer.type !== 'graphics') return;
-
-    // make a copy of the edits context variable
-    const editsCopy = updateLayerEdits({
-      edits,
-      layer,
-      type: 'delete',
-      changes,
-    });
-
-    setEdits(editsCopy);
-
-    // Find the original point graphic and remove it
-    let graphicsToRemove: __esri.Graphic[] = [];
-    layer.sketchLayer.graphics.forEach((polygonVersion) => {
-      if (
-        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
-        polygonVersion.attributes.PERMANENT_IDENTIFIER
-      ) {
-        graphicsToRemove.push(polygonVersion);
-      }
-    });
-    layer.sketchLayer.removeMany(graphicsToRemove);
-
-    if (!layer.pointsLayer) return;
-
-    // Find the original point graphic and remove it
-    graphicsToRemove = [];
-    layer.pointsLayer.graphics.forEach((pointVersion) => {
-      if (
-        sampleToDelete.attributes.PERMANENT_IDENTIFIER ===
-        pointVersion.attributes.PERMANENT_IDENTIFIER
-      ) {
-        graphicsToRemove.push(pointVersion);
-      }
-    });
-    layer.pointsLayer.removeMany(graphicsToRemove);
-
-    // close the popup
-    mapView?.popup.close();
-
-    setSampleToDelete(null);
-  }, [edits, setEdits, layers, mapView, sampleToDelete]);
-
-  const [popupActionsInitialized, setPopupActionsInitialized] = useState(false);
+  // syncs the sketchVMG variable with the sketchVM context value
   useEffect(() => {
-    if (!mapView || popupActionsInitialized) return;
+    sketchVMG = !sketchVM ? sketchVM : sketchVM[displayDimensions];
+  }, [displayDimensions, sketchVM]);
 
-    setPopupActionsInitialized(true);
+  // Sets up a watcher to sync the updateGraphics variable with the sketchVM.updateGraphics
+  // context value
+  const [handler, setHandler] = useState<{
+    '2d': IHandle;
+    '3d': IHandle;
+  } | null>(null);
+  useEffect(() => {
+    if (!sketchVM || handler) return;
 
-    const tempMapView = mapView as any;
-    tempMapView.popup._displayActionTextLimit = 1;
+    function setupWatcher(
+      sketchVM: SketchViewModelType,
+      dimensions: '2d' | '3d',
+    ) {
+      return reactiveUtils.watch(
+        () => sketchVM[dimensions].updateGraphics.length,
+        () => {
+          const updateGraphicsArray =
+            sketchVM[dimensions].updateGraphics.toArray();
+          if (
+            sketchVM[dimensions].updateGraphics.length === 0 &&
+            !ctrl &&
+            !shift
+          ) {
+            updateGraphics = [];
+          } else {
+            updateGraphicsArray.forEach((g) => {
+              const hasGraphic = updateGraphics.find(
+                (f) =>
+                  f.attributes.PERMANENT_IDENTIFIER ===
+                  g.attributes.PERMANENT_IDENTIFIER,
+              );
 
-    mapView.popup.on('trigger-action', (event) => {
-      // Workaround for target not being on the PopupTriggerActionEvent
-      if (event.action.id === 'delete' && mapView?.popup?.selectedFeature) {
-        setSampleToDelete(mapView.popup.selectedFeature);
-      }
-      if (event.action.id === 'table') {
-        setTablePanelExpanded(true);
-      }
+              if (!hasGraphic) updateGraphics.push(g);
+            });
+          }
+        },
+      );
+    }
+
+    setHandler({
+      '2d': setupWatcher(sketchVM, '2d'),
+      '3d': setupWatcher(sketchVM, '3d'),
     });
-  }, [popupActionsInitialized, mapView, setTablePanelExpanded]);
+  }, [handler, sketchVM]);
 
   return null;
 }
