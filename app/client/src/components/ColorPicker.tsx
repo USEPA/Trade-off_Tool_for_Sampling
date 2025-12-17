@@ -62,7 +62,7 @@ const coverStyles = css`
 // --- components ---
 type SingleColorPickerProps = {
   color: RGBColor;
-  onChange: Function;
+  onChange: (color: RGBColor) => void;
 };
 
 function SingleColorPicker({
@@ -78,7 +78,7 @@ function SingleColorPicker({
 
   // Used to make the color picker visible and position it
   const [top, setTop] = useState(250);
-  function toggleColorPicker(e: ReactMouseEvent<HTMLDivElement, MouseEvent>) {
+  function toggleColorPicker(_e: ReactMouseEvent<HTMLDivElement, MouseEvent>) {
     if (colorPickerVisible) {
       setColorPickerVisible(false);
       return;
@@ -101,8 +101,8 @@ function SingleColorPicker({
     const pickerHeight = pickerContainer.clientHeight;
 
     // get the preffered and alternate tops
-    let prefferedTop = buttonTop + button.clientHeight + containerPadding;
-    let alternateTop = buttonTop - pickerHeight - containerPadding;
+    const prefferedTop = buttonTop + button.clientHeight + containerPadding;
+    const alternateTop = buttonTop - pickerHeight - containerPadding;
 
     // Determine if the color picker should be above or below the button.
     // The color picker should only be above the button, if there is enough space
@@ -139,7 +139,10 @@ function SingleColorPicker({
         id={`color-picker-container-${uid}`}
         css={popoverStyles(colorPickerVisible, top)}
       >
-        <div css={coverStyles} onClick={(ev) => setColorPickerVisible(false)} />
+        <div
+          css={coverStyles}
+          onClick={(_ev) => setColorPickerVisible(false)}
+        />
         <SketchPicker
           color={colorState}
           onChange={(color) => setColorState(color.rgb)}
@@ -171,7 +174,7 @@ const inlineMenuStyles = css`
 type Props = {
   symbol: PolygonSymbol;
   title?: string;
-  onChange?: Function;
+  onChange?: (symbol: PolygonSymbol) => void;
 };
 
 function ColorPicker({

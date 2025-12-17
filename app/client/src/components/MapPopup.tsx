@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { createRoot } from 'react-dom/client';
 import { css } from '@emotion/react';
 import Select from 'components/Select';
 //components
@@ -14,17 +15,21 @@ import MessageBox from 'components/MessageBox';
 // types
 import { EditsType } from 'types/Edits';
 import { FieldInfos, LayerType } from 'types/Layer';
-import { LookupFile } from 'types/Misc';
+import { LayerProps } from 'types/Misc';
+import { AppType } from 'types/Navigation';
 // utils
 import {
   getSketchableLayers,
   getZValue,
   setGeometryZValues,
 } from 'utils/sketchUtils';
+import { parseSmallFloat } from 'utils/utils';
 // styles
-import { colors, linkButtonStyles } from 'styles';
+import { colors, linkButtonStyles, reactSelectStyles } from 'styles';
 
 type SaveStatusType = 'none' | 'success' | 'failure';
+
+const maxFields = 4;
 
 // --- styles (FeatureTool) ---
 const containerStyles = css`
@@ -74,13 +79,16 @@ const saveButtonStyles = (status: SaveStatusType) => css`
 
 // --- components (FeatureTool) ---
 type Props = {
+  appType: AppType;
   features: any[];
   edits: EditsType;
   setEdits: Dispatch<SetStateAction<EditsType>>;
   layers: LayerType[];
   fieldInfos: FieldInfos;
-  layerProps: LookupFile;
+  layerProps: LayerProps;
+  includeControls?: boolean;
   onClick: (
+    appType: AppType,
     edits: EditsType,
     setEdits: Dispatch<SetStateAction<EditsType>>,
     layers: LayerType[],
@@ -91,12 +99,14 @@ type Props = {
 };
 
 function MapPopup({
+  appType,
   features,
   edits,
   setEdits,
   layers,
   fieldInfos,
   layerProps,
+  includeControls = true,
   onClick,
 }: Props) {
   // initializes the note and graphicNote whenever the graphic selection changes
@@ -156,7 +166,7 @@ function MapPopup({
       setLayerInitialized(true);
     } else if (features.length > 1) {
       let allSameLayer = true;
-      let firstLayerId = features[0].graphic.layer.id
+      const firstLayerId = features[0].graphic.layer.id
         .replace('-points', '')
         .replace('-hybrid', '');
       features.forEach((feature) => {
@@ -198,7 +208,7 @@ function MapPopup({
   useEffect(() => {
     // Get the note from the graphics attributes
     let allSameZ = true;
-    let firstZ = getZValue(features?.[0]?.graphic);
+    const firstZ = getZValue(features?.[0]?.graphic);
     features.forEach((feature) => {
       const tempZ = getZValue(feature?.graphic);
       if (firstZ !== tempZ) allSameZ = false;
@@ -229,7 +239,7 @@ function MapPopup({
   // get the layers the graphic can be moved to
   const layerOptions: { label: string; options: LayerType[] }[] = [];
   edits.edits.forEach((edit) => {
-    if (edit.type === 'layer') return;
+    if (edit.type !== 'scenario') return;
     if (edit.layerType !== 'Samples' && edit.layerType !== 'VSP') return;
 
     layerOptions.push({
@@ -251,15 +261,14 @@ function MapPopup({
 
   // get the notes character limit from the defaultFields
   let notesCharacterLimit = 2000;
-  if (layerProps.status === 'success') {
-    layerProps.data.defaultFields.forEach((field: any) => {
-      if (field.name === 'Notes') notesCharacterLimit = field.length;
-    });
-  }
+  layerProps.defaultFields.forEach((field) => {
+    if (field.name !== 'Notes' || !field.length) return;
+    notesCharacterLimit = field.length;
+  });
 
   let allNotesEmpty = true;
   let allNotesSame = true;
-  let firstNote = features?.[0]?.graphic?.attributes?.Notes;
+  const firstNote = features?.[0]?.graphic?.attributes?.Notes;
   features.forEach((feature) => {
     const tempNote = feature?.graphic?.attributes?.Notes;
     if (tempNote) allNotesEmpty = false;
@@ -273,7 +282,8 @@ function MapPopup({
           <table className="esri-widget__table">
             <tbody>
               {fieldInfos.map((fieldInfo, index) => {
-                if (!showMore && index > 4) return null;
+                if (includeControls && !showMore && index > maxFields)
+                  return null;
 
                 return (
                   <tr key={index}>
@@ -288,16 +298,21 @@ function MapPopup({
               })}
             </tbody>
           </table>
-          <button css={linkButtonStyles} onClick={() => setShowMore(!showMore)}>
-            <i
-              css={iconStyles}
-              className={`fas fa-arrow-${showMore ? 'up' : 'down'}`}
-            />
-            Show {showMore ? 'Less' : 'More'}
-          </button>
+          {includeControls && fieldInfos.length > maxFields && (
+            <button
+              css={linkButtonStyles}
+              onClick={() => setShowMore(!showMore)}
+            >
+              <i
+                css={iconStyles}
+                className={`fas fa-arrow-${showMore ? 'up' : 'down'}`}
+              />
+              Show {showMore ? 'Less' : 'More'}
+            </button>
+          )}
         </div>
       )}
-      {activeLayer?.title !== 'Sketched Sampling Mask' && (
+      {includeControls && activeLayer?.title !== 'Sketched Sampling Mask' && (
         <Fragment>
           <div css={inputContainerStyles}>
             <label htmlFor="layer-change-select-input">Layer:</label>
@@ -310,6 +325,8 @@ function MapPopup({
                 setSelectedLayer(ev as LayerType);
               }}
               options={layerOptions}
+              menuPortalTarget={document.body}
+              styles={reactSelectStyles as any}
             />
           </div>
           <div>
@@ -336,7 +353,7 @@ function MapPopup({
               maxLength={notesCharacterLimit}
               placeholder={
                 !allNotesEmpty && !allNotesSame && fieldInfos.length === 0
-                  ? 'Samples have different notes...'
+                  ? `${appType === 'decon' ? 'Decon applications' : 'Samples'} have different notes...`
                   : ''
               }
               onChange={(ev) => {
@@ -356,7 +373,7 @@ function MapPopup({
                 <MessageBox
                   severity="warning"
                   title="Notes will be overwritten"
-                  message="Some selected samples already have notes. Saving will overwrite those existing notes."
+                  message={`Some selected ${appType === 'decon' ? 'decon applications' : 'samples'} already have notes. Saving will overwrite those existing notes.`}
                 />
               </div>
             )}
@@ -368,7 +385,7 @@ function MapPopup({
                 activeLayerId === selectedLayer?.layerId &&
                 graphicElevation === elevation
               }
-              onClick={async (ev) => {
+              onClick={async (_ev) => {
                 // set the notes
                 try {
                   if (graphicNote !== note) {
@@ -395,6 +412,7 @@ function MapPopup({
                       .replace('-hybrid', '')
                   ) {
                     onClick(
+                      appType,
                       edits,
                       setEdits,
                       layers,
@@ -404,6 +422,7 @@ function MapPopup({
                     );
                   } else if (graphicElevation !== elevation) {
                     onClick(
+                      appType,
                       edits,
                       setEdits,
                       layers,
@@ -412,7 +431,7 @@ function MapPopup({
                       selectedLayer,
                     );
                   } else {
-                    onClick(edits, setEdits, layers, features, 'Save');
+                    onClick(appType, edits, setEdits, layers, features, 'Save');
                   }
 
                   setSaveStatus('success');
@@ -434,6 +453,590 @@ function MapPopup({
       )}
     </div>
   );
+}
+
+type MapPopupSimpleProps = {
+  feature: any;
+  fieldInfos: FieldInfos;
+};
+
+function MapPopupSimple({ feature, fieldInfos }: MapPopupSimpleProps) {
+  const [showMore, setShowMore] = useState(false);
+
+  return (
+    <div css={containerStyles}>
+      {fieldInfos.length > 0 && (
+        <div css={inputContainerStyles}>
+          <table className="esri-widget__table">
+            <tbody>
+              {fieldInfos.map((fieldInfo, index) => {
+                if (!showMore && index > maxFields) return null;
+
+                const fieldValue =
+                  feature.graphic.attributes[fieldInfo.fieldName];
+                const value =
+                  fieldInfo.format === 'number'
+                    ? (parseSmallFloat(fieldValue, 2) ?? '').toLocaleString()
+                    : fieldValue;
+                return (
+                  <tr key={index}>
+                    <th className="esri-feature__field-header">
+                      {fieldInfo.label}
+                    </th>
+                    <td className="esri-feature__field-data">
+                      {typeof value !== 'boolean'
+                        ? value
+                        : value
+                          ? 'Yes'
+                          : 'No'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {fieldInfos.length > maxFields && (
+            <button
+              css={linkButtonStyles}
+              onClick={() => setShowMore(!showMore)}
+            >
+              <i
+                css={iconStyles}
+                className={`fas fa-arrow-${showMore ? 'up' : 'down'}`}
+              />
+              Show {showMore ? 'Less' : 'More'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function contaminationMapPopup(feature: any) {
+  const content = (
+    <MapPopupSimple
+      feature={feature}
+      fieldInfos={[
+        { label: 'Contamination Type', fieldName: 'CONTAMTYPE' },
+        { label: 'Contamination Unit', fieldName: 'CONTAMUNIT' },
+        { label: 'Contamination Value', fieldName: 'CONTAMVAL' },
+        // { label: 'Contamination Reduced', fieldName: 'CONTAMREDUCED' },
+        // { label: 'Contaminated', fieldName: 'CONTAMINATED' },
+        // { label: 'Has Decontamination been Applied', fieldName: 'CONTAMHIT' },
+        {
+          fieldName: 'EXTERIOR',
+          label: 'Contamination Value Building Exteriors',
+        },
+        {
+          fieldName: 'INTERIOR',
+          label: 'Contamination Value Building Interiors',
+        },
+        {
+          fieldName: 'BRICK',
+          label: 'Contamination Value Brick Buildings',
+        },
+        {
+          fieldName: 'CONCRETE',
+          label: 'Contamination Value Concrete Buildings',
+        },
+        {
+          fieldName: 'STEEL',
+          label: 'Contamination Value Steel Buildings',
+        },
+        {
+          fieldName: 'WOOD',
+          label: 'Contamination Value Wood Buildings',
+        },
+        {
+          fieldName: 'OTHER',
+          label: 'Contamination Value Other Buildings',
+        },
+        { label: 'FID', fieldName: 'FID' },
+        { label: 'ID', fieldName: 'Id' },
+      ]}
+    />
+  );
+
+  // wrap the content for esri
+  const contentContainer = document.createElement('div');
+  createRoot(contentContainer).render(content);
+
+  return contentContainer;
+}
+
+export function buildingMapPopup(feature: any) {
+  feature.graphic.attributes.layerName =
+    feature.graphic.layer.parent?.title ?? feature.graphic.layer.title;
+  const fieldInfos: any[] = [
+    { label: 'Layer', fieldName: 'layerName' },
+    { label: 'Object ID', fieldName: 'OBJECTID' },
+    { label: 'Building ID', fieldName: 'BUILD_ID' },
+    { label: 'Building Occupancy Classification', fieldName: 'OCC_CLS' },
+    { label: 'Primary Occupancy', fieldName: 'PRIM_OCC' },
+    { label: 'Secondary Occupancy', fieldName: 'SEC_OCC' },
+    { label: 'Model Building Type Code', fieldName: 'SOC' },
+    { label: 'Address', fieldName: 'PROP_ADDR' },
+    { label: 'City', fieldName: 'PROP_CITY' },
+    { label: 'State', fieldName: 'PROP_ST' },
+    { label: 'ZIP Code', fieldName: 'PROP_ZIP' },
+    { label: 'Outbuilding or Non-Primary Structure', fieldName: 'OUTBLDG' },
+    { label: 'Height (meters)', fieldName: 'HEIGHT', format: 'number' },
+    {
+      label: 'Footprint Square Meters',
+      fieldName: 'SQMETERS',
+      format: 'number',
+    },
+    { label: 'Footprint Square Feet', fieldName: 'SQFEET', format: 'number' },
+    {
+      label: 'Highest Ground Elevation (meters)',
+      fieldName: 'H_ADJ_ELEV',
+      format: 'number',
+    },
+    {
+      label: 'Lowest Ground Elevation (meters)',
+      fieldName: 'L_ADJ_ELEV',
+      format: 'number',
+    },
+    {
+      label: 'County FIPS',
+      fieldName: 'FIPS',
+    },
+    { label: 'Census Tract Identifier', fieldName: 'CENSUSCODE' },
+    { label: 'Production Date', fieldName: 'PROD_DATE' },
+    { label: 'Source', fieldName: 'SOURCE' },
+    {
+      label: 'USNG Coordinates',
+      fieldName: 'USNG',
+    },
+    { label: 'Longitude', fieldName: 'LONGITUDE' },
+    { label: 'Latitude', fieldName: 'LATITUDE' },
+    { label: 'Image Name', fieldName: 'IMAGE_NAME' },
+    { label: 'Image Date', fieldName: 'IMAGE_DATE' },
+    {
+      label: 'Building Outline Validation Methodology',
+      fieldName: 'VAL_METHOD',
+    },
+    { label: 'Remarks', fieldName: 'REMARKS' },
+    { label: 'UUID', fieldName: 'UUID' },
+    {
+      label: 'State FIPS',
+      fieldName: 'STATE_FIPS',
+    },
+    {
+      label: 'Ext Area (square meters)',
+      fieldName: 'extSqM',
+      format: 'number',
+    },
+    {
+      label: 'Ext Area (square feet)',
+      fieldName: 'extSqFt',
+      format: 'number',
+    },
+    {
+      label: 'Int Area (square meters)',
+      fieldName: 'intSqM',
+      format: 'number',
+    },
+    {
+      label: 'Int Area (square feet)',
+      fieldName: 'intSqFt',
+      format: 'number',
+    },
+    {
+      label: 'Total Area (square meters)',
+      fieldName: 'totalSqM',
+      format: 'number',
+    },
+    {
+      label: 'Total Area (square feet)',
+      fieldName: 'totalSqFt',
+      format: 'number',
+    },
+  ];
+
+  if (window.location.search.includes('devMode=true')) {
+    fieldInfos.push(
+      ...[
+        {
+          label: 'Roof Area (square meters)',
+          fieldName: 'roofSqM',
+          format: 'number',
+        },
+        {
+          label: 'Footprint Area (square meters)',
+          fieldName: 'footprintSqM',
+          format: 'number',
+        },
+        {
+          label: 'Floors Area (square meters)',
+          fieldName: 'floorsSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ceilings Area (square meters)',
+          fieldName: 'ceilingsSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Walls Area (square meters)',
+          fieldName: 'extWallsSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Walls Area (square meters)',
+          fieldName: 'intWallsSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume (cubic meters)',
+          fieldName: 'extVolumeCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume (cubic meters)',
+          fieldName: 'intVolumeCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume (cubic meters)',
+          fieldName: 'intVolumeContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Roof Area (square feet)',
+          fieldName: 'roofSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Footprint Area (square feet)',
+          fieldName: 'footprintSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Floors Area (square feet)',
+          fieldName: 'floorsSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ceilings Area (square feet)',
+          fieldName: 'ceilingsSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Walls Area (square feet)',
+          fieldName: 'extWallsSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Walls Area (square feet)',
+          fieldName: 'intWallsSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume (cubic feet)',
+          fieldName: 'extVolumeCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume (cubic feet)',
+          fieldName: 'intVolumeCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume (cubic feet)',
+          fieldName: 'intVolumeContentsCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Brick Area (square meters)',
+          fieldName: 'extBrickSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Brick Area (square meters)',
+          fieldName: 'intBrickSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Brick (cubic meters)',
+          fieldName: 'extVolumeBrickCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Brick (cubic meters)',
+          fieldName: 'intVolumeBrickCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Brick (cubic meters)',
+          fieldName: 'intVolumeBrickContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Concrete Area (square meters)',
+          fieldName: 'extConcreteSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Concrete Area (square meters)',
+          fieldName: 'intConcreteSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Concrete (cubic meters)',
+          fieldName: 'extVolumeConcreteCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Concrete (cubic meters)',
+          fieldName: 'intVolumeConcreteCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Concrete (cubic meters)',
+          fieldName: 'intVolumeConcreteContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Steel Area (square meters)',
+          fieldName: 'extSteelSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Steel Area (square meters)',
+          fieldName: 'intSteelSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Steel (cubic meters)',
+          fieldName: 'extVolumeSteelCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Steel (cubic meters)',
+          fieldName: 'intVolumeSteelCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Steel (cubic meters)',
+          fieldName: 'intVolumeSteelContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Wood Area (square meters)',
+          fieldName: 'extWoodSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Wood Area (square meters)',
+          fieldName: 'intWoodSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Wood (cubic meters)',
+          fieldName: 'extVolumeWoodCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Wood (cubic meters)',
+          fieldName: 'intVolumeWoodCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Wood (cubic meters)',
+          fieldName: 'intVolumeWoodContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Other Area (square meters)',
+          fieldName: 'extOtherSqM',
+          format: 'number',
+        },
+        {
+          label: 'Int Other Area (square meters)',
+          fieldName: 'intOtherSqM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Other (cubic meters)',
+          fieldName: 'extVolumeOtherCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Other (cubic meters)',
+          fieldName: 'intVolumeOtherCubM',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Other (cubic meters)',
+          fieldName: 'intVolumeOtherContentsCubM',
+          format: 'number',
+        },
+        {
+          label: 'Ext Brick Area (square feet)',
+          fieldName: 'extBrickSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Brick Area (square feet)',
+          fieldName: 'intBrickSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Brick (cubic feet)',
+          fieldName: 'extVolumeBrickCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Brick (cubic feet)',
+          fieldName: 'intVolumeBrickCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Brick (cubic feet)',
+          fieldName: 'intVolumeBrickContentsCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Concrete Area (square feet)',
+          fieldName: 'extConcreteSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Concrete Area (square feet)',
+          fieldName: 'intConcreteSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Concrete (cubic feet)',
+          fieldName: 'extVolumeConcreteCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Concrete (cubic feet)',
+          fieldName: 'intVolumeConcreteCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Concrete (cubic feet)',
+          fieldName: 'intVolumeConcreteContentsCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Steel Area (square feet)',
+          fieldName: 'extSteelSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Steel Area (square feet)',
+          fieldName: 'intSteelSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Steel (cubic feet)',
+          fieldName: 'extVolumeSteelCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Steel (cubic feet)',
+          fieldName: 'intVolumeSteelCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Steel (cubic feet)',
+          fieldName: 'intVolumeSteelContentsCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Wood Area (square feet)',
+          fieldName: 'extWoodSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Wood Area (square feet)',
+          fieldName: 'intWoodSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Wood (cubic feet)',
+          fieldName: 'extVolumeWoodCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Wood (cubic feet)',
+          fieldName: 'intVolumeWoodCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Wood (cubic feet)',
+          fieldName: 'intVolumeWoodContentsCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Other Area (square feet)',
+          fieldName: 'extOtherSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Other Area (square feet)',
+          fieldName: 'intOtherSqFt',
+          format: 'number',
+        },
+        {
+          label: 'Ext Volume Other (cubic feet)',
+          fieldName: 'extVolumeOtherCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Volume Other (cubic feet)',
+          fieldName: 'intVolumeOtherCubFt',
+          format: 'number',
+        },
+        {
+          label: 'Int Contents Volume Other (cubic feet)',
+          fieldName: 'intVolumeOtherContentsCubFt',
+          format: 'number',
+        },
+        { label: 'Contamination Type', fieldName: 'CONTAMTYPE' },
+        {
+          label: 'Activity (Initial)',
+          fieldName: 'CONTAMVALINITIAL',
+        },
+        { label: 'Activity (Final)', fieldName: 'CONTAMVAL' },
+        { label: 'Unit of Measure', fieldName: 'CONTAMUNIT' },
+      ],
+    );
+  }
+
+  const content = <MapPopupSimple feature={feature} fieldInfos={fieldInfos} />;
+
+  // wrap the content for esri
+  const contentContainer = document.createElement('div');
+  createRoot(contentContainer).render(content);
+
+  return contentContainer;
+}
+
+export function imageryAnalysisMapPopup(feature: any) {
+  feature.graphic.attributes.layerName =
+    feature.graphic.layer.parent?.title ?? feature.graphic.layer.title;
+  const content = (
+    <MapPopupSimple
+      feature={feature}
+      fieldInfos={[
+        { label: 'Layer', fieldName: 'layerName' },
+        { label: 'Category', fieldName: 'category' },
+        { label: 'Grid Code', fieldName: 'gridcode' },
+      ]}
+    />
+  );
+
+  // wrap the content for esri
+  const contentContainer = document.createElement('div');
+  createRoot(contentContainer).render(content);
+
+  return contentContainer;
 }
 
 export default MapPopup;

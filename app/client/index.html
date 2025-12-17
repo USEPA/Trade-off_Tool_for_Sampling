@@ -42,7 +42,7 @@
     />
     <meta
       property="og:image"
-      content="%PUBLIC_URL%/epa-template-files/images/epa-standard-og.jpg"
+      content="/epa-template-files/images/epa-standard-og.jpg"
     />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -66,113 +66,104 @@
     <meta name="twitter:image:width" content="1200" />
     <meta
       name="twitter:image"
-      content="%PUBLIC_URL%/epa-template-files/images/epa-standard-twitter.jpg"
+      content="/epa-template-files/images/epa-standard-twitter.jpg"
     />
     <link
       rel="icon"
       type="image/x-icon"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon.ico"
+      href="/epa-template-files/images/favicon.ico"
     />
     <meta name="msapplication-TileColor" content="#2b5797" />
     <meta
       name="msapplication-TileImage"
-      content="%PUBLIC_URL%/epa-template-files/images/favicon-144.png"
+      content="/epa-template-files/images/favicon-144.png"
     />
     <meta name="application-name" content="US EPA" />
     <meta
       name="msapplication-config"
-      content="%PUBLIC_URL%/epa-template-files/ieconfig.xml"
+      content="/epa-template-files/ieconfig.xml"
     />
-    <link
-      rel="manifest"
-      href="%PUBLIC_URL%/site.webmanifest"
-      crossorigin="use-credentials"
-    />
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="196x196"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-196.png"
+      href="/epa-template-files/images/favicon-196.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="152x152"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-152.png"
+      href="/epa-template-files/images/favicon-152.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="144x144"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-144.png"
+      href="/epa-template-files/images/favicon-144.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="120x120"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-120.png"
+      href="/epa-template-files/images/favicon-120.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="114x114"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-114.png"
+      href="/epa-template-files/images/favicon-114.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
       sizes="72x72"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-72.png"
+      href="/epa-template-files/images/favicon-72.png"
     />
     <link
       rel="apple-touch-icon-precomposed"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-180.png"
+      href="/epa-template-files/images/favicon-180.png"
     />
     <link
       rel="icon"
-      href="%PUBLIC_URL%/epa-template-files/images/favicon-32.png"
+      href="/epa-template-files/images/favicon-32.png"
       sizes="32x32"
     />
     <link
       rel="mask-icon"
-      href="%PUBLIC_URL%/epa-template-files/images/safari-pinned-tab.svg"
+      href="/epa-template-files/images/safari-pinned-tab.svg"
       color="#ffffff"
     />
     <link
       rel="preload"
-      href="%PUBLIC_URL%/epa-template-files/fonts/source-sans-pro/sourcesanspro-regular-webfont.woff2"
+      href="/epa-template-files/fonts/source-sans-pro/sourcesanspro-regular-webfont.woff2"
       as="font"
       crossorigin="anonymous"
     />
     <link
       rel="preload"
-      href="%PUBLIC_URL%/epa-template-files/fonts/source-sans-pro/sourcesanspro-bold-webfont.woff2"
+      href="/epa-template-files/fonts/source-sans-pro/sourcesanspro-bold-webfont.woff2"
       as="font"
       crossorigin="anonymous"
     />
     <link
       rel="preload"
-      href="%PUBLIC_URL%/epa-template-files/fonts/source-sans-pro/sourcesanspro-italic-webfont.woff2"
+      href="/epa-template-files/fonts/source-sans-pro/sourcesanspro-italic-webfont.woff2"
       as="font"
       crossorigin="anonymous"
     />
     <link
       rel="preload"
-      href="%PUBLIC_URL%/epa-template-files/fonts/merriweather/Latin-Merriweather-Bold.woff2"
+      href="/epa-template-files/fonts/merriweather/Latin-Merriweather-Bold.woff2"
       as="font"
       crossorigin="anonymous"
     />
 
     <meta name="theme-color" content="#ffffff" />
     <!--googleoff: all-->
-    <link
-      rel="stylesheet"
-      media="all"
-      href="%PUBLIC_URL%/epa-template-files/css/epa.css"
-    />
+    <link rel="stylesheet" media="all" href="/epa-template-files/css/epa.css" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Roboto+Slab&display=swap"
     />
-    <link
-      rel="stylesheet"
-      href="https://use.fontawesome.com/releases/v5.12.1/css/all.css"
+    <script
+      src="https://kit.fontawesome.com/60ca3f2de9.js"
       crossorigin="anonymous"
-    />
+    ></script>
 
     <style>
       /* bootstrap overrides */
@@ -181,8 +172,9 @@
       }
 
       body {
-        font-family: 'Source Sans Pro Web', 'Helvetica Neue', 'Helvetica',
-          'Roboto', 'Arial', sans-serif;
+        font-family:
+          'Source Sans Pro Web', 'Helvetica Neue', 'Helvetica', 'Roboto',
+          'Arial', sans-serif;
       }
 
       /* epa template overrides */
@@ -191,6 +183,7 @@
         border: 0;
         border-radius: 3px;
         color: #fff;
+        cursor: pointer;
         display: inline-block;
         font-weight: bold;
         line-height: 1;
@@ -240,8 +233,9 @@
       .disclaimer {
         background: #f1f1f1;
         display: block;
-        font-family: 'Source Sans Pro', 'Helvetica Neue', 'Helvetica', 'Roboto',
-          'Arial', sans-serif;
+        font-family:
+          'Source Sans Pro', 'Helvetica Neue', 'Helvetica', 'Roboto', 'Arial',
+          sans-serif;
         font-size: 15px;
         margin: 0 0 1.5em;
         padding: 0.75em 1.5em;
@@ -365,6 +359,60 @@
       </style>
     <![endif]-->
 
+    <!-- Set the page title dynamically -->
+    <script>
+      // map pathnames to a formatted title for SEO purposes
+      const pathnameMapping = {
+        default: {
+          title: 'Trade-off Tool for Sampling (TOTS) | US EPA',
+          description:
+            'Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create a sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.',
+          webArea: 'TOTS',
+        },
+        decon: {
+          title:
+            'Trade-off Tool for Decontamination Strategies (TODS) | US EPA',
+          description:
+            'Trade-off Tool for Decontamination Strategies (TODS) is JavaScript Web Mapping application to create a decontamination strategy for chemical and radiological contamination characterization easily accessible to the EPA GeoPlatform.',
+          webArea: 'TODS',
+        },
+      };
+
+      function setMetaItem(attribute, attributeValue, content) {
+        // remove old dc title tags if necessary
+        let oldTag = document.querySelector(
+          '[' + attribute + "='" + attributeValue + "']",
+        );
+        if (oldTag) oldTag.remove();
+
+        // create dc title tag
+        const newTag = document.createElement('meta');
+        newTag.setAttribute(attribute, attributeValue);
+        newTag.content = content;
+        document.getElementsByTagName('head')[0].appendChild(newTag);
+      }
+
+      // update page title and description using mapping
+      function setPageInfo(pathnameMapping) {
+        const pathname = window.location.pathname.split('/')[1];
+        const pageInfo = pathnameMapping[pathname] || pathnameMapping.default;
+        document.title = pageInfo.title;
+
+        setMetaItem('name', 'DC.title', pageInfo.title);
+        setMetaItem('name', 'description', pageInfo.description);
+        setMetaItem('name', 'DC.description', pageInfo.description);
+        setMetaItem('property', 'WebArea', pageInfo.webArea);
+        setMetaItem('property', 'og:title', pageInfo.title);
+      }
+
+      setPageInfo(pathnameMapping); // set page title when page loads
+
+      // set page title when window location changes
+      window.addEventListener('locationchange', function (event) {
+        setPageInfo(pathnameMapping);
+      });
+    </script>
+
     <script>
       /**
        * This script is used for displaying a "browser unsupported"
@@ -372,10 +420,11 @@
        * div, when available it then checks the browser version and
        * displays the message if necessary.
        */
+      const appId = window.location.pathname === '/decon' ? 'tods' : 'tots';
 
       function unsupportedBrowserMessage() {
         const unsupportedMessage = document.getElementById(
-          'unsupported-browser-message',
+          `unsupported-browser-message-${appId}`,
         );
 
         if (unsupportedMessage) {
@@ -425,8 +474,7 @@
           })();
 
           // fetch the supported browser list lookup file
-          const proxyUrl = `${origin}/proxy`;
-          const url = `${proxyUrl}?url=${origin}/data/config/supported-browsers.json`;
+          const url = `${origin}/api/supportedBrowsers`;
           fetch(url)
             .then((response) => {
               if (response.status === 200) {
@@ -481,7 +529,7 @@
       // Allows the user to close the unsupported message.
       function hideUnsupportedMessage() {
         const unsupportedMessage = document.getElementById(
-          'unsupported-browser-message',
+          `unsupported-browser-message-${appId}`,
         );
         unsupportedMessage.style.display = 'none';
       }
@@ -507,17 +555,6 @@
     <!-- Google Analytics (GA4) -->
     <script>
       const loc = window.location;
-      if (loc.pathname.replace('/', '') !== '') {
-        let url = `${loc.origin}/404.html`;
-        if (loc.hostname === 'localhost') {
-          url = `${loc.protocol}//${loc.hostname}:9090/404.html`;
-        }
-
-        // append the original url for tracking purposes
-        url += `?src=${loc.href}`;
-
-        window.location.assign(url);
-      }
 
       function configureGoogleAnalytics(id, debug = false) {
         const gaScript = document.createElement('script');
@@ -540,18 +577,18 @@
         gtag('config', id, options);
       }
 
-      // get origin for mapping proxy calls
+      // get origin for mapping calls
       const origin =
         loc.hostname === 'localhost'
-          ? `${loc.protocol}//${loc.hostname}:9091`
+          ? `${loc.protocol}//${loc.hostname}:3002`
           : loc.origin;
 
       // initialize the googleAnalyticsMapping window object so the calls to get
       // the services lookup file are logged.
       window.googleAnalyticsMapping = [
         {
-          wildcardUrl: `${origin}/proxy?url=${origin}/data/config/services.json`,
-          name: 's3 lookup - config services',
+          wildcardUrl: `${origin}/api/lookupFiles`,
+          name: 's3 lookup - Config Files',
         },
       ];
 
@@ -578,12 +615,14 @@
         });
       }
 
-      //Only setup the logging for public sites, ie don't log from localhost
+      // Configure analytics destinations.
       if (
         window.location.hostname === 'tots.epa.gov' ||
         window.location.hostname === 'tots-prod.app.cloud.gov'
       ) {
-        //EPA (Production) - Do nothing so EPA injected GA4 is used
+        //EPA (Production)
+        trackingId = 'G-2SEC4V3SK9';
+        configureGoogleAnalytics(trackingId);
       } else if (window.location.hostname === 'tots-stage.app.cloud.gov') {
         // Stage
         trackingId = 'G-LN1VKQS4H5';
@@ -669,7 +708,7 @@
           const extension = href.split('.').pop;
           const category =
             window.location.hostname === event.target.hostname
-              ? //Part of the TOTS application
+              ? //Part of the application
                 extension === '.pdf' || extension === '.zip'
                 ? 'Download'
                 : 'Internal'
@@ -729,7 +768,7 @@
               <img
                 class="usa-banner__header-flag"
                 aria-hidden="true"
-                src="%PUBLIC_URL%/epa-template-files/images/us_flag_small.png"
+                src="/epa-template-files/images/us_flag_small.png"
                 alt="U.S. flag"
                 height="11px"
                 width="16px"
@@ -760,7 +799,7 @@
             <div class="usa-banner__guidance tablet:grid-col-6">
               <img
                 class="usa-banner__icon usa-media-block__img"
-                src="%PUBLIC_URL%/epa-template-files/images/icon-dot-gov.svg"
+                src="/epa-template-files/images/icon-dot-gov.svg"
                 alt="Dot gov"
               />
               <div class="usa-media-block__body">
@@ -775,7 +814,7 @@
             <div class="usa-banner__guidance tablet:grid-col-6">
               <img
                 class="usa-banner__icon usa-media-block__img"
-                src="%PUBLIC_URL%/epa-template-files/images/icon-https.svg"
+                src="/epa-template-files/images/icon-https.svg"
                 alt="HTTPS"
               />
               <div class="usa-media-block__body">
@@ -810,6 +849,8 @@
       </div>
     </section>
 
+    <section class="usa-site-alert"></section>
+
     <header id="usa-header" class="l-header js-header-search">
       <div class="usa-overlay"></div>
       <div class="l-constrain">
@@ -827,7 +868,7 @@
                 aria-hidden="true"
               >
                 <use
-                  href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#magnifying-glass"
+                  href="/epa-template-files/images/sprite.artifact.svg#magnifying-glass"
                 ></use>
               </svg>
               <svg
@@ -835,7 +876,7 @@
                 aria-hidden="true"
               >
                 <use
-                  href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#xmark"
+                  href="/epa-template-files/images/sprite.artifact.svg#xmark"
                 ></use>
               </svg>
             </button>
@@ -1030,7 +1071,7 @@
                 <button class="button" type="submit" aria-label="Search">
                   <svg class="icon usa-search__submit-icon" aria-hidden="true">
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#magnifying-glass"
+                      href="/epa-template-files/images/sprite.artifact.svg#magnifying-glass"
                     ></use>
                   </svg>
                   <span class="usa-search__submit-text">Search</span>
@@ -1056,7 +1097,7 @@
               <svg class="icon icon--nav-close" aria-hidden="true" role="img">
                 <title>Primary navigation</title>
                 <use
-                  href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#xmark"
+                  href="/epa-template-files/images/sprite.artifact.svg#xmark"
                 ></use>
               </svg>
             </button>
@@ -1112,7 +1153,7 @@
                 You need to enable JavaScript to run this app.
               </noscript>
               <div
-                id="unsupported-browser-message"
+                id="unsupported-browser-message-tots"
                 class="unsupportedMessageContainer"
               >
                 <div class="unsupportedErrorBox">
@@ -1155,6 +1196,51 @@
                   </button>
                 </div>
               </div>
+              <div
+                id="unsupported-browser-message-tods"
+                class="unsupportedMessageContainer"
+              >
+                <div class="unsupportedErrorBox">
+                  <div class="unsupportedMessage">
+                    <strong
+                      >You are using a browser that is not supported. Trade-off
+                      Tool for Decontamination Strategies (TODS) works best on
+                      the latest verions of Chrome, Safari, Edge, or
+                      Firfox.</strong
+                    >
+                    <br />
+                    Trade-off Tool for Decontamination Strategies (TODS)
+                    utilizes Esri's ArcGIS JavaScript API for advanced mapping
+                    features, which are not supported by this browser. For more
+                    information visit the following links:
+                    <a
+                      href="https://developers.arcgis.com/javascript/latest/system-requirements/#:~:text=Supported%20browsers&text=Firefox%2093%20or%20later,Safari%2014%20or%20later"
+                      >ArcGIS API for JavaScript System Requirements</a
+                    >
+                    and
+                    <a
+                      href="https://www.esri.com/arcgis-blog/products/arcgis/announcements/so-long-internet-explorer-11/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >So Long Internet Explorer</a
+                    >.
+                    <a
+                      class="exit-disclaimer"
+                      href="https://www.epa.gov/home/exit-epa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      EXIT
+                    </a>
+                  </div>
+                  <button
+                    class="unsupportedCloseButton"
+                    onClick="hideUnsupportedMessage();"
+                  >
+                    x
+                  </button>
+                </div>
+              </div>
               <div id="root"></div>
             </div>
           </div>
@@ -1166,7 +1252,7 @@
       <div class="l-constrain">
         <img
           class="footer__epa-seal"
-          src="%PUBLIC_URL%/epa-template-files/images/epa-seal.svg"
+          src="/epa-template-files/images/epa-seal.svg"
           alt="United States Environmental Protection Agency"
           height="100"
           width="100"
@@ -1177,9 +1263,12 @@
 
             <ul class="menu menu--footer">
               <li class="menu__item">
-                <a href="https://www.epa.gov/accessibility" class="menu__link"
-                  >Accessibility</a
+                <a
+                  class="menu__link"
+                  href="https://www.epa.gov/accessibility/epa-accessibility-statement"
                 >
+                  Accessibility Statement
+                </a>
               </li>
 
               <li class="menu__item">
@@ -1198,7 +1287,7 @@
                 <a
                   href="https://www.epa.gov/home/wwwepagov-snapshots"
                   class="menu__link"
-                  >EPA www Web Snapshots</a
+                  >EPA www Web Snapshot</a
                 >
               </li>
 
@@ -1210,15 +1299,17 @@
 
               <li class="menu__item">
                 <a
-                  href="https://www.epa.gov/ocr/whistleblower-protections-epa-and-how-they-relate-non-disclosure-agreements-signed-epa-employees"
+                  href="https://www.epa.gov/ocr/no-fear-act-data"
                   class="menu__link"
                   >No FEAR Act Data</a
                 >
               </li>
 
               <li class="menu__item">
-                <a href="https://www.epa.gov/privacy" class="menu__link"
-                  >Privacy</a
+                <a
+                  href="https://www.epa.gov/web-policies-and-procedures/plain-writing"
+                  class="menu__link"
+                  >Plain Writing</a
                 >
               </li>
 
@@ -1236,12 +1327,12 @@
 
             <ul class="menu menu--footer">
               <li class="menu__item">
-                <a href="https://www.data.gov/" class="menu__link">Data.gov</a>
+                <a class="menu__link" href="https://www.epa.gov/data">Data</a>
               </li>
 
               <li class="menu__item">
                 <a
-                  href="https://www.epa.gov/office-inspector-general/about-epas-office-inspector-general"
+                  href="https://www.epa.gov/office-inspector-general"
                   class="menu__link"
                   >Inspector General</a
                 >
@@ -1260,18 +1351,12 @@
               </li>
 
               <li class="menu__item">
-                <a href="https://www.epa.gov/data" class="menu__link"
-                  >Open Government</a
-                >
-              </li>
-
-              <li class="menu__item">
                 <a href="https://www.regulations.gov/" class="menu__link">
                   Regulations.gov
                   <svg class="icon icon--exit is-spaced-before" role="img">
                     <title>Exit EPA's Website</title>
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.svg#launch"
+                      href="/epa-template-files/images/sprite.svg#launch"
                     ></use>
                   </svg>
                 </a>
@@ -1291,7 +1376,7 @@
                   <svg class="icon icon--exit is-spaced-before" role="img">
                     <title>Exit EPA's Website</title>
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.svg#launch"
+                      href="/epa-template-files/images/sprite.svg#launch"
                     ></use>
                   </svg>
                 </a>
@@ -1303,7 +1388,7 @@
                   <svg class="icon icon--exit is-spaced-before" role="img">
                     <title>Exit EPA's Website</title>
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.svg#launch"
+                      href="/epa-template-files/images/sprite.svg#launch"
                     ></use>
                   </svg>
                 </a>
@@ -1316,7 +1401,7 @@
             <ul class="menu menu--footer">
               <li class="menu__item">
                 <a
-                  href="https://www.epa.gov/aboutepa/forms/contact-epa"
+                  href="https://www.epa.gov/home/forms/contact-epa"
                   class="menu__link"
                   >Contact EPA</a
                 >
@@ -1346,7 +1431,7 @@
 
               <li class="menu__item">
                 <a
-                  href="https://www.epa.gov/aboutepa/frequent-questions-specific-epa-programstopics"
+                  href="https://www.epa.gov/home/frequent-questions-specific-epa-programstopics"
                   class="menu__link"
                   >Frequent Questions</a
                 >
@@ -1363,7 +1448,7 @@
                 >
                   <svg class="icon icon--social" aria-hidden="true">
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#facebook-square"
+                      href="/epa-template-files/images/sprite.artifact.svg#facebook-square"
                     ></use>
                   </svg>
                 </a>
@@ -1372,11 +1457,11 @@
                 <a
                   class="menu__link"
                   aria-label="EPA’s Twitter"
-                  href="https://twitter.com/epa"
+                  href="https://x.com/epa"
                 >
                   <svg class="icon icon--social" aria-hidden="true">
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#twitter-square"
+                      href="/epa-template-files/images/sprite.artifact.svg#twitter-square"
                     ></use>
                   </svg>
                 </a>
@@ -1389,20 +1474,7 @@
                 >
                   <svg class="icon icon--social" aria-hidden="true">
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#youtube-square"
-                    ></use>
-                  </svg>
-                </a>
-              </li>
-              <li class="menu__item">
-                <a
-                  class="menu__link"
-                  aria-label="EPA’s Flickr"
-                  href="https://www.flickr.com/photos/usepagov"
-                >
-                  <svg class="icon icon--social" aria-hidden="true">
-                    <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#flickr-square"
+                      href="/epa-template-files/images/sprite.artifact.svg#youtube-square"
                     ></use>
                   </svg>
                 </a>
@@ -1415,7 +1487,7 @@
                 >
                   <svg class="icon icon--social" aria-hidden="true">
                     <use
-                      href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#instagram-square"
+                      href="/epa-template-files/images/sprite.artifact.svg#instagram-square"
                     ></use>
                   </svg>
                 </a>
@@ -1428,15 +1500,13 @@
 
     <a href="#top" class="back-to-top" title="Back to top" aria-hidden="true">
       <svg class="back-to-top__icon" role="img" aria-label="">
-        <use
-          href="%PUBLIC_URL%/epa-template-files/images/sprite.artifact.svg#angle"
-        ></use>
+        <use href="/epa-template-files/images/sprite.artifact.svg#angle"></use>
       </svg>
     </a>
 
-    <script src="%PUBLIC_URL%/epa-template-files/js/once.min.js"></script>
-    <script src="%PUBLIC_URL%/epa-template-files/js/common.min.js"></script>
-    <script src="%PUBLIC_URL%/epa-template-files/js/scripts.min.js"></script>
+    <script src="/epa-template-files/js/once.min.js"></script>
+    <script src="/epa-template-files/js/common.min.js"></script>
+    <script src="/epa-template-files/js/scripts.min.js"></script>
     <!-- EPA template script overrides-->
     <script>
       const searchButton = document.querySelector(
@@ -1470,5 +1540,7 @@
         fill: #fff;
       }
     </style>
+
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

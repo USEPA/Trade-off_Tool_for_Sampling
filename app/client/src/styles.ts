@@ -1,9 +1,12 @@
 import { css } from '@emotion/react';
 import { CSSProperties } from 'react';
+// config
+import { isDecon } from 'config/navigation';
 
 const colors = {
   black: (alpha: number = 1) => `rgba(0, 0, 0, ${alpha})`, // #000,
   white: (alpha: number = 1) => `rgba(255, 255, 255, ${alpha})`, // #fff,
+  lightGray: (alpha: number = 1) => `rgba(217, 232, 246, ${alpha})`, // #d9e8f6,
   blue: (alpha: number = 1) => `rgba(0, 113, 187, ${alpha})`, // #0071bb,
   gold: (alpha: number = 1) => `rgba(252, 171, 83, ${alpha})`, // #fcab53,
   teal: (alpha: number = 1) => `rgba(80, 210, 194, ${alpha})`, // #50d2c2,
@@ -17,6 +20,15 @@ const colors = {
   gray6: '#666',
 };
 
+const appTheme = {
+  headerBackgroundColor: isDecon() ? colors.lightGray() : colors.darkblue(),
+  headerBackgroundColorSelected: colors.white(),
+  headerButtonSelectedColor: isDecon() ? colors.white() : '#004f83',
+  headerColor: isDecon() ? colors.black() : colors.white(),
+  headerColorSelected: colors.black(),
+  resourceTallyColor: isDecon() ? colors.black() : colors.white(),
+};
+
 const reactSelectStyles = {
   placeholder: (defaultStyles: CSSProperties) => {
     return {
@@ -25,6 +37,12 @@ const reactSelectStyles = {
     };
   },
 };
+
+const infoIconStyles = css`
+  margin-left: 10px;
+  color: #19a3dd;
+  pointer-events: all;
+`;
 
 const linkButtonStyles = css`
   display: inline;
@@ -46,4 +64,11 @@ const linkButtonStyles = css`
   }
 `;
 
-export { colors, reactSelectStyles, linkButtonStyles };
+export {
+  appTheme,
+  colors,
+  infoIconStyles,
+  isDecon,
+  linkButtonStyles,
+  reactSelectStyles,
+};

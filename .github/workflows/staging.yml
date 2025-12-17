@@ -1,6 +1,9 @@
 # This is a basic workflow to help you get started with Actions
 
 name: Staging Deploy
+permissions:
+  contents: read
+  pull-requests: write
 
 # Controls when the action will run.
 on:
@@ -25,8 +28,8 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-      - uses: dorny/paths-filter@v2
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           base: staging
@@ -59,24 +62,24 @@ jobs:
       CF_S3_PUB_BUCKET_ID: ${{ secrets.CF_STAGING_S3_PUB_BUCKET_ID }}
       CF_S3_PUB_REGION: ${{ secrets.CF_STAGING_S3_PUB_REGION }}
       CF_S3_PUB_SECRET_KEY: ${{ secrets.CF_STAGING_S3_PUB_SECRET_KEY }}
-      REACT_APP_ARCGIS_APP_ID: ${{ secrets.REACT_APP_ARCGIS_APP_ID_STAGING }}
       TOTS_BASIC_USER_NAME: ${{ secrets.TOTS_BASIC_USER_NAME }}
       TOTS_BASIC_USER_PWD: ${{ secrets.TOTS_BASIC_USER_PWD }}
       SERVER_URL: https://tots-stage.app.cloud.gov
+      VITE_ARCGIS_CLIENT_ID: ${{ secrets.VITE_ARCGIS_CLIENT_ID_STAGING }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Set up node and npm
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       # Run front-end processes (install, lint, test, bundle)
       - name: Cache node modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/client/.npm
           key: v1-npm-client-deps-${{ hashFiles('**/client/package-lock.json') }}
@@ -88,9 +91,9 @@ jobs:
 
       - name: Build front-end files and move to server
         run: |
-          export NODE_OPTIONS="--max_old_space_size=4096"
+          export NODE_OPTIONS="--max_old_space_size=6144"
           PUBLIC_URL="$SERVER_URL" \
-            REACT_APP_ARCGIS_APP_ID="$REACT_APP_ARCGIS_APP_ID" \
+            VITE_ARCGIS_CLIENT_ID="$VITE_ARCGIS_CLIENT_ID" \
             npm run build
           cd build
           cp -r * ../../server/app/public
@@ -100,7 +103,7 @@ jobs:
       # Run CloudFoundry/Cloud.gov deployment
       - name: Set up Cloud Foundry CLI
         run: |
-          curl -v -L -o cf-cli_amd64.deb 'https://cli.run.pivotal.io/stable?release=debian64&version=v7&source=github'
+          curl -v -L -o cf-cli_amd64.deb 'https://packages.cloudfoundry.org/stable?release=debian64&version=8.8.3&source=github-rel'
           sudo dpkg -i cf-cli_amd64.deb
           cf -v
           cf api https://api.fr.cloud.gov
@@ -113,7 +116,7 @@ jobs:
           cf set-env $APP_NAME "TOTS_BASIC_USER_PWD" "$TOTS_BASIC_USER_PWD" > /dev/null
 
       - name: Configure Public AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.CF_S3_PUB_ACCESS_KEY }}
           aws-secret-access-key: ${{ env.CF_S3_PUB_SECRET_KEY }}

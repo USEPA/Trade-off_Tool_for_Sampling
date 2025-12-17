@@ -5,36 +5,46 @@ import { css } from '@emotion/react';
 // contexts
 import { NavigationContext } from 'contexts/Navigation';
 // types
-import { PanelValueType } from 'config/navigation';
+import {
+  deconPanels,
+  isDecon,
+  PanelValueType,
+  samplingPanels,
+} from 'config/navigation';
 
 // --- styles (NavigationButton) ---
 const containerStyles = css`
+  display: flex;
+  gap: 6px;
   justify-content: flex-end;
-`;
-
-const nextButtonStyles = css`
-  float: right;
   margin-top: 10px;
 `;
 
 // --- components (NavigationButton) ---
 type Props = {
-  goToPanel: PanelValueType;
+  currentPanel: PanelValueType;
+  includeSkipToPublish?: boolean;
 };
 
-function NavigationButton({ goToPanel }: Props) {
+function NavigationButton({
+  currentPanel,
+  includeSkipToPublish = false,
+}: Props) {
   const { setGoTo } = useContext(NavigationContext);
 
+  const panelConfig = isDecon() ? deconPanels : samplingPanels;
+  const currentIndex = panelConfig.findIndex(
+    (panel) => panel.value === currentPanel,
+  );
+  const nextPanel = panelConfig[currentIndex + 1]?.value;
+
+  if (!nextPanel) return null;
   return (
     <div css={containerStyles}>
-      <button
-        css={nextButtonStyles}
-        onClick={(ev) => {
-          setGoTo(goToPanel);
-        }}
-      >
-        Next
-      </button>
+      {includeSkipToPublish && (
+        <button onClick={(_ev) => setGoTo('publish')}>Skip to Publish</button>
+      )}
+      <button onClick={(_ev) => setGoTo(nextPanel)}>Next</button>
     </div>
   );
 }

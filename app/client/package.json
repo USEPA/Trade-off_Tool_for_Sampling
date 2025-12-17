@@ -1,7 +1,6 @@
 {
   "name": "epa-hsrp-tots-client",
-  "version": "3.0.0",
-  "private": true,
+  "version": "4.0.0",
   "description": "Trade-off Tool for Sampling (TOTS) is JavaScript Web Mapping application to create sampling strategy for chemical and radiological contamination characterization easily accessible to field collection applications via the EPA GeoPlatform.",
   "keywords": [
     "TOTS",
@@ -18,82 +17,70 @@
     "Molly Rodgers <molly.rodgers@erg.com>"
   ],
   "engines": {
-    "node": "20.x"
+    "node": ">=24.x"
   },
   "main": "src/index.js",
-  "homepage": ".",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts -r @cypress/instrument-cra start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint:css": "stylelint './src/**/*.{js,jsx,ts,tsx,css}'"
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@arcgis/core": "4.28.10",
-    "@emotion/react": "11.11.4",
-    "@emotion/styled": "11.11.0",
+    "@arcgis/core": "4.34.8",
+    "@babel/plugin-proposal-private-property-in-object": "7.21.11",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
     "@reach/dialog": "0.18.0",
     "@reach/window-size": "0.18.0",
+    "@tanstack/react-table": "8.21.3",
+    "@tanstack/react-virtual": "3.13.12",
+    "dexie": "4.2.1",
     "exceljs": "4.4.0",
     "file-saver": "2.0.5",
-    "react": "18.2.0",
+    "react": "19.2.1",
     "react-app-polyfill": "3.0.0",
     "react-color": "2.19.3",
-    "react-dom": "18.2.0",
-    "react-dropzone": "14.2.3",
-    "react-scripts": "5.0.1",
-    "react-select": "5.8.0",
-    "react-switch": "7.0.0",
+    "react-dom": "19.2.1",
+    "react-dropzone": "14.3.8",
+    "react-router-dom": "7.10.1",
+    "react-select": "5.10.2",
+    "react-switch": "7.1.0",
     "react-table": "7.8.0",
-    "react-tooltip": "5.26.3",
-    "react-window": "1.8.10",
-    "typescript": "5.3.3",
-    "universal-cookie": "7.1.0",
-    "uuid": "9.0.1"
+    "react-tooltip": "5.30.0",
+    "regenerator-runtime": "0.14.1",
+    "universal-cookie": "8.0.1",
+    "uuid": "13.0.0"
   },
   "devDependencies": {
-    "@cypress/instrument-cra": "1.4.0",
+    "@eslint/js": "9.39.1",
     "@types/file-saver": "2.0.7",
-    "@types/jest": "29.5.12",
-    "@types/mocha": "10.0.6",
-    "@types/node": "20.11.22",
-    "@types/react": "18.2.60",
-    "@types/react-color": "3.0.12",
-    "@types/react-dom": "18.2.19",
-    "@types/react-select": "5.0.1",
-    "@types/react-table": "7.7.19",
+    "@types/jest": "30.0.0",
+    "@types/mocha": "10.0.10",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-color": "3.0.13",
+    "@types/react-dom": "19.2.3",
+    "@types/react-select": "5.0.0",
+    "@types/react-table": "7.7.20",
     "@types/react-window": "1.8.8",
-    "@types/uuid": "9.0.8",
-    "husky": "9.0.11",
-    "lint-staged": "15.2.2",
-    "prettier": "3.2.5",
-    "stylelint": "16.2.1",
-    "stylelint-config-standard": "36.0.0"
-  },
-  "lint-staged": {
-    "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
-      "prettier --write",
-      "npm run lint:css"
-    ]
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all",
-      "not ie > 0",
-      "not android < 5"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "@types/uuid": "10.0.0",
+    "@vitejs/plugin-react": "5.1.1",
+    "eslint": "9.39.1",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.4.24",
+    "globals": "16.5.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "prettier": "3.7.4",
+    "stylelint": "16.26.1",
+    "stylelint-config-standard": "39.0.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.48.1",
+    "vite": "7.2.6",
+    "vite-plugin-html": "3.2.2",
+    "vite-plugin-istanbul": "7.2.1",
+    "vite-tsconfig-paths": "5.1.4"
   }
 }
