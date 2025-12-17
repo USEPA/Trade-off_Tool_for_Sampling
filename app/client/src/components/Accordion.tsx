@@ -36,7 +36,7 @@ const headerStyles = css`
   }
 
   .fa-angle-down {
-    margin-right: 0.75em;
+    margin-right: 0.875em;
   }
 
   .fa-angle-right {
@@ -84,7 +84,7 @@ function AccordionItem({
       <header
         tabIndex={0}
         css={headerStyles}
-        onClick={(ev) => {
+        onClick={(_ev) => {
           const newIsOpen = !isOpen;
           setIsOpen(newIsOpen);
           onChange(newIsOpen);

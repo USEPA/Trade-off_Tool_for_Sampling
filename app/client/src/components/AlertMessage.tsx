@@ -4,7 +4,7 @@ import React, { Fragment } from 'react';
 import { css } from '@emotion/react';
 // import { globalHistory } from '@reach/router';
 // contexts
-import { useNotificationsContext } from 'contexts/LookupFiles';
+import { useLookupFiles } from 'contexts/LookupFiles';
 
 const bannerStyles = (color: string, backgroundColor: string) => {
   return css`
@@ -23,20 +23,14 @@ const bannerStyles = (color: string, backgroundColor: string) => {
 };
 
 function AlertMessage() {
-  const notifications = useNotificationsContext();
+  const notifications = useLookupFiles().data.notifications;
 
-  if (
-    notifications.status === 'success' &&
-    notifications.data &&
-    Object.keys(notifications.data).length > 0
-  ) {
-    const data = notifications.data;
-
+  if (Object.keys(notifications).length > 0) {
     // create a banner that applies to all pages
-    const allPagesBanner = data.message && (
+    const allPagesBanner = notifications.message && (
       <div
-        css={bannerStyles(data.color, data.backgroundColor)}
-        dangerouslySetInnerHTML={{ __html: data.message }}
+        css={bannerStyles(notifications.color, notifications.backgroundColor)}
+        dangerouslySetInnerHTML={{ __html: notifications.message }}
         data-testid="all-pages-notifications-banner"
       ></div>
     );

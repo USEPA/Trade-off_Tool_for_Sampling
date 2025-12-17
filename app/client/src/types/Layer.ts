@@ -1,16 +1,35 @@
 import { EditType } from 'types/Edits';
 
 export type LayerTypeName =
-  | 'Contamination Map'
-  | 'Samples'
-  | 'Reference Layer'
+  | 'AOI Analysis'
+  | 'AOI Assessed'
   | 'Area of Interest'
-  | 'VSP'
-  | 'Sampling Mask';
+  | 'Contamination Map'
+  | 'Decon'
+  | 'Decon Mask'
+  | 'Decon Results'
+  | 'Decon Scenario'
+  | 'GSG'
+  | 'Image Analysis'
+  | 'Reference Layer'
+  | 'Samples'
+  | 'Sampling Mask'
+  | 'Staging Area Mask'
+  | 'VSP';
+
+export type LayerTypeLabel =
+  | 'Area of Interest'
+  | 'Contamination Map'
+  | 'Decon Applications'
+  | 'GSG'
+  | 'Reference Layer'
+  | 'Samples'
+  | 'Sampling Mask'
+  | 'VSP';
 
 export type LayerSelectType = {
   value: LayerTypeName;
-  label: LayerTypeName;
+  label: LayerTypeLabel;
 };
 
 export type AddedFrom = 'file' | 'sketch' | 'tots';
@@ -34,7 +53,11 @@ export type LayerType = {
   geometryType: string;
   addedFrom: AddedFrom;
   status: PublishStatus;
-  sketchLayer: __esri.GraphicsLayer | __esri.FeatureLayer;
+  sketchLayer:
+    | __esri.GraphicsLayer
+    | __esri.FeatureLayer
+    | __esri.GroupLayer
+    | null;
   hybridLayer: __esri.GraphicsLayer | null;
   pointsLayer: __esri.GraphicsLayer | null;
   parentLayer: __esri.GroupLayer | null;
@@ -54,11 +77,13 @@ export type PortalLayerTypes =
 export type PortalUrlLayerTypes = PortalLayerTypes & UrlLayerTypes;
 
 export type PortalLayerType = {
+  categories: string[];
   id: string;
   type: 'arcgis' | 'tots';
   label: string;
   layerType: PortalLayerTypes;
   url: string;
+  linkedIds?: string[];
 };
 
 export type UrlLayerType = {
@@ -72,4 +97,5 @@ export type UrlLayerType = {
 export type FieldInfos = {
   fieldName: string;
   label: string;
+  format?: 'number' | null;
 }[];

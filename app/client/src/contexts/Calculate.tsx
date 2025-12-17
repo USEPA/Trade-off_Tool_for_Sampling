@@ -8,12 +8,17 @@ import React, {
   useState,
 } from 'react';
 // types
-import { CalculateResultsType } from 'types/CalculateResults';
+import {
+  CalculateResultsDeconType,
+  CalculateResultsType,
+} from 'types/CalculateResults';
 import { LayerType } from 'types/Layer';
 
 export type CalculateType = {
   calculateResults: CalculateResultsType;
   setCalculateResults: Dispatch<SetStateAction<CalculateResultsType>>;
+  calculateResultsDecon: CalculateResultsDeconType;
+  setCalculateResultsDecon: Dispatch<SetStateAction<CalculateResultsDeconType>>;
   contaminationMap: LayerType | null;
   setContaminationMap: Dispatch<SetStateAction<LayerType | null>>;
   inputNumLabs: number;
@@ -51,6 +56,8 @@ export const settingDefaults = {
 export const CalculateContext = createContext<CalculateType>({
   calculateResults: { status: 'none', panelOpen: false, data: null },
   setCalculateResults: () => {},
+  calculateResultsDecon: { status: 'none', panelOpen: false, data: null },
+  setCalculateResultsDecon: () => {},
   contaminationMap: null,
   setContaminationMap: () => {},
   inputNumLabs: settingDefaults.NUM_LABS,
@@ -79,6 +86,12 @@ type Props = { children: ReactNode };
 export function CalculateProvider({ children }: Props) {
   const [calculateResults, setCalculateResults] =
     useState<CalculateResultsType>({
+      status: 'none',
+      panelOpen: false,
+      data: null,
+    });
+  const [calculateResultsDecon, setCalculateResultsDecon] =
+    useState<CalculateResultsDeconType>({
       status: 'none',
       panelOpen: false,
       data: null,
@@ -118,6 +131,8 @@ export function CalculateProvider({ children }: Props) {
       value={{
         calculateResults,
         setCalculateResults,
+        calculateResultsDecon,
+        setCalculateResultsDecon,
         contaminationMap,
         setContaminationMap,
         inputNumLabs,
@@ -140,6 +155,11 @@ export function CalculateProvider({ children }: Props) {
         setUpdateContextValues,
         resetCalculateContext: () => {
           setCalculateResults({
+            status: 'none',
+            panelOpen: false,
+            data: null,
+          });
+          setCalculateResultsDecon({
             status: 'none',
             panelOpen: false,
             data: null,

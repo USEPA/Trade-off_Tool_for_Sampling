@@ -14,10 +14,11 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import "./commands";
-import "@cypress/code-coverage/support";
+import './commands';
+import '@cypress/code-coverage/support';
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
-import "@testing-library/cypress/add-commands";
+import '@testing-library/cypress/add-commands';
+import 'cypress-real-events/support';

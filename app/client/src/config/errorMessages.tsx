@@ -1,12 +1,10 @@
 /** @jsxImportSource @emotion/react */
 
-import React, { Fragment } from 'react';
+import React, { Fragment, JSX } from 'react';
 import { css } from '@emotion/react';
 // components
 import MessageBox from 'components/MessageBox';
 import ShowLessMore from 'components/ShowLessMore';
-// utils
-import { generateUUID } from 'utils/sketchUtils';
 // config
 import { SampleIssuesOutput } from 'config/sampleAttributes';
 // types
@@ -23,50 +21,40 @@ export const webServiceErrorMessage = (
     message: 'An error occurred in the web service',
   },
   title: string = 'Web Service Error',
-) => {
-  const id = `error-copy-input-${generateUUID()}`;
+) => (
+  <MessageBox
+    severity="error"
+    title={title}
+    message={
+      <Fragment>
+        {error.message && <span>{error.message}</span>}
+        <br />
+        <ShowLessMore
+          text={
+            <textarea
+              css={textAreaStyles}
+              value={JSON.stringify(error, null, '\t')}
+            />
+          }
+          charLimit={0}
+        />
+        <br />
+        <button
+          onClick={(ev) => {
+            ev.preventDefault();
 
-  return (
-    <MessageBox
-      severity="error"
-      title={title}
-      message={
-        <Fragment>
-          <span>{error.message}</span>
-          <br />
-          <ShowLessMore
-            text={
-              <textarea
-                id={id}
-                css={textAreaStyles}
-                value={JSON.stringify(error, null, '\t')}
-              />
-            }
-            charLimit={0}
-          />
-          <br />
-          <button
-            onClick={() => {
-              // get the text area input
-              const textArea = document.getElementById(id) as HTMLInputElement;
-              if (!textArea) return;
+            // copy the text to the clipboard
+            navigator.clipboard.writeText(JSON.stringify(error, null, '\t'));
+          }}
+        >
+          Copy Detailed Error
+        </button>
+      </Fragment>
+    }
+  />
+);
 
-              // select all of the text
-              textArea.select();
-
-              // copy the text to the clipboard
-              document.execCommand('copy');
-            }}
-          >
-            Copy Detailed Error
-          </button>
-        </Fragment>
-      }
-    />
-  );
-};
-
-export const errorBoundaryMessage = (
+export const errorBoundaryMessage = (error: Error) => (
   <MessageBox
     severity="error"
     title="Error"
@@ -76,6 +64,27 @@ export const errorBoundaryMessage = (
         at <a href="mailto:boe.timothy@epa.gov.">boe.timothy@epa.gov.</a>.
         Please include as much detail related to the sequence of interactions
         that triggered the error with your message.
+        <br />
+        <ShowLessMore
+          text={
+            <textarea
+              css={textAreaStyles}
+              value={error.stack ?? error.message}
+            />
+          }
+          charLimit={0}
+        />
+        <br />
+        <button
+          onClick={(ev) => {
+            ev.preventDefault();
+
+            // copy the text to the clipboard
+            navigator.clipboard.writeText(error.stack ?? error.message);
+          }}
+        >
+          Copy Detailed Error
+        </button>
       </Fragment>
     }
   />
@@ -219,11 +228,11 @@ export const cantUseWithVspMessage = (
   />
 );
 
-export const cantUseWith3dMessage = (
+export const cantUseWith3dMessage = (toolName: string) => (
   <MessageBox
     severity="warning"
     title="Not Available in 3D View"
-    message="Multiple Random Samples cannot be used in 3D mode"
+    message={`${toolName} cannot be used in 3D mode. Use the Settings menu to change the dimension to 2D.`}
   />
 );
 
@@ -238,11 +247,12 @@ export const generateRandomExceededTransferLimitMessage = (
 export const generateRandomSuccessMessage = (
   numSamples: number,
   layerName: string,
+  targetSamples?: number,
 ) => (
   <MessageBox
     severity="info"
     title="Samples Added"
-    message={`${numSamples} samples added to the "${layerName}" layer`}
+    message={`${numSamples}${targetSamples && numSamples !== targetSamples ? ` out of the goal of ${targetSamples}` : ''} samples added to the "${layerName}" layer`}
   />
 );
 
@@ -275,7 +285,7 @@ export const noContaminationGraphicsMessage = (
   <MessageBox
     severity="error"
     title="No Features In Contamination Map"
-    message="There are no features in the contamination map to run calculations on"
+    message="There are no features in the contamination map to run calculations on."
   />
 );
 
@@ -291,6 +301,14 @@ export const userDefinedValidationMessage = (
   message: JSX.Element[] | string,
 ) => (
   <MessageBox severity="error" title="Validation Failure" message={message} />
+);
+
+export const generalError = (
+  <MessageBox
+    severity="error"
+    title="An error occurred"
+    message="An error occurred. This was likely a web service error. Please try again."
+  />
 );
 
 // calculate results panel
@@ -326,12 +344,28 @@ export const downloadSuccessMessage = (
   />
 );
 
+export const noFeaturesMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Features to Download"
+    message="There are no contamination map features to download."
+  />
+);
+
 // publish plan tab
 export const noSamplesPublishMessage = (
   <MessageBox
     severity="warning"
     title="No Samples to Publish"
     message="There are no samples to publish. Please add some samples to the plan and try again."
+  />
+);
+
+export const noDeconPublishMessage = (
+  <MessageBox
+    severity="warning"
+    title="No Plans or AOIs to Publish"
+    message="There are no AOIs or Decon Plans to publish. Please create content and try again."
   />
 );
 
@@ -359,40 +393,68 @@ export const noServiceNameMessage = (
   />
 );
 
-export const publishSuccessMessage = (
-  <MessageBox
-    severity="info"
-    title="Publish Succeeded"
-    message={
-      'To view or share your TOTS content with others, go to the ' +
-      'My Content menu in the Content section of your ArcGIS ' +
-      'Online organization.'
-    }
-  />
-);
+export const publishSuccessMessage = (appName: string, itemData?: any[]) => {
+  const items = itemData
+    ?.filter((data) => data?.itemData?.itemServiceUrl)
+    .map((data) => data.itemData);
+  return (
+    <MessageBox
+      severity="info"
+      title="Publish Succeeded"
+      message={
+        <div>
+          <span>
+            To view or share your {appName} content with others, go to the My
+            Content menu in the Content section of your ArcGIS Online
+            organization
+            {items && items.length > 0 ? ' or click the link(s) below' : ''}.
+          </span>
+          {items && items.length > 0 && (
+            <ul>
+              {items.map((item) => (
+                <li key={item.itemServiceUrl}>
+                  <a
+                    href={item.itemServiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      }
+    />
+  );
+};
 
 // scenario name / description component messages
-export const scenarioNameTakenMessage = (scenarioName: string) => (
+export const scenarioNameTakenMessage = (scenarioName?: string) => (
   <MessageBox
     severity="warning"
-    title="Plan Name Not Available"
-    message={`The "${scenarioName}" name is already in use within your organization. Please rename the plan and try again.`}
+    title="Name Not Available"
+    message={`The "${scenarioName ?? ''}" name is already in use within your organization. Please rename the item and try again.`}
   />
 );
 
-export const featureServiceTakenMessage = (serviceName: string) => (
+export const scenarioNameInvalidMessage = (scenarioName?: string) => (
   <MessageBox
     severity="warning"
-    title="Feature Service Name Not Available"
-    message={`The "${serviceName}" name is already in use. Please rename the feature service and try again.`}
+    title="Invalid Characters"
+    message={`The "${scenarioName ?? ''}" name may only contain alphanumeric characters, spaces and underscores. Please rename the item and try again.`}
   />
 );
 
-// feature not availble messages
-export const featureNotAvailableMessage = (featureName: string) => (
-  <MessageBox
-    severity="error"
-    title="Feature Not Available"
-    message={`The "${featureName}" is unavailble, please try again later.`}
-  />
-);
+// tots not availble messages
+export const totsNotAvailableMessage = () => {
+  const appName = window.location.pathname === '/decon' ? 'TODS' : 'TOTS';
+  return (
+    <MessageBox
+      severity="error"
+      title={`${appName} Not Available`}
+      message={`${appName} is temporarily unavailable, please try again later.`}
+    />
+  );
+};

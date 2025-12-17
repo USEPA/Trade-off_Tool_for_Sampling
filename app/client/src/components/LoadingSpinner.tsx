@@ -59,14 +59,13 @@ const circleStyles = css`
   stroke-dasharray: 150;
   stroke-dashoffset: 0;
   transform-origin: center;
-  animation: ${dash} 1.25s ease-in-out infinite,
+  animation:
+    ${dash} 1.25s ease-in-out infinite,
     ${color} 5s ease-in-out infinite;
 `;
 
 // --- components ---
-type Props = {};
-
-function LoadingSpinner({ ...props }: Props) {
+function LoadingSpinner(props: React.HTMLAttributes<SVGSVGElement>) {
   return (
     <svg
       data-testid="tots-loading-spinner"

@@ -1,0 +1,68 @@
+# Signatures Produced by ClassSig from 
+#    Class-Grid __1000001
+#    and Stack __1000000
+
+#    Number of selected grids
+/*           3
+#    Layer-Number    Band-name
+/*           1       Zone1.tif\Band_1
+/*           2       Zone1.tif\Band_2
+/*           3       Zone1.tif\Band_3
+
+#  Type   Number of Classes   Number of Layers    Number of Parametric Layers
+    1             5                  3                         3
+# ===================================================================
+
+#  Class ID     Number of Cells    Class Name
+        1              2012         Soil
+# Layers             1             2             3
+# Means    
+                162.20924     143.57604     120.01441
+# Covariance
+    1           176.08300     165.84211     147.72548
+    2           165.84211     164.05041     151.44868
+    3           147.72548     151.44868     153.71585
+# -------------------------------------------------------------------
+
+#  Class ID     Number of Cells    Class Name
+        2             12382         Concrete
+# Layers             1             2             3
+# Means    
+                177.12583     174.68042     167.79842
+# Covariance
+    1           656.81221     684.83862     753.53219
+    2           684.83862     722.87121     803.16601
+    3           753.53219     803.16601     908.06000
+# -------------------------------------------------------------------
+
+#  Class ID     Number of Cells    Class Name
+        3              6902         Asphalt
+# Layers             1             2             3
+# Means    
+                 97.84599     100.01188     100.22312
+# Covariance
+    1           273.14611     250.73622     188.04046
+    2           250.73622     232.17722     174.43526
+    3           188.04046     174.43526     135.19525
+# -------------------------------------------------------------------
+
+#  Class ID     Number of Cells    Class Name
+        4              5081         Vegetation
+# Layers             1             2             3
+# Means    
+                 64.71246      83.87935      68.70400
+# Covariance
+    1           178.90293     149.37219     111.07097
+    2           149.37219     142.79587      97.35385
+    3           111.07097      97.35385      77.58008
+# -------------------------------------------------------------------
+
+#  Class ID     Number of Cells    Class Name
+        5             20170         Water
+# Layers             1             2             3
+# Means    
+                 34.48409      48.40897      50.27581
+# Covariance
+    1            36.61696      32.32593      54.74263
+    2            32.32593      29.13270      48.83593
+    3            54.74263      48.83593      86.68286

@@ -1,12 +1,37 @@
 {
   "totsGPServer": "https://geopub.epa.gov/arcgis/rest/services/ORD/TOTS/GPServer",
+  "totsTestGPServer": "https://ags.erg.com/arcgis/rest/services/ORD/TOTS/GPServer",
+  "governmentLands": "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Federal_Lands/FeatureServer",
+  "gpServerInputMaxRecordCount": 2000,
+  "parcel": "https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer",
   "proxyUrl": "https://app7.erg.com/PHP/proxy.php?",
+  "structures": "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0",
+  "suitability": "https://geopub.epa.gov/arcgis/rest/services/ORD/HSRP_30m/ImageServer",
   "useProxyForGPServer": false,
+  "todsUserGuideVisible": false,
+  "radarDatasets": {
+    "sampleMetadata": "https://radar-staging.app.cloud.gov/api/v1/datasets/b334f501-10be-4bc3-8fbf-7eacd163eff7/data/3",
+    "deconTechFactors": "https://radar-staging.app.cloud.gov/api/v1/datasets/e96a8f9e-0454-4090-ba0a-8a3f5fe75a78/data/1",
+    "deconMaterialFactors": "https://radar-staging.app.cloud.gov/api/v1/datasets/e96a8f9e-0454-4090-ba0a-8a3f5fe75a78/data/2",
+    "deconBuildingFactors": "https://radar-staging.app.cloud.gov/api/v1/datasets/e96a8f9e-0454-4090-ba0a-8a3f5fe75a78/data/3",
+    "deconWasteFactors": "https://radar-staging.app.cloud.gov/api/v1/datasets/e96a8f9e-0454-4090-ba0a-8a3f5fe75a78/data/4",
+    "deconBuildingClassFactors": "https://radar-staging.app.cloud.gov/api/v1/datasets/e96a8f9e-0454-4090-ba0a-8a3f5fe75a78/data/5"
+  },
   "googleAnalyticsMapping": [
     {
       "urlLookup": "totsGPServer",
-      "wildcardUrl": "{urlLookup}/Contamination Results*",
+      "wildcardUrl": "{urlLookup}/Classify%20AOI*",
+      "name": "GP Server - Classify AOI"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{urlLookup}/Contamination%20Results*",
       "name": "GP Server - Contamination Results"
+    },
+    {
+      "urlLookup": "totsGPServer",
+      "wildcardUrl": "{urlLookup}/Export%20ShapeFile*",
+      "name": "GP Server - Export ShapeFile"
     },
     {
       "urlLookup": "totsGPServer",
@@ -25,8 +50,18 @@
     },
     {
       "urlLookup": "origin",
-      "wildcardUrl": "{urlLookup}/proxy?url={urlLookup}/data/sampleTypes/sampleTypes.json",
-      "name": "s3 lookup - sample types"
+      "wildcardUrl": "{urlLookup}/api/lookupFiles",
+      "name": "s3 lookup - Config Files"
+    },
+    {
+      "urlLookup": "origin",
+      "wildcardUrl": "{urlLookup}/api/tots/userGuide",
+      "name": "s3 lookup - TOTS User Guide"
+    },
+    {
+      "urlLookup": "origin",
+      "wildcardUrl": "{urlLookup}/api/tods/userGuide",
+      "name": "s3 lookup - TODS User Guide"
     },
     {
       "urlLookup": "ArcGIS",
@@ -102,6 +137,26 @@
       "urlLookup": "ArcGIS",
       "wildcardUrl": "https://www.arcgis.com/sharing/rest/content/users/*",
       "name": "ArcGIS - User logged in check"
+    },
+    {
+      "urlLookup": "suitability",
+      "wildcardUrl": "{urlLookup}*",
+      "name": "Staging Suitability Analysis"
+    },
+    {
+      "urlLookup": "governmentLands",
+      "wildcardUrl": "{urlLookup}*",
+      "name": "Government Lands"
+    },
+    {
+      "urlLookup": "parcel",
+      "wildcardUrl": "{urlLookup}*",
+      "name": "Parcel Information"
+    },
+    {
+      "urlLookup": "structures",
+      "wildcardUrl": "{urlLookup}*",
+      "name": "USA Structures"
     }
   ]
 }
