@@ -1,2 +1,3 @@
-# https://www.robotstxt.org/robotstxt.html
+Sitemap: https://tots.epa.gov/sitemap.xml
 User-agent: *
+Disallow:

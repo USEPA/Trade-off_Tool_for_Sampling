@@ -7,28 +7,44 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import { css } from '@emotion/react';
 // components
 import AddData from 'components/AddData';
+import AdditionalTools from 'components/AdditionalTools';
 import Calculate from 'components/Calculate';
 import CalculateResults from 'components/CalculateResults';
 import ConfigureOutput from 'components/ConfigureOutput';
+import CreateDeconPlan from 'components/CreateDeconPlan';
 import LoadingSpinner from 'components/LoadingSpinner';
 import LocateSamples from 'components/LocateSamples';
 import Publish from 'components/Publish';
-import Search from 'components/Search';
 import GettingStarted from 'components/GettingStarted';
 // contexts
 import { CalculateContext } from 'contexts/Calculate';
 import { NavigationContext } from 'contexts/Navigation';
+import { PublishContext } from 'contexts/Publish';
+import { SketchContext } from 'contexts/Sketch';
+// utils
+import {
+  useAutoConfigureOutput,
+  useCalculateDeconPlan,
+  useCalculatePlan,
+} from 'utils/hooks';
 // config
 import { navPanelWidth } from 'config/appConfig';
-import { panels, PanelType } from 'config/navigation';
+import {
+  deconPanels,
+  isDecon,
+  PanelType,
+  samplingPanels,
+} from 'config/navigation';
+// types
+import { AppType } from 'types/Navigation';
 // styles
 import '@reach/dialog/styles.css';
-import { colors } from 'styles';
-import { useCalculatePlan } from 'utils/hooks';
+import { appTheme, colors } from 'styles';
 
 const panelWidth = '325px';
 const resultsPanelWidth = '500px';
@@ -37,56 +53,58 @@ const buttonColor = colors.darkblue2();
 const buttonVisitedColor = colors.darkaqua();
 
 // --- styles (NavButton) ---
-const navButtonStyles = (selected: boolean) => {
-  return css`
-    display: flex;
-    align-items: center;
-    text-align: justify;
-    color: ${selected ? 'black' : 'white'};
-    background-color: ${selected ? colors.white() : 'transparent'};
-    margin: 0;
-    padding: 0;
-    font-size: 14px;
+const navButtonStyles = (selected: boolean) => css`
+  display: flex;
+  align-items: center;
+  text-align: justify;
+  color: ${selected ? appTheme.headerColorSelected : appTheme.headerColor};
+  background-color: ${selected
+    ? appTheme.headerBackgroundColorSelected
+    : 'transparent'};
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
 
-    /* 
+  /* 
       shift the button so the icon centers with the 
       left side of the button 
     */
-    width: calc(100% - 30px);
-    margin-left: calc(0.75em + 23px);
-  `;
-};
+  height: 40px;
+  width: calc(100% - 30px);
+  margin-left: calc(0.75em + 20px);
+`;
 
 const verticalButtonBar = (color: string) => {
   return css`
     border-left: 6px solid ${color};
-    height: 1.1764em;
-    margin-left: 30px;
+    height: 0.5em;
+    margin-left: 25px;
   `;
 };
 
 const navIconStyles = (color: string) => {
   return css`
-    font-size: 18px;
-    padding: 14px;
+    font-size: 16px;
+    padding: 13px;
     margin-left: -23px;
     margin-right: 10px;
     border-radius: 50%;
     color: white;
     background-color: ${color};
-    width: 46px;
-    height: 46px;
+    width: 40px;
+    height: 40px;
     text-align: center;
   `;
 };
 
 const navTextStyles = css`
-  width: 70px;
+  width: 80px;
 `;
 
 // --- components (NavButton) ---
 type NavButtonProps = {
   panel: PanelType;
+  panelIndex: number;
   selectedPanel: PanelType | null;
   visitedStepIndex: number;
   onClick: (ev: ReactMouseEvent<HTMLElement>) => void;
@@ -94,6 +112,7 @@ type NavButtonProps = {
 
 function NavButton({
   panel,
+  panelIndex,
   selectedPanel,
   visitedStepIndex,
   onClick,
@@ -103,9 +122,6 @@ function NavButton({
   // check if this button is selected
   const selectedValue = selectedPanel && selectedPanel.value;
   const selected = value === selectedValue;
-
-  // get the index of the panel
-  const panelIndex = panels.findIndex((item) => item.value === panel.value);
 
   // get the color of the button
   let color = buttonColor;
@@ -152,7 +168,7 @@ const navPanelStyles = (height: number) => {
     position: relative;
     height: ${height}px;
     width: ${navPanelWidth};
-    background-color: ${colors.darkblue()};
+    background-color: ${appTheme.headerBackgroundColor};
   `;
 };
 
@@ -167,7 +183,7 @@ const navPanelContainerStyles = css`
 `;
 
 const resourceTallyStyles = css`
-  color: white;
+  color: ${appTheme.resourceTallyColor};
   text-align: center;
   border-top: 5px solid ${buttonVisitedColor};
   border-bottom: 5px solid ${buttonVisitedColor};
@@ -176,7 +192,7 @@ const resourceTallyStyles = css`
 `;
 
 const tallyTitle = css`
-  color: white;
+  color: ${appTheme.resourceTallyColor};
   margin: 0;
   padding: 0 0 0.25em;
   font-size: 100%;
@@ -200,6 +216,7 @@ const mainTallyStyles = css`
 const resourceTallySeparator = css`
   border-top: none;
   border-bottom: 1px solid ${buttonVisitedColor};
+  margin: 0.5rem 0 0.5rem 0.5rem;
 `;
 
 const helpIconStyles = css`
@@ -208,8 +225,8 @@ const helpIconStyles = css`
   margin-left: 8px;
   margin-right: 10px;
   border-radius: 50%;
-  color: ${buttonColor};
-  background-color: white;
+  color: ${isDecon() ? 'white' : buttonColor};
+  background-color: ${isDecon() ? buttonColor : 'white'};
   width: 30px;
   height: 30px;
   text-align: center;
@@ -313,11 +330,13 @@ const resultsCollapsePanelButton = css`
 
 // --- components (NavBar) ---
 type Props = {
+  appType: AppType;
   height: number;
 };
 
-function NavBar({ height }: Props) {
-  const { calculateResults } = useContext(CalculateContext);
+function NavBar({ appType, height }: Props) {
+  const { calculateResults, calculateResultsDecon } =
+    useContext(CalculateContext);
   const {
     currentPanel,
     setCurrentPanel,
@@ -332,6 +351,26 @@ function NavBar({ height }: Props) {
     resultsExpanded,
     setResultsExpanded,
   } = useContext(NavigationContext);
+  const {
+    defaultConfigureOutput,
+    manualConfigureOutput,
+    setManualConfigureOutput,
+  } = useContext(PublishContext);
+  const {
+    deconSketchLayer,
+    edits,
+    layers,
+    map,
+    setDeconSketchLayer,
+    setEdits,
+    setLayers,
+    setStagingAreaLayer,
+    stagingAreaLayer,
+  } = useContext(SketchContext);
+
+  useAutoConfigureOutput();
+
+  const [panels] = useState(appType === 'decon' ? deconPanels : samplingPanels);
 
   const toggleExpand = useCallback(
     (panel: PanelType, panelIndex: number) => {
@@ -371,13 +410,19 @@ function NavBar({ height }: Props) {
     if (goToPanel) toggleExpand(goToPanel, goToPanelIndex);
 
     setGoTo('');
-  }, [goTo, setGoTo, toggleExpand]);
+  }, [goTo, panels, setGoTo, toggleExpand]);
 
   useEffect(() => {
     if (calculateResults.status !== 'none') {
       setResultsExpanded(true);
     }
   }, [calculateResults, setResultsExpanded]);
+
+  useEffect(() => {
+    if (calculateResultsDecon.status !== 'none') {
+      setResultsExpanded(true);
+    }
+  }, [calculateResultsDecon, setResultsExpanded]);
 
   // determine how far to the right the expand/collapse buttons should be
   let expandLeft = navPanelWidth;
@@ -400,7 +445,8 @@ function NavBar({ height }: Props) {
   }
 
   // run calculations to update the running tally
-  useCalculatePlan();
+  useCalculatePlan(appType);
+  useCalculateDeconPlan();
 
   const pannelRef = useRef<HTMLDivElement>(null);
 
@@ -410,6 +456,109 @@ function NavBar({ height }: Props) {
     }
   }, [currentPanel]);
 
+  // clean up layers without a name when leaving additionalTools tab
+  const [lastPanel, setLastPanel] = useState<PanelType | null>(currentPanel);
+  useEffect(() => {
+    if (currentPanel === lastPanel) return;
+    setLastPanel(currentPanel);
+
+    if (!currentPanel || currentPanel.value === 'additionalTools') return;
+
+    const editsWithoutNames = edits.edits.filter((edit) => !edit.name);
+    if (editsWithoutNames.length > 0) {
+      // get analysis layer ids for removing linked operation layers
+      const analysisLayerIds = editsWithoutNames
+        .filter((e) => e.type === 'layer-aoi-analysis')
+        .map((e) => e.layerId);
+      const deconOpIds = edits.edits
+        .filter(
+          (e) =>
+            e.type === 'layer-decon' &&
+            analysisLayerIds.includes(e.analysisLayerId),
+        )
+        .map((e) => e.layerId);
+      const idsToRemove = [
+        ...analysisLayerIds,
+        ...deconOpIds,
+        ...editsWithoutNames.map((e) => e.layerId),
+      ];
+
+      // filter out layers without names and linked layers
+      const newEdits = edits.edits.filter(
+        (edit) => !idsToRemove.includes(edit.layerId),
+      );
+      setEdits({
+        count: edits.count + 1,
+        edits: newEdits,
+      });
+
+      // set next available decon sketch layer
+      if (deconSketchLayer && !deconSketchLayer.name) {
+        const newDeconLayer = newEdits.find(
+          (l) => l.type === 'layer-aoi-analysis',
+        );
+        setDeconSketchLayer(newDeconLayer ?? null);
+      }
+
+      setLayers((layers) => {
+        // get ids to remove including parent layers
+        const fullIdsToRemove: string[] = [];
+        layers.forEach((l) => {
+          const parentId = l.parentLayer?.id ?? '';
+          if (idsToRemove.includes(l.layerId) || idsToRemove.includes(parentId))
+            fullIdsToRemove.push(l.layerId);
+        });
+        const newLayers = layers.filter(
+          (l) => !fullIdsToRemove.includes(l.layerId),
+        );
+
+        if (stagingAreaLayer && !stagingAreaLayer.name) {
+          const newStagingLayer = newLayers.find(
+            (l) => l.layerType === 'Staging Area Mask',
+          );
+          setStagingAreaLayer(newStagingLayer ?? null);
+        }
+
+        const mapLayersToRemove = map?.layers?.filter((l) =>
+          fullIdsToRemove.includes(l.id),
+        );
+        if (mapLayersToRemove) map?.removeMany(mapLayersToRemove.toArray());
+
+        return newLayers;
+      });
+    }
+  }, [
+    currentPanel,
+    deconSketchLayer,
+    edits,
+    lastPanel,
+    layers,
+    map,
+    setDeconSketchLayer,
+    setEdits,
+    setLayers,
+    stagingAreaLayer,
+    setStagingAreaLayer,
+  ]);
+
+  // clean up layers without a name when leaving additionalTools tab
+  useEffect(() => {
+    if (!currentPanel || currentPanel.value === 'configureOutput') return;
+    if (!manualConfigureOutput) return;
+
+    if (
+      JSON.stringify(manualConfigureOutput) ===
+      JSON.stringify(defaultConfigureOutput)
+    ) {
+      setManualConfigureOutput(null);
+    }
+  }, [
+    currentPanel,
+    defaultConfigureOutput,
+    manualConfigureOutput,
+    setManualConfigureOutput,
+  ]);
+
   return (
     <Fragment>
       <GettingStarted isOpen={gettingStartedOpen}>
@@ -417,7 +566,7 @@ function NavBar({ height }: Props) {
           <button
             className="btn"
             css={helpOkButtonStyles}
-            onClick={(ev) => setGettingStartedOpen(false)}
+            onClick={(_ev) => setGettingStartedOpen(false)}
           >
             Close
           </button>
@@ -431,6 +580,7 @@ function NavBar({ height }: Props) {
                 <NavButton
                   key={index}
                   panel={panel}
+                  panelIndex={index}
                   selectedPanel={currentPanel}
                   visitedStepIndex={latestStepIndex}
                   onClick={() => setGoTo(panel.value)}
@@ -439,67 +589,125 @@ function NavBar({ height }: Props) {
             })}
           </div>
 
-          {calculateResults.status === 'fetching' && <LoadingSpinner />}
-          {calculateResults.status === 'success' && calculateResults.data && (
-            <div css={resourceTallyStyles}>
-              <h3 css={tallyTitle}>Resource Tally</h3>
-              <div css={resourceTallyContainerStyles}>
-                <div css={mainTallyStyles}>
-                  Total Cost: $
-                  {Math.round(
-                    calculateResults.data['Total Cost'],
-                  ).toLocaleString()}
-                </div>
-                <div css={subTallyStyles}>
-                  <i className="fas fa-users fa-fw" /> $
-                  {Math.round(
-                    calculateResults.data['Total Sampling Cost'],
-                  ).toLocaleString()}
-                </div>
-                <div css={subTallyStyles}>
-                  <i className="fas fa-flask fa-fw" /> $
-                  {Math.round(
-                    calculateResults.data['Total Analysis Cost'],
-                  ).toLocaleString()}
-                </div>
-                <div css={mainTallyStyles}>
-                  Max Time day(s):{' '}
-                  {calculateResults.data['Total Time'].toLocaleString()}
-                </div>
-                <div css={subTallyStyles}>
-                  <i className="fas fa-users fa-fw" />{' '}
-                  {(
-                    Math.round(
-                      calculateResults.data['Time to Complete Sampling'] * 10,
-                    ) / 10
-                  ).toLocaleString()}
-                </div>
-                <div css={subTallyStyles}>
-                  <i className="fas fa-flask fa-fw" />{' '}
-                  {(
-                    Math.round(
-                      calculateResults.data['Time to Complete Analyses'] * 10,
-                    ) / 10
-                  ).toLocaleString()}
-                </div>
-                <hr css={resourceTallySeparator} />
-              </div>
-              {calculateResults.data['Limiting Time Factor'] && (
-                <div>
-                  <span css={mainTallyStyles}>Limiting Factor</span>
-                  <br />
-                  {calculateResults.data['Limiting Time Factor'] ===
-                    'Sampling' && <i className="fas fa-users fa-fw" />}
-                  {calculateResults.data['Limiting Time Factor'] ===
-                    'Analysis' && <i className="fas fa-flask fa-fw" />}{' '}
-                  <span>{calculateResults.data['Limiting Time Factor']}</span>
+          {appType === 'sampling' && (
+            <Fragment>
+              {calculateResults.status === 'fetching' && <LoadingSpinner />}
+              {calculateResults.status === 'success' &&
+                calculateResults.data && (
+                  <div css={resourceTallyStyles}>
+                    <h2 css={tallyTitle}>Resource Tally</h2>
+                    <div css={resourceTallyContainerStyles}>
+                      <div css={mainTallyStyles}>
+                        Total Cost: $
+                        {Math.round(
+                          calculateResults.data['TOTAL_COST'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={subTallyStyles}>
+                        <i className="fas fa-users fa-fw" /> $
+                        {Math.round(
+                          calculateResults.data['TOTAL_SAMPLING_COST'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={subTallyStyles}>
+                        <i className="fas fa-flask fa-fw" /> $
+                        {Math.round(
+                          calculateResults.data['TOTAL_LAB_COST'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={mainTallyStyles}>
+                        Max Time Day(s):{' '}
+                        {Math.round(
+                          calculateResults.data['TOTAL_TIME'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={subTallyStyles}>
+                        <i className="fas fa-users fa-fw" />{' '}
+                        {(
+                          Math.round(
+                            calculateResults.data['SAMPLING_TIME'] * 10,
+                          ) / 10
+                        ).toLocaleString()}
+                      </div>
+                      <div css={subTallyStyles}>
+                        <i className="fas fa-flask fa-fw" />{' '}
+                        {(
+                          Math.round(
+                            calculateResults.data['LAB_ANALYSIS_TIME'] * 10,
+                          ) / 10
+                        ).toLocaleString()}
+                      </div>
+                      <hr css={resourceTallySeparator} />
+                    </div>
+                    {calculateResults.data['LIMITING_TIME_FACTOR'] && (
+                      <div>
+                        <span css={mainTallyStyles}>Limiting Factor</span>
+                        <br />
+                        {calculateResults.data['LIMITING_TIME_FACTOR'] ===
+                          'Sampling' && <i className="fas fa-users fa-fw" />}
+                        {calculateResults.data['LIMITING_TIME_FACTOR'] ===
+                          'Analysis' && (
+                          <i className="fas fa-flask fa-fw" />
+                        )}{' '}
+                        <span>
+                          {calculateResults.data['LIMITING_TIME_FACTOR']}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+            </Fragment>
+          )}
+
+          {appType === 'decon' && (
+            <Fragment>
+              {calculateResultsDecon.status === 'fetching' && (
+                <LoadingSpinner />
+              )}
+              {calculateResultsDecon.status === 'failure' && (
+                <div css={resourceTallyStyles}>
+                  An error occurred. Please try again.
                 </div>
               )}
-            </div>
+              {calculateResultsDecon.status === 'success' &&
+                calculateResultsDecon.data && (
+                  <div css={resourceTallyStyles}>
+                    <h2 css={tallyTitle}>Resource Tally</h2>
+                    <div css={resourceTallyContainerStyles}>
+                      <div css={mainTallyStyles}>
+                        Total Cost: $
+                        {Math.round(
+                          calculateResultsDecon.data['TOTAL_COST'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={mainTallyStyles}>
+                        Max Time Day(s):{' '}
+                        {Math.round(
+                          calculateResultsDecon.data['TOTAL_TIME'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={mainTallyStyles}>
+                        Total Waste Volume (m<sup>3</sup>):{' '}
+                        {Math.round(
+                          calculateResultsDecon.data['WASTE_VOLUME_TOTAL'],
+                        ).toLocaleString()}
+                      </div>
+                      <div css={mainTallyStyles}>
+                        Total Waste Mass (kg):{' '}
+                        {Math.round(
+                          calculateResultsDecon.data['WASTE_WEIGHT_TOTAL'],
+                        ).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              <div />
+            </Fragment>
           )}
 
           <button
-            onClick={(ev) => setGettingStartedOpen(!gettingStartedOpen)}
+            onClick={(_ev) => setGettingStartedOpen(!gettingStartedOpen)}
             css={navButtonStyles(false)}
           >
             <i className="fas fa-question" css={helpIconStyles} />
@@ -523,12 +731,23 @@ function NavBar({ height }: Props) {
               id="tots-panel-scroll-container"
               css={floatPanelScrollContainerStyles}
             >
-              {currentPanel.value === 'search' && <Search />}
-              {currentPanel.value === 'addData' && <AddData />}
+              {currentPanel.value === 'addData' && (
+                <AddData appType={appType} />
+              )}
+              {currentPanel.value === 'additionalTools' && (
+                <AdditionalTools appType={appType} />
+              )}
               {currentPanel.value === 'locateSamples' && <LocateSamples />}
-              {currentPanel.value === 'calculate' && <Calculate />}
-              {currentPanel.value === 'configureOutput' && <ConfigureOutput />}
-              {currentPanel.value === 'publish' && <Publish />}
+              {currentPanel.value === 'decon' && <CreateDeconPlan />}
+              {currentPanel.value === 'calculate' && (
+                <Calculate appType={appType} />
+              )}
+              {currentPanel.value === 'configureOutput' && (
+                <ConfigureOutput appType={appType} />
+              )}
+              {currentPanel.value === 'publish' && (
+                <Publish appType={appType} />
+              )}
             </div>
           </div>
         </div>
@@ -558,7 +777,7 @@ function NavBar({ height }: Props) {
             height,
             left: expandLeft,
             expanded: true,
-            zIndex: 3,
+            zIndex: 1,
           })}
         >
           <div css={floatPanelButtonContainer(panelExpanded)}>

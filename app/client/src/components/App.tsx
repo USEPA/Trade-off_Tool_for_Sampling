@@ -1,20 +1,15 @@
 /** @jsxImportSource @emotion/react */
 
 import React, {
-  Fragment,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from 'react';
-import { Global, css } from '@emotion/react';
+import { css } from '@emotion/react';
 import { useWindowSize } from '@reach/window-size';
-import esriConfig from '@arcgis/core/config';
-import * as urlUtils from '@arcgis/core/core/urlUtils';
 // components
-import AlertDialog from 'components/AlertDialog';
-import AlertMessage from 'components/AlertMessage';
-import ErrorBoundary from 'components/ErrorBoundary';
 import NavBar from 'components/NavBar';
 import Toolbar from 'components/Toolbar';
 import SplashScreen from 'components/SplashScreen';
@@ -22,93 +17,29 @@ import TestingToolbar from 'components/TestingToolbar';
 import Map from 'components/Map';
 import { ReactTable } from 'components/ReactTable';
 // contexts
-import { AuthenticationProvider } from 'contexts/Authentication';
-import { CalculateProvider, CalculateContext } from 'contexts/Calculate';
-import { DialogProvider, DialogContext } from 'contexts/Dialog';
-import { LookupFilesProvider, useServicesContext } from 'contexts/LookupFiles';
-import { NavigationProvider, NavigationContext } from 'contexts/Navigation';
-import { PublishProvider } from 'contexts/Publish';
-import { SketchProvider, SketchContext } from 'contexts/Sketch';
+import { CalculateContext } from 'contexts/Calculate';
+import { DialogContext } from 'contexts/Dialog';
+import { NavigationContext } from 'contexts/Navigation';
+import { SketchContext } from 'contexts/Sketch';
 // utilities
-import { getEnvironmentString } from 'utils/arcGisRestUtils';
-import { logCallToGoogleAnalytics } from 'utils/fetchUtils';
-import { useSessionStorage } from 'utils/hooks';
-import { getSampleTableColumns } from 'utils/sketchUtils';
+import { useSessionStorage } from 'utils/browserStorage';
+import {
+  getBuildingTableColumns,
+  getSampleTableColumns,
+} from 'utils/sketchUtils';
+import { parseSmallFloat } from 'utils/utils';
 // config
 import { navPanelWidth } from 'config/appConfig';
-// styles
-import '@reach/dialog/styles.css';
-import '@arcgis/core/assets/esri/themes/light/main.css';
+import { isDecon } from 'config/navigation';
+// types
+import { LayerAoiAnalysisEditsType, LayerDeconEditsType } from 'types/Edits';
+import { AppType } from 'types/Navigation';
 
 const resizerHeight = 10;
 const esrifooterheight = 16;
 const expandButtonHeight = 32;
 const minMapHeight = 180;
 let startY = 0;
-
-declare global {
-  interface Window {
-    googleAnalyticsMapping: any[];
-    logErrorToGa: Function;
-    logToGa: Function;
-  }
-}
-
-const globalStyles = css`
-  html {
-    /* overwrite EPA's html font-size so rem units are based on 16px */
-    font-size: 100%;
-  }
-
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-      'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
-      'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-
-    /* re-apply EPA's html element font-size, just scoped to the body element */
-    font-size: 106.25%;
-  }
-
-  .tots {
-    /* revert back to 16px font-size on our application code itself */
-    font-size: 1rem;
-
-    input {
-      &:disabled {
-        color: #999;
-        background-color: #f2f2f2;
-        border-color: #fff;
-      }
-    }
-  }
-
-  .sr-only {
-    position: absolute;
-    left: -10000px;
-    top: auto;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-  }
-
-  .esri-popup__main-container {
-    min-width: 460px !important;
-  }
-
-  .esri-popup__action-text {
-    display: none;
-  }
-
-  .esri-widget,
-  .esri-widget--button {
-    &:focus {
-      outline: none;
-    }
-  }
-`;
 
 const appStyles = (offset: number) => css`
   display: flex;
@@ -253,11 +184,16 @@ const zoomButtonStyles = css`
   background-color: transparent;
   color: black;
   margin: 0;
-  padding: 3px 6px;
+  padding: 0;
   font-size: 16px;
 `;
 
-function App() {
+// --- components (NavBar) ---
+type Props = {
+  appType: AppType;
+};
+
+function App({ appType }: Props) {
   const { calculateResults } = useContext(CalculateContext);
   const {
     currentPanel,
@@ -271,6 +207,7 @@ function App() {
   } = useContext(NavigationContext);
   const {
     displayDimensions,
+    edits,
     layers,
     mapView,
     sceneView,
@@ -279,17 +216,21 @@ function App() {
     selectedScenario,
   } = useContext(SketchContext);
 
-  const services = useServicesContext();
-  useSessionStorage();
+  useSessionStorage(appType);
 
   const { height, width } = useWindowSize();
+
+  const [mapDiv, setMapDiv] = useState<HTMLDivElement | null>(null);
+  const mapRef = useCallback((node: HTMLDivElement) => {
+    if (node === null) return;
+    setMapDiv(node);
+  }, []);
 
   // calculate height of div holding actions info
   const [contentHeight, setContentHeight] = useState(0);
   const [toolbarHeight, setToolbarHeight] = useState(0);
-  const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!mapRef?.current) return;
+    if (!mapDiv) return;
 
     // adjust the table height if necessary
     const maxTableHeight =
@@ -300,7 +241,7 @@ function App() {
   }, [
     width,
     height,
-    mapRef,
+    mapDiv,
     contentHeight,
     tablePanelHeight,
     setTablePanelHeight,
@@ -336,37 +277,483 @@ function App() {
     setSizeCheckInitialized(true);
   }, [width, height, sizeCheckInitialized, setOptions]);
 
-  const totsRef = useRef<HTMLDivElement>(null);
+  const [totsDiv, setTotsDiv] = useState<HTMLDivElement | null>(null);
+  const totsRef = useCallback((node: HTMLDivElement) => {
+    if (node === null) return;
+    setTotsDiv(node);
+  }, []);
+
   const [offset, setOffset] = useState(0);
   useEffect(() => {
-    if (!totsRef?.current) return;
+    if (!totsDiv) return;
 
-    const offsetTop = totsRef.current.offsetTop;
-    const clientHeight = totsRef.current.clientHeight;
+    const offsetTop = totsDiv.offsetTop;
+    const clientHeight = totsDiv.clientHeight;
     if (contentHeight !== clientHeight) setContentHeight(clientHeight);
     if (offset !== offsetTop) setOffset(offsetTop);
-  }, [contentHeight, height, offset, totsRef, width]);
+  }, [contentHeight, height, offset, totsDiv, width]);
 
   // count the number of samples
-  const sampleData: any[] = [];
-  layers.forEach((layer) => {
-    if (!layer.sketchLayer || layer.sketchLayer.type === 'feature') return;
-    if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
-    if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
-      const graphics = layer.sketchLayer.graphics.toArray();
-      graphics.sort((a, b) =>
-        a.attributes.PERMANENT_IDENTIFIER.localeCompare(
-          b.attributes.PERMANENT_IDENTIFIER,
-        ),
-      );
-      graphics.forEach((sample) => {
-        sampleData.push({
-          graphic: sample,
-          ...sample.attributes,
-        });
+  const tableData: any[] = [];
+  if (isDecon()) {
+    if (selectedScenario && selectedScenario.type === 'scenario-decon') {
+      const aoiLayersProcessed: string[] = [];
+      selectedScenario.linkedLayerIds.forEach((layerId) => {
+        const deconLayer = edits.edits.find(
+          (l) => l.type === 'layer-decon' && l.layerId === layerId,
+        ) as LayerDeconEditsType | undefined;
+        const layer = edits.edits.find(
+          (l) =>
+            l.type === 'layer-aoi-analysis' &&
+            l.layerId === deconLayer?.analysisLayerId,
+        ) as LayerAoiAnalysisEditsType | undefined;
+        if (!layer) return;
+
+        const aoiAssessed = layer.layers.find(
+          (l) => l.layerType === 'AOI Assessed',
+        );
+        const aoiAssessedLayer = layers.find(
+          (l) =>
+            l.layerType === 'AOI Assessed' &&
+            l.layerId === aoiAssessed?.layerId,
+        );
+        if (!aoiAssessedLayer) return;
+        if (aoiLayersProcessed.includes(aoiAssessedLayer.layerId)) return;
+
+        aoiLayersProcessed.push(aoiAssessedLayer.layerId);
+        (aoiAssessedLayer.sketchLayer as __esri.GraphicsLayer).graphics.forEach(
+          (building) => {
+            tableData.push({
+              graphic: building,
+              ...building.attributes,
+              layerName:
+                aoiAssessedLayer.parentLayer?.title ?? aoiAssessedLayer.label,
+              H_ADJ_ELEV:
+                parseSmallFloat(
+                  building.attributes.H_ADJ_ELEV,
+                  2,
+                )?.toLocaleString() ?? '',
+              L_ADJ_ELEV:
+                parseSmallFloat(
+                  building.attributes.L_ADJ_ELEV,
+                  2,
+                )?.toLocaleString() ?? '',
+              HEIGHT:
+                parseSmallFloat(
+                  building.attributes.HEIGHT,
+                  2,
+                )?.toLocaleString() ?? '',
+              SQMETERS:
+                parseSmallFloat(
+                  building.attributes.SQMETERS,
+                  2,
+                )?.toLocaleString() ?? '',
+              footprintSqM:
+                parseSmallFloat(
+                  building.attributes.footprintSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              floorsSqM:
+                parseSmallFloat(
+                  building.attributes.floorsSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              totalSqM:
+                parseSmallFloat(
+                  building.attributes.totalSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extWallsSqM:
+                parseSmallFloat(
+                  building.attributes.extWallsSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intWallsSqM:
+                parseSmallFloat(
+                  building.attributes.intWallsSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extSqM:
+                parseSmallFloat(
+                  building.attributes.extSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intSqM:
+                parseSmallFloat(
+                  building.attributes.intSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              roofSqM:
+                parseSmallFloat(
+                  building.attributes.roofSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              ceilingsSqM:
+                parseSmallFloat(
+                  building.attributes.ceilingsSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              footprintSqFt:
+                parseSmallFloat(
+                  building.attributes.footprintSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              SQFEET:
+                parseSmallFloat(
+                  building.attributes.SQFEET,
+                  2,
+                )?.toLocaleString() ?? '',
+              heightFt:
+                parseSmallFloat(
+                  building.attributes.heightFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              floorsSqFt:
+                parseSmallFloat(
+                  building.attributes.floorsSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              totalSqFt:
+                parseSmallFloat(
+                  building.attributes.totalSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extWallsSqFt:
+                parseSmallFloat(
+                  building.attributes.extWallsSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intWallsSqFt:
+                parseSmallFloat(
+                  building.attributes.intWallsSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extSqFt:
+                parseSmallFloat(
+                  building.attributes.extSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intSqFt:
+                parseSmallFloat(
+                  building.attributes.intSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              roofSqFt:
+                parseSmallFloat(
+                  building.attributes.roofSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              ceilingsSqFt:
+                parseSmallFloat(
+                  building.attributes.ceilingsSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intBrickSqM:
+                parseSmallFloat(
+                  building.attributes.intBrickSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extBrickSqM:
+                parseSmallFloat(
+                  building.attributes.extBrickSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeBrickCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeBrickCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeBrickCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeBrickCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeBrickContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeBrickContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intConcreteSqM:
+                parseSmallFloat(
+                  building.attributes.intConcreteSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extConcreteSqM:
+                parseSmallFloat(
+                  building.attributes.extConcreteSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeConcreteCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeConcreteCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeConcreteCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeConcreteCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeConcreteContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeConcreteContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intSteelSqM:
+                parseSmallFloat(
+                  building.attributes.intSteelSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extSteelSqM:
+                parseSmallFloat(
+                  building.attributes.extSteelSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeSteelCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeSteelCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeSteelCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeSteelCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeSteelContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeSteelContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intWoodSqM:
+                parseSmallFloat(
+                  building.attributes.intWoodSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extWoodSqM:
+                parseSmallFloat(
+                  building.attributes.extWoodSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeWoodCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeWoodCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeWoodCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeWoodCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeWoodContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeWoodContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intOtherSqM:
+                parseSmallFloat(
+                  building.attributes.intOtherSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extOtherSqM:
+                parseSmallFloat(
+                  building.attributes.extOtherSqM,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeOtherCubM:
+                parseSmallFloat(
+                  building.attributes.extVolumeOtherCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeOtherCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeOtherCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeOtherContentsCubM:
+                parseSmallFloat(
+                  building.attributes.intVolumeOtherContentsCubM,
+                  2,
+                )?.toLocaleString() ?? '',
+
+              intBrickSqFt:
+                parseSmallFloat(
+                  building.attributes.intBrickSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extBrickSqFt:
+                parseSmallFloat(
+                  building.attributes.extBrickSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeBrickCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeBrickCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeBrickCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeBrickCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeBrickContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeBrickContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intConcreteSqFt:
+                parseSmallFloat(
+                  building.attributes.intConcreteSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extConcreteSqFt:
+                parseSmallFloat(
+                  building.attributes.extConcreteSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeConcreteCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeConcreteCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeConcreteCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeConcreteCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeConcreteContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeConcreteContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intSteelSqFt:
+                parseSmallFloat(
+                  building.attributes.intSteelSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extSteelSqFt:
+                parseSmallFloat(
+                  building.attributes.extSteelSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeSteelCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeSteelCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeSteelCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeSteelCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeSteelContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeSteelContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intWoodSqFt:
+                parseSmallFloat(
+                  building.attributes.intWoodSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extWoodSqFt:
+                parseSmallFloat(
+                  building.attributes.extWoodSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeWoodCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeWoodCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeWoodCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeWoodCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeWoodContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeWoodContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intOtherSqFt:
+                parseSmallFloat(
+                  building.attributes.intOtherSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extOtherSqFt:
+                parseSmallFloat(
+                  building.attributes.extOtherSqFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              extVolumeOtherCubFt:
+                parseSmallFloat(
+                  building.attributes.extVolumeOtherCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeOtherCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeOtherCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+              intVolumeOtherContentsCubFt:
+                parseSmallFloat(
+                  building.attributes.intVolumeOtherContentsCubFt,
+                  2,
+                )?.toLocaleString() ?? '',
+            });
+          },
+        );
       });
     }
-  });
+  } else {
+    layers.forEach((layer) => {
+      if (!layer.sketchLayer || layer.sketchLayer.type !== 'graphics') return;
+      if (layer?.parentLayer?.id !== selectedScenario?.layerId) return;
+      if (layer.layerType === 'Samples' || layer.layerType === 'VSP') {
+        const graphics = layer.sketchLayer.graphics.toArray();
+        graphics.sort((a, b) =>
+          a.attributes.PERMANENT_IDENTIFIER.localeCompare(
+            b.attributes.PERMANENT_IDENTIFIER,
+          ),
+        );
+        graphics.forEach((sample) => {
+          tableData.push({
+            graphic: sample,
+            ...sample.attributes,
+          });
+        });
+      }
+    });
+  }
 
   // calculate the width of the table
   let tablePanelWidth = 150;
@@ -379,310 +766,227 @@ function App() {
     tablePanelWidth += 500;
   }
 
-  // determine which rows of the table should be selected
-  const ids: { [key: string]: boolean } = {};
-  let selectionMethod: 'row-click' | 'sample-click' = 'sample-click';
-  sampleData.forEach((sample, index) => {
-    const selectedIndex = selectedSampleIds.findIndex(
-      (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
-    );
-    const selectedItem = selectedSampleIds.find(
-      (item) => item.PERMANENT_IDENTIFIER === sample.PERMANENT_IDENTIFIER,
-    );
-    if (selectedItem && selectedIndex !== -1) {
-      ids[selectedItem.PERMANENT_IDENTIFIER] = true;
-      selectionMethod = selectedSampleIds[selectedIndex].selection_method;
-    }
-  });
-  const initialSelectedRowIds = {
-    selectionMethod,
-    ids,
-  };
-
-  // setup esri interceptors for logging to google analytics
-  const [interceptorsInitialized, setInterceptorsInitialized] = useState(false);
-  useEffect(() => {
-    if (interceptorsInitialized || !esriConfig?.request?.interceptors) return;
-
-    let callId = 0;
-    let callDurations: any = {};
-
-    if (services.status === 'success') {
-      // Have ESRI use the proxy for communicating with the TOTS GP Server
-      urlUtils.addProxyRule({
-        proxyUrl: services.data.proxyUrl,
-        urlPrefix: 'https://ags.erg.com',
-      });
-    }
-
-    if (!esriConfig?.request?.interceptors) return;
-
-    // intercept esri calls to gispub
-    const urls: string[] = ['https://www.arcgis.com/sharing/rest/'];
-    esriConfig.request.interceptors.push({
-      urls,
-
-      // Workaround for ESRI CORS cacheing issue, when switching between
-      // environments.
-      before: function (params) {
-        // if this environment has a phony variable use it
-        const envString = getEnvironmentString();
-        if (envString) {
-          params.requestOptions.query[envString] = 1;
-        }
-
-        // add the callId to the query so we can tie the response back
-        params.requestOptions.query['callId'] = callId;
-
-        // add the call's start time to the dictionary
-        callDurations[callId] = performance.now();
-
-        // increment the callId
-        callId = callId + 1;
-      },
-
-      // Log esri api calls to Google Analytics
-      after: function (response: any) {
-        // get the execution time for the call
-        const callId = response.requestOptions.query.callId;
-        const startTime = callDurations[callId];
-
-        logCallToGoogleAnalytics(response.url, 200, startTime);
-
-        // delete the execution time from the dictionary
-        delete callDurations[callId];
-      },
-
-      error: function (error) {
-        // get the execution time for the call
-        const details = error.details;
-        const callId = details.requestOptions.query.callId;
-        const startTime = callDurations[callId];
-
-        logCallToGoogleAnalytics(
-          details.url,
-          details.httpStatus ? details.httpStatus : error.message,
-          startTime,
-        );
-
-        // delete the execution time from the dictionary
-        delete callDurations[callId];
-      },
-    });
-
-    setInterceptorsInitialized(true);
-  }, [interceptorsInitialized, services]);
-
   return (
-    <Fragment>
-      <Global styles={globalStyles} />
-
-      <div className="tots" ref={totsRef}>
-        <ErrorBoundary>
-          <Fragment>
-            <SplashScreen />
-            <AlertDialog />
-            <AlertMessage />
-            <div css={appStyles(offset)}>
-              <div css={containerStyles}>
-                <div ref={toolbarRef}>
-                  {window.location.search.includes('devMode=true') && (
-                    <TestingToolbar />
-                  )}
-                  <Toolbar />
-                </div>
-                <NavBar height={contentHeight - toolbarHeight} />
+    <div className="tots" ref={totsRef}>
+      <SplashScreen />
+      <div css={appStyles(offset)}>
+        <div css={containerStyles}>
+          <div ref={toolbarRef}>
+            {window.location.search.includes('devMode=true') && (
+              <TestingToolbar />
+            )}
+            <Toolbar appType={appType} />
+          </div>
+          <NavBar height={contentHeight - toolbarHeight} appType={appType} />
+          <div
+            css={mapPanelStyles(
+              toolbarHeight + (tablePanelExpanded ? tablePanelHeight : 0),
+            )}
+            ref={mapRef}
+          >
+            <div id="tots-map-div" css={mapHeightStyles}>
+              {toolbarHeight ? (
+                <Map
+                  appType={appType}
+                  height={
+                    contentHeight -
+                    (tablePanelExpanded ? tablePanelHeight : 0) -
+                    toolbarHeight
+                  }
+                />
+              ) : (
+                ''
+              )}
+            </div>
+          </div>
+          {tableData.length > 0 && (
+            <div
+              id="tots-table-button-div"
+              css={floatButtonPanelStyles({
+                width: tablePanelWidth,
+                height: tablePanelHeight,
+                left: `${tablePanelWidth}px`,
+                expanded: tablePanelExpanded,
+                zIndex: 1,
+              })}
+            >
+              <button
+                css={collapsePanelButton}
+                aria-label={`${
+                  tablePanelExpanded ? 'Collapse' : 'Expand'
+                } Table Panel`}
+                onClick={() => setTablePanelExpanded(!tablePanelExpanded)}
+              >
+                <i
+                  className={
+                    tablePanelExpanded
+                      ? 'fas fa-chevron-down'
+                      : 'fas fa-chevron-up'
+                  }
+                />
+              </button>
+            </div>
+          )}
+          {tablePanelExpanded && (
+            <div
+              id="tots-table-div"
+              css={floatPanelStyles({
+                width: tablePanelWidth,
+                height: tablePanelHeight,
+                left: `${tablePanelWidth}px`,
+                expanded: true,
+                zIndex: 2,
+              })}
+            >
+              <div css={floatPanelContentStyles(false)}>
                 <div
-                  css={mapPanelStyles(
-                    toolbarHeight + (tablePanelExpanded ? tablePanelHeight : 0),
-                  )}
-                  ref={mapRef}
+                  css={resizerContainerStyles}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    startY = e.clientY;
+
+                    const mapDiv = document.getElementById('tots-map-div'); // adjust height
+                    const tableDiv = document.getElementById('tots-table-div'); // adjust height
+                    const reactTableElm =
+                      document.getElementById('tots-samples-table');
+                    const buttonDiv = document.getElementById(
+                      'tots-table-button-div',
+                    ); // move top
+
+                    let mapHeight = 0;
+                    let tableHeight = 0;
+                    if (!mapDiv || !tableDiv || !buttonDiv) return;
+
+                    mapHeight = mapDiv.clientHeight;
+                    tableHeight = tableDiv.clientHeight;
+
+                    document.onmouseup = () => {
+                      /* stop moving when mouse button is released:*/
+                      document.onmouseup = null;
+                      document.onmousemove = null;
+
+                      // clear the styles set
+                      tableDiv.style.height = '';
+                      mapDiv.style.height = '';
+                      buttonDiv.style.bottom = '';
+                    };
+                    // call a function whenever the cursor moves:
+                    document.onmousemove = (e: MouseEvent) => {
+                      e.preventDefault();
+
+                      if (!mapDiv || !tableDiv || !buttonDiv) return;
+
+                      // get size info
+                      const panelHeight = contentHeight - toolbarHeight;
+                      const mouseOffset = startY - e.clientY;
+                      let newMapHeight = mapHeight - mouseOffset;
+                      let newTableHeight = tableHeight + mouseOffset;
+                      const maxTableHeight = panelHeight - minMapHeight;
+
+                      // prevent map being taller then content box
+                      if (newMapHeight + resizerHeight >= contentHeight) {
+                        newMapHeight = contentHeight - resizerHeight;
+                        newTableHeight = resizerHeight;
+                      }
+
+                      // prevent table being taller then content box
+                      if (newTableHeight >= maxTableHeight) {
+                        newMapHeight = contentHeight - maxTableHeight;
+                        newTableHeight = maxTableHeight;
+                      }
+
+                      // set the height directly for faster performance
+                      mapDiv.style.height = `${newMapHeight}px`;
+                      tableDiv.style.height = `${newTableHeight}px`;
+                      buttonDiv.style.bottom = `${
+                        newTableHeight + esrifooterheight
+                      }px`;
+
+                      if (reactTableElm) {
+                        reactTableElm.style.height = `${
+                          newTableHeight - resizerHeight - 30
+                        }px`;
+                      }
+
+                      setTablePanelHeight(tableDiv.clientHeight);
+                    };
+                  }}
                 >
-                  <div id="tots-map-div" css={mapHeightStyles}>
-                    {toolbarHeight && (
-                      <Map
-                        height={
-                          contentHeight -
-                          (tablePanelExpanded ? tablePanelHeight : 0) -
-                          toolbarHeight
-                        }
-                      />
-                    )}
-                  </div>
+                  <div css={resizerButtonStyles}></div>
                 </div>
-                {sampleData.length > 0 && (
-                  <div
-                    id="tots-table-button-div"
-                    css={floatButtonPanelStyles({
-                      width: tablePanelWidth,
-                      height: tablePanelHeight,
-                      left: `${tablePanelWidth}px`,
-                      expanded: tablePanelExpanded,
-                      zIndex: 1,
-                    })}
-                  >
-                    <button
-                      css={collapsePanelButton}
-                      aria-label={`${
-                        tablePanelExpanded ? 'Collapse' : 'Expand'
-                      } Table Panel`}
-                      onClick={() => setTablePanelExpanded(!tablePanelExpanded)}
-                    >
-                      <i
-                        className={
-                          tablePanelExpanded
-                            ? 'fas fa-chevron-down'
-                            : 'fas fa-chevron-up'
-                        }
-                      />
-                    </button>
+                <div
+                  id="tots-attributes-panel-scroll-container"
+                  css={floatPanelScrollContainerStyles}
+                >
+                  <div css={tablePanelHeaderStyles}>
+                    <span css={sampleTableHeaderStyles}>
+                      {appType === 'decon' ? 'Buildings' : 'Samples'} (Count:{' '}
+                      {tableData.length})
+                    </span>
                   </div>
-                )}
-                {tablePanelExpanded && (
-                  <div
-                    id="tots-table-div"
-                    css={floatPanelStyles({
-                      width: tablePanelWidth,
-                      height: tablePanelHeight,
-                      left: `${tablePanelWidth}px`,
-                      expanded: true,
-                      zIndex: 2,
-                    })}
-                  >
-                    <div css={floatPanelContentStyles(false)}>
-                      <div
-                        css={resizerContainerStyles}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          startY = e.clientY;
+                  <div>
+                    <ReactTable
+                      id="tots-samples-table"
+                      data={tableData}
+                      striped={true}
+                      height={tablePanelHeight - resizerHeight - 30}
+                      initialSelectedRowIds={selectedSampleIds}
+                      onSelectionChange={(row: any) => {
+                        const PERMANENT_IDENTIFIER =
+                          row.original.PERMANENT_IDENTIFIER;
+                        const DECISIONUNITUUID = row.original.DECISIONUNITUUID;
+                        setSelectedSampleIds((selectedSampleIds) => {
+                          if (
+                            selectedSampleIds.findIndex(
+                              (item) =>
+                                item.PERMANENT_IDENTIFIER ===
+                                PERMANENT_IDENTIFIER,
+                            ) !== -1
+                          ) {
+                            const samples = selectedSampleIds.filter(
+                              (item) =>
+                                item.PERMANENT_IDENTIFIER !==
+                                PERMANENT_IDENTIFIER,
+                            );
 
-                          const mapDiv =
-                            document.getElementById('tots-map-div'); // adjust height
-                          const tableDiv =
-                            document.getElementById('tots-table-div'); // adjust height
-                          const reactTableElm =
-                            document.getElementById('tots-samples-table');
-                          const buttonDiv = document.getElementById(
-                            'tots-table-button-div',
-                          ); // move top
+                            return samples.map((sample) => {
+                              return {
+                                PERMANENT_IDENTIFIER,
+                                DECISIONUNITUUID,
+                                selection_method: 'row-click',
+                                graphic: sample.graphic,
+                              };
+                            });
+                          }
 
-                          let mapHeight = 0;
-                          let tableHeight = 0;
-                          if (!mapDiv || !tableDiv || !buttonDiv) return;
-
-                          mapHeight = mapDiv.clientHeight;
-                          tableHeight = tableDiv.clientHeight;
-
-                          document.onmouseup = () => {
-                            /* stop moving when mouse button is released:*/
-                            document.onmouseup = null;
-                            document.onmousemove = null;
-
-                            // clear the styles set
-                            tableDiv.style.height = '';
-                            mapDiv.style.height = '';
-                            buttonDiv.style.bottom = '';
-                          };
-                          // call a function whenever the cursor moves:
-                          document.onmousemove = (e: MouseEvent) => {
-                            e.preventDefault();
-
-                            if (!mapDiv || !tableDiv || !buttonDiv) return;
-
-                            // get size info
-                            const panelHeight = contentHeight - toolbarHeight;
-                            const mouseOffset = startY - e.clientY;
-                            let newMapHeight = mapHeight - mouseOffset;
-                            let newTableHeight = tableHeight + mouseOffset;
-                            const maxTableHeight = panelHeight - minMapHeight;
-
-                            // prevent map being taller then content box
-                            if (newMapHeight + resizerHeight >= contentHeight) {
-                              newMapHeight = contentHeight - resizerHeight;
-                              newTableHeight = resizerHeight;
-                            }
-
-                            // prevent table being taller then content box
-                            if (newTableHeight >= maxTableHeight) {
-                              newMapHeight = contentHeight - maxTableHeight;
-                              newTableHeight = maxTableHeight;
-                            }
-
-                            // set the height directly for faster performance
-                            mapDiv.style.height = `${newMapHeight}px`;
-                            tableDiv.style.height = `${newTableHeight}px`;
-                            buttonDiv.style.bottom = `${
-                              newTableHeight + esrifooterheight
-                            }px`;
-
-                            if (reactTableElm) {
-                              reactTableElm.style.height = `${
-                                newTableHeight - resizerHeight - 30
-                              }px`;
-                            }
-
-                            setTablePanelHeight(tableDiv.clientHeight);
-                          };
-                        }}
-                      >
-                        <div css={resizerButtonStyles}></div>
-                      </div>
-                      <div
-                        id="tots-attributes-panel-scroll-container"
-                        css={floatPanelScrollContainerStyles}
-                      >
-                        <div css={tablePanelHeaderStyles}>
-                          <span css={sampleTableHeaderStyles}>
-                            Samples (Count: {sampleData.length})
-                          </span>
-                        </div>
-                        <div>
-                          <ReactTable
-                            id="tots-samples-table"
-                            data={sampleData}
-                            idColumn={'PERMANENT_IDENTIFIER'}
-                            striped={true}
-                            height={tablePanelHeight - resizerHeight - 30}
-                            initialSelectedRowIds={initialSelectedRowIds}
-                            onSelectionChange={(row: any) => {
-                              const PERMANENT_IDENTIFIER =
-                                row.original.PERMANENT_IDENTIFIER;
-                              const DECISIONUNITUUID =
-                                row.original.DECISIONUNITUUID;
-                              setSelectedSampleIds((selectedSampleIds) => {
-                                if (
-                                  selectedSampleIds.findIndex(
-                                    (item) =>
-                                      item.PERMANENT_IDENTIFIER ===
-                                      PERMANENT_IDENTIFIER,
-                                  ) !== -1
-                                ) {
-                                  const samples = selectedSampleIds.filter(
-                                    (item) =>
-                                      item.PERMANENT_IDENTIFIER !==
-                                      PERMANENT_IDENTIFIER,
-                                  );
-
-                                  return samples.map((sample) => {
-                                    return {
-                                      PERMANENT_IDENTIFIER,
-                                      DECISIONUNITUUID,
-                                      selection_method: 'row-click',
-                                    };
-                                  });
-                                }
-
-                                return [
-                                  // ...selectedSampleIds, // Uncomment this line to allow multiple selections
-                                  {
-                                    PERMANENT_IDENTIFIER,
-                                    DECISIONUNITUUID,
-                                    selection_method: 'row-click',
-                                  },
-                                ];
-                              });
-                            }}
-                            sortBy={[
+                          return [
+                            // ...selectedSampleIds, // Uncomment this line to allow multiple selections
+                            {
+                              PERMANENT_IDENTIFIER,
+                              DECISIONUNITUUID,
+                              selection_method: 'row-click',
+                              graphic: row.original.graphic,
+                            },
+                          ];
+                        });
+                      }}
+                      sortBy={
+                        appType === 'decon'
+                          ? [
+                              {
+                                id: 'layerName',
+                                desc: false,
+                              },
+                              {
+                                id: 'OCC_CLS',
+                                desc: false,
+                              },
+                              {
+                                id: 'PRIM_OCC',
+                                desc: false,
+                              },
+                            ]
+                          : [
                               {
                                 id: 'DECISIONUNIT',
                                 desc: false,
@@ -691,99 +995,80 @@ function App() {
                                 id: 'TYPE',
                                 desc: false,
                               },
-                              {
-                                id: 'PERMANENT_IDENTIFIER',
-                                desc: false,
-                              },
-                            ]}
-                            getColumns={(tableWidth: any) => {
-                              return [
-                                {
-                                  Header: () => null,
-                                  id: 'zoom-button',
-                                  renderCell: true,
-                                  width: 30,
-                                  Cell: ({ row }: { row: any }) => (
-                                    <div css={zoomButtonContainerStyles}>
-                                      <button
-                                        css={zoomButtonStyles}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
+                            ]
+                      }
+                      getColumns={(tableWidth: any) => {
+                        const tableColumns =
+                          appType === 'decon'
+                            ? getBuildingTableColumns({
+                                tableWidth,
+                                trainingMode,
+                              })
+                            : getSampleTableColumns({
+                                tableWidth,
+                                includeContaminationFields: trainingMode,
+                              });
 
-                                          // select the sample
-                                          setSelectedSampleIds([
-                                            {
-                                              PERMANENT_IDENTIFIER:
-                                                row.original
-                                                  .PERMANENT_IDENTIFIER,
-                                              DECISIONUNITUUID:
-                                                row.original.DECISIONUNITUUID,
-                                              selection_method: 'row-click',
-                                            },
-                                          ]);
+                        return [
+                          {
+                            header: () => <span className="sr-only">Zoom</span>,
+                            id: 'zoom-button',
+                            size: 30,
+                            cell: ({ row }: { row: any }) => (
+                              <div css={zoomButtonContainerStyles}>
+                                <button
+                                  css={zoomButtonStyles}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
 
-                                          // zoom to the graphic
-                                          if (
-                                            displayDimensions === '2d' &&
-                                            mapView
-                                          ) {
-                                            mapView.goTo(row.original.graphic);
-                                            mapView.zoom = mapView.zoom - 1;
-                                          } else if (
-                                            displayDimensions === '3d' &&
-                                            sceneView
-                                          ) {
-                                            sceneView.goTo(
-                                              row.original.graphic,
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        <i className="fas fa-search-plus" />
-                                        <span className="sr-only">
-                                          Zoom to sample
-                                        </span>
-                                      </button>
-                                    </div>
-                                  ),
-                                },
-                                ...getSampleTableColumns({
-                                  tableWidth,
-                                  includeContaminationFields: trainingMode,
-                                }),
-                              ];
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                                    // select the sample
+                                    setSelectedSampleIds([
+                                      {
+                                        PERMANENT_IDENTIFIER:
+                                          row.original.PERMANENT_IDENTIFIER,
+                                        DECISIONUNITUUID:
+                                          row.original.DECISIONUNITUUID,
+                                        selection_method: 'row-click',
+                                        graphic: row.original.grpahic,
+                                      },
+                                    ]);
+
+                                    // zoom to the graphic
+                                    if (displayDimensions === '2d' && mapView) {
+                                      mapView.goTo(row.original.graphic);
+                                      mapView.zoom =
+                                        appType === 'decon'
+                                          ? 16
+                                          : mapView.zoom - 1;
+                                    } else if (
+                                      displayDimensions === '3d' &&
+                                      sceneView
+                                    ) {
+                                      sceneView.goTo(row.original.graphic);
+                                    }
+                                  }}
+                                >
+                                  <i className="fas fa-search-plus" />
+                                  <span className="sr-only">
+                                    Zoom to sample
+                                  </span>
+                                </button>
+                              </div>
+                            ),
+                          },
+                          ...tableColumns,
+                        ];
+                      }}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          </Fragment>
-        </ErrorBoundary>
+          )}
+        </div>
       </div>
-    </Fragment>
+    </div>
   );
 }
 
-export default function AppContainer() {
-  return (
-    <LookupFilesProvider>
-      <DialogProvider>
-        <AuthenticationProvider>
-          <CalculateProvider>
-            <NavigationProvider>
-              <PublishProvider>
-                <SketchProvider>
-                  <App />
-                </SketchProvider>
-              </PublishProvider>
-            </NavigationProvider>
-          </CalculateProvider>
-        </AuthenticationProvider>
-      </DialogProvider>
-    </LookupFilesProvider>
-  );
-}
+export default App;

@@ -1,4 +1,4 @@
-import { escapeRegex } from 'utils/utils';
+import { delay, escapeRegex } from 'utils/utils';
 import * as geoprocessor from '@arcgis/core/rest/geoprocessor';
 
 /**
@@ -7,9 +7,12 @@ import * as geoprocessor from '@arcgis/core/rest/geoprocessor';
  * @param apiUrl The webservice url to fetch data from
  * @returns A promise that resolves to the fetch response.
  */
-export function fetchCheck(url: string) {
+export function fetchCheck(
+  url: string,
+  init: RequestInit | undefined = undefined,
+) {
   const startTime = performance.now();
-  return fetch(url)
+  return fetch(url, init)
     .then((response: any) => {
       logCallToGoogleAnalytics(url, response.status, startTime);
       return checkResponse(response);
@@ -30,52 +33,15 @@ export function fetchCheck(url: string) {
  * @param url The webservice url to fetch data from
  * @returns A promise that resolves to the fetch response.
  */
-export function proxyFetch(url: string) {
-  const { REACT_APP_PROXY_URL } = process.env;
+export function proxyFetch(
+  url: string,
+  init: RequestInit | undefined = undefined,
+) {
+  const { VITE_PROXY_URL } = import.meta.env;
   // if environment variable is not set, default to use the current site origin
-  const proxyUrl = REACT_APP_PROXY_URL || `${window.location.origin}/proxy`;
+  const proxyUrl = VITE_PROXY_URL || `${window.location.origin}/proxy`;
 
-  return fetchCheck(`${proxyUrl}?url=${url}`);
-}
-
-/**
- * Performs a fetch to get a lookup file from S3.
- *
- * @param path The path to the lookup file to return
- * @returns A promise that resolves to the fetch response.
- */
-export function lookupFetch(path: string) {
-  const { REACT_APP_SERVER_URL } = process.env;
-  const baseUrl = REACT_APP_SERVER_URL || window.location.origin;
-  const url = `${baseUrl}/data/${path}`;
-
-  return new Promise<Object>((resolve, reject) => {
-    // Function that fetches the lookup file.
-    // This will retry the fetch 3 times if the fetch fails with a
-    // 1 second delay between each retry.
-    const fetchLookup = (retryCount: number = 0) => {
-      proxyFetch(url)
-        .then((data: any) => {
-          resolve(data);
-        })
-        .catch((err) => {
-          console.error(err);
-
-          // resolve the request when the max retry count of 3 is hit
-          if (retryCount === 3) {
-            reject(err);
-          } else {
-            // recursive retry (1 second between retries)
-            console.log(
-              `Failed to fetch ${path}. Retrying (${retryCount + 1} of 3)...`,
-            );
-            setTimeout(() => fetchLookup(retryCount + 1), 1000);
-          }
-        });
-    };
-
-    fetchLookup();
-  });
+  return fetchCheck(`${proxyUrl}?url=${url}`, init);
 }
 
 /**
@@ -95,7 +61,7 @@ export function fetchPost(
 
   // build the url search params
   const body = new URLSearchParams();
-  for (let [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(data)) {
     // get the value convert JSON to strings where necessary
     let valueToAdd = value;
     if (typeof value === 'object') {
@@ -134,7 +100,7 @@ export function fetchPostFile(url: string, data: object, file: any) {
 
   // build the url search params
   const body = new FormData();
-  for (let [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(data)) {
     // get the value convert JSON to strings where necessary
     let valueToAdd = value;
     if (typeof value === 'object') {
@@ -199,7 +165,7 @@ export function geoprocessorFetch({
 
     geoprocessor
       .execute(url, inputParameters, { outSpatialReference } as any, {
-        timeout: 120000,
+        timeout: 240000,
         cacheBust: true,
       })
       .then((res) => {
@@ -212,6 +178,40 @@ export function geoprocessorFetch({
         reject(err);
       });
   });
+}
+
+/**
+ * Retries the task that is passed in and returns
+ * the result.
+ *
+ * @param task The task to run and retry on failure
+ * @param retryLimit Amount of times to retry
+ * @param retryIntervalSeconds Time in between retries
+ * @param retryCount (DO NOT USE) Number of times retried
+ * @returns Result of the task that was passed in
+ */
+export async function retryCall<T>(
+  task: () => Promise<T>,
+  retryLimit = 3,
+  retryIntervalSeconds = 1,
+  retryCount = 0,
+) {
+  try {
+    return await task();
+  } catch (err: unknown) {
+    if (retryCount < retryLimit) {
+      console.log(err);
+      console.log(`Retrying API call (${retryCount + 1} of ${retryLimit}) `);
+
+      await delay(retryIntervalSeconds * 1000);
+      return await retryCall(
+        task,
+        retryLimit,
+        retryIntervalSeconds,
+        retryCount + 1,
+      );
+    } else throw err;
+  }
 }
 
 /**
@@ -230,7 +230,7 @@ export function logCallToGoogleAnalytics(
   const duration = performance.now() - startTime;
 
   // combine the web service and map service mappings
-  let mapping = window.googleAnalyticsMapping;
+  const mapping = window.googleAnalyticsMapping;
 
   // get the short name from the url
   let eventAction = 'UNKNOWN';

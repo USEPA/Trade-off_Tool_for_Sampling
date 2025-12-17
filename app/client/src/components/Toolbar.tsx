@@ -10,9 +10,9 @@ import LayerList from '@arcgis/core/widgets/LayerList';
 import Legend from '@arcgis/core/widgets/Legend';
 import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
 import Portal from '@arcgis/core/portal/Portal';
-import PortalBasemapsSource from '@arcgis/core/widgets/BasemapGallery/support/PortalBasemapsSource';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
 import Slider from '@arcgis/core/widgets/Slider';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
 // components
 import InfoIcon from 'components/InfoIcon';
 import Switch from 'components/Switch';
@@ -24,28 +24,35 @@ import { SketchContext } from 'contexts/Sketch';
 // utils
 import { getEnvironmentStringParam } from 'utils/arcGisRestUtils';
 import { fetchCheck } from 'utils/fetchUtils';
+import { buildingColors, imageAnalysisSymbols } from 'utils/hooks';
 import {
   findLayerInEdits,
   getElevationLayer,
   getNextScenarioLayer,
 } from 'utils/sketchUtils';
 // types
-import { ScenarioEditsType, LayerEditsType } from 'types/Edits';
+import {
+  LayerAoiAnalysisEditsType,
+  LayerEditsType,
+  ScenarioDeconEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
+import { LayerType } from 'types/Layer';
+import { AppType } from 'types/Navigation';
 // styles
-import { colors } from 'styles';
+import { appTheme, isDecon } from 'styles';
 import {
   DefaultSymbolsType,
   PolygonSymbol,
   SampleSelectType,
 } from 'config/sampleAttributes';
-import { LayerType } from 'types/Layer';
 
 const toolBarHeight = '40px';
 
 // Builds the legend item for a layer
-function buildLegendListItem(event: any) {
+function buildLegendListItem(event: any, view: __esri.MapView) {
   const item = event.item;
-  const view = event.view;
+  item.childrenSortable = false;
 
   // create the slider
   const sliderContainer = document.createElement('div');
@@ -68,7 +75,7 @@ function buildLegendListItem(event: any) {
   // find the layer type (i.e., Samples, VSP, AOI, etc.)
   let subtitle = '';
   const legendItems: LegendRowType[] = [];
-  const layer = (window as any).totsLayers?.find(
+  const layer = window.totsLayers?.find(
     (layer: LayerType) =>
       layer.layerId === item?.layer?.id ||
       layer.pointsLayer?.id === item?.layer?.id ||
@@ -78,7 +85,7 @@ function buildLegendListItem(event: any) {
   const isPoints = item.layer.id?.toString().includes('-points');
   const isHybrid = item.layer.id?.toString().includes('-hybrid');
 
-  const defaultSymbols: DefaultSymbolsType = (window as any).totsDefaultSymbols;
+  const defaultSymbols: DefaultSymbolsType = window.totsDefaultSymbols;
 
   // build the data for building the legend
   if (
@@ -89,6 +96,7 @@ function buildLegendListItem(event: any) {
       value: 'Area of Interest',
       title: 'Area of Interest',
       symbol: defaultSymbols.symbols['Area of Interest'],
+      type: 'polygon',
       style: null,
     });
   }
@@ -98,35 +106,108 @@ function buildLegendListItem(event: any) {
       title: 'Contamination Map',
       symbol: defaultSymbols.symbols['Contamination Map'],
       style: null,
+      type: 'polygon',
+    });
+  }
+  if (layer?.layerType === 'Staging Area Mask') {
+    legendItems.push({
+      value: 'Staging Area',
+      title: 'Staging Area',
+      symbol: defaultSymbols.symbols['Staging Area Mask'],
+      style: null,
+      type: 'polygon',
     });
   }
   if (layer?.layerType === 'Samples' || layer?.layerType === 'VSP') {
     subtitle = 'Sample Type';
 
-    (window as any).totsAllSampleOptions?.forEach(
-      (option: SampleSelectType) => {
-        const attributes = (window as any).totsSampleAttributes[option.value];
-        const style =
-          isPoints || (isHybrid && attributes.ShapeType === 'point')
-            ? attributes?.POINT_STYLE || null
-            : null;
-        if (defaultSymbols.symbols.hasOwnProperty(option.value)) {
-          legendItems.push({
-            value: option.value,
-            title: option.label,
-            symbol: defaultSymbols.symbols[option.value],
-            style,
-          });
-        } else {
-          legendItems.push({
-            value: 'Samples',
-            title: option.label,
-            symbol: defaultSymbols.symbols['Samples'],
-            style,
-          });
-        }
-      },
-    );
+    window.totsAllSampleOptions?.forEach((option: SampleSelectType) => {
+      const attributes = window.totsSampleAttributes[option.value];
+      const style =
+        isPoints || (isHybrid && attributes.ShapeType === 'point')
+          ? attributes?.POINT_STYLE || null
+          : null;
+      if (
+        Object.prototype.hasOwnProperty.call(
+          defaultSymbols.symbols,
+          option.value,
+        )
+      ) {
+        legendItems.push({
+          value: option.value,
+          title: option.label,
+          symbol: defaultSymbols.symbols[option.value],
+          style,
+          type: 'polygon',
+        });
+      } else {
+        legendItems.push({
+          value: 'Samples',
+          title: option.label,
+          symbol: defaultSymbols.symbols['Samples'],
+          style,
+          type: 'polygon',
+        });
+      }
+    });
+  }
+  if (layer?.layerType === 'Decon Mask') {
+    legendItems.push({
+      value: 'Area of Interest',
+      title: 'Area of Interest',
+      symbol: defaultSymbols.symbols['Area of Interest'],
+      type: 'polygon',
+      style: null,
+    });
+  }
+  if (layer?.layerType === 'AOI Assessed') {
+    Object.keys(buildingColors).forEach((key) => {
+      legendItems.push({
+        value: key,
+        title: key,
+        symbol: {
+          type: 'simple-fill',
+          color: buildingColors[key],
+          outline: {
+            color: [153, 153, 153, 64],
+            width: 0.84,
+          },
+        },
+        type: 'polygon',
+        style: null,
+      });
+    });
+  }
+  if (layer?.layerType === 'Image Analysis') {
+    Object.keys(imageAnalysisSymbols).forEach((key) => {
+      if (key === 'Vegetation') return;
+      const esriSymbol = (imageAnalysisSymbols as any)[key];
+      const label = key === 'Soil' ? 'Soil/Vegetation' : key;
+      legendItems.push({
+        value: label,
+        title: label,
+        symbol: {
+          type: esriSymbol.type,
+          color: [
+            esriSymbol.color.r,
+            esriSymbol.color.g,
+            esriSymbol.color.b,
+            esriSymbol.color.a,
+          ],
+          outline: {
+            color: [
+              esriSymbol.outline.color.r,
+              esriSymbol.outline.color.g,
+              esriSymbol.outline.color.b,
+              esriSymbol.outline.color.a,
+            ],
+            width: esriSymbol.outline.width,
+          },
+        },
+        type: 'polygon',
+        style: null,
+      });
+    });
   }
 
   // sort the legend items
@@ -152,11 +233,28 @@ function buildLegendListItem(event: any) {
                           opacity: 1;
                         `}
                       >
-                        <ShapeStyle
-                          color={row.symbol.color}
-                          outline={row.symbol.outline}
-                          style={row.style}
-                        />
+                        {row.type === 'polygon' && (
+                          <ShapeStyle
+                            color={row.symbol.color}
+                            outline={row.symbol.outline}
+                            style={row.style}
+                          />
+                        )}
+                        {row.type === 'text' && (
+                          <span
+                            className="esri-icon-organization"
+                            css={css`
+                              font-size: 22px;
+                              font-weight: bold;
+                              color: rgba(
+                                ${row.symbol.color.r},
+                                ${row.symbol.color.g},
+                                ${row.symbol.color.b},
+                                ${row.symbol.color.a}
+                              );
+                            `}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -218,11 +316,11 @@ function buildLegendListItem(event: any) {
       layerInfos: [
         {
           layer: item.layer,
-          title: item.layer.title,
-          hideLayers: [],
+          title: item.title,
         } as any,
       ],
     });
+    container.append(slider.domNode);
     container.append(legend.domNode);
 
     // don't show legend twice
@@ -234,7 +332,6 @@ function buildLegendListItem(event: any) {
   }
 
   // add a delete button for each layer, but don't add it to sublayers
-  item.actionsOpen = true;
   item.actionsSections = [
     [
       {
@@ -251,43 +348,25 @@ function buildLegendListItem(event: any) {
   ];
 }
 
-const basemapNames = [
-  'Streets',
-  'Imagery',
-  'Imagery Hybrid',
-  'Topographic',
-  'Terrain with Labels',
-  'Light Gray Canvas',
-  'Dark Gray Canvas',
-  'Navigation',
-  'Streets (Night)',
-  'Oceans',
-  'National Geographic Style Map',
-  'OpenStreetMap',
-  'Charted Territory Map',
-  'Community Map',
-  'Navigation (Dark Mode)',
-  'Newspaper Map',
-  'Human Geography Map',
-  'Human Geography Dark Map',
-  'Modern Antique Map',
-  'Mid-Century Map',
-  'Nova Map',
-  'Colored Pencil Map',
-  'Firefly Imagery Hybrid',
-  'USA Topo Maps',
-];
-
-type LegendRowType = {
-  title: string;
-  value: string;
-  symbol: PolygonSymbol;
-  style: string | null;
-};
+type LegendRowType =
+  | {
+      type: 'polygon';
+      title: string;
+      value: string;
+      symbol: PolygonSymbol;
+      style: string | null;
+    }
+  | {
+      title: string;
+      value: string;
+      symbol: TextSymbol;
+      type: 'text';
+      style: string | null;
+    };
 
 // --- styles (Toolbar) ---
 const toolBarTitle = css`
-  color: white;
+  color: ${appTheme.headerColor};
   margin: 0;
   padding: 0 16px;
   font-size: 100%;
@@ -334,7 +413,7 @@ const toolBarStyles = css`
   justify-content: space-between;
   padding: 0;
   padding-right: 0;
-  background-color: ${colors.darkblue()};
+  background-color: ${appTheme.headerBackgroundColor};
 `;
 
 const toolBarButtonsStyles = css`
@@ -347,8 +426,8 @@ const toolBarButtonStyles = (width?: string) => {
     height: ${toolBarHeight};
     margin-bottom: 0;
     padding: 0.75em 1em;
-    color: white;
-    background-color: ${colors.darkblue()};
+    color: ${appTheme.headerColor};
+    background-color: ${appTheme.headerBackgroundColor};
     border-radius: 0;
     line-height: 16px;
     text-decoration: none;
@@ -356,7 +435,8 @@ const toolBarButtonStyles = (width?: string) => {
     ${width ? `width: ${width};` : ''}
 
     &:hover {
-      background-color: ${colors.darkblue()};
+      background-color: ${appTheme.headerBackgroundColor};
+      color: ${appTheme.headerColor};
     }
 
     &:visited {
@@ -364,7 +444,7 @@ const toolBarButtonStyles = (width?: string) => {
     }
 
     &.tots-button-selected {
-      background-color: #004f83;
+      background-color: ${appTheme.headerButtonSelectedColor};
       border-top: 2px solid #8491a1;
     }
   `;
@@ -402,6 +482,7 @@ const floatContainerStyles = (containerVisible: boolean, right: string) => {
 const legendStyles = (legendVisible: boolean, right: string) => {
   return css`
     ${floatContainerStyles(legendVisible, right)}
+    padding: 0.5em 0;
 
     /* Hide/show the actions panel */
     .esri-layer-list__item-actions[hidden] {
@@ -421,20 +502,23 @@ const legendStyles = (legendVisible: boolean, right: string) => {
 };
 
 const navIconStyles = css`
-  color: white;
+  color: ${appTheme.headerColor};
   width: 10px;
   margin-left: -2px;
   margin-right: 10px;
 `;
 
 // --- components (Toolbar) ---
-function Toolbar() {
+type Props = {
+  appType: AppType;
+};
+
+function Toolbar({ appType }: Props) {
   const { setContaminationMap } = useContext(CalculateContext);
   const { trainingMode, setTrainingMode } = useContext(NavigationContext);
   const {
     autoZoom,
     setAutoZoom,
-    basemapWidget,
     setBasemapWidget,
     defaultSymbols,
     edits,
@@ -482,7 +566,7 @@ function Toolbar() {
     if (oAuthInfo) return;
 
     const info = new OAuthInfo({
-      appId: process.env.REACT_APP_ARCGIS_APP_ID,
+      appId: import.meta.env.VITE_ARCGIS_CLIENT_ID,
       popup: true,
       flowType: 'authorization-code',
       popupCallbackUrl: `${window.location.origin}/oauth-callback.html`,
@@ -554,8 +638,9 @@ function Toolbar() {
     const newLayerList = new LayerList({
       view: mapView,
       container: 'legend-container',
+      dragEnabled: true,
       listItemCreatedFunction: (event) => {
-        buildLegendListItem(event);
+        buildLegendListItem(event, mapView);
       },
     });
 
@@ -609,12 +694,12 @@ function Toolbar() {
 
   // Rebuild the legend if the sample type definitions are changed
   useEffect(() => {
-    if (!layerList) return;
+    if (!layerList || !mapView) return;
 
     layerList.listItemCreatedFunction = (event) => {
-      buildLegendListItem(event);
+      buildLegendListItem(event, mapView);
     };
-  }, [defaultSymbols, layerList, userDefinedAttributes]);
+  }, [defaultSymbols, layerList, mapView, userDefinedAttributes]);
 
   // Deletes layers from the map and session variables when the delete button is clicked
   useEffect(() => {
@@ -662,7 +747,12 @@ function Toolbar() {
       setEdits(newEdits);
 
       // find the layer
-      let totsLayerToRemove: ScenarioEditsType | LayerEditsType | null = null;
+      let totsLayerToRemove:
+        | ScenarioEditsType
+        | ScenarioDeconEditsType
+        | LayerEditsType
+        | LayerAoiAnalysisEditsType
+        | null = null;
       const { editsScenario, editsLayer } = findLayerInEdits(
         edits.edits,
         layerToRemove.id,
@@ -754,40 +844,27 @@ function Toolbar() {
   const [basemapVisible, setBasemapVisible] = useState(false);
   const [basemapInitialized, setBasemapInitialized] = useState(false);
   useEffect(() => {
-    if (!mapView || basemapInitialized) return;
+    if (!mapView || !sceneView || basemapInitialized) return;
 
-    const basemapsSource = new PortalBasemapsSource({
-      filterFunction: (basemap: __esri.Basemap) => {
-        return basemapNames.indexOf(basemap.portalItem.title) !== -1;
-      },
-      updateBasemapsCallback: (basemaps: __esri.Basemap[]) => {
-        // sort the basemaps based on the ordering of basemapNames
-        return basemaps.sort((a, b) => {
-          return (
-            basemapNames.indexOf(a.portalItem.title) -
-            basemapNames.indexOf(b.portalItem.title)
-          );
-        });
-      },
-    });
-
-    setBasemapWidget(
-      new BasemapGallery({
-        container: 'basemap-container',
+    setBasemapWidget({
+      '2d': new BasemapGallery({
+        container: 'basemap-container-2d',
         view: mapView,
-        source: basemapsSource,
       }),
-    );
+      '3d': new BasemapGallery({
+        container: 'basemap-container-3d',
+        view: sceneView,
+      }),
+    });
     setBasemapInitialized(true);
-  }, [mapView, basemapInitialized, setBasemapWidget]);
+  }, [mapView, basemapInitialized, setBasemapWidget, sceneView]);
 
   // Switches the layer list and basemap widgets between 2D and 3D
   useEffect(() => {
-    if (!basemapWidget || !layerList || !mapView || !sceneView) return;
+    if (!layerList || !mapView || !sceneView) return;
 
     layerList.view = displayDimensions === '2d' ? mapView : sceneView;
-    basemapWidget.view = displayDimensions === '2d' ? mapView : sceneView;
-  }, [basemapWidget, displayDimensions, layerList, mapView, sceneView]);
+  }, [displayDimensions, layerList, mapView, sceneView]);
 
   // Switches between point and polygon representations
   useEffect(() => {
@@ -799,7 +876,7 @@ function Toolbar() {
         layer.hybridLayer
       ) {
         // make points layers visible
-        if (layer.sketchLayer.listMode === 'show') {
+        if (layer.sketchLayer?.listMode === 'show') {
           layer.pointsLayer.listMode = layer.sketchLayer.listMode;
           layer.pointsLayer.visible = layer.sketchLayer.visible;
         }
@@ -807,8 +884,10 @@ function Toolbar() {
           layer.pointsLayer.listMode = layer.hybridLayer.listMode;
           layer.pointsLayer.visible = layer.hybridLayer.visible;
         }
-        layer.sketchLayer.listMode = 'hide';
-        layer.sketchLayer.visible = false;
+        if (layer.sketchLayer) {
+          layer.sketchLayer.listMode = 'hide';
+          layer.sketchLayer.visible = false;
+        }
         layer.hybridLayer.listMode = 'hide';
         layer.hybridLayer.visible = false;
       } else if (
@@ -817,11 +896,11 @@ function Toolbar() {
         layer.hybridLayer
       ) {
         // make polygons layer visible
-        if (layer.pointsLayer.listMode === 'show') {
+        if (layer.pointsLayer.listMode === 'show' && layer.sketchLayer) {
           layer.sketchLayer.listMode = layer.pointsLayer.listMode;
           layer.sketchLayer.visible = layer.pointsLayer.visible;
         }
-        if (layer.hybridLayer.listMode === 'show') {
+        if (layer.hybridLayer.listMode === 'show' && layer.sketchLayer) {
           layer.sketchLayer.listMode = layer.hybridLayer.listMode;
           layer.sketchLayer.visible = layer.hybridLayer.visible;
         }
@@ -835,7 +914,7 @@ function Toolbar() {
         layer.hybridLayer
       ) {
         // make points layers visible
-        if (layer.sketchLayer.listMode === 'show') {
+        if (layer.sketchLayer?.listMode === 'show' && layer.sketchLayer) {
           layer.hybridLayer.listMode = layer.sketchLayer.listMode;
           layer.hybridLayer.visible = layer.sketchLayer.visible;
         }
@@ -843,8 +922,10 @@ function Toolbar() {
           layer.hybridLayer.listMode = layer.pointsLayer.listMode;
           layer.hybridLayer.visible = layer.pointsLayer.visible;
         }
-        layer.sketchLayer.listMode = 'hide';
-        layer.sketchLayer.visible = false;
+        if (layer.sketchLayer) {
+          layer.sketchLayer.listMode = 'hide';
+          layer.sketchLayer.visible = false;
+        }
         layer.pointsLayer.listMode = 'hide';
         layer.pointsLayer.visible = false;
       }
@@ -917,17 +998,23 @@ function Toolbar() {
     };
   }, [map, viewUnderground3d]);
 
+  const buttonSelectedClass = 'tots-button-selected';
+
   return (
     <div css={toolBarStyles} data-testid="tots-toolbar">
       <h1 css={toolBarTitle}>
-        Trade-off Tool for Sampling (TOTS) {trainingMode && ' - TRAINING MODE'}
+        Trade-off Tool for{' '}
+        {appType === 'decon'
+          ? 'Decontamination Strategies (TODS)'
+          : 'Sampling (TOTS)'}{' '}
+        {trainingMode && ' - TRAINING MODE'}
       </h1>
       <div css={toolBarButtonsStyles}>
         <div>
           <button
             css={toolBarButtonStyles()}
-            className={settingsVisible ? 'tots-button-selected' : ''}
-            onClick={(ev) => {
+            className={settingsVisible ? buttonSelectedClass : ''}
+            onClick={(_ev) => {
               setSettingsVisible(!settingsVisible);
               setBasemapVisible(false);
               setLegendVisible(false);
@@ -943,9 +1030,7 @@ function Toolbar() {
                 <InfoIcon
                   cssStyles={infoIconStyles}
                   id="3d-view-switch"
-                  tooltip={
-                    'Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your samples in “3D” mode. Samples plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode. '
-                  }
+                  tooltip={`Switches between “2D” and “3D” viewing modes. <br/>If you plan to use the “3D” feature, it is best to plot<br/>your ${appType === 'decon' ? 'decon applications' : 'samples'} in “3D” mode. ${appType === 'decon' ? 'Decon applications' : 'Samples'} plotted in “2D”<br/>mode can be obscured by 3D geometry, such as 3D <br/>reference layers, when viewing in “3D” mode.`}
                   place="bottom"
                 />
               </legend>
@@ -955,7 +1040,7 @@ function Toolbar() {
                 name="dimension"
                 value="2d"
                 checked={displayDimensions === '2d'}
-                onChange={(ev) => setDisplayDimensions('2d')}
+                onChange={(_ev) => setDisplayDimensions('2d')}
               />
               <label htmlFor="dimension-2d">2D</label>
               <br />
@@ -966,7 +1051,7 @@ function Toolbar() {
                 name="dimension"
                 value="3d"
                 checked={displayDimensions === '3d'}
-                onChange={(ev) => {
+                onChange={(_ev) => {
                   setDisplayDimensions('3d');
                   setDisplayGeometryType('points');
                 }}
@@ -974,50 +1059,53 @@ function Toolbar() {
               <label htmlFor="dimension-3d">3D</label>
             </fieldset>
 
-            <fieldset css={fieldsetStyles}>
-              <legend>
-                Shape
-                <InfoIcon
-                  cssStyles={infoIconStyles}
-                  id="poly-points-switch"
-                  tooltip={
-                    'The "Polygons" view displays samples on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the samples as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>samples over a large geographic area. The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".'
-                  }
-                  place="bottom"
+            {!isDecon() && (
+              <fieldset css={fieldsetStyles}>
+                <legend>
+                  Shape
+                  <InfoIcon
+                    cssStyles={infoIconStyles}
+                    id="poly-points-switch"
+                    tooltip={`The "Polygons" view displays ${appType === 'decon' ? 'decon applications' : 'samples'} on the map as their<br/>exact size which do not scale as you zoom out on the map.<br/>The "Points" view displays the ${appType === 'decon' ? 'decon applications' : 'samples'} as icons that scale<br/>as you zoom in/out and may be useful for viewing many<br/>${appType === 'decon' ? 'decon applications' : 'samples'} over a large geographic area. ${appType === 'sampling' ? 'The "Hybrid" view<br/>displays point based samples as points and polygon based<br/>samples as polygons. The "Hybrid" view may be useful for<br/>viewing in "3D".' : ''}`}
+                    place="bottom"
+                  />
+                </legend>
+                <input
+                  id="shape-points"
+                  type="radio"
+                  name="shape"
+                  value="points"
+                  checked={displayGeometryType === 'points'}
+                  onChange={(_ev) => setDisplayGeometryType('points')}
                 />
-              </legend>
-              <input
-                id="shape-points"
-                type="radio"
-                name="shape"
-                value="points"
-                checked={displayGeometryType === 'points'}
-                onChange={(ev) => setDisplayGeometryType('points')}
-              />
-              <label htmlFor="shape-points">Points</label>
-              <br />
+                <label htmlFor="shape-points">Points</label>
+                <br />
 
-              <input
-                id="shape-polygons"
-                type="radio"
-                name="shape"
-                value="polygons"
-                checked={displayGeometryType === 'polygons'}
-                onChange={(ev) => setDisplayGeometryType('polygons')}
-              />
-              <label htmlFor="shape-polygons">Polygons</label>
-              <br />
+                <input
+                  id="shape-polygons"
+                  type="radio"
+                  name="shape"
+                  value="polygons"
+                  checked={displayGeometryType === 'polygons'}
+                  onChange={(_ev) => setDisplayGeometryType('polygons')}
+                />
+                <label htmlFor="shape-polygons">Polygons</label>
+                <br />
 
-              <input
-                id="shape-hybrid"
-                type="radio"
-                name="shape"
-                value="hybrid"
-                checked={displayGeometryType === 'hybrid'}
-                onChange={(ev) => setDisplayGeometryType('hybrid')}
-              />
-              <label htmlFor="shape-hybrid">Hybrid</label>
-            </fieldset>
+                {appType === 'sampling' && (
+                  <label>
+                    <input
+                      type="radio"
+                      name="shape"
+                      value="hybrid"
+                      checked={displayGeometryType === 'hybrid'}
+                      onChange={(_ev) => setDisplayGeometryType('hybrid')}
+                    />
+                    <span>Hybrid</span>
+                  </label>
+                )}
+              </fieldset>
+            )}
 
             {displayDimensions === '3d' && (
               <Fragment>
@@ -1032,16 +1120,18 @@ function Toolbar() {
                   />
                 </label>
 
-                <label css={switchLabelContainer}>
-                  <span css={switchLabel}>3D Use Terrain Elevation</span>
-                  <Switch
-                    checked={terrain3dUseElevation}
-                    onChange={(checked) => setTerrain3dUseElevation(checked)}
-                    ariaLabel="3D Use Terrain Elevation"
-                    onColor="#90ee90"
-                    onHandleColor="#129c12"
-                  />
-                </label>
+                {appType === 'sampling' && (
+                  <label css={switchLabelContainer}>
+                    <span css={switchLabel}>3D Use Terrain Elevation</span>
+                    <Switch
+                      checked={terrain3dUseElevation}
+                      onChange={(checked) => setTerrain3dUseElevation(checked)}
+                      ariaLabel="3D Use Terrain Elevation"
+                      onColor="#90ee90"
+                      onHandleColor="#129c12"
+                    />
+                  </label>
+                )}
 
                 <label css={switchLabelContainer}>
                   <span css={switchLabel}>3D View Underground</span>
@@ -1065,6 +1155,16 @@ function Toolbar() {
                 onColor="#90ee90"
                 onHandleColor="#129c12"
               />
+              <InfoIcon
+                cssStyles={infoIconStyles}
+                id="training-mode-switch"
+                tooltip={
+                  appType === 'decon'
+                    ? 'When Training Mode is enabled, the tool will simulate decontamination<br/>by creating a new contamination map reflecting decreased contamination<br/>based on the efficacy of selected decontamination technologies using<br/>the original contamination map values that are associated with a sampling plan.<br/>This allows users to test the effectiveness of a decon plan in a training setting.'
+                    : 'When Training Mode is enabled, the “Contamination Map”<br/>layer type option is enabled on the “Add Layer from File”<br/>of the “Add Data” tab and the “Include Contamination Map”<br/>option is enabled on the “Calculate Resources” tab. When<br/>Training Mode is enabled, the tool will simulate receiving<br/>analytical results by intersecting the contamination map<br/>layer values with sample points to allow users to test the<br/>effectiveness of a sampling plan in a training setting.'
+                }
+                place="bottom"
+              />
             </label>
 
             <label css={switchLabelContainer}>
@@ -1082,8 +1182,8 @@ function Toolbar() {
         <div>
           <button
             css={toolBarButtonStyles()}
-            className={basemapVisible ? 'tots-button-selected' : ''}
-            onClick={(ev) => {
+            className={basemapVisible ? buttonSelectedClass : ''}
+            onClick={(_ev) => {
               setBasemapVisible(!basemapVisible);
               setLegendVisible(false);
               setSettingsVisible(false);
@@ -1092,16 +1192,22 @@ function Toolbar() {
             <i className="esri-icon-basemap" css={navIconStyles} />
             Basemap{' '}
           </button>
-          <div
-            css={floatContainerStyles(basemapVisible, '131px')}
-            id="basemap-container"
-          />
+          <div css={floatContainerStyles(basemapVisible, '131px')}>
+            <div
+              id="basemap-container-2d"
+              style={{ display: displayDimensions === '2d' ? 'block' : 'none' }}
+            />
+            <div
+              id="basemap-container-3d"
+              style={{ display: displayDimensions === '3d' ? 'block' : 'none' }}
+            />
+          </div>
         </div>
         <div>
           <button
             css={toolBarButtonStyles()}
-            className={legendVisible ? 'tots-button-selected' : ''}
-            onClick={(ev) => {
+            className={legendVisible ? buttonSelectedClass : ''}
+            onClick={(_ev) => {
               setLegendVisible(!legendVisible);
               setBasemapVisible(false);
               setSettingsVisible(false);
@@ -1119,7 +1225,7 @@ function Toolbar() {
         {oAuthInfo && (
           <button
             css={toolBarButtonStyles('105px')}
-            onClick={(ev) => {
+            onClick={(_ev) => {
               if (signedIn) {
                 IdentityManager.destroyCredentials();
                 setSignedIn(false);

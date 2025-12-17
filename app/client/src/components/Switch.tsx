@@ -1,12 +1,10 @@
-// @flow
-
 import ReactSwitch from 'react-switch';
 
 type Props = {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled: boolean;
-  ariaLabel: string;
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  ariaLabel?: string;
   onColor?: string;
   onHandleColor?: string;
   offColor?: string;
@@ -44,13 +42,5 @@ function Switch({
     />
   );
 }
-
-// all default prop are set here just to satisfy flow,
-// even though they’re all passed as a default function params
-Switch.defaultProps = {
-  checked: false,
-  onChange: () => {},
-  disabled: false,
-};
 
 export default Switch;

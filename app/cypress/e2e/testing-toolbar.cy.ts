@@ -1,32 +1,32 @@
-describe("Testing Tools", function () {
+describe('Testing Tools', function () {
   beforeEach(function () {
     const location = window.location;
     const origin =
-      location.hostname === "localhost"
+      location.hostname === 'localhost'
         ? `${location.protocol}//${location.hostname}:3000`
         : window.location.origin;
 
     cy.loadPage(true, `${origin}?devMode=true`);
   });
 
-  it("Verify buttons", function () {
-    cy.findByRole("button", { name: "OK" })
-      .should("exist")
+  it('Verify buttons', function () {
+    cy.findByRole('button', { name: 'OK' })
+      .should('exist')
       .click({ force: true });
-    cy.findByRole("button", { name: "Log Map" })
-      .should("exist")
+    cy.findByRole('button', { name: 'Log Map' })
+      .should('exist')
       .click({ force: true });
-    cy.findByRole("button", { name: "Log Views" })
-      .should("exist")
+    cy.findByRole('button', { name: 'Log Views' })
+      .should('exist')
       .click({ force: true });
-    cy.findByRole("button", { name: "Log Layers" })
-      .should("exist")
+    cy.findByRole('button', { name: 'Log Layers' })
+      .should('exist')
       .click({ force: true });
-    cy.findByRole("button", { name: "Log SketchVM" })
-      .should("exist")
+    cy.findByRole('button', { name: 'Log SketchVMs' })
+      .should('exist')
       .click({ force: true });
-    cy.findByRole("button", { name: "Clear Session Data" })
-      .should("exist")
+    cy.findByRole('button', { name: 'Clear IndexedDB Data' })
+      .should('exist')
       .click({ force: true });
   });
 });

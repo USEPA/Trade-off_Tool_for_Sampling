@@ -6,22 +6,16 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import Collection from '@arcgis/core/core/Collection';
-import CSVLayer from '@arcgis/core/layers/CSVLayer';
-import Extent from '@arcgis/core/geometry/Extent';
-import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
-import Field from '@arcgis/core/layers/support/Field';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import FillSymbol3DLayer from '@arcgis/core/symbols/FillSymbol3DLayer';
-import * as geometryJsonUtils from '@arcgis/core/geometry/support/jsonUtils';
-import GeoRSSLayer from '@arcgis/core/layers/GeoRSSLayer';
+import * as geometryEngine from '@arcgis/core/geometry/geometryEngine';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import GroupLayer from '@arcgis/core/layers/GroupLayer';
-import KMLLayer from '@arcgis/core/layers/KMLLayer';
-import Layer from '@arcgis/core/layers/Layer';
 import LineStylePattern3D from '@arcgis/core/symbols/patterns/LineStylePattern3D';
 import LineSymbol3D from '@arcgis/core/symbols/LineSymbol3D';
 import LineSymbol3DLayer from '@arcgis/core/symbols/LineSymbol3DLayer';
@@ -29,95 +23,1278 @@ import Point from '@arcgis/core/geometry/Point';
 import Polygon from '@arcgis/core/geometry/Polygon';
 import PolygonSymbol3D from '@arcgis/core/symbols/PolygonSymbol3D';
 import PopupTemplate from '@arcgis/core/PopupTemplate';
-import PortalItem from '@arcgis/core/portal/PortalItem';
+import * as query from '@arcgis/core/rest/query';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils';
-import * as rendererJsonUtils from '@arcgis/core/renderers/support/jsonUtils';
-import Viewpoint from '@arcgis/core/Viewpoint';
-import WMSLayer from '@arcgis/core/layers/WMSLayer';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 // components
-import MapPopup from 'components/MapPopup';
+import MapPopup, {
+  buildingMapPopup,
+  contaminationMapPopup,
+  imageryAnalysisMapPopup,
+} from 'components/MapPopup';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
 import { CalculateContext } from 'contexts/Calculate';
-import { DialogContext, AlertDialogOptions } from 'contexts/Dialog';
-import { useLayerProps, useSampleTypesContext } from 'contexts/LookupFiles';
+import { DialogContext } from 'contexts/Dialog';
+import { SampleTypesS3, useLookupFiles } from 'contexts/LookupFiles';
 import { NavigationContext } from 'contexts/Navigation';
-import { PublishContext } from 'contexts/Publish';
-import { SketchContext, SketchViewModelType } from 'contexts/Sketch';
+import { PublishContext, Selections } from 'contexts/Publish';
+import {
+  AoiCharacterizationData,
+  JsonDownloadType,
+  PlanGraphics,
+  SketchContext,
+  SketchViewModelType,
+} from 'contexts/Sketch';
 // types
 import {
   CalculateResultsType,
   CalculateResultsDataType,
+  CalculateResultsDeconDataType,
 } from 'types/CalculateResults';
-import { EditsType, ScenarioEditsType, ServiceMetaDataType } from 'types/Edits';
 import {
-  FieldInfos,
-  LayerType,
-  LayerTypeName,
-  PortalLayerType,
-  UrlLayerType,
-} from 'types/Layer';
-import { SampleTypeOptions } from 'types/Publish';
-// config
-import { PanelValueType } from 'config/navigation';
+  EditsType,
+  LayerAoiAnalysisEditsType,
+  LayerDeconEditsType,
+  ScenarioEditsType,
+} from 'types/Edits';
+import { FieldInfos, LayerType, LayerTypeName } from 'types/Layer';
+import { AppType } from 'types/Navigation';
+import { ReferenceLayerSelections } from 'types/Publish';
 // utils
+import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
+import { writeToStorage } from 'utils/browserStorage';
+import {
+  fetchPost,
+  fetchPostFile,
+  geoprocessorFetch,
+  retryCall,
+} from 'utils/fetchUtils';
 import {
   calculateArea,
   convertToPoint,
   createBuffer,
-  createLayer,
   deactivateButtons,
   findLayerInEdits,
   generateUUID,
   getCurrentDateTime,
+  getDefaultWebMapSceneSelections,
   handlePopupClick,
+  removeZValues,
+  setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { GoToOptions } from 'types/Navigation';
-import {
-  SampleSelectType,
-  UserDefinedAttributes,
-} from 'config/sampleAttributes';
+import { parseSmallFloat } from 'utils/utils';
+// config
+import { isDecon } from 'config/navigation';
 
-// Saves data to session storage
-export async function writeToStorage(
-  key: string,
-  data: string | boolean | object,
-  setOptions: Dispatch<SetStateAction<AlertDialogOptions | null>>,
+export type GsgParam = { itemID: string };
+
+let view: __esri.MapView | __esri.SceneView | null = null;
+
+export const buildingColors: { [key: string]: number[] } = {
+  Residential: [255, 222, 62, 191],
+  Commercial: [255, 127, 127, 191],
+  Government: [20, 158, 206, 191],
+  Education: [252, 146, 31, 191],
+  Industrial: [133, 133, 133, 191],
+  Other: [255, 222, 62, 191],
+};
+
+export const mediaToBeepEnum = {
+  'Streets - Asphalt': 'asphalt',
+  'Streets/Sidewalks - Concrete': 'concrete',
+  'Soil/Vegetation': 'soil',
+};
+
+export const summarizedBuildingSurfaceTypes = [
+  'Buildings (Interior and Exterior)',
+  'Building Interiors',
+  'Building Exteriors',
+];
+
+export const outsideMedia = [
+  'Soil',
+  'Soil/Vegetation',
+  'Streets - Asphalt',
+  'Streets/Sidewalks - Concrete',
+];
+const mediaLookup: { [key: string]: string[] } = {
+  Basic: [...outsideMedia, 'Buildings (Interior and Exterior)'],
+  'Advanced - Building Structural Component': [
+    ...outsideMedia,
+    'Building Exteriors',
+    'Building Interiors',
+  ],
+  'Advanced - Building Primary Material Composition': [
+    ...outsideMedia,
+    'Brick Buildings',
+    'Concrete Buildings',
+    'Steel Buildings',
+    'Wood Buildings',
+    'Other Buildings',
+  ],
+};
+
+function performBasicDeconCalculations(
+  deconTech: string,
+  sel: any,
+  deconAttributes: any,
+  limitOfDetection: number,
+  jsonDownload: any[],
+  parentMedia?: string,
+  removeBuildingContentsOverride?: boolean,
 ) {
-  const itemSize = Math.round(JSON.stringify(data).length / 1024);
+  const {
+    APPLICATION_METHOD,
+    FIXED_COSTS,
+    SIZE_BASED_COSTS,
+    SETUP_TIME,
+    BREAKDOWN_TIME,
+    APPLICATION_TIME,
+    RESIDENCE_TIME,
+    MATERIAL_SPECIFIC_PARAMS,
+    SURFACE_SPECIFIC_PARAMS,
+  } = deconAttributes;
 
-  try {
-    if (typeof data === 'string') sessionStorage.setItem(key, data);
-    else sessionStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    const storageSize = Math.round(
-      JSON.stringify(sessionStorage).length / 1024,
-    );
-    const message = `New storage size would be ${
-      storageSize + itemSize
-    }K up from ${storageSize}K already in storage`;
-    console.error(e);
+  const {
+    CONTAM_REMOVAL_FACTOR,
+    SOLID_WASTE_VOLUME,
+    AQUEOUS_WASTE_VOLUME,
+    SOLID_WASTE_MASS,
+    AQUEOUS_WASTE_MASS,
+  } = SURFACE_SPECIFIC_PARAMS[sel.media];
 
-    setOptions({
-      title: 'Session Storage Limit Reached',
-      ariaLabel: 'Session Storage Limit Reached',
-      description: message,
-    });
+  // calculate final contamination
+  const contamRemovalFactor = parentMedia
+    ? MATERIAL_SPECIFIC_PARAMS[parentMedia.replace(' Buildings', '')]
+        .CONTAM_REMOVAL_FACTOR
+    : CONTAM_REMOVAL_FACTOR;
+  const contamLeftFactor = 1 - contamRemovalFactor;
+  const avgFinalContam =
+    sel.avgCfu * Math.pow(contamLeftFactor, sel.numIterativeApplications);
+  sel.avgFinalContamination = avgFinalContam;
+  sel.aboveDetectionLimit = avgFinalContam >= limitOfDetection;
 
-    window.logErrorToGa(`${key}:${message}`);
+  const removeBldgContents =
+    removeBuildingContentsOverride !== undefined
+      ? removeBuildingContentsOverride
+      : sel.removeContents;
+
+  const areaDeconApplied = sel.surfaceArea * (sel.pctDeconed * 0.01);
+  const areaDeconAppliedSqFt =
+    convertSqMtoSqFt(sel.surfaceArea) * (sel.pctDeconed * 0.01);
+  const volumeDeconAppliedCubFt = convertCubMtoCubFt(sel.volume);
+
+  const liquidWasteM3 =
+    areaDeconApplied * AQUEOUS_WASTE_VOLUME * sel.numIterativeApplications;
+  let solidWasteM3 = areaDeconApplied * SOLID_WASTE_VOLUME;
+  const liquidWasteMass =
+    areaDeconApplied * AQUEOUS_WASTE_MASS * sel.numIterativeApplications;
+  let solidWasteMass = areaDeconApplied * SOLID_WASTE_MASS;
+  if (sel.media === 'Building Interiors') {
+    const pctVolumeDeconed = sel.pctDeconed * 0.01 * sel.volumeContents;
+    if (APPLICATION_METHOD === 'Surface' && !removeBldgContents) {
+      solidWasteM3 -= pctVolumeDeconed;
+      solidWasteMass -= pctVolumeDeconed * SOLID_WASTE_MASS;
+    }
+    if (APPLICATION_METHOD === 'Volumetric' && removeBldgContents) {
+      solidWasteM3 += pctVolumeDeconed;
+      solidWasteMass += pctVolumeDeconed * SOLID_WASTE_MASS;
+    }
   }
+
+  const deconCost =
+    APPLICATION_METHOD === 'Surface'
+      ? FIXED_COSTS +
+        areaDeconAppliedSqFt * SIZE_BASED_COSTS * sel.numIterativeApplications
+      : FIXED_COSTS +
+        volumeDeconAppliedCubFt *
+          SIZE_BASED_COSTS *
+          sel.numIterativeApplications;
+  const deconTime =
+    SETUP_TIME / 24 +
+    BREAKDOWN_TIME / 24 +
+    (areaDeconApplied *
+      (APPLICATION_TIME / sel.numTeams) *
+      sel.numIterativeApplications) /
+      24 +
+    (RESIDENCE_TIME * sel.numIterativeApplications) / 24;
+
+  jsonDownload.push({
+    contaminationScenario: parentMedia
+      ? `${parentMedia} - ${sel.media}`
+      : sel.media,
+    decontaminationTechnology: deconTech,
+    solidWasteVolumeM3: solidWasteM3,
+    liquidWasteVolumeM3: liquidWasteM3,
+    solidWasteMassKg: solidWasteMass,
+    liquidWasteMassKg: liquidWasteMass,
+    decontaminationCost: deconCost,
+    decontaminationTimeDays: deconTime,
+    averageInitialContamination: sel.avgCfu,
+    averageFinalContamination: sel.avgFinalContamination,
+    aboveDetectionLimit: sel.aboveDetectionLimit,
+    pctAoi: outsideMedia.includes(sel.media) ? sel.pctAoi : null,
+    surfaceArea: sel.surfaceArea,
+    volume: sel.volume,
+    volumeContents:
+      sel.media === 'Building Interiors' ? sel.volumeContents : null,
+    numIterativeApplications: sel.numIterativeApplications,
+    numTeams: sel.numTeams,
+    removeContents:
+      sel.media === 'Building Interiors' ? sel.removeContents : null,
+  });
+
+  return {
+    deconCost,
+    deconTime,
+    solidWasteM3,
+    liquidWasteM3,
+    solidWasteMass,
+    liquidWasteMass,
+  };
 }
 
-// Reads data from session storage
-export function readFromStorage(key: string) {
-  return sessionStorage.getItem(key);
+export const backupImagerySymbol = new SimpleFillSymbol({
+  color: [0, 0, 0, 0],
+  outline: {
+    color: [0, 0, 0, 0],
+    width: 0,
+    style: 'solid',
+  },
+});
+export const imageAnalysisSymbols: { [key: string]: __esri.SimpleFillSymbol } =
+  {
+    Asphalt: new SimpleFillSymbol({
+      color: [0, 0, 0, 0.5],
+      outline: {
+        color: [0, 0, 0, 1],
+        width: 1,
+        style: 'solid',
+      },
+    }),
+    Concrete: new SimpleFillSymbol({
+      color: [156, 156, 156, 0.5],
+      outline: {
+        color: [156, 156, 156, 1],
+        width: 1,
+        style: 'solid',
+      },
+    }),
+    // Soil: new SimpleFillSymbol({
+    //   color: [181, 53, 53, 0.5],
+    //   outline: {
+    //     color: [181, 53, 53, 1],
+    //     width: 1,
+    //     style: 'solid',
+    //   },
+    // }),
+    Soil: new SimpleFillSymbol({
+      color: [191, 217, 153, 0.5],
+      outline: {
+        color: [191, 217, 153, 1],
+        width: 1,
+        style: 'solid',
+      },
+    }),
+    Vegetation: new SimpleFillSymbol({
+      color: [191, 217, 153, 0.5],
+      outline: {
+        color: [191, 217, 153, 1],
+        width: 1,
+        style: 'solid',
+      },
+    }),
+    Water: new SimpleFillSymbol({
+      color: [191, 217, 242, 0.5],
+      outline: {
+        color: [191, 217, 242, 1],
+        width: 1,
+        style: 'solid',
+      },
+    }),
+  };
+
+type ContaminationPercentages = {
+  [planId: string]: { [key: number]: number };
+};
+type PlanBuildingCfu = { [planId: string]: number };
+
+export function processScenario(
+  layer: LayerAoiAnalysisEditsType | string,
+  aoiCharacterizationData: AoiCharacterizationData,
+  contaminationPercentages: ContaminationPercentages,
+  planBuildingCfu: PlanBuildingCfu,
+  defaultDeconSelections: any[],
+) {
+  const isScenario = typeof layer !== 'string';
+  const scenarioId = isScenario ? layer.layerId : layer;
+  const deconTechSelections = isScenario ? layer.deconTechSelections : [];
+
+  const planGraphics = aoiCharacterizationData.planGraphics[scenarioId];
+  if (!planGraphics) return [];
+
+  const { totalAoiSqM, totalBuildingFootprintSqM } = planGraphics.summary;
+
+  if (isScenario && layer.aoiSummary) {
+    layer.aoiSummary.totalAoiSqM = planGraphics.aoiArea;
+    layer.aoiSummary.totalBuildingFootprintSqM = totalBuildingFootprintSqM;
+  }
+
+  let curDeconTechSelections =
+    deconTechSelections && deconTechSelections.length > 0
+      ? deconTechSelections
+      : defaultDeconSelections;
+  curDeconTechSelections = curDeconTechSelections.filter(
+    (d) => !d.media.includes('Building'),
+  );
+  planGraphics.summary.areaByMedia.forEach((category) => {
+    curDeconTechSelections.push({
+      aboveDetectionLimit: 0,
+      avgCfu: 0,
+      avgFinalContamination: null,
+      deconTech: null,
+      isHazardous: { label: 'Non-Hazardous', value: 'non-hazardous' },
+      numIterativeApplications: 1,
+      numTeams: 1,
+      pctDeconed: 100,
+      removeContents: false,
+      id: category.id,
+      media: category.media,
+      pctAoi: category.pctAoi,
+      surfaceArea: category.surfaceArea,
+      volume: category.volume,
+      volumeContents: category.volumeContents,
+      subRows: category.subMedia.map((sub) => ({
+        aboveDetectionLimit: 0,
+        avgCfu: 0,
+        avgFinalContamination: null,
+        deconTech: null,
+        isHazardous: { label: 'Non-Hazardous', value: 'non-hazardous' },
+        numIterativeApplications: 1,
+        numTeams: 1,
+        pctDeconed: 100,
+        removeContents: false,
+        id: sub.id ?? generateUUID(),
+        media: sub.media,
+        pctAoi: sub.pctAoi,
+        surfaceArea: sub.surfaceArea,
+        volume: sub.volume,
+        volumeContents: sub.volumeContents,
+      })),
+    });
+  });
+
+  const newDeconTechSelections: any[] = [];
+  curDeconTechSelections.forEach((sel) => {
+    // find decon settings
+    const media = sel.media;
+
+    let surfaceArea = 0;
+    // let volume = 0;
+    let avgCfu = 0;
+    let pctAoi = 0;
+    if (media.includes('Building')) {
+      // avgCfu =
+      //   (planBuildingCfu[scenarioId] ?? 0) * (partitionFactors[media] ?? 1);
+      // if (media === 'Building Exteriors') surfaceArea = totalBuildingExtSqM;
+      // if (media === 'Building Interiors') {
+      //   surfaceArea = totalBuildingIntSqM;
+      //   volume = totalBuildingVolumeCubM;
+      // }
+      newDeconTechSelections.push(sel);
+    } else {
+      pctAoi = (planGraphics.aoiPercentages as any)[
+        (mediaToBeepEnum as any)[sel.media]
+      ] as number;
+      const pctFactor = pctAoi * 0.01;
+
+      // get surface area of soil, asphalt or concrete
+      //             60 =             100 * 0.6 surface area of concrete
+      surfaceArea = totalAoiSqM * pctFactor;
+
+      // get total CFU for media
+      let totalArea = 0;
+      let totalCfu = 0;
+      if (
+        Object.prototype.hasOwnProperty.call(
+          contaminationPercentages,
+          scenarioId,
+        )
+      ) {
+        Object.keys(contaminationPercentages[scenarioId]).forEach(
+          (key: any) => {
+            // area of media and cfu level
+            const pctCfu = contaminationPercentages[scenarioId][key];
+            //                34.2 =   0.57 * 60
+            const surfaceAreaSfCfu = pctCfu * surfaceArea;
+            totalArea += surfaceAreaSfCfu;
+
+            // 34.2M  =             34.2 * 1M;
+            // SUM    = 35.916M CFU
+            totalCfu += surfaceAreaSfCfu * key;
+          },
+        );
+      }
+
+      avgCfu = !totalCfu && !totalArea ? 0 : totalCfu / totalArea;
+
+      newDeconTechSelections.push({
+        ...sel,
+        pctAoi,
+        surfaceArea,
+        volume: surfaceArea,
+        avgCfu,
+      });
+    }
+  });
+
+  return newDeconTechSelections;
 }
 
-// Finds the layer by the layer id
-function getLayerById(layers: LayerType[], id: string) {
-  const index = layers.findIndex((layer) => layer.layerId === id);
-  return layers[index];
+function convertMtoFt(meters: number) {
+  return meters / 0.3048;
+}
+
+function convertSqMtoSqFt(sqMeters: number) {
+  return sqMeters / 0.092903;
+}
+
+function convertCubMtoCubFt(sqMeters: number) {
+  return sqMeters / 0.0283168;
+}
+
+export async function fetchBuildingData(
+  aoiGraphics: __esri.Graphic[],
+  services: any,
+  planGraphics: PlanGraphics,
+  responseIndexes: string[],
+  gsgFile: File | undefined,
+  sceneViewForArea: __esri.SceneView | null,
+  cutFootprintsMethod: 'cut' | 'math' | 'raw' = 'math',
+  technologyTypes: SampleTypesS3,
+  _buildingFilter: string[] = [],
+) {
+  const countRequests: any[] = [];
+  aoiGraphics.forEach((graphic) => {
+    countRequests.push(
+      retryCall<number>(() =>
+        query.executeForCount(services.structures, {
+          geometry: graphic.geometry,
+          returnGeometry: false,
+        }),
+      ),
+    );
+  });
+
+  const countResponses = await Promise.all(countRequests);
+  let buildingCount = 0;
+  countResponses.forEach((count) => (buildingCount += count));
+
+  const buildingLimit = cutFootprintsMethod === 'cut' ? 500 : 2000;
+  if (buildingCount > buildingLimit) {
+    return {
+      thresholdExceeded: true,
+      buildingCount,
+      buildingLimit,
+    };
+  }
+
+  const requests: any[] = [];
+  aoiGraphics.forEach((graphic) => {
+    requests.push(
+      retryCall(() =>
+        query.executeQueryJSON(services.structures, {
+          geometry: graphic.geometry,
+          returnGeometry: true,
+          outFields: ['*'],
+        }),
+      ),
+    );
+  });
+
+  const responses = await Promise.all(requests);
+  responses.forEach((results, index) => {
+    const planId = responseIndexes[index];
+    results.features.forEach((feature: any) => {
+      const { HEIGHT, OCC_CLS, PRIM_OCC, SQMETERS } = feature.attributes;
+
+      // if (buildingFilter.includes(bid)) return;
+
+      // defaults
+      const defaultStoryHeightM = 3.6576; // default to 12 feet if no height is provided
+      const interiorMaterialFactor = 0.0740456514;
+
+      // meters
+      const heightM = HEIGHT ?? defaultStoryHeightM;
+      const numStory = Math.max(Math.ceil(heightM / defaultStoryHeightM), 1);
+      const roofSqM = SQMETERS;
+      const footprintSqM = SQMETERS;
+      const floorsSqM = numStory * footprintSqM;
+      const ceilingsSqM = floorsSqM;
+      const extWallsSqM = Math.sqrt(footprintSqM) * heightM * 4;
+      const intWallsSqM = extWallsSqM;
+      const extSqM = extWallsSqM + roofSqM;
+      const intSqM = intWallsSqM + floorsSqM + ceilingsSqM;
+      const totalSqM = extSqM + intSqM;
+      const extVolumeCubM = extSqM;
+      const intVolumeCubM = heightM * footprintSqM;
+      const intVolumeContentsCubM = intSqM * interiorMaterialFactor;
+
+      // feet
+      const heightFt = convertMtoFt(heightM);
+      const roofSqFt = convertSqMtoSqFt(roofSqM);
+      const footprintSqFt = convertSqMtoSqFt(footprintSqM);
+      const floorsSqFt = convertSqMtoSqFt(floorsSqM);
+      const ceilingsSqFt = convertSqMtoSqFt(ceilingsSqM);
+      const extWallsSqFt = convertSqMtoSqFt(extWallsSqM);
+      const intWallsSqFt = convertSqMtoSqFt(intWallsSqM);
+      const extSqFt = convertSqMtoSqFt(extSqM);
+      const intSqFt = convertSqMtoSqFt(intSqM);
+      const totalSqFt = convertSqMtoSqFt(totalSqM);
+      const extVolumeCubFt = convertCubMtoCubFt(extVolumeCubM);
+      const intVolumeCubFt = convertCubMtoCubFt(intVolumeCubM);
+      const intVolumeContentsCubFt = convertCubMtoCubFt(intVolumeContentsCubM);
+
+      // get building material type factors
+      const factorKey =
+        PRIM_OCC === 'Unclassified' ? `${PRIM_OCC}-${OCC_CLS}` : PRIM_OCC;
+      const buildingFactors = technologyTypes.deconBuildingFactors[factorKey];
+      if (!buildingFactors) {
+        console.log('No definition for ', factorKey);
+        return;
+      }
+      const { SOC, Brick, Concrete, Steel, Wood, Other } = buildingFactors;
+
+      // get surface area per material type sq meters
+      const intBrickSqM = intSqM * (Brick / 100);
+      const extBrickSqM = extSqM * (Brick / 100);
+      const extVolumeBrickCubM = extSqM * (Brick / 100);
+      const intVolumeBrickCubM = intVolumeCubM * (Brick / 100);
+      const intVolumeBrickContentsCubM =
+        intVolumeBrickCubM * interiorMaterialFactor;
+      const intConcreteSqM = intSqM * (Concrete / 100);
+      const extConcreteSqM = extSqM * (Concrete / 100);
+      const extVolumeConcreteCubM = extSqM * (Concrete / 100);
+      const intVolumeConcreteCubM = intVolumeCubM * (Concrete / 100);
+      const intVolumeConcreteContentsCubM =
+        intVolumeConcreteCubM * interiorMaterialFactor;
+      const intSteelSqM = intSqM * (Steel / 100);
+      const extSteelSqM = extSqM * (Steel / 100);
+      const extVolumeSteelCubM = extSqM * (Steel / 100);
+      const intVolumeSteelCubM = intVolumeCubM * (Steel / 100);
+      const intVolumeSteelContentsCubM =
+        intVolumeSteelCubM * interiorMaterialFactor;
+      const intWoodSqM = intSqM * (Wood / 100);
+      const extWoodSqM = extSqM * (Wood / 100);
+      const extVolumeWoodCubM = extSqM * (Wood / 100);
+      const intVolumeWoodCubM = intVolumeCubM * (Wood / 100);
+      const intVolumeWoodContentsCubM =
+        intVolumeWoodCubM * interiorMaterialFactor;
+      const intOtherSqM = intSqM * (Other / 100);
+      const extOtherSqM = extSqM * (Other / 100);
+      const extVolumeOtherCubM = extSqM * (Other / 100);
+      const intVolumeOtherCubM = intVolumeCubM * (Other / 100);
+      const intVolumeOtherContentsCubM =
+        intVolumeOtherCubM * interiorMaterialFactor;
+
+      // get surface area per material type sq feet
+      const intBrickSqFt = convertSqMtoSqFt(intBrickSqM);
+      const extBrickSqFt = convertSqMtoSqFt(extBrickSqM);
+      const extVolumeBrickCubFt = convertCubMtoCubFt(extVolumeBrickCubM);
+      const intVolumeBrickCubFt = convertCubMtoCubFt(intVolumeBrickCubM);
+      const intVolumeBrickContentsCubFt = convertCubMtoCubFt(
+        intVolumeBrickContentsCubM,
+      );
+      const intConcreteSqFt = convertSqMtoSqFt(intConcreteSqM);
+      const extConcreteSqFt = convertSqMtoSqFt(extConcreteSqM);
+      const extVolumeConcreteCubFt = convertCubMtoCubFt(extVolumeConcreteCubM);
+      const intVolumeConcreteCubFt = convertCubMtoCubFt(intVolumeConcreteCubM);
+      const intVolumeConcreteContentsCubFt = convertCubMtoCubFt(
+        intVolumeConcreteContentsCubM,
+      );
+      const intSteelSqFt = convertSqMtoSqFt(intSteelSqM);
+      const extSteelSqFt = convertSqMtoSqFt(extSteelSqM);
+      const extVolumeSteelCubFt = convertCubMtoCubFt(extVolumeSteelCubM);
+      const intVolumeSteelCubFt = convertCubMtoCubFt(intVolumeSteelCubM);
+      const intVolumeSteelContentsCubFt = convertCubMtoCubFt(
+        intVolumeSteelContentsCubM,
+      );
+      const intWoodSqFt = convertSqMtoSqFt(intWoodSqM);
+      const extWoodSqFt = convertSqMtoSqFt(extWoodSqM);
+      const extVolumeWoodCubFt = convertCubMtoCubFt(extVolumeWoodCubM);
+      const intVolumeWoodCubFt = convertCubMtoCubFt(intVolumeWoodCubM);
+      const intVolumeWoodContentsCubFt = convertCubMtoCubFt(
+        intVolumeWoodContentsCubM,
+      );
+      const intOtherSqFt = convertSqMtoSqFt(intOtherSqM);
+      const extOtherSqFt = convertSqMtoSqFt(extOtherSqM);
+      const extVolumeOtherCubFt = convertCubMtoCubFt(extVolumeOtherCubM);
+      const intVolumeOtherCubFt = convertCubMtoCubFt(intVolumeOtherCubM);
+      const intVolumeOtherContentsCubFt = convertCubMtoCubFt(
+        intVolumeOtherContentsCubM,
+      );
+
+      const actions = new Collection<any>();
+      actions.add({
+        title: 'View In Table',
+        id: 'table',
+        className: 'esri-icon-table',
+      });
+
+      const permId = generateUUID();
+      const occCls = feature.attributes.OCC_CLS;
+      const prodDate = feature.attributes.PROD_DATE;
+      const imageDate = feature.attributes.IMAGE_DATE;
+      planGraphics[planId].graphics.push(
+        new Graphic({
+          attributes: {
+            ...feature.attributes,
+            GlobalID: undefined,
+            PERMANENT_IDENTIFIER: permId,
+            PROD_DATE: prodDate ? new Date(prodDate).toLocaleString() : '',
+            IMAGE_DATE: imageDate ? new Date(imageDate).toLocaleString() : '',
+            soc: SOC,
+            CONTAMTYPE: '',
+            CONTAMUNIT: '',
+            CONTAMVALPLUME: 0,
+            CONTAMVALINITIAL: 0,
+            CONTAMVAL: 0,
+            numStory,
+            HEIGHT: heightM,
+            roofSqM,
+            footprintSqM,
+            floorsSqM,
+            ceilingsSqM,
+            extWallsSqM,
+            intWallsSqM,
+            extSqM,
+            intSqM,
+            totalSqM,
+            extVolumeCubM,
+            intVolumeCubM,
+            intVolumeContentsCubM,
+            heightFt,
+            roofSqFt,
+            footprintSqFt,
+            floorsSqFt,
+            ceilingsSqFt,
+            extWallsSqFt,
+            intWallsSqFt,
+            extSqFt,
+            intSqFt,
+            totalSqFt,
+            extVolumeCubFt,
+            intVolumeCubFt,
+            intVolumeContentsCubFt,
+            intBrickSqM,
+            extBrickSqM,
+            extVolumeBrickCubM,
+            intVolumeBrickCubM,
+            intVolumeBrickContentsCubM,
+            intConcreteSqM,
+            extConcreteSqM,
+            extVolumeConcreteCubM,
+            intVolumeConcreteCubM,
+            intVolumeConcreteContentsCubM,
+            intSteelSqM,
+            extSteelSqM,
+            extVolumeSteelCubM,
+            intVolumeSteelCubM,
+            intVolumeSteelContentsCubM,
+            intWoodSqM,
+            extWoodSqM,
+            extVolumeWoodCubM,
+            intVolumeWoodCubM,
+            intVolumeWoodContentsCubM,
+            intOtherSqM,
+            extOtherSqM,
+            extVolumeOtherCubM,
+            intVolumeOtherCubM,
+            intVolumeOtherContentsCubM,
+            intBrickSqFt,
+            extBrickSqFt,
+            extVolumeBrickCubFt,
+            intVolumeBrickCubFt,
+            intVolumeBrickContentsCubFt,
+            intConcreteSqFt,
+            extConcreteSqFt,
+            extVolumeConcreteCubFt,
+            intVolumeConcreteCubFt,
+            intVolumeConcreteContentsCubFt,
+            intSteelSqFt,
+            extSteelSqFt,
+            extVolumeSteelCubFt,
+            intVolumeSteelCubFt,
+            intVolumeSteelContentsCubFt,
+            intWoodSqFt,
+            extWoodSqFt,
+            extVolumeWoodCubFt,
+            intVolumeWoodCubFt,
+            intVolumeWoodContentsCubFt,
+            intOtherSqFt,
+            extOtherSqFt,
+            extVolumeOtherCubFt,
+            intVolumeOtherCubFt,
+            intVolumeOtherContentsCubFt,
+          },
+          geometry: feature.geometry,
+          symbol: new SimpleFillSymbol({
+            color: Object.prototype.hasOwnProperty.call(buildingColors, occCls)
+              ? buildingColors[occCls]
+              : buildingColors['Other'],
+            outline: {
+              color: [153, 153, 153, 64],
+              width: 0.84,
+            },
+          }),
+          popupTemplate: {
+            title: '',
+            content: buildingMapPopup,
+            actions,
+          },
+        }),
+      );
+
+      planGraphics[planId].summary.totalBuildingRoofSqM += roofSqM;
+      planGraphics[planId].summary.totalBuildingFootprintSqM += footprintSqM;
+      planGraphics[planId].summary.totalBuildingFloorsSqM += floorsSqM;
+      planGraphics[planId].summary.totalBuildingCeilingsSqM += ceilingsSqM;
+      planGraphics[planId].summary.totalBuildingExtWallsSqM += extWallsSqM;
+      planGraphics[planId].summary.totalBuildingIntWallsSqM += intWallsSqM;
+      planGraphics[planId].summary.totalBuildingExtSqM += extSqM;
+      planGraphics[planId].summary.totalBuildingIntSqM += intSqM;
+      planGraphics[planId].summary.totalBuildingSqM += totalSqM;
+      planGraphics[planId].summary.totalBuildingVolumeCubM +=
+        intVolumeCubM + extVolumeCubM;
+      planGraphics[planId].summary.totalBuildingVolumeContentsCubM +=
+        intVolumeContentsCubM;
+    });
+  });
+
+  buildingCalculations(planGraphics);
+
+  let gsgParam: GsgParam | undefined = undefined;
+  if (gsgFile) {
+    const gsgFileUploaded: any = await retryCall(() =>
+      fetchPostFile(
+        `${services.totsGPServer}/uploads/upload`,
+        {
+          f: 'json',
+        },
+        gsgFile,
+      ),
+    );
+    gsgParam = {
+      itemID: gsgFileUploaded.item.itemID,
+    };
+  }
+
+  let iaResponses: any[] = [];
+  let errorToRethrow = null;
+  try {
+    const iaRequests: Promise<any>[] = [];
+    for (const graphic of aoiGraphics) {
+      removeZValues(graphic);
+
+      const featureSet = new FeatureSet({
+        displayFieldName: '',
+        geometryType: 'polygon',
+        spatialReference: {
+          wkid: 3857,
+        },
+        fields: [
+          {
+            name: 'OBJECTID',
+            type: 'oid',
+            alias: 'OBJECTID',
+          },
+          {
+            name: 'PERMANENT_IDENTIFIER',
+            type: 'guid',
+            alias: 'PERMANENT_IDENTIFIER',
+          },
+        ],
+        features: [graphic],
+      });
+
+      // call gp service
+      const props = {
+        f: 'json',
+        Area_of_Interest_Mask: featureSet.toJSON(),
+        GSGFile: gsgParam,
+        ImageryLayer:
+          'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+      };
+
+      appendEnvironmentObjectParam(props);
+
+      iaRequests.push(
+        retryCall(() =>
+          geoprocessorFetch({
+            url: `${services.totsGPServer}/Classify%20AOI`,
+            inputParameters: props,
+          }),
+        ),
+      );
+    }
+
+    iaResponses = await Promise.all(iaRequests);
+  } catch (err) {
+    errorToRethrow = err;
+  } finally {
+    if (gsgParam) {
+      await retryCall(() =>
+        fetchPost(
+          `${services.totsGPServer}/uploads/${gsgParam.itemID}/delete`,
+          {
+            f: 'json',
+          },
+        ),
+      );
+    }
+  }
+
+  if (errorToRethrow) throw errorToRethrow;
+
+  iaResponses.forEach((response, index) => {
+    const summaryOutput = response.results.find(
+      (r: any) => r.paramName === 'Output_Classification_Summary',
+    );
+    if (summaryOutput) {
+      const planId = responseIndexes[index];
+      planGraphics[planId].aoiPercentages.numAois +=
+        summaryOutput.value.features.length;
+
+      summaryOutput.value.features.forEach((f: any) => {
+        planGraphics[planId].aoiPercentages.asphalt += f.attributes.ASPHALT;
+        planGraphics[planId].aoiPercentages.concrete += f.attributes.CONCRETE;
+        planGraphics[planId].aoiPercentages.soil += f.attributes.SOIL;
+      });
+    }
+
+    // Figure out what to add graphics to
+    const featuresOutput = response.results.find(
+      (r: any) => r.paramName === 'Output_Classification_Features',
+    );
+    if (featuresOutput) {
+      featuresOutput.value.features.forEach((f: any) => {
+        const category = f.attributes.category;
+        const symbol = Object.prototype.hasOwnProperty.call(
+          imageAnalysisSymbols,
+          category,
+        )
+          ? (imageAnalysisSymbols as any)[category]
+          : backupImagerySymbol;
+
+        const planId = responseIndexes[index];
+        const permId = generateUUID();
+
+        const startPolygon = new Polygon({
+          rings: f.geometry.rings,
+          spatialReference: {
+            wkid: 3857,
+          },
+        });
+        let polygons: __esri.Geometry[] = [startPolygon];
+        if (cutFootprintsMethod === 'cut') {
+          for (const buildingGraphic of planGraphics[planId].graphics) {
+            if (geometryEngine.contains(buildingGraphic.geometry, startPolygon))
+              return;
+          }
+
+          planGraphics[planId].graphics.forEach((buildingGraphic) => {
+            const difference = geometryEngine.difference(
+              polygons,
+              buildingGraphic.geometry,
+            );
+            if (!difference) return;
+
+            const newPolygons: __esri.Geometry[] = [];
+            if (!Array.isArray(difference)) newPolygons.push(difference);
+            else {
+              difference.forEach((diff) => {
+                if (!diff) return;
+                newPolygons.push(diff);
+              });
+            }
+            if (newPolygons.length > 0) polygons = newPolygons;
+          });
+        }
+
+        polygons.forEach((polygon) => {
+          planGraphics[planId].imageGraphics.push(
+            new Graphic({
+              attributes: {
+                ...f.attributes,
+                PERMANENT_IDENTIFIER: permId,
+              },
+              geometry: polygon,
+              symbol,
+              popupTemplate: {
+                title: '',
+                content: imageryAnalysisMapPopup,
+              },
+            }),
+          );
+        });
+      });
+    }
+  });
+
+  for (const planId of Object.keys(planGraphics)) {
+    if (cutFootprintsMethod === 'cut') {
+      const imageAreas: { [key: string]: number } = {};
+      for (const graphic of planGraphics[planId].imageGraphics) {
+        const key = graphic.attributes.category.toLowerCase();
+
+        const areaSM = await calculateArea(graphic, sceneViewForArea);
+        if (typeof areaSM === 'number') {
+          if (Object.prototype.hasOwnProperty.call(imageAreas, key))
+            imageAreas[key] += areaSM;
+          else imageAreas[key] = areaSM;
+        }
+      }
+
+      const totalArea = planGraphics[planId].aoiArea;
+      const { numAois } = planGraphics[planId].aoiPercentages;
+      planGraphics[planId].aoiPercentages = {
+        numAois,
+        asphalt: (imageAreas['asphalt'] / totalArea) * 100,
+        asphaltSqM: imageAreas['asphalt'],
+        concrete: (imageAreas['concrete'] / totalArea) * 100,
+        concreteSqM: imageAreas['concrete'],
+        soil:
+          ((imageAreas['soil'] + imageAreas['vegetation']) / totalArea) * 100,
+        soilSqM: imageAreas['soil'] + imageAreas['vegetation'],
+      };
+    } else if (cutFootprintsMethod === 'math') {
+      // trim building footprints to AOI
+      let buildingFootprintArea = 0;
+      for (const buildingGraphic of planGraphics[planId].graphics) {
+        const intersection = geometryEngine.intersect(
+          aoiGraphics.map((g) => g.geometry),
+          buildingGraphic.geometry,
+        );
+
+        const intersectionArray = Array.isArray(intersection)
+          ? intersection
+          : [intersection];
+        for (const geometry of intersectionArray) {
+          if (!geometry) continue;
+          const areaSM = await calculateArea(
+            new Graphic({ geometry }),
+            sceneViewForArea,
+          );
+          if (typeof areaSM === 'number') {
+            buildingFootprintArea += areaSM;
+          }
+        }
+      }
+
+      // generate new areas and percentages based on non building area
+      const totalArea = planGraphics[planId].aoiArea;
+      const nonBuildingArea = totalArea - buildingFootprintArea;
+      const { numAois, asphalt, concrete, soil } =
+        planGraphics[planId].aoiPercentages;
+      const asphaltSqM = (asphalt / 100) * nonBuildingArea;
+      const concreteSqM = (concrete / 100) * nonBuildingArea;
+      const soilSqM = (soil / 100) * nonBuildingArea;
+
+      planGraphics[planId].aoiPercentages = {
+        numAois,
+        asphalt: (asphaltSqM / totalArea) * 100,
+        asphaltSqM,
+        concrete: (concreteSqM / totalArea) * 100,
+        concreteSqM,
+        soil: (soilSqM / totalArea) * 100,
+        soilSqM,
+      };
+    } else if (cutFootprintsMethod === 'raw') {
+      const totalArea = planGraphics[planId].aoiArea;
+      const { numAois, asphalt, concrete, soil } =
+        planGraphics[planId].aoiPercentages;
+      planGraphics[planId].aoiPercentages = {
+        numAois,
+        asphalt: asphalt / numAois,
+        asphaltSqM: totalArea * (asphalt / 100),
+        concrete: concrete / numAois,
+        concreteSqM: totalArea * (concrete / 100),
+        soil: soil / numAois,
+        soilSqM: totalArea * (soil / 100),
+      };
+    }
+
+    console.log('planGraphics: ', planGraphics);
+  }
+
+  return {
+    thresholdExceeded: false,
+    buildingCount,
+    buildingLimit,
+  };
+}
+
+export function buildingCalculations(planGraphics: PlanGraphics) {
+  const buildingMaterialOptions: {
+    [planId: string]: {
+      [key: string]: any;
+    };
+  } = {};
+  Object.entries(planGraphics).forEach(([planId, value]) => {
+    if (
+      !Object.prototype.hasOwnProperty.call(buildingMaterialOptions, planId)
+    ) {
+      buildingMaterialOptions[planId] = {
+        'Buildings (Interior and Exterior)': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Building Exteriors': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Building Interiors': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Brick Buildings': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Concrete Buildings': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Steel Buildings': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Wood Buildings': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+        'Other Buildings': {
+          surfaceArea: 0,
+          volume: 0,
+          extVolume: 0,
+          intVolume: 0,
+          intVolumeContents: 0,
+          extSurfaceArea: 0,
+          intSurfaceArea: 0,
+        },
+      };
+    }
+
+    value.graphics.forEach((graphic) => {
+      const {
+        intSqM,
+        extSqM,
+        extVolumeCubM,
+        intVolumeCubM,
+        intVolumeContentsCubM,
+        intBrickSqM,
+        extBrickSqM,
+        intVolumeBrickCubM,
+        extVolumeBrickCubM,
+        intVolumeBrickContentsCubM,
+        intConcreteSqM,
+        extConcreteSqM,
+        extVolumeConcreteCubM,
+        intVolumeConcreteCubM,
+        intVolumeConcreteContentsCubM,
+        intSteelSqM,
+        extSteelSqM,
+        extVolumeSteelCubM,
+        intVolumeSteelCubM,
+        intVolumeSteelContentsCubM,
+        intWoodSqM,
+        extWoodSqM,
+        extVolumeWoodCubM,
+        intVolumeWoodCubM,
+        intVolumeWoodContentsCubM,
+        intOtherSqM,
+        extOtherSqM,
+        extVolumeOtherCubM,
+        intVolumeOtherCubM,
+        intVolumeOtherContentsCubM,
+      } = graphic.attributes;
+
+      // add up surface area for summary building
+      buildingMaterialOptions[planId][
+        'Buildings (Interior and Exterior)'
+      ].surfaceArea += intSqM + extSqM;
+      buildingMaterialOptions[planId][
+        'Buildings (Interior and Exterior)'
+      ].volume += extVolumeCubM + intVolumeCubM;
+
+      buildingMaterialOptions[planId]['Building Exteriors'].surfaceArea +=
+        extSqM;
+      buildingMaterialOptions[planId]['Building Exteriors'].extSurfaceArea +=
+        extSqM;
+      buildingMaterialOptions[planId]['Building Exteriors'].volume +=
+        extVolumeCubM;
+      buildingMaterialOptions[planId]['Building Exteriors'].extVolume +=
+        extVolumeCubM;
+      buildingMaterialOptions[planId]['Building Interiors'].surfaceArea +=
+        intSqM;
+      buildingMaterialOptions[planId]['Building Interiors'].intSurfaceArea +=
+        intSqM;
+      buildingMaterialOptions[planId]['Building Interiors'].volume +=
+        intVolumeCubM;
+      buildingMaterialOptions[planId]['Building Interiors'].intVolume +=
+        intVolumeCubM;
+      buildingMaterialOptions[planId]['Building Interiors'].intVolumeContents +=
+        intVolumeContentsCubM;
+
+      // add up surface area per building type
+      buildingMaterialOptions[planId]['Brick Buildings'].surfaceArea +=
+        intBrickSqM + extBrickSqM;
+      buildingMaterialOptions[planId]['Brick Buildings'].intSurfaceArea +=
+        intBrickSqM;
+      buildingMaterialOptions[planId]['Brick Buildings'].extSurfaceArea +=
+        extBrickSqM;
+      buildingMaterialOptions[planId]['Brick Buildings'].volume +=
+        intVolumeBrickCubM + extVolumeBrickCubM;
+      buildingMaterialOptions[planId]['Brick Buildings'].extVolume +=
+        extVolumeBrickCubM;
+      buildingMaterialOptions[planId]['Brick Buildings'].intVolume +=
+        intVolumeBrickCubM;
+      buildingMaterialOptions[planId]['Brick Buildings'].intVolumeContents +=
+        intVolumeBrickContentsCubM;
+
+      buildingMaterialOptions[planId]['Concrete Buildings'].surfaceArea +=
+        intConcreteSqM + extConcreteSqM;
+      buildingMaterialOptions[planId]['Concrete Buildings'].intSurfaceArea +=
+        intConcreteSqM;
+      buildingMaterialOptions[planId]['Concrete Buildings'].extSurfaceArea +=
+        extConcreteSqM;
+      buildingMaterialOptions[planId]['Concrete Buildings'].extVolume +=
+        extVolumeConcreteCubM;
+      buildingMaterialOptions[planId]['Concrete Buildings'].intVolume +=
+        intVolumeConcreteCubM;
+      buildingMaterialOptions[planId]['Concrete Buildings'].intVolumeContents +=
+        intVolumeConcreteContentsCubM;
+
+      buildingMaterialOptions[planId]['Steel Buildings'].surfaceArea +=
+        intSteelSqM + extSteelSqM;
+      buildingMaterialOptions[planId]['Steel Buildings'].intSurfaceArea +=
+        intSteelSqM;
+      buildingMaterialOptions[planId]['Steel Buildings'].extSurfaceArea +=
+        extSteelSqM;
+      buildingMaterialOptions[planId]['Steel Buildings'].volume +=
+        extVolumeSteelCubM + intVolumeSteelCubM;
+      buildingMaterialOptions[planId]['Steel Buildings'].extVolume +=
+        extVolumeSteelCubM;
+      buildingMaterialOptions[planId]['Steel Buildings'].intVolume +=
+        intVolumeSteelCubM;
+      buildingMaterialOptions[planId]['Steel Buildings'].intVolumeContents +=
+        intVolumeSteelContentsCubM;
+
+      buildingMaterialOptions[planId]['Wood Buildings'].surfaceArea +=
+        intWoodSqM + extWoodSqM;
+      buildingMaterialOptions[planId]['Wood Buildings'].intSurfaceArea +=
+        intWoodSqM;
+      buildingMaterialOptions[planId]['Wood Buildings'].extSurfaceArea +=
+        extWoodSqM;
+      buildingMaterialOptions[planId]['Wood Buildings'].volume +=
+        extVolumeWoodCubM + intVolumeWoodCubM;
+      buildingMaterialOptions[planId]['Wood Buildings'].extVolume +=
+        extVolumeWoodCubM;
+      buildingMaterialOptions[planId]['Wood Buildings'].intVolume +=
+        intVolumeWoodCubM;
+      buildingMaterialOptions[planId]['Wood Buildings'].intVolumeContents +=
+        intVolumeWoodContentsCubM;
+
+      buildingMaterialOptions[planId]['Other Buildings'].surfaceArea +=
+        intOtherSqM + extOtherSqM;
+      buildingMaterialOptions[planId]['Other Buildings'].intSurfaceArea +=
+        intOtherSqM;
+      buildingMaterialOptions[planId]['Other Buildings'].extSurfaceArea +=
+        extOtherSqM;
+      buildingMaterialOptions[planId]['Other Buildings'].volume +=
+        extVolumeOtherCubM + intVolumeOtherCubM;
+      buildingMaterialOptions[planId]['Other Buildings'].extVolume +=
+        extVolumeOtherCubM;
+      buildingMaterialOptions[planId]['Other Buildings'].intVolume +=
+        intVolumeOtherCubM;
+      buildingMaterialOptions[planId]['Other Buildings'].intVolumeContents +=
+        intVolumeOtherContentsCubM;
+    });
+  });
+
+  Object.entries(buildingMaterialOptions).forEach(([planId, options]) => {
+    Object.entries(options).forEach(([key, value]) => {
+      if (!planGraphics[planId].summary.areaByMedia)
+        planGraphics[planId].summary.areaByMedia = [];
+      planGraphics[planId].summary.areaByMedia.push({
+        id: generateUUID(),
+        media: key,
+        pctAoi: 0,
+        surfaceArea: value.surfaceArea,
+        volume: value.intVolume,
+        volumeContents: value.intVolumeContents,
+        subMedia: summarizedBuildingSurfaceTypes.includes(key)
+          ? []
+          : [
+              {
+                id: generateUUID(),
+                media: 'Building Exteriors',
+                pctAoi: 0,
+                surfaceArea: value.extSurfaceArea,
+                volume: 0,
+                volumeContents: 0,
+                subMedia: [],
+              },
+              {
+                id: generateUUID(),
+                media: 'Building Interiors',
+                pctAoi: 0,
+                surfaceArea: value.intSurfaceArea,
+                volume: value.intVolume,
+                volumeContents: value.intVolumeContents,
+                subMedia: [],
+              },
+            ],
+      });
+    });
+  });
 }
 
 // Hook that allows the user to easily start over without
@@ -134,18 +1311,14 @@ export function useStartOver() {
     setTrainingMode,
   } = useContext(NavigationContext);
   const {
-    setIncludePartialPlan,
-    setIncludePartialPlanWebMap,
-    setIncludePartialPlanWebScene,
-    setIncludeCustomSampleTypes,
+    setManualConfigureOutput,
     setPublishSamplesMode,
     setPublishSampleTableMetaData,
     setSampleTableDescription,
     setSampleTableName,
+    setSampleTableNameAvailable,
     setSampleTypeSelections,
     setSelectedService,
-    setWebMapReferenceLayerSelections,
-    setWebSceneReferenceLayerSelections,
   } = useContext(PublishContext);
   const {
     basemapWidget,
@@ -155,6 +1328,7 @@ export function useStartOver() {
     resetDefaultSymbols,
     sceneView,
     setAoiSketchLayer,
+    setDeconSketchLayer,
     setDisplayDimensions,
     setDisplayGeometryType,
     setEdits,
@@ -163,6 +1337,7 @@ export function useStartOver() {
     setReferenceLayers,
     setSelectedScenario,
     setSketchLayer,
+    setStagingAreaLayer,
     setTerrain3dUseElevation,
     setTerrain3dVisible,
     setUrlLayers,
@@ -181,14 +1356,24 @@ export function useStartOver() {
       if (doubleClickEvent) doubleClickEvent.remove();
       if (moveEvent) moveEvent.remove();
       if (popupEvent) popupEvent.remove();
-    } catch (_ex) {}
+    } catch (ex) {
+      console.error(ex);
+    }
 
+    setAoiSketchLayer(null);
+    setDeconSketchLayer(null);
     setSelectedScenario(null);
     setSketchLayer(null);
-    setAoiSketchLayer(null);
+    setStagingAreaLayer(null);
 
     // clear the map
-    map?.removeAll();
+    const layersToRemove =
+      map?.layers
+        .filter(
+          (l) => !['contaminationMapUpdated', 'deconResults'].includes(l.id),
+        )
+        .toArray() ?? [];
+    if (layersToRemove.length > 0) map?.removeMany(layersToRemove);
 
     // set the layers to just the defaults
     setLayers([]);
@@ -222,18 +1407,16 @@ export function useStartOver() {
     resetCalculateContext();
 
     // clear publish
+    setManualConfigureOutput(null);
     setPublishSamplesMode('');
     setPublishSampleTableMetaData(null);
     setSampleTableDescription('');
     setSampleTableName('');
+    setSampleTableNameAvailable('unknown');
     setSampleTypeSelections([]);
     setSelectedService(null);
-    setIncludePartialPlan(true);
-    setIncludePartialPlanWebMap(true);
-    setIncludePartialPlanWebScene(true);
-    setIncludeCustomSampleTypes(false);
-    setWebMapReferenceLayerSelections([]);
-    setWebSceneReferenceLayerSelections([]);
+
+    memoryState = {};
 
     // reset the zoom
     if (mapView) {
@@ -262,14 +1445,16 @@ export function useStartOver() {
     }
 
     if (basemapWidget) {
-      // Search for the basemap with the matching basemap
-      let selectedBasemap: __esri.Basemap | null = null;
-      basemapWidget.source.basemaps.forEach((basemap) => {
-        if (basemap.title === 'Streets') selectedBasemap = basemap;
-      });
+      Object.values(basemapWidget).forEach((widget) => {
+        // Search for the basemap with the matching basemap
+        let selectedBasemap: __esri.Basemap | null = null;
+        widget.source.basemaps.forEach((basemap) => {
+          if (basemap.title === 'Streets') selectedBasemap = basemap;
+        });
 
-      // Set the activeBasemap to the basemap that was found
-      if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
+        // Set the activeBasemap to the basemap that was found
+        if (selectedBasemap) widget.activeBasemap = selectedBasemap;
+      });
     }
   }
 
@@ -286,7 +1471,7 @@ export function useStartOver() {
 // Runs sampling plan calculations whenever the
 // samples change or the variables on the calculate tab
 // change.
-export function useCalculatePlan() {
+export function useCalculatePlan(appType: AppType) {
   const {
     edits,
     layers,
@@ -296,6 +1481,7 @@ export function useCalculatePlan() {
     setSelectedScenario,
   } = useContext(SketchContext);
   const {
+    calculateResults,
     inputNumLabs,
     inputNumLabHours,
     inputNumSamplingHours,
@@ -309,16 +1495,26 @@ export function useCalculatePlan() {
     updateContextValues,
   } = useContext(CalculateContext);
 
+  useEffect(() => {
+    console.log('calculateResults: ', calculateResults);
+  }, [calculateResults]);
+
   // Reset the calculateResults context variable, whenever anything
   // changes that will cause a re-calculation.
   const [calcGraphics, setCalcGraphics] = useState<__esri.Graphic[]>([]);
   useEffect(() => {
+    if (appType !== 'sampling') return;
+
     // Get the number of graphics for the selected scenario
     let numGraphics = 0;
-    if (selectedScenario && selectedScenario.layers.length > 0) {
+    if (
+      selectedScenario &&
+      selectedScenario.type === 'scenario' &&
+      selectedScenario.layers.length > 0
+    ) {
       layers.forEach((layer) => {
         if (layer.parentLayer?.id !== selectedScenario.layerId) return;
-        if (layer.sketchLayer.type !== 'graphics') return;
+        if (layer.sketchLayer?.type !== 'graphics') return;
 
         numGraphics += layer.sketchLayer.graphics.length;
       });
@@ -347,7 +1543,7 @@ export function useCalculatePlan() {
         data: null,
       };
     });
-  }, [edits, layers, selectedScenario, setCalculateResults]);
+  }, [appType, edits, layers, selectedScenario, setCalculateResults]);
 
   const [totals, setTotals] = useState({
     ttpk: 0,
@@ -369,9 +1565,12 @@ export function useCalculatePlan() {
 
   // perform geospatial calculatations
   useEffect(() => {
+    if (appType !== 'sampling') return;
+
     // exit early checks
     if (
       !selectedScenario ||
+      selectedScenario.type !== 'scenario' ||
       selectedScenario.layers.length === 0 ||
       edits.count === 0
     ) {
@@ -410,7 +1609,7 @@ export function useCalculatePlan() {
         if (
           !selectedScenario ||
           layer.parentLayer?.id !== selectedScenario.layerId ||
-          layer.sketchLayer.type !== 'graphics'
+          layer.sketchLayer?.type !== 'graphics'
         ) {
           continue;
         }
@@ -419,7 +1618,11 @@ export function useCalculatePlan() {
           const calcGraphic = graphic.clone();
 
           // calculate the area using the custom hook
-          const areaSI = await calculateArea(graphic, sceneViewForArea);
+          const areaSI = await calculateArea(
+            graphic,
+            sceneViewForArea,
+            'sqinches',
+          );
           if (typeof areaSI !== 'number') {
             continue;
           }
@@ -525,12 +1728,14 @@ export function useCalculatePlan() {
     }
 
     processFeatures();
-  }, [edits, layers, sceneViewForArea, selectedScenario]);
+  }, [appType, edits, layers, sceneViewForArea, selectedScenario]);
 
   // perform non-geospatial calculations
   useEffect(() => {
+    if (appType !== 'sampling') return;
+
     // exit early checks
-    if (!selectedScenario) return;
+    if (selectedScenario?.type !== 'scenario') return;
     if (calcGraphics.length === 0 || totalArea === 0) {
       setCalculateResults({ status: 'none', panelOpen: false, data: null });
       return;
@@ -591,7 +1796,7 @@ export function useCalculatePlan() {
     }
 
     // Get limiting time factor (will be undefined if they are equal)
-    let limitingFactor: CalculateResultsDataType['Limiting Time Factor'] = '';
+    let limitingFactor: CalculateResultsDataType['LIMITING_TIME_FACTOR'] = '';
     if (timeCompleteSampling > labThroughput) {
       limitingFactor = 'Sampling';
     } else {
@@ -608,41 +1813,43 @@ export function useCalculatePlan() {
       'User Specified Number of Available Labs for Analysis': numLabs,
       'User Specified Analysis Lab Hours per Day': numLabHours,
       'User Specified Surface Area': surfaceArea,
-      'Total Number of User-Defined Samples': calcGraphics.length,
+      NUM_USER_SAMPLES: calcGraphics.length,
 
       // assign counts
-      'Total Number of Samples': totals.ac,
-      'Total Sampled Area': totalArea,
-      'Time to Prepare Kits': totals.ttpk,
-      'Time to Collect': totals.ttc,
-      'Sampling Material Cost': totals.mcps,
-      'Time to Analyze': totals.tta,
-      'Analysis Labor Cost': totals.alc,
-      'Analysis Material Cost': totals.amc,
-      'Waste Volume': totals.wvps,
-      'Waste Weight': totals.wwps,
+      NUM_SAMPLES: totals.ac,
+      TOTAL_SAMPLED_AREA: totalArea,
+      TTPK: totals.ttpk,
+      TTC: totals.ttc,
+      SAMPLING_MATERIAL_COST: totals.mcps,
+      TTA: totals.tta,
+      ALC: totals.alc,
+      AMC: totals.amc,
+      WASTE_VOLUME_SOLID: totals.wvps / 1000, // convert liters to m3
+      WASTE_VOLUME_SOLID_LITERS: totals.wvps,
+      WASTE_WEIGHT_SOLID: totals.wwps / 2.2046226218, // convert lbs to kg
+      WASTE_WEIGHT_SOLID_POUNDS: totals.wwps,
 
       // spatial items
       'User Specified Total AOI': userSpecifiedAOI,
-      'Percent of Area Sampled': percentAreaSampled,
+      PCT_AREA_SAMPLED: percentAreaSampled,
 
       // sampling
-      'Total Required Sampling Time': samplingTimeHours,
-      'Sampling Hours per Day': samplingHours,
-      'Sampling Personnel hours per Day': samplingPersonnelHoursPerDay,
-      'Sampling Personnel Labor Cost': samplingPersonnelLaborCost,
-      'Time to Complete Sampling': timeCompleteSampling,
-      'Total Sampling Labor Cost': totalSamplingLaborCost,
-      'Total Sampling Cost': totalSamplingCost,
-      'Total Analysis Cost': totalAnalysisCost,
+      TOTAL_SAMPLING_TIME: samplingTimeHours,
+      SAMPLING_HOURS: samplingHours,
+      NUM_SAMPLING_HOURS: samplingPersonnelHoursPerDay,
+      SAMPLING_LABOR_COST: samplingPersonnelLaborCost,
+      SAMPLING_TIME: timeCompleteSampling,
+      TOTAL_SAMPLING_LABOR_COST: totalSamplingLaborCost,
+      TOTAL_SAMPLING_COST: totalSamplingCost,
+      TOTAL_LAB_COST: totalAnalysisCost,
 
       // analysis
-      'Time to Complete Analyses': labThroughput,
+      LAB_ANALYSIS_TIME: labThroughput,
 
       //totals
-      'Total Cost': totalCost,
-      'Total Time': Math.round(totalTime * 10) / 10,
-      'Limiting Time Factor': limitingFactor,
+      TOTAL_COST: totalCost,
+      TOTAL_TIME: Math.round(totalTime * 10) / 10,
+      LIMITING_TIME_FACTOR: limitingFactor,
     };
 
     // display loading spinner for 1 second
@@ -653,12 +1860,21 @@ export function useCalculatePlan() {
         data: resultObject,
       };
     });
-  }, [calcGraphics, selectedScenario, setCalculateResults, totals, totalArea]);
+  }, [
+    appType,
+    calcGraphics,
+    selectedScenario,
+    setCalculateResults,
+    totals,
+    totalArea,
+  ]);
 
   // Updates the calculation context values with the inputs.
   // The intention is to update these values whenever the user navigates away from
   // the calculate resources tab or when they click the View Detailed Results button.
   useEffect(() => {
+    if (appType !== 'sampling') return;
+
     if (!selectedScenario || !updateContextValues) return;
     setUpdateContextValues(false);
 
@@ -674,7 +1890,7 @@ export function useCalculatePlan() {
     };
 
     setSelectedScenario((selectedScenario) => {
-      if (selectedScenario) {
+      if (selectedScenario?.type === 'scenario') {
         selectedScenario.calculateSettings.current = {
           ...selectedScenario.calculateSettings.current,
           ...newSettings,
@@ -701,6 +1917,7 @@ export function useCalculatePlan() {
       };
     });
   }, [
+    appType,
     inputNumLabs,
     inputNumLabHours,
     inputNumSamplingHours,
@@ -717,21 +1934,1021 @@ export function useCalculatePlan() {
   ]);
 }
 
+// Runs sampling plan calculations whenever the
+// samples change or the variables on the calculate tab
+// change.
+export function useCalculateDeconPlan() {
+  const { calculateResultsDecon, contaminationMap, setCalculateResultsDecon } =
+    useContext(CalculateContext);
+  const { trainingMode } = useContext(NavigationContext);
+  const {
+    defaultDeconSelections,
+    displayDimensions,
+    edits,
+    layers,
+    mapView,
+    resultsOpen,
+    sampleAttributesDecon,
+    sceneView,
+    sceneViewForArea,
+    selectedScenario,
+    setEdits,
+    setEfficacyResults,
+    setJsonDownload,
+  } = useContext(SketchContext);
+  const lookupFiles = useLookupFiles().data;
+  const technologyTypes = lookupFiles.technologyTypes;
+
+  useEffect(() => {
+    view = displayDimensions === '2d' ? mapView : sceneView;
+  }, [displayDimensions, mapView, sceneView]);
+
+  const [lastScenarioId, setLastScenarioId] = useState('');
+  useEffect(() => {
+    if (!selectedScenario || selectedScenario?.layerId === lastScenarioId)
+      return;
+    setLastScenarioId(selectedScenario.layerId);
+    setCalculateResultsDecon((calculateResultsDecon) => {
+      return {
+        status: selectedScenario ? 'fetching' : 'none',
+        panelOpen: calculateResultsDecon.panelOpen,
+        data: null,
+      };
+    });
+  }, [lastScenarioId, selectedScenario, setCalculateResultsDecon]);
+
+  type ContaminatedAoiAreas = { [planId: string]: { [key: number]: number } };
+  const [aoiContamIntersect, setAoiContamIntersect] = useState<{
+    contaminatedAoiAreas: ContaminatedAoiAreas;
+    graphics: __esri.Graphic[];
+  }>({
+    contaminatedAoiAreas: {},
+    graphics: [],
+  });
+
+  useEffect(() => {
+    if (
+      ['none', 'success'].includes(calculateResultsDecon.status) ||
+      !selectedScenario ||
+      selectedScenario.type !== 'scenario-decon'
+    )
+      return;
+
+    // reset the contamination map
+    const contamMapUpdated = view?.map.layers.find(
+      (l) => l.id === 'contaminationMapUpdated',
+    ) as __esri.GraphicsLayer;
+    if (contamMapUpdated) contamMapUpdated.removeAll();
+
+    async function performCalculations() {
+      if (selectedScenario?.type !== 'scenario-decon' || !mapView) return;
+
+      const linkedDeconOperations: LayerDeconEditsType[] = [];
+      const linkedAoiCharacterizationIds: string[] = [];
+      const linkedAoiCharacterizations: LayerAoiAnalysisEditsType[] = [];
+      const editsCopy: EditsType = edits;
+      editsCopy.edits.forEach((edit) => {
+        if (
+          edit.type !== 'layer-decon' ||
+          !selectedScenario.linkedLayerIds.includes(edit.layerId)
+        )
+          return;
+
+        linkedDeconOperations.push(edit);
+
+        const aoi = editsCopy.edits.find(
+          (e) =>
+            e.type === 'layer-aoi-analysis' &&
+            e.layerId === edit.analysisLayerId,
+        ) as LayerAoiAnalysisEditsType | undefined;
+        if (aoi) {
+          linkedAoiCharacterizations.push(aoi);
+          linkedAoiCharacterizationIds.push(edit.analysisLayerId);
+        }
+      });
+
+      const contaminatedAoiAreas: ContaminatedAoiAreas = {};
+      const contaminationPercentages: ContaminationPercentages = {};
+      const planBuildingCfu: PlanBuildingCfu = {};
+      if (
+        contaminationMap &&
+        contaminationMap?.sketchLayer?.type === 'graphics'
+      ) {
+        // loop through structures
+        linkedAoiCharacterizations.forEach((characterizationLayer) => {
+          const buildingLayerEdits = characterizationLayer.layers.find(
+            (l) => l.layerType === 'AOI Assessed',
+          );
+          const buildingLayer = layers.find(
+            (l) => l.layerId === buildingLayerEdits?.layerId,
+          );
+          if (!buildingLayer || buildingLayer.sketchLayer?.type !== 'graphics')
+            return;
+
+          buildingLayer.sketchLayer.graphics.forEach((graphic) => {
+            // loop through contamination map features
+            (
+              contaminationMap.sketchLayer as __esri.GraphicsLayer
+            ).graphics.forEach((contamGraphic) => {
+              // call intersect to see if decon app intersects contamination map
+              if (
+                !graphic.geometry ||
+                !contamGraphic.geometry ||
+                !geometryEngine.intersects(
+                  graphic.geometry,
+                  contamGraphic.geometry,
+                )
+              ) {
+                return;
+              }
+
+              const {
+                CONTAMVAL,
+                INTERIOR,
+                EXTERIOR,
+                BRICK,
+                CONCRETE,
+                STEEL,
+                WOOD,
+                OTHER,
+              } = contamGraphic.attributes;
+
+              const plumeCfu = CONTAMVAL;
+
+              // lookup decon selection
+              let originalCfu = 0;
+              let newCfu = 0;
+              const deconOp = linkedDeconOperations.find(
+                (op) => op.analysisLayerId === characterizationLayer.layerId,
+              ) as LayerDeconEditsType | undefined;
+              if (deconOp) {
+                const approach = deconOp.approach;
+                const buildingApproach = deconOp.buildingApproach;
+                const mediaKey =
+                  approach === 'Basic'
+                    ? 'Advanced - Building Structural Component'
+                    : `${approach}${approach === 'Advanced' ? ` - ${buildingApproach}` : ''}`;
+
+                // find decon tech selections
+                const basicBuildingDeconTech =
+                  deconOp.deconTechSelections?.find(
+                    (t) => t.media === 'Buildings (Interior and Exterior)',
+                  );
+                const buildingTech = deconOp.deconTechSelections?.filter(
+                  (t) =>
+                    mediaLookup[mediaKey].includes(t.media) &&
+                    !outsideMedia.includes(t.media),
+                );
+                buildingTech?.forEach((tech) => {
+                  let mediaCfu = plumeCfu;
+
+                  if (tech.media === 'Building Exteriors' && EXTERIOR)
+                    mediaCfu = EXTERIOR;
+                  if (tech.media === 'Building Interiors' && INTERIOR)
+                    mediaCfu = INTERIOR;
+                  if (tech.media === 'Brick Buildings' && BRICK)
+                    mediaCfu = BRICK;
+                  if (tech.media === 'Concrete Buildings' && CONCRETE)
+                    mediaCfu = CONCRETE;
+                  if (tech.media === 'Steel Buildings' && STEEL)
+                    mediaCfu = STEEL;
+                  if (tech.media === 'Wood Buildings' && WOOD) mediaCfu = WOOD;
+                  if (tech.media === 'Other Buildings' && OTHER)
+                    mediaCfu = OTHER;
+
+                  originalCfu += mediaCfu;
+
+                  const deconTech =
+                    sampleAttributesDecon[
+                      approach === 'Basic'
+                        ? basicBuildingDeconTech?.deconTech?.value
+                        : tech.deconTech?.value
+                    ];
+                  if (!deconTech) {
+                    newCfu += mediaCfu;
+                    return;
+                  }
+
+                  const bldgApproachKey =
+                    buildingApproach === 'Building Structural Component' ||
+                    approach === 'Basic'
+                      ? 'SURFACE_SPECIFIC_PARAMS'
+                      : 'MATERIAL_SPECIFIC_PARAMS';
+
+                  const { CONTAM_REMOVAL_FACTOR } =
+                    deconTech[bldgApproachKey][
+                      tech.media.replace(' Buildings', '')
+                    ];
+
+                  const reductionFactor = parseSmallFloat(
+                    1 - CONTAM_REMOVAL_FACTOR,
+                  );
+                  const newMediaCfu = mediaCfu * reductionFactor;
+                  newCfu += newMediaCfu;
+                });
+              }
+              graphic.attributes.CONTAMVALPLUME = plumeCfu;
+              graphic.attributes.CONTAMVALINITIAL = originalCfu;
+              graphic.attributes.CONTAMVAL = newCfu;
+              graphic.attributes.CONTAMUNIT =
+                contamGraphic.attributes.CONTAMUNIT;
+              graphic.attributes.CONTAMTYPE =
+                contamGraphic.attributes.CONTAMTYPE;
+
+              const opId =
+                linkedDeconOperations.find(
+                  (op) => op.analysisLayerId === characterizationLayer.layerId,
+                )?.layerId ?? '';
+              if (Object.prototype.hasOwnProperty.call(planBuildingCfu, opId)) {
+                planBuildingCfu[opId] += plumeCfu;
+              } else {
+                planBuildingCfu[opId] = plumeCfu;
+              }
+            });
+          });
+        });
+
+        // loop through aoi mask layers
+        const aoiContamIntersectGraphics: __esri.Graphic[] = [];
+        for (const characterization of linkedAoiCharacterizations) {
+          const aoiEdits = characterization.layers.find(
+            (l) => l.layerType === 'AOI Assessed',
+          );
+          const aoiLayer = layers.find((l) => l.layerId === aoiEdits?.layerId);
+          if (!aoiLayer || aoiLayer.sketchLayer?.type !== 'graphics') return;
+
+          for (const graphic of aoiLayer.sketchLayer.graphics) {
+            for (const contamGraphic of (
+              contaminationMap.sketchLayer as __esri.GraphicsLayer
+            ).graphics) {
+              const contamValue = contamGraphic.attributes.CONTAMVAL as number;
+              const outGeometry = geometryEngine.intersect(
+                graphic.geometry,
+                contamGraphic.geometry,
+              ) as __esri.Geometry;
+              if (!outGeometry) continue;
+
+              const outGraphic = new Graphic({ geometry: outGeometry });
+              const originalZ = removeZValues(outGraphic);
+              setZValues({
+                map: mapView?.map,
+                graphic: outGraphic,
+                zRefParam: null,
+                elevationSampler: null,
+                zOverride: originalZ,
+              });
+
+              const clippedAreaM2 = await calculateArea(
+                outGraphic,
+                sceneViewForArea,
+              );
+
+              const currArea =
+                contaminatedAoiAreas?.[characterization.layerId]?.[contamValue];
+              if (typeof clippedAreaM2 === 'number') {
+                if (
+                  !Object.prototype.hasOwnProperty.call(
+                    contaminatedAoiAreas,
+                    characterization.layerId,
+                  )
+                ) {
+                  contaminatedAoiAreas[characterization.layerId] = {};
+                }
+                contaminatedAoiAreas[characterization.layerId][contamValue] =
+                  currArea ? currArea + clippedAreaM2 : clippedAreaM2;
+              }
+
+              aoiContamIntersectGraphics.push(
+                new Graphic({
+                  attributes: contamGraphic.attributes,
+                  geometry: outGeometry,
+                }),
+              );
+            }
+          }
+        }
+
+        setAoiContamIntersect({
+          contaminatedAoiAreas,
+          graphics: aoiContamIntersectGraphics,
+        });
+
+        Object.keys(contaminatedAoiAreas).forEach((characterizationId: any) => {
+          const characterization = linkedAoiCharacterizations.find(
+            (c) => c.layerId === characterizationId,
+          );
+          if (!characterization) return;
+
+          const totalAoiSqM = characterization.aoiSummary.totalAoiSqM;
+          Object.keys(contaminatedAoiAreas[characterizationId]).forEach(
+            (key: any) => {
+              if (
+                !Object.prototype.hasOwnProperty.call(
+                  contaminationPercentages,
+                  characterizationId,
+                )
+              ) {
+                contaminationPercentages[characterizationId] = {};
+              }
+              contaminationPercentages[characterizationId][key] =
+                contaminatedAoiAreas[characterizationId][key] / totalAoiSqM;
+            },
+          );
+        });
+      }
+
+      let atLeastOneDeconTechSelection = false;
+      linkedDeconOperations.forEach((deconOp) => {
+        deconOp.deconTechSelections?.forEach((tech) => {
+          if (tech.deconTech && tech.deconTech.value !== 'none')
+            atLeastOneDeconTechSelection = true;
+        });
+      });
+      if (!atLeastOneDeconTechSelection) {
+        setCalculateResultsDecon({
+          status: 'none',
+          panelOpen: false,
+          data: null,
+        });
+        return;
+      }
+
+      const jsonDownload: JsonDownloadType[] = [];
+
+      // perform calculations off percentAOI stuff
+      let totalSolidWasteM3 = 0;
+      let totalLiquidWasteM3 = 0;
+      let totalSolidWasteMass = 0;
+      let totalLiquidWasteMass = 0;
+      let totalDeconCost = 0;
+      let totalDeconTime = 0;
+      linkedDeconOperations.forEach((deconOp) => {
+        if (!deconOp.deconLayerResults) return;
+
+        const approach = deconOp.approach;
+        const buildingApproach = deconOp.buildingApproach;
+        const jsonDownloadOpLevel: JsonDownloadType[] = [];
+        deconOp.deconLayerResults.resultsTable = [];
+        deconOp.deconLayerResults.cost = 0;
+        deconOp.deconLayerResults.time = 0;
+        deconOp.deconLayerResults.wasteMass = 0;
+        deconOp.deconLayerResults.wasteVolume = 0;
+        const curDeconTechSelections =
+          deconOp.deconTechSelections && deconOp.deconTechSelections?.length > 0
+            ? deconOp.deconTechSelections
+            : defaultDeconSelections;
+        curDeconTechSelections.forEach((sel) => {
+          // find decon settings
+          const deconTech = sel.deconTech?.value;
+
+          const media = sel.media;
+          if (!deconTech || deconTech === 'none') {
+            sel.avgFinalContamination = sel.avgCfu;
+            sel.aboveDetectionLimit =
+              sel.avgCfu >= technologyTypes.limitOfDetection;
+            return;
+          }
+
+          const mediaKey = `${approach}${approach === 'Advanced' ? ` - ${buildingApproach}` : ''}`;
+          if (!mediaLookup[mediaKey].includes(media)) return;
+
+          let deconCost = 0;
+          let deconTime = 0;
+          let solidWasteM3 = 0;
+          let liquidWasteM3 = 0;
+          let solidWasteMass = 0;
+          let liquidWasteMass = 0;
+          if (
+            deconOp.approach === 'Basic' &&
+            media === 'Buildings (Interior and Exterior)'
+          ) {
+            const filteredMedia = curDeconTechSelections.filter((media) =>
+              ['Building Exteriors', 'Building Interiors'].includes(
+                media.media,
+              ),
+            );
+            filteredMedia.forEach((mediaSel) => {
+              const calcOutput = performBasicDeconCalculations(
+                deconTech,
+                mediaSel,
+                sampleAttributesDecon[deconTech as any],
+                technologyTypes.limitOfDetection,
+                jsonDownloadOpLevel,
+                undefined,
+                false,
+              );
+              deconCost += calcOutput.deconCost;
+              deconTime = Math.max(calcOutput.deconTime, deconTime);
+              solidWasteM3 += calcOutput.solidWasteM3;
+              liquidWasteM3 += calcOutput.liquidWasteM3;
+              solidWasteMass += calcOutput.solidWasteMass;
+              liquidWasteMass += calcOutput.liquidWasteMass;
+            });
+          } else if (
+            deconOp.approach === 'Advanced' &&
+            buildingApproach === 'Building Primary Material Composition' &&
+            !outsideMedia.includes(media)
+          ) {
+            sel.subRows.forEach((mediaSel: any) => {
+              const deconTech = mediaSel.deconTech?.value;
+              if (!deconTech || ['none', 'multiple'].includes(deconTech))
+                return;
+
+              const calcOutput = performBasicDeconCalculations(
+                deconTech,
+                mediaSel,
+                sampleAttributesDecon[deconTech as any],
+                technologyTypes.limitOfDetection,
+                jsonDownloadOpLevel,
+                media,
+              );
+              deconCost += calcOutput.deconCost;
+              deconTime = Math.max(calcOutput.deconTime, deconTime);
+              solidWasteM3 += calcOutput.solidWasteM3;
+              liquidWasteM3 += calcOutput.liquidWasteM3;
+              solidWasteMass += calcOutput.solidWasteMass;
+              liquidWasteMass += calcOutput.liquidWasteMass;
+            });
+          } else {
+            ({
+              deconCost,
+              deconTime,
+              solidWasteM3,
+              liquidWasteM3,
+              solidWasteMass,
+              liquidWasteMass,
+            } = performBasicDeconCalculations(
+              deconTech,
+              sel,
+              sampleAttributesDecon[deconTech as any],
+              technologyTypes.limitOfDetection,
+              jsonDownloadOpLevel,
+            ));
+          }
+
+          if (deconOp.deconLayerResults) {
+            deconOp.deconLayerResults.cost += deconCost;
+            deconOp.deconLayerResults.time = Math.max(
+              deconTime,
+              deconOp.deconLayerResults.time,
+            );
+            deconOp.deconLayerResults.wasteVolume +=
+              solidWasteM3 + liquidWasteM3;
+            deconOp.deconLayerResults.wasteMass +=
+              solidWasteMass + liquidWasteMass;
+          }
+
+          totalSolidWasteM3 += solidWasteM3;
+          totalLiquidWasteM3 += liquidWasteM3;
+          totalSolidWasteMass += solidWasteMass;
+          totalLiquidWasteMass += liquidWasteMass;
+          totalDeconCost += deconCost;
+          totalDeconTime = Math.max(deconTime, totalDeconTime);
+        });
+
+        deconOp.deconLayerResults.resultsTable = jsonDownloadOpLevel;
+        jsonDownload.push(...jsonDownloadOpLevel);
+      });
+
+      const jsonDownloadSummarized: JsonDownloadType[] = [];
+      const scenariosIncluded: string[] = [];
+      jsonDownload.forEach((item) => {
+        if (scenariosIncluded.includes(item.contaminationScenario)) return;
+        scenariosIncluded.push(item.contaminationScenario);
+      });
+      scenariosIncluded.forEach((scenario) => {
+        const scenarioItems = jsonDownload.filter(
+          (j) => j.contaminationScenario === scenario,
+        );
+
+        const tech: { [deconTech: string]: JsonDownloadType } = {};
+        scenarioItems.forEach((item) => {
+          const deconTech = item.decontaminationTechnology;
+          if (Object.prototype.hasOwnProperty.call(tech, deconTech)) {
+            tech[deconTech].decontaminationCost += item.decontaminationCost;
+            tech[deconTech].decontaminationTimeDays +=
+              item.decontaminationTimeDays;
+            tech[deconTech].solidWasteVolumeM3 += item.solidWasteVolumeM3;
+            tech[deconTech].liquidWasteVolumeM3 += item.liquidWasteVolumeM3;
+            tech[deconTech].solidWasteMassKg += item.solidWasteMassKg;
+            tech[deconTech].liquidWasteMassKg += item.liquidWasteMassKg;
+          } else {
+            tech[deconTech] = {
+              ...item,
+            };
+          }
+        });
+
+        Object.values(tech).forEach((deconTech) => {
+          jsonDownloadSummarized.push(deconTech);
+        });
+      });
+
+      const resultObject: CalculateResultsDeconDataType = {
+        // assign counts
+        'Solid Waste Volume': totalSolidWasteM3,
+        'Liquid Waste Volume': totalLiquidWasteM3,
+        'Solid Waste Mass': totalSolidWasteMass,
+        'Liquid Waste Mass': totalLiquidWasteMass,
+        WASTE_VOLUME_TOTAL: totalSolidWasteM3 + totalLiquidWasteM3,
+        WASTE_WEIGHT_TOTAL: totalSolidWasteMass + totalLiquidWasteMass,
+
+        //totals
+        TOTAL_COST: totalDeconCost,
+        TOTAL_TIME: Math.round(totalDeconTime * 10) / 10,
+        'Contamination Type': '',
+        resultsTable: jsonDownloadSummarized,
+      };
+
+      linkedDeconOperations.forEach((deconOp) => {
+        deconOp.deconSummaryResults = {
+          ...deconOp.deconSummaryResults,
+          calculateResults: resultObject,
+        };
+      });
+
+      setEdits(editsCopy);
+
+      setJsonDownload(jsonDownloadSummarized);
+
+      // display loading spinner for 1 second
+      setCalculateResultsDecon((calculateResultsDecon) => {
+        return {
+          status: 'success',
+          panelOpen: calculateResultsDecon.panelOpen,
+          data: resultObject,
+        };
+      });
+    }
+    performCalculations();
+  }, [
+    calculateResultsDecon,
+    contaminationMap,
+    defaultDeconSelections,
+    edits,
+    layers,
+    mapView,
+    sampleAttributesDecon,
+    sceneViewForArea,
+    selectedScenario,
+    setCalculateResultsDecon,
+    setEdits,
+    setJsonDownload,
+    technologyTypes,
+  ]);
+
+  useEffect(() => {
+    if (calculateResultsDecon.status === 'failure') return;
+    if (!selectedScenario || selectedScenario.type !== 'scenario-decon') return;
+
+    async function performCalculations() {
+      if (!selectedScenario || selectedScenario.type !== 'scenario-decon')
+        return;
+
+      const contaminationGraphicsClone: __esri.Graphic[] = [];
+      let contamMap: LayerType | null = null;
+      if (trainingMode) contamMap = contaminationMap;
+      if (!trainingMode && selectedScenario.portalId) {
+        const editLayer = edits.edits.find(
+          (e) =>
+            e.type === 'layer' &&
+            e.layerType === 'Contamination Map' &&
+            e.portalId === selectedScenario.portalId,
+        );
+        const layer = layers.find((l) => l.layerId === editLayer?.layerId);
+        if (layer) contamMap = layer;
+      }
+
+      if (contamMap?.sketchLayer?.type === 'graphics') {
+        contaminationGraphicsClone.push(
+          ...contamMap.sketchLayer.graphics.clone().toArray(),
+        );
+      }
+
+      const linkedDeconOperations: LayerDeconEditsType[] = [];
+      const linkedAoiCharacterizationIds: string[] = [];
+      const linkedAoiCharacterizations: LayerAoiAnalysisEditsType[] = [];
+      edits.edits.forEach((edit) => {
+        if (
+          edit.type !== 'layer-decon' ||
+          !selectedScenario.linkedLayerIds.includes(edit.layerId)
+        )
+          return;
+
+        linkedDeconOperations.push(edit);
+
+        const aoi = edits.edits.find(
+          (e) =>
+            e.type === 'layer-aoi-analysis' &&
+            e.layerId === edit.analysisLayerId,
+        ) as LayerAoiAnalysisEditsType | undefined;
+        if (aoi) {
+          linkedAoiCharacterizations.push(aoi);
+          linkedAoiCharacterizationIds.push(edit.analysisLayerId);
+        }
+      });
+
+      let newContamGraphics: __esri.Graphic[] = [];
+      for (const deconOp of linkedDeconOperations) {
+        // tie graphics and imageryGraphics to a scenario
+        const aoiLayerEdits = linkedAoiCharacterizations.find(
+          (c) => c.layerId === deconOp.analysisLayerId,
+        );
+        const deconMaskEdits = aoiLayerEdits?.layers.find(
+          (l) => l.layerType === 'Decon Mask',
+        );
+        const aoiAssessedEdits = aoiLayerEdits?.layers.find(
+          (l) => l.layerType === 'AOI Assessed',
+        );
+        const deconAoiLayer =
+          layers.find(
+            (l) =>
+              l.layerType === 'Decon Mask' &&
+              l.layerId === deconMaskEdits?.layerId,
+          ) ?? null;
+        const buildingLayer =
+          layers.find(
+            (l) =>
+              l.layerType === 'AOI Assessed' &&
+              l.layerId === aoiAssessedEdits?.layerId,
+          ) ?? null;
+
+        const curDeconTechSelections =
+          deconOp.deconTechSelections && deconOp.deconTechSelections?.length > 0
+            ? deconOp.deconTechSelections
+            : defaultDeconSelections;
+        let hasDeconTech = false;
+
+        const aoiLayerGraphics =
+          deconAoiLayer && deconAoiLayer.sketchLayer?.type === 'graphics'
+            ? deconAoiLayer.sketchLayer.graphics.toArray()
+            : [];
+        for (const graphic of aoiLayerGraphics) {
+          const currContamGraphics =
+            newContamGraphics.length > 0
+              ? [...newContamGraphics]
+              : contaminationGraphicsClone;
+          newContamGraphics = [];
+          for (const contamGraphic of currContamGraphics) {
+            // call intersect to see if decon app intersects contamination map
+            if (
+              !graphic.geometry ||
+              !contamGraphic.geometry ||
+              !geometryEngine.intersects(
+                graphic.geometry,
+                contamGraphic.geometry,
+              )
+            ) {
+              contamGraphic.attributes.EXTERIOR = null;
+              contamGraphic.attributes.INTERIOR = null;
+              contamGraphic.attributes.BRICK = null;
+              contamGraphic.attributes.CONCRETE = null;
+              contamGraphic.attributes.STEEL = null;
+              contamGraphic.attributes.WOOD = null;
+              contamGraphic.attributes.OTHER = null;
+              newContamGraphics.push(contamGraphic);
+              continue;
+            }
+
+            const deconContainsContam = geometryEngine.contains(
+              graphic.geometry,
+              contamGraphic.geometry,
+            );
+
+            // cut a hole in contamination map using result geometry from above step
+            const newOuterContamGeometry = deconContainsContam
+              ? null
+              : geometryEngine.difference(
+                  contamGraphic.geometry,
+                  graphic.geometry,
+                );
+
+            // create new geometry to fill in the hole
+            const newInnerContamGeometry = geometryEngine.intersect(
+              graphic.geometry,
+              contamGraphic.geometry,
+            );
+            const innerGeometry = Array.isArray(newInnerContamGeometry)
+              ? newInnerContamGeometry
+              : [newInnerContamGeometry];
+
+            const approach = deconOp.approach;
+            const buildingApproach = deconOp.buildingApproach;
+            const mediaKey =
+              approach === 'Basic'
+                ? 'Advanced - Building Structural Component'
+                : `${approach}${approach === 'Advanced' ? ` - ${buildingApproach}` : ''}`;
+            const basicBuildingDeconTech = curDeconTechSelections.find(
+              (t) => t.media === 'Buildings (Interior and Exterior)',
+            );
+            const buildingTech = curDeconTechSelections.filter((t) =>
+              mediaLookup[mediaKey].includes(t.media),
+            );
+
+            let CONTAMVALEXTERIOR = contamGraphic.attributes.EXTERIOR;
+            let CONTAMVALINTERIOR = contamGraphic.attributes.INTERIOR;
+            let CONTAMVALBRICK = contamGraphic.attributes.BRICK;
+            let CONTAMVALCONCRETE = contamGraphic.attributes.CONCRETE;
+            let CONTAMVALSTEEL = contamGraphic.attributes.STEEL;
+            let CONTAMVALWOOD = contamGraphic.attributes.WOOD;
+            let CONTAMVALOTHER = contamGraphic.attributes.OTHER;
+            let totalSurfaceRemovalFactor = 0;
+            let surfaceRemovalCount = 0;
+            for (const sel of buildingTech) {
+              if (sel.deconTech && sel.deconTech.value !== 'none')
+                hasDeconTech = true;
+
+              if (
+                sel.media.includes('Building') &&
+                buildingLayer?.sketchLayer?.type === 'graphics'
+              ) {
+                for (const graphic of buildingLayer.sketchLayer.graphics) {
+                  if (!graphic.attributes.CONTAMTYPE) continue;
+                  if (
+                    !graphic.geometry ||
+                    !contamGraphic.geometry ||
+                    !geometryEngine.intersects(
+                      graphic.geometry,
+                      contamGraphic.geometry,
+                    )
+                  ) {
+                    continue;
+                  }
+
+                  const {
+                    INTERIOR,
+                    EXTERIOR,
+                    BRICK,
+                    CONCRETE,
+                    STEEL,
+                    WOOD,
+                    OTHER,
+                  } = contamGraphic.attributes;
+                  let mediaCfu = graphic.attributes.CONTAMVALPLUME;
+
+                  if (sel.media === 'Building Exteriors' && EXTERIOR)
+                    mediaCfu = EXTERIOR;
+                  if (sel.media === 'Building Interiors' && INTERIOR)
+                    mediaCfu = INTERIOR;
+                  if (sel.media === 'Brick Buildings' && BRICK)
+                    mediaCfu = BRICK;
+                  if (sel.media === 'Concrete Buildings' && CONCRETE)
+                    mediaCfu = CONCRETE;
+                  if (sel.media === 'Steel Buildings' && STEEL)
+                    mediaCfu = STEEL;
+                  if (sel.media === 'Wood Buildings' && WOOD) mediaCfu = WOOD;
+                  if (sel.media === 'Other Buildings' && OTHER)
+                    mediaCfu = OTHER;
+
+                  const deconTech =
+                    sampleAttributesDecon[
+                      approach === 'Basic'
+                        ? basicBuildingDeconTech?.deconTech?.value
+                        : sel.deconTech?.value
+                    ];
+                  if (!deconTech) continue;
+
+                  const bldgApproachKey =
+                    buildingApproach === 'Building Structural Component' ||
+                    approach === 'Basic'
+                      ? 'SURFACE_SPECIFIC_PARAMS'
+                      : 'MATERIAL_SPECIFIC_PARAMS';
+
+                  const { CONTAM_REMOVAL_FACTOR } =
+                    deconTech[bldgApproachKey][
+                      sel.media.replace(' Buildings', '')
+                    ];
+
+                  const contamReductionFactor = parseSmallFloat(
+                    1 - CONTAM_REMOVAL_FACTOR,
+                  );
+                  const avgCfu = mediaCfu * contamReductionFactor;
+
+                  if (sel.media === 'Building Exteriors')
+                    CONTAMVALEXTERIOR = avgCfu;
+                  if (sel.media === 'Building Interiors')
+                    CONTAMVALINTERIOR = avgCfu;
+                  if (sel.media === 'Brick Buildings') CONTAMVALBRICK = avgCfu;
+                  if (sel.media === 'Concrete Buildings')
+                    CONTAMVALCONCRETE = avgCfu;
+                  if (sel.media === 'Steel Buildings') CONTAMVALSTEEL = avgCfu;
+                  if (sel.media === 'Wood Buildings') CONTAMVALWOOD = avgCfu;
+                  if (sel.media === 'Other Buildings') CONTAMVALOTHER = avgCfu;
+                }
+              } else {
+                surfaceRemovalCount += 1;
+                if (
+                  !sel.pctAoi ||
+                  !sel.deconTech ||
+                  sel.deconTech.value === 'none'
+                )
+                  continue;
+
+                const { CONTAM_REMOVAL_FACTOR } =
+                  sampleAttributesDecon[sel.deconTech.value][
+                    'SURFACE_SPECIFIC_PARAMS'
+                  ][sel.media];
+                totalSurfaceRemovalFactor += CONTAM_REMOVAL_FACTOR;
+              }
+            }
+
+            const avgSurfaceRemovalFactor =
+              totalSurfaceRemovalFactor / surfaceRemovalCount;
+            const avgSurfaceReductionFactor = parseSmallFloat(
+              1 - avgSurfaceRemovalFactor,
+            );
+            const CONTAMVAL =
+              contamGraphic.attributes.CONTAMVAL * avgSurfaceReductionFactor;
+
+            if (newOuterContamGeometry) {
+              const geometry = Array.isArray(newOuterContamGeometry)
+                ? newOuterContamGeometry
+                : [newOuterContamGeometry];
+              for (const geom of geometry) {
+                newContamGraphics.push(
+                  new Graphic({
+                    attributes: {
+                      ...contamGraphic.attributes,
+                      EXTERIOR: null,
+                      INTERIOR: null,
+                      BRICK: null,
+                      CONCRETE: null,
+                      STEEL: null,
+                      WOOD: null,
+                      OTHER: null,
+                    },
+                    geometry: geom,
+                    symbol: contamGraphic.symbol,
+                    popupTemplate: {
+                      title: '',
+                      content: contaminationMapPopup,
+                    },
+                  }),
+                );
+              }
+            }
+
+            for (const geom of innerGeometry) {
+              let newCfu = CONTAMVAL;
+              if (CONTAMVALEXTERIOR > newCfu) newCfu = CONTAMVALEXTERIOR;
+              if (CONTAMVALINTERIOR > newCfu) newCfu = CONTAMVALINTERIOR;
+              if (CONTAMVALBRICK > newCfu) newCfu = CONTAMVALBRICK;
+              if (CONTAMVALCONCRETE > newCfu) newCfu = CONTAMVALCONCRETE;
+              if (CONTAMVALSTEEL > newCfu) newCfu = CONTAMVALSTEEL;
+              if (CONTAMVALWOOD > newCfu) newCfu = CONTAMVALWOOD;
+              if (CONTAMVALOTHER > newCfu) newCfu = CONTAMVALOTHER;
+
+              newContamGraphics.push(
+                new Graphic({
+                  attributes: {
+                    ...contamGraphic.attributes,
+                    CONTAMVAL, // plume reductions
+                    EXTERIOR: CONTAMVALEXTERIOR,
+                    INTERIOR: CONTAMVALINTERIOR,
+                    BRICK: CONTAMVALBRICK,
+                    CONCRETE: CONTAMVALCONCRETE,
+                    STEEL: CONTAMVALSTEEL,
+                    WOOD: CONTAMVALWOOD,
+                    OTHER: CONTAMVALOTHER,
+                  },
+                  geometry: geom,
+                  symbol: !window.location.search.includes('devMode=true')
+                    ? contamGraphic.symbol
+                    : newCfu < technologyTypes.limitOfDetection
+                      ? ({
+                          type: 'simple-fill',
+                          color: [0, 255, 0],
+                          outline: {
+                            color: [0, 0, 0],
+                          },
+                        } as any)
+                      : ({
+                          type: 'simple-fill',
+                          color: [255, 255, 255],
+                          outline: {
+                            color: [255, 0, 0],
+                          },
+                        } as any),
+                  popupTemplate: {
+                    title: '',
+                    content: contaminationMapPopup,
+                  },
+                }),
+              );
+            }
+          }
+        }
+
+        const aoiAssessed =
+          layers.find(
+            (l) =>
+              l.layerType === 'AOI Assessed' &&
+              l.layerId === aoiLayerEdits?.layerId,
+          ) ?? null;
+        if (aoiAssessed) {
+          const aoiAssessedLayer = layers.find(
+            (l) => l.layerId === aoiAssessed.layerId,
+          );
+
+          if (
+            aoiAssessedLayer?.sketchLayer?.type === 'graphics' &&
+            buildingLayer?.sketchLayer?.type === 'graphics'
+          ) {
+            aoiAssessedLayer?.sketchLayer.graphics.removeAll();
+            aoiAssessedLayer?.sketchLayer.graphics.addMany(
+              buildingLayer.sketchLayer.graphics.map((g) => {
+                if (!g.attributes.CONTAMTYPE || !hasDeconTech) return g;
+
+                const newG = g.clone();
+                if (window.location.search.includes('devMode=true')) {
+                  (newG.symbol as any).outline.color =
+                    g.attributes.CONTAMVAL < technologyTypes.limitOfDetection
+                      ? 'green'
+                      : 'red';
+                  (newG.symbol as any).outline.width = 2;
+                }
+
+                return newG;
+              }),
+            );
+          }
+        }
+      }
+
+      const contamMapUpdated = view?.map.layers.find(
+        (l) => l.id === 'contaminationMapUpdated',
+      ) as __esri.GraphicsLayer;
+      if (contamMapUpdated) {
+        contamMapUpdated.removeAll();
+        newContamGraphics.forEach((g, index) => {
+          const uuid = generateUUID();
+          g.attributes.GLOBALID = uuid;
+          g.attributes.PERMANENT_IDENTIFIER = uuid;
+          g.attributes.OBJECTID = index;
+          g.attributes.ID = index;
+          g.attributes.FID = index;
+        });
+        contamMapUpdated.addMany(newContamGraphics);
+      }
+    }
+
+    performCalculations();
+  }, [
+    aoiContamIntersect,
+    calculateResultsDecon,
+    contaminationMap,
+    defaultDeconSelections,
+    edits,
+    layers,
+    sampleAttributesDecon,
+    sceneViewForArea,
+    selectedScenario,
+    setEfficacyResults,
+    technologyTypes,
+    trainingMode,
+  ]);
+
+  useEffect(() => {
+    if (!resultsOpen || !contaminationMap || !contaminationMap.sketchLayer)
+      return;
+    if (window.location.search.includes('devMode=true'))
+      contaminationMap.sketchLayer.listMode = 'show';
+
+    const contamMapUpdated = mapView?.map.layers.find(
+      (l) => l.id === 'contaminationMapUpdated',
+    ) as __esri.GraphicsLayer;
+    if (contamMapUpdated) {
+      if (window.location.search.includes('devMode=true'))
+        contamMapUpdated.listMode = 'show';
+    }
+  }, [contaminationMap, mapView, resultsOpen]);
+
+  useEffect(() => {
+    console.log('calculateResultsDecon: ', calculateResultsDecon);
+  }, [calculateResultsDecon]);
+}
+
 // Allows using a dynamicPopup that has access to react state/context.
 // This is primarily needed for sample popups.
-export function useDynamicPopup() {
+export function useDynamicPopup(appType: AppType) {
   const { edits, setEdits, layers } = useContext(SketchContext);
-  const layerProps = useLayerProps();
+  const layerProps = useLookupFiles().data.layerProps;
 
-  const getSampleTemplate = (feature: any, fieldInfos: FieldInfos) => {
+  const getSampleTemplate = (
+    feature: any,
+    fieldInfos: FieldInfos,
+    includeControls: boolean,
+  ) => {
     const content = (
       <MapPopup
+        appType={appType}
         features={[feature]}
         edits={edits}
         setEdits={setEdits}
         layers={layers}
         fieldInfos={fieldInfos}
         layerProps={layerProps}
+        includeControls={includeControls}
         onClick={handlePopupClick}
       />
     );
@@ -756,16 +2973,21 @@ export function useDynamicPopup() {
   return function getPopupTemplate(
     type: LayerTypeName,
     includeContaminationFields: boolean = false,
+    includeControls: boolean = true,
   ) {
+    const numberFormat = { digitSeparator: true, places: 2 };
+
     if (type === 'Sampling Mask') {
       const actions = new Collection<any>();
-      actions.addMany([
-        {
-          title: 'Delete Sample',
-          id: 'delete',
-          className: 'esri-icon-trash',
-        },
-      ]);
+      if (includeControls) {
+        actions.addMany([
+          {
+            title: 'Delete Sample',
+            id: 'delete',
+            className: 'esri-icon-trash',
+          },
+        ]);
+      }
 
       return {
         title: '',
@@ -778,7 +3000,66 @@ export function useDynamicPopup() {
         actions,
       };
     }
-    if (type === 'Area of Interest') {
+    if (type === 'Decon Mask') {
+      const actions = new Collection<any>();
+      if (includeControls) {
+        actions.addMany([
+          {
+            title: 'Delete Decon Technology',
+            id: 'delete',
+            className: 'esri-icon-trash',
+          },
+        ]);
+      }
+
+      return {
+        title: '',
+        content: [
+          {
+            type: 'fields',
+            fieldInfos: [{ fieldName: 'TYPE', label: 'Type' }],
+          },
+        ],
+        actions,
+      };
+    }
+    if (type === 'Staging Area Mask') {
+      const actions = new Collection<any>();
+      if (includeControls) {
+        actions.addMany([
+          {
+            title: 'Delete Staging Area',
+            id: 'delete',
+            className: 'esri-icon-trash',
+          },
+        ]);
+      }
+
+      return {
+        title: 'Staging Area',
+        content: [
+          {
+            type: 'fields',
+            fieldInfos: [
+              { fieldName: 'TYPE', label: 'Type' },
+              { fieldName: 'AREA', label: 'Area (m²)', format: numberFormat },
+              {
+                fieldName: 'SOLID_WASTE_CAPACITY',
+                label: 'Solid Waste Capacity (m³)',
+                format: numberFormat,
+              },
+              {
+                fieldName: 'LIQUID_WASTE_CAPACITY',
+                label: 'Liquid Waste Capacity (m³)',
+                format: numberFormat,
+              },
+            ],
+          },
+        ],
+        actions,
+      };
+    }
+    if (type === 'Area of Interest' || (type === 'Samples' && isDecon())) {
       return {
         title: '',
         content: [
@@ -805,7 +3086,7 @@ export function useDynamicPopup() {
         ],
       };
     }
-    if (type === 'Samples' || type === 'VSP') {
+    if ((type === 'Samples' || type === 'VSP') && !isDecon()) {
       const fieldInfos = [
         { fieldName: 'DECISIONUNIT', label: 'Layer' },
         { fieldName: 'TYPE', label: 'Sample Type' },
@@ -850,23 +3131,50 @@ export function useDynamicPopup() {
       }
 
       const actions = new Collection<any>();
-      actions.addMany([
-        {
-          title: 'Delete Sample',
-          id: 'delete',
-          className: 'esri-icon-trash',
-        },
-        {
-          title: 'View In Table',
-          id: 'table',
-          className: 'esri-icon-table',
-        },
-      ]);
+      if (includeControls) {
+        actions.addMany([
+          {
+            title: isDecon() ? 'Delete Decon' : 'Delete Sample',
+            id: 'delete',
+            className: 'esri-icon-trash',
+          },
+          {
+            title: 'View In Table',
+            id: 'table',
+            className: 'esri-icon-table',
+          },
+        ]);
+      }
 
       return {
         title: '',
-        content: (feature: any) => getSampleTemplate(feature, fieldInfos),
+        content: (feature: any) =>
+          getSampleTemplate(feature, fieldInfos, includeControls),
         actions,
+      };
+    }
+    if (type === 'AOI Assessed') {
+      const actions = new Collection<any>();
+      if (includeControls) {
+        actions.addMany([
+          {
+            title: 'View In Table',
+            id: 'table',
+            className: 'esri-icon-table',
+          },
+        ]);
+      }
+
+      return {
+        title: '',
+        content: buildingMapPopup,
+        actions,
+      };
+    }
+    if (type === 'Image Analysis') {
+      return {
+        title: '',
+        content: imageryAnalysisMapPopup,
       };
     }
 
@@ -882,7 +3190,7 @@ let moveEvent: IHandle | null = null;
 let popupEvent: IHandle | null = null;
 let sketchVMG: SketchViewModelType | null = null;
 let tempSketchLayer: __esri.GraphicsLayer | null = null;
-export function use3dSketch() {
+export function use3dSketch(appType: AppType) {
   const { userInfo } = useContext(AuthenticationContext);
   const { getTrainingMode } = useContext(NavigationContext);
   const {
@@ -899,7 +3207,7 @@ export function use3dSketch() {
     sketchLayer,
     sketchVM,
   } = useContext(SketchContext);
-  const getPopupTemplate = useDynamicPopup();
+  const getPopupTemplate = useDynamicPopup(appType);
 
   const [geometry, setGeometry] = useState<
     __esri.Point | __esri.Polygon | null
@@ -918,7 +3226,9 @@ export function use3dSketch() {
       if (doubleClickEvent) doubleClickEvent.remove();
       if (moveEvent) moveEvent.remove();
       if (popupEvent) popupEvent.remove();
-    } catch (_ex) {}
+    } catch (ex) {
+      console.error(ex);
+    }
 
     if (map && tempSketchLayer) {
       tempSketchLayer?.removeAll();
@@ -1243,12 +3553,12 @@ export function use3dSketch() {
   useEffect(() => {
     async function processItem() {
       if (!geometry || !tempSketchLayer || !sketchLayer) return;
-      if (sketchLayer.sketchLayer.type === 'feature') return;
+      if (sketchLayer.sketchLayer?.type === 'feature') return;
 
       // get the button and it's id
       const button = document.querySelector('.sketch-button-selected');
-      const id = button && button.id;
-      if (id === 'sampling-mask') {
+      const id = (button && button.id)?.replace('draw-sample-', '');
+      if (id?.includes('-sampling-mask') || id?.includes('decon-mask')) {
         deactivateButtons();
       }
 
@@ -1258,11 +3568,22 @@ export function use3dSketch() {
       let attributes: any = {};
       const uuid = generateUUID();
       let layerType: LayerTypeName = 'Samples';
-      if (id === 'sampling-mask') {
+      if (id.includes('-sampling-mask')) {
         layerType = 'Sampling Mask';
         attributes = {
-          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
-          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          DECISIONUNITUUID: sketchLayer.sketchLayer?.id ?? '',
+          DECISIONUNIT: sketchLayer.sketchLayer?.title ?? '',
+          DECISIONUNITSORT: 0,
+          PERMANENT_IDENTIFIER: uuid,
+          GLOBALID: uuid,
+          OBJECTID: -1,
+          TYPE: layerType,
+        };
+      } else if (id.includes('decon-mask')) {
+        layerType = 'Decon Mask';
+        attributes = {
+          DECISIONUNITUUID: sketchLayer.sketchLayer?.id ?? '',
+          DECISIONUNIT: sketchLayer.sketchLayer?.title ?? '',
           DECISIONUNITSORT: 0,
           PERMANENT_IDENTIFIER: uuid,
           GLOBALID: uuid,
@@ -1271,9 +3592,9 @@ export function use3dSketch() {
         };
       } else {
         attributes = {
-          ...(window as any).totsSampleAttributes[id],
-          DECISIONUNITUUID: sketchLayer.sketchLayer.id,
-          DECISIONUNIT: sketchLayer.sketchLayer.title,
+          ...window.totsSampleAttributes[id],
+          DECISIONUNITUUID: sketchLayer.sketchLayer?.id ?? '',
+          DECISIONUNIT: sketchLayer.sketchLayer?.title ?? '',
           DECISIONUNITSORT: 0,
           PERMANENT_IDENTIFIER: uuid,
           GLOBALID: uuid,
@@ -1295,7 +3616,8 @@ export function use3dSketch() {
         symbol: sketchVM?.[displayDimensions].polygonSymbol,
       });
 
-      sketchLayer.sketchLayer.graphics.add(graphic);
+      if (sketchLayer.sketchLayer?.type === 'graphics')
+        sketchLayer.sketchLayer.graphics.add(graphic);
 
       // predefined boxes (sponge, micro vac and swab) need to be
       // converted to a box of a specific size.
@@ -1303,7 +3625,7 @@ export function use3dSketch() {
         await createBuffer(graphic);
       }
 
-      if (id !== 'sampling-mask') {
+      if (!id.includes('-sampling-mask') && !id.includes('decon-mask')) {
         // find the points version of the layer
         const layerId = graphic.layer.id;
         const pointLayer = (graphic.layer as any).parent.layers.find(
@@ -1329,7 +3651,7 @@ export function use3dSketch() {
       for (let i = 0; i < layers.length; i++) {
         const layer = layers[i];
         if (
-          (sketchLayer && layer.layerId === sketchLayer.sketchLayer.id) ||
+          (sketchLayer && layer.layerId === sketchLayer.sketchLayer?.id) ||
           (!sketchLayer &&
             layer.layerId === graphic.attributes?.DECISIONUNITUUID)
         ) {
@@ -1346,6 +3668,7 @@ export function use3dSketch() {
       // save the layer changes
       // make a copy of the edits context variable
       const editsCopy = updateLayerEdits({
+        appType,
         edits,
         layer: sketchLayer,
         type: 'add',
@@ -1356,7 +3679,9 @@ export function use3dSketch() {
       setEdits(editsCopy);
 
       const newScenario = editsCopy.edits.find(
-        (e) => e.type === 'scenario' && e.layerId === selectedScenario?.layerId,
+        (e) =>
+          ['scenario', 'scenario-decon'].includes(e.type) &&
+          e.layerId === selectedScenario?.layerId,
       ) as ScenarioEditsType;
       if (newScenario) setSelectedScenario(newScenario);
 
@@ -1379,6 +3704,7 @@ export function use3dSketch() {
 
     processItem();
   }, [
+    appType,
     displayDimensions,
     edits,
     geometry,
@@ -1398,1379 +3724,277 @@ export function use3dSketch() {
   return { endSketch, startSketch };
 }
 
-///////////////////////////////////////////////////////////////////
-////////////////// Browser storage related hooks //////////////////
-///////////////////////////////////////////////////////////////////
-
-// Uses browser storage for holding graphics color.
-function useGraphicColor() {
-  const key = 'tots_polygon_symbol';
-
-  const { setOptions } = useContext(DialogContext);
-  const { defaultSymbols, setDefaultSymbols, setSymbolsInitialized } =
-    useContext(SketchContext);
-
-  // Retreives training mode data from browser storage when the app loads
-  const [localPolygonInitialized, setLocalPolygonInitialized] = useState(false);
-  useEffect(() => {
-    if (localPolygonInitialized) return;
-
-    setLocalPolygonInitialized(true);
-
-    const polygonStr = readFromStorage(key);
-    if (!polygonStr) {
-      // if no key in browser storage, leave as default and say initialized
-      setSymbolsInitialized(true);
-      return;
-    }
-
-    const polygon = JSON.parse(polygonStr);
-
-    // validate the polygon
-    setDefaultSymbols(polygon);
-    setSymbolsInitialized(true);
-  }, [localPolygonInitialized, setDefaultSymbols, setSymbolsInitialized]);
-
-  useEffect(() => {
-    if (!localPolygonInitialized) return;
-
-    const polygonObj = defaultSymbols as object;
-    writeToStorage(key, polygonObj, setOptions);
-  }, [defaultSymbols, localPolygonInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the training mode selection.
-function useTrainingModeStorage() {
-  const key = 'tots_training_mode';
-
-  const { setOptions } = useContext(DialogContext);
-  const { trainingMode, setTrainingMode } = useContext(NavigationContext);
-
-  // Retreives training mode data from browser storage when the app loads
-  const [localTrainingModeInitialized, setLocalTrainingModeInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (localTrainingModeInitialized) return;
-
-    setLocalTrainingModeInitialized(true);
-
-    const trainingModeStr = readFromStorage(key);
-    if (!trainingModeStr) return;
-
-    const trainingMode = JSON.parse(trainingModeStr);
-    setTrainingMode(trainingMode);
-  }, [localTrainingModeInitialized, setTrainingMode]);
-
-  useEffect(() => {
-    if (!localTrainingModeInitialized) return;
-
-    writeToStorage(key, trainingMode, setOptions);
-  }, [trainingMode, localTrainingModeInitialized, setOptions]);
-}
-
-// Uses browser storage for holding any editable layers.
-function useEditsLayerStorage() {
-  const key = 'tots_edits';
-  const { setOptions } = useContext(DialogContext);
+// Automatically makes selections for the Configure Output tab
+// based on what items users have added.
+export function useAutoConfigureOutput() {
   const {
-    defaultSymbols,
-    edits,
-    setEdits,
-    layersInitialized,
-    setLayersInitialized,
-    layers,
-    setLayers,
-    map,
-    symbolsInitialized,
-  } = useContext(SketchContext);
-  const getPopupTemplate = useDynamicPopup();
-
-  // Retreives edit data from browser storage when the app loads
-  useEffect(() => {
-    if (
-      !map ||
-      !setEdits ||
-      !setLayers ||
-      !symbolsInitialized ||
-      layersInitialized
-    )
-      return;
-
-    const editsStr = readFromStorage(key);
-    if (!editsStr) {
-      setLayersInitialized(true);
-      return;
-    }
-
-    // change the edit type to add and set the edit context state
-    const edits: EditsType = JSON.parse(editsStr);
-    edits.edits.forEach((edit) => {
-      edit.editType = 'add';
-    });
-    setEdits(edits);
-
-    const newLayers: LayerType[] = [];
-    const graphicsLayers: (__esri.GraphicsLayer | __esri.GroupLayer)[] = [];
-    edits.edits.forEach((editsLayer) => {
-      // add layer edits directly
-      if (editsLayer.type === 'layer') {
-        graphicsLayers.push(
-          ...createLayer({
-            defaultSymbols,
-            editsLayer,
-            getPopupTemplate,
-            newLayers,
-          }),
-        );
-      }
-      // scenarios need to be added to a group layer first
-      if (editsLayer.type === 'scenario') {
-        const groupLayer = new GroupLayer({
-          id: editsLayer.layerId,
-          title: editsLayer.scenarioName,
-          visible: editsLayer.visible,
-          listMode: editsLayer.listMode,
-        });
-
-        // create the layers and add them to the group layer
-        const scenarioLayers: __esri.GraphicsLayer[] = [];
-        editsLayer.layers.forEach((layer) => {
-          scenarioLayers.push(
-            ...createLayer({
-              defaultSymbols,
-              editsLayer: layer,
-              getPopupTemplate,
-              newLayers,
-              parentLayer: groupLayer,
-            }),
-          );
-        });
-        groupLayer.addMany(scenarioLayers);
-
-        graphicsLayers.push(groupLayer);
-      }
-    });
-
-    if (newLayers.length > 0) {
-      setLayers([...layers, ...newLayers]);
-      map.addMany(graphicsLayers);
-    }
-
-    setLayersInitialized(true);
-  }, [
-    defaultSymbols,
-    setEdits,
-    getPopupTemplate,
-    setLayers,
-    layers,
-    layersInitialized,
-    setLayersInitialized,
-    map,
-    symbolsInitialized,
-  ]);
-
-  // Saves the edits to browser storage everytime they change
-  useEffect(() => {
-    if (!layersInitialized) return;
-    writeToStorage(key, edits, setOptions);
-  }, [edits, layersInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the reference layers that have been added.
-function useReferenceLayerStorage() {
-  const key = 'tots_reference_layers';
-  const { setOptions } = useContext(DialogContext);
-  const { map, referenceLayers, setReferenceLayers } =
-    useContext(SketchContext);
-
-  // Retreives reference layers from browser storage when the app loads
-  const [localReferenceLayerInitialized, setLocalReferenceLayerInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!map || !setReferenceLayers || localReferenceLayerInitialized) return;
-
-    setLocalReferenceLayerInitialized(true);
-    const referenceLayersStr = readFromStorage(key);
-    if (!referenceLayersStr) return;
-
-    const referenceLayers = JSON.parse(referenceLayersStr);
-
-    // add the portal layers to the map
-    const layersToAdd: __esri.FeatureLayer[] = [];
-    referenceLayers.forEach((layer: any) => {
-      const fields: __esri.Field[] = [];
-      layer.fields.forEach((field: __esri.Field) => {
-        fields.push(Field.fromJSON(field));
-      });
-
-      const source: any[] = [];
-      layer.source.forEach((feature: any) => {
-        source.push({
-          attributes: feature.attributes,
-          geometry: geometryJsonUtils.fromJSON(feature.geometry),
-          popupTemplate: feature.popupTemplate,
-          symbol: feature.symbol,
-        });
-      });
-
-      const layerProps = {
-        fields,
-        source,
-        id: layer.layerId,
-        objectIdField: layer.objectIdField,
-        outFields: layer.outFields,
-        title: layer.title,
-        renderer: rendererJsonUtils.fromJSON(layer.renderer),
-        popupTemplate: layer.popupTemplate,
-      };
-
-      layersToAdd.push(new FeatureLayer(layerProps));
-    });
-
-    map.addMany(layersToAdd);
-    setReferenceLayers(referenceLayers);
-  }, [localReferenceLayerInitialized, map, setReferenceLayers]);
-
-  // Saves the reference layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localReferenceLayerInitialized) return;
-    writeToStorage(key, referenceLayers, setOptions);
-  }, [referenceLayers, localReferenceLayerInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the url layers that have been added.
-function useUrlLayerStorage() {
-  const key = 'tots_url_layers';
-  const { setOptions } = useContext(DialogContext);
-  const { map, urlLayers, setUrlLayers } = useContext(SketchContext);
-
-  // Retreives url layers from browser storage when the app loads
-  const [localUrlLayerInitialized, setLocalUrlLayerInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!map || !setUrlLayers || localUrlLayerInitialized) return;
-
-    setLocalUrlLayerInitialized(true);
-    const urlLayersStr = readFromStorage(key);
-    if (!urlLayersStr) return;
-
-    const urlLayers: UrlLayerType[] = JSON.parse(urlLayersStr);
-    const newUrlLayers: UrlLayerType[] = [];
-
-    // add the portal layers to the map
-    urlLayers.forEach((urlLayer) => {
-      const type = urlLayer.type;
-
-      if (
-        type === 'ArcGIS' ||
-        type === 'WMS' ||
-        // type === 'WFS' ||
-        type === 'KML' ||
-        type === 'GeoRSS' ||
-        type === 'CSV'
-      ) {
-        newUrlLayers.push(urlLayer);
-      }
-    });
-
-    setUrlLayers(newUrlLayers);
-  }, [localUrlLayerInitialized, map, setUrlLayers]);
-
-  // Saves the url layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localUrlLayerInitialized) return;
-    writeToStorage(key, urlLayers, setOptions);
-  }, [urlLayers, localUrlLayerInitialized, setOptions]);
-
-  // adds url layers to map
-  useEffect(() => {
-    if (!map || urlLayers.length === 0) return;
-
-    // add the url layers to the map
-    urlLayers.forEach((urlLayer) => {
-      const type = urlLayer.type;
-      const url = urlLayer.url;
-      const id = urlLayer.layerId;
-
-      const layerFound = map.layers.findIndex((l) => l.id === id) > -1;
-      if (layerFound) return;
-
-      let layer;
-      if (type === 'ArcGIS') {
-        Layer.fromArcGISServerUrl({ url, properties: { id } })
-          .then((layer) => map.add(layer))
-          .catch((err) => {
-            console.error(err);
-
-            window.logErrorToGa(err);
-          });
-        return;
-      }
-      if (type === 'WMS') {
-        layer = new WMSLayer({ url, id });
-      }
-      /* // not supported in 4.x js api
-      if(type === 'WFS') {
-        layer = new WFSLayer({ url, id });
-      } */
-      if (type === 'KML') {
-        layer = new KMLLayer({ url, id });
-      }
-      if (type === 'GeoRSS') {
-        layer = new GeoRSSLayer({ url, id });
-      }
-      if (type === 'CSV') {
-        layer = new CSVLayer({ url, id });
-      }
-
-      // add the layer if isn't null
-      if (layer) {
-        map.add(layer);
-      }
-    });
-  }, [map, urlLayers]);
-}
-
-// Uses browser storage for holding the portal layers that have been added.
-function usePortalLayerStorage() {
-  const key = 'tots_portal_layers';
-  const { setOptions } = useContext(DialogContext);
-  const { map, portalLayers, setPortalLayers } = useContext(SketchContext);
-
-  // Retreives portal layers from browser storage when the app loads
-  const [localPortalLayerInitialized, setLocalPortalLayerInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!map || !setPortalLayers || localPortalLayerInitialized) return;
-
-    setLocalPortalLayerInitialized(true);
-    const portalLayersStr = readFromStorage(key);
-    if (!portalLayersStr) return;
-
-    const portalLayers: PortalLayerType[] = JSON.parse(portalLayersStr);
-    setPortalLayers(portalLayers);
-  }, [localPortalLayerInitialized, map, portalLayers, setPortalLayers]);
-
-  // Saves the portal layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localPortalLayerInitialized) return;
-    writeToStorage(key, portalLayers, setOptions);
-  }, [portalLayers, localPortalLayerInitialized, setOptions]);
-
-  // adds portal layers to map
-  useEffect(() => {
-    if (!map || portalLayers.length === 0) return;
-
-    // add the portal layers to the map
-    portalLayers.forEach((portalLayer) => {
-      const id = portalLayer.id;
-
-      const layerFound =
-        map.layers.findIndex((l: any) => l?.portalItem?.id === id) > -1;
-      if (layerFound) return;
-
-      // Skip tots layers, since they are stored in edits.
-      // The only reason tots layers are also in portal layers is
-      // so the search panel will show the layer as having been
-      // added.
-      if (portalLayer.type === 'tots') return;
-
-      const layer = Layer.fromPortalItem({
-        portalItem: new PortalItem({ id }),
-      });
-      map.add(layer);
-    });
-  }, [map, portalLayers]);
-}
-
-// Uses browser storage for holding the map's view port extent.
-function useMapExtentStorage() {
-  const key2d = 'tots_map_2d_extent';
-  const key3d = 'tots_map_3d_extent';
-
-  const { setOptions } = useContext(DialogContext);
-  const { mapView, sceneView } = useContext(SketchContext);
-
-  // Retreives the map position and zoom level from browser storage when the app loads
-  const [localMapPositionInitialized, setLocalMapPositionInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!mapView || !sceneView || localMapPositionInitialized) return;
-
-    setLocalMapPositionInitialized(true);
-
-    const position2dStr = readFromStorage(key2d);
-    if (position2dStr) {
-      const extent = JSON.parse(position2dStr) as any;
-      mapView.extent = Extent.fromJSON(extent);
-    }
-
-    const position3dStr = readFromStorage(key3d);
-    if (position3dStr) {
-      const extent = JSON.parse(position3dStr) as any;
-      sceneView.extent = Extent.fromJSON(extent);
-    }
-
-    setLocalMapPositionInitialized(true);
-  }, [mapView, sceneView, localMapPositionInitialized]);
-
-  // Saves the map position and zoom level to browser storage whenever it changes
-  const [
-    watchExtentInitialized,
-    setWatchExtentInitialized, //
-  ] = useState(false);
-  useEffect(() => {
-    if (!mapView || !sceneView || watchExtentInitialized) return;
-
-    reactiveUtils.when(
-      () => mapView.stationary,
-      () => {
-        if (mapView && mapView.extent && mapView.stationary) {
-          writeToStorage(key2d, mapView.extent.toJSON(), setOptions);
-        }
-      },
-    );
-    reactiveUtils.watch(
-      () => sceneView.stationary,
-      () => {
-        if (sceneView && sceneView.extent && sceneView.stationary) {
-          writeToStorage(key3d, sceneView.extent.toJSON(), setOptions);
-        }
-      },
-    );
-
-    setWatchExtentInitialized(true);
-  }, [
-    mapView,
-    sceneView,
-    watchExtentInitialized,
-    localMapPositionInitialized,
-    setOptions,
-  ]);
-}
-
-// Uses browser storage for holding the map's view port extent.
-function useMapPositionStorage() {
-  const key = 'tots_map_scene_position';
-
-  const { setOptions } = useContext(DialogContext);
-  const { mapView, sceneView } = useContext(SketchContext);
-
-  // Retreives the map position and zoom level from browser storage when the app loads
-  const [localMapPositionInitialized, setLocalMapPositionInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!sceneView || localMapPositionInitialized) return;
-
-    setLocalMapPositionInitialized(true);
-
-    const positionStr = readFromStorage(key);
-    if (!positionStr) return;
-
-    const camera = JSON.parse(positionStr) as any;
-    if (!sceneView.camera) sceneView.camera = {} as any;
-    sceneView.camera.fov = camera.fov;
-    sceneView.camera.heading = camera.heading;
-    sceneView.camera.position = geometryJsonUtils.fromJSON(
-      camera.position,
-    ) as __esri.Point;
-    sceneView.camera.tilt = camera.tilt;
-
-    setLocalMapPositionInitialized(true);
-  }, [sceneView, localMapPositionInitialized]);
-
-  // Saves the map position and zoom level to browser storage whenever it changes
-  const [
-    watchExtentInitialized,
-    setWatchExtentInitialized, //
-  ] = useState(false);
-  useEffect(() => {
-    if (!mapView || !sceneView || watchExtentInitialized) return;
-
-    reactiveUtils.watch(
-      () => mapView.center,
-      () => {
-        if (!mapView.center) return;
-        const cameraObj = {
-          fov: sceneView.camera?.fov,
-          heading: sceneView.camera?.heading,
-          position: mapView.center.toJSON(),
-          tilt: sceneView.camera?.tilt,
-        };
-        writeToStorage(key, cameraObj, setOptions);
-      },
-    );
-
-    reactiveUtils.watch(
-      () => sceneView.camera,
-      () => {
-        if (!sceneView.camera) return;
-        const cameraObj = {
-          fov: sceneView.camera.fov,
-          heading: sceneView.camera.heading,
-          position: sceneView.camera.position.toJSON(),
-          tilt: sceneView.camera.tilt,
-        };
-        writeToStorage(key, cameraObj, setOptions);
-      },
-    );
-
-    setWatchExtentInitialized(true);
-  }, [
-    mapView,
-    sceneView,
-    watchExtentInitialized,
-    localMapPositionInitialized,
-    setOptions,
-  ]);
-}
-
-// Uses browser storage for holding the home widget's viewpoint.
-function useHomeWidgetStorage() {
-  const key2d = 'tots_home_2d_viewpoint';
-  const key3d = 'tots_home_3d_viewpoint';
-
-  const { setOptions } = useContext(DialogContext);
-  const { homeWidget } = useContext(SketchContext);
-
-  // Retreives the home widget viewpoint from browser storage when the app loads
-  const [localHomeWidgetInitialized, setLocalHomeWidgetInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (!homeWidget || localHomeWidgetInitialized) return;
-
-    setLocalHomeWidgetInitialized(true);
-
-    const viewpoint2dStr = readFromStorage(key2d);
-    const viewpoint3dStr = readFromStorage(key3d);
-
-    if (viewpoint2dStr) {
-      const viewpoint2d = JSON.parse(viewpoint2dStr) as any;
-      homeWidget['2d'].viewpoint = Viewpoint.fromJSON(viewpoint2d);
-    }
-    if (viewpoint3dStr) {
-      const viewpoint3d = JSON.parse(viewpoint3dStr) as any;
-      homeWidget['3d'].viewpoint = Viewpoint.fromJSON(viewpoint3d);
-    }
-  }, [homeWidget, localHomeWidgetInitialized]);
-
-  // Saves the home widget viewpoint to browser storage whenever it changes
-  const [
-    watchHomeWidgetInitialized,
-    setWatchHomeWidgetInitialized, //
-  ] = useState(false);
-  useEffect(() => {
-    if (!homeWidget || watchHomeWidgetInitialized) return;
-
-    reactiveUtils.watch(
-      () => homeWidget['2d']?.viewpoint,
-      () => {
-        writeToStorage(
-          key2d,
-          homeWidget['2d']?.viewpoint
-            ? homeWidget['2d']?.viewpoint.toJSON()
-            : {},
-          setOptions,
-        );
-      },
-    );
-
-    reactiveUtils.watch(
-      () => homeWidget['3d']?.viewpoint,
-      () => {
-        writeToStorage(
-          key3d,
-          homeWidget['3d']?.viewpoint
-            ? homeWidget['3d']?.viewpoint.toJSON()
-            : {},
-          setOptions,
-        );
-      },
-    );
-
-    setWatchHomeWidgetInitialized(true);
-  }, [homeWidget, watchHomeWidgetInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the currently selected sample layer.
-function useSamplesLayerStorage() {
-  const key = 'tots_selected_sample_layer';
-  const key2 = 'tots_selected_scenario';
-
-  const { setOptions } = useContext(DialogContext);
-  const {
-    edits,
-    layers,
-    selectedScenario,
-    setSelectedScenario,
-    sketchLayer,
-    setSketchLayer,
-  } = useContext(SketchContext);
-
-  // Retreives the selected sample layer (sketchLayer) from browser storage
-  // when the app loads
-  const [localSampleLayerInitialized, setLocalSampleLayerInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (layers.length === 0 || localSampleLayerInitialized) return;
-
-    setLocalSampleLayerInitialized(true);
-
-    // set the selected scenario first
-    const scenarioId = readFromStorage(key2);
-    const scenario = edits.edits.find(
-      (item) => item.type === 'scenario' && item.layerId === scenarioId,
-    );
-    if (scenario) setSelectedScenario(scenario as ScenarioEditsType);
-
-    // then set the layer
-    const layerId = readFromStorage(key);
-    if (!layerId) return;
-
-    setSketchLayer(getLayerById(layers, layerId));
-  }, [
-    edits,
-    layers,
-    setSelectedScenario,
-    setSketchLayer,
-    localSampleLayerInitialized,
-  ]);
-
-  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleLayerInitialized) return;
-
-    const data = sketchLayer?.layerId ? sketchLayer.layerId : '';
-    writeToStorage(key, data, setOptions);
-  }, [sketchLayer, localSampleLayerInitialized, setOptions]);
-
-  // Saves the selected scenario to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleLayerInitialized) return;
-
-    const data = selectedScenario?.layerId ? selectedScenario.layerId : '';
-    writeToStorage(key2, data, setOptions);
-  }, [selectedScenario, localSampleLayerInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the currently selected contamination map layer.
-function useContaminationMapStorage() {
-  const key = 'tots_selected_contamination_layer';
-  const { setOptions } = useContext(DialogContext);
-  const { layers } = useContext(SketchContext);
-  const {
-    contaminationMap,
-    setContaminationMap, //
-  } = useContext(CalculateContext);
-
-  // Retreives the selected contamination map from browser storage
-  // when the app loads
-  const [
-    localContaminationLayerInitialized,
-    setLocalContaminationLayerInitialized,
-  ] = useState(false);
-  useEffect(() => {
-    if (layers.length === 0 || localContaminationLayerInitialized) return;
-
-    setLocalContaminationLayerInitialized(true);
-
-    const layerId = readFromStorage(key);
-    if (!layerId) return;
-
-    setContaminationMap(getLayerById(layers, layerId));
-  }, [layers, setContaminationMap, localContaminationLayerInitialized]);
-
-  // Saves the selected contamination map to browser storage whenever it changes
-  useEffect(() => {
-    if (!localContaminationLayerInitialized) return;
-
-    const data = contaminationMap?.layerId ? contaminationMap.layerId : '';
-    writeToStorage(key, data, setOptions);
-  }, [contaminationMap, localContaminationLayerInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the currently selected sampling mask layer.
-function useGenerateRandomMaskStorage() {
-  const key = 'tots_generate_random_mask_layer';
-  const { setOptions } = useContext(DialogContext);
-  const { layers } = useContext(SketchContext);
-  const {
-    aoiSketchLayer,
-    setAoiSketchLayer, //
-  } = useContext(SketchContext);
-
-  // Retreives the selected sampling mask from browser storage
-  // when the app loads
-  const [localAoiLayerInitialized, setLocalAoiLayerInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (layers.length === 0 || localAoiLayerInitialized) return;
-
-    setLocalAoiLayerInitialized(true);
-
-    const layerId = readFromStorage(key);
-    if (!layerId) return;
-
-    setAoiSketchLayer(getLayerById(layers, layerId));
-  }, [layers, setAoiSketchLayer, localAoiLayerInitialized]);
-
-  // Saves the selected sampling mask to browser storage whenever it changes
-  useEffect(() => {
-    if (!localAoiLayerInitialized) return;
-
-    const data = aoiSketchLayer?.layerId ? aoiSketchLayer.layerId : '';
-    writeToStorage(key, data, setOptions);
-  }, [aoiSketchLayer, localAoiLayerInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the current calculate settings.
-function useCalculateSettingsStorage() {
-  const key = 'tots_calculate_settings';
-  const { setOptions } = useContext(DialogContext);
-  const {
-    inputNumLabs,
-    setInputNumLabs,
-    inputNumLabHours,
-    setInputNumLabHours,
-    inputNumSamplingHours,
-    setInputNumSamplingHours,
-    inputNumSamplingPersonnel,
-    setInputNumSamplingPersonnel,
-    inputNumSamplingShifts,
-    setInputNumSamplingShifts,
-    inputNumSamplingTeams,
-    setInputNumSamplingTeams,
-    inputSamplingLaborCost,
-    setInputSamplingLaborCost,
-    inputSurfaceArea,
-    setInputSurfaceArea,
-  } = useContext(CalculateContext);
-
-  type CalculateSettingsType = {
-    numLabs: number;
-    numLabHours: number;
-    numSamplingHours: number;
-    numSamplingPersonnel: number;
-    numSamplingShifts: number;
-    numSamplingTeams: number;
-    samplingLaborCost: number;
-    surfaceArea: number;
-  };
-
-  // Reads the calculate settings from browser storage.
-  const [settingsInitialized, setSettingsInitialized] = useState(false);
-  useEffect(() => {
-    if (settingsInitialized) return;
-    const settingsStr = readFromStorage(key);
-
-    setSettingsInitialized(true);
-
-    if (!settingsStr) return;
-    const settings: CalculateSettingsType = JSON.parse(settingsStr);
-
-    setInputNumLabs(settings.numLabs);
-    setInputNumLabHours(settings.numLabHours);
-    setInputNumSamplingHours(settings.numSamplingHours);
-    setInputNumSamplingPersonnel(settings.numSamplingPersonnel);
-    setInputNumSamplingShifts(settings.numSamplingShifts);
-    setInputNumSamplingTeams(settings.numSamplingTeams);
-    setInputSamplingLaborCost(settings.samplingLaborCost);
-    setInputSurfaceArea(settings.surfaceArea);
-  }, [
-    setInputNumLabs,
-    setInputNumLabHours,
-    setInputNumSamplingHours,
-    setInputNumSamplingPersonnel,
-    setInputNumSamplingShifts,
-    setInputNumSamplingTeams,
-    setInputSamplingLaborCost,
-    setInputSurfaceArea,
-    settingsInitialized,
-  ]);
-
-  // Saves the calculate settings to browser storage
-  useEffect(() => {
-    const settings: CalculateSettingsType = {
-      numLabs: inputNumLabs,
-      numLabHours: inputNumLabHours,
-      numSamplingHours: inputNumSamplingHours,
-      numSamplingPersonnel: inputNumSamplingPersonnel,
-      numSamplingShifts: inputNumSamplingShifts,
-      numSamplingTeams: inputNumSamplingTeams,
-      samplingLaborCost: inputSamplingLaborCost,
-      surfaceArea: inputSurfaceArea,
-    };
-
-    writeToStorage(key, settings, setOptions);
-  }, [
-    inputNumLabs,
-    inputNumLabHours,
-    inputNumSamplingHours,
-    inputNumSamplingPersonnel,
-    inputNumSamplingShifts,
-    inputNumSamplingTeams,
-    inputSamplingLaborCost,
-    inputSurfaceArea,
-    setOptions,
-  ]);
-}
-
-// Uses browser storage for holding the current tab and current tab's options.
-function useCurrentTabSettings() {
-  const key = 'tots_current_tab';
-
-  type PanelSettingsType = {
-    goTo: PanelValueType | '';
-    goToOptions: GoToOptions;
-  };
-
-  const { setOptions } = useContext(DialogContext);
-  const {
-    goTo,
-    setGoTo,
-    goToOptions,
-    setGoToOptions, //
-  } = useContext(NavigationContext);
-
-  // Retreives the current tab and current tab's options from browser storage
-  const [
-    localTabDataInitialized,
-    setLocalTabDataInitialized, //
-  ] = useState(false);
-  useEffect(() => {
-    if (localTabDataInitialized) return;
-
-    setLocalTabDataInitialized(true);
-
-    const dataStr = readFromStorage(key);
-    if (!dataStr) return;
-
-    const data: PanelSettingsType = JSON.parse(dataStr);
-
-    setGoTo(data.goTo);
-    setGoToOptions(data.goToOptions);
-  }, [setGoTo, setGoToOptions, localTabDataInitialized]);
-
-  // Saves the current tab and optiosn to browser storage whenever it changes
-  useEffect(() => {
-    if (!localTabDataInitialized) return;
-
-    let data: PanelSettingsType = { goTo: '', goToOptions: null };
-
-    // get the current value from storage, if it exists
-    const dataStr = readFromStorage(key);
-    if (dataStr) {
-      data = JSON.parse(dataStr);
-    }
-
-    // Update the data values only if they have values.
-    // This is because other components clear these once they have been applied
-    // but the browser storage needs to hold onto it.
-    if (goTo) data['goTo'] = goTo;
-    if (goToOptions) data['goToOptions'] = goToOptions;
-
-    // save to storage
-    writeToStorage(key, data, setOptions);
-  }, [goTo, goToOptions, localTabDataInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the currently selected basemap.
-function useBasemapStorage() {
-  const key = 'tots_selected_basemap_layer';
-
-  const { setOptions } = useContext(DialogContext);
-  const { basemapWidget } = useContext(SketchContext);
-
-  // Retreives the selected basemap from browser storage when the app loads
-  const [
-    localBasemapInitialized,
-    setLocalBasemapInitialized, //
-  ] = useState(false);
-  const [
-    watchHandler,
-    setWatchHandler, //
-  ] = useState<__esri.WatchHandle | null>(null);
-  useEffect(() => {
-    if (!basemapWidget || watchHandler || localBasemapInitialized) return;
-
-    const portalId = readFromStorage(key);
-    if (!portalId) {
-      // early return since this field isn't in storage
-      setLocalBasemapInitialized(true);
-      return;
-    }
-
-    // create the watch handler for finding the selected basemap
-    const newWatchHandle = basemapWidget.watch(
-      'source.basemaps.length',
-      (newValue) => {
-        // wait for the basemaps to be populated
-        if (newValue === 0) return;
-
-        setLocalBasemapInitialized(true);
-
-        // Search for the basemap with the matching portal id
-        let selectedBasemap: __esri.Basemap | null = null;
-        basemapWidget.source.basemaps.forEach((basemap) => {
-          if (basemap.portalItem.id === portalId) selectedBasemap = basemap;
-        });
-
-        // Set the activeBasemap to the basemap that was found
-        if (selectedBasemap) basemapWidget.activeBasemap = selectedBasemap;
-      },
-    );
-
-    setWatchHandler(newWatchHandle);
-  }, [basemapWidget, watchHandler, localBasemapInitialized]);
-
-  // destroys the watch handler after initialization completes
-  useEffect(() => {
-    if (!watchHandler || !localBasemapInitialized) return;
-
-    watchHandler.remove();
-    setWatchHandler(null);
-  }, [watchHandler, localBasemapInitialized]);
-
-  // Saves the selected basemap to browser storage whenever it changes
-  const [
-    watchBasemapInitialized,
-    setWatchBasemapInitialized, //
-  ] = useState(false);
-  useEffect(() => {
-    if (!basemapWidget || !localBasemapInitialized || watchBasemapInitialized) {
-      return;
-    }
-
-    basemapWidget.watch('activeBasemap.portalItem.id', (newValue) => {
-      writeToStorage(key, newValue, setOptions);
-    });
-
-    setWatchBasemapInitialized(true);
-  }, [
-    basemapWidget,
-    localBasemapInitialized,
-    watchBasemapInitialized,
-    setOptions,
-  ]);
-}
-
-// Uses browser storage for holding the url layers that have been added.
-function useUserDefinedSampleOptionsStorage() {
-  const key = 'tots_user_defined_sample_options';
-  const { setOptions } = useContext(DialogContext);
-  const { userDefinedOptions, setUserDefinedOptions } =
-    useContext(SketchContext);
-
-  // Retreives url layers from browser storage when the app loads
-  const [
-    localUserDefinedSamplesInitialized,
-    setLocalUserDefinedSamplesInitialized,
-  ] = useState(false);
-  useEffect(() => {
-    if (!setUserDefinedOptions || localUserDefinedSamplesInitialized) return;
-
-    setLocalUserDefinedSamplesInitialized(true);
-    const userDefinedSamplesStr = readFromStorage(key);
-    if (!userDefinedSamplesStr) return;
-
-    const userDefinedSamples: SampleSelectType[] = JSON.parse(
-      userDefinedSamplesStr,
-    );
-
-    setUserDefinedOptions(userDefinedSamples);
-  }, [localUserDefinedSamplesInitialized, setUserDefinedOptions]);
-
-  // Saves the url layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localUserDefinedSamplesInitialized) return;
-    writeToStorage(key, userDefinedOptions, setOptions);
-  }, [userDefinedOptions, localUserDefinedSamplesInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the url layers that have been added.
-function useUserDefinedSampleAttributesStorage() {
-  const key = 'tots_user_defined_sample_attributes';
-  const sampleTypeContext = useSampleTypesContext();
-  const { setOptions } = useContext(DialogContext);
-  const {
-    setSampleAttributes,
-    userDefinedAttributes,
-    setUserDefinedAttributes,
-  } = useContext(SketchContext);
-
-  // Retreives url layers from browser storage when the app loads
-  const [
-    localUserDefinedSamplesInitialized,
-    setLocalUserDefinedSamplesInitialized,
-  ] = useState(false);
-  useEffect(() => {
-    if (!setUserDefinedAttributes || localUserDefinedSamplesInitialized) return;
-
-    setLocalUserDefinedSamplesInitialized(true);
-    const userDefinedAttributesStr = readFromStorage(key);
-    if (!userDefinedAttributesStr) return;
-
-    // parse the storage value
-    const userDefinedAttributesObj: UserDefinedAttributes = JSON.parse(
-      userDefinedAttributesStr,
-    );
-
-    // set the state
-    setUserDefinedAttributes(userDefinedAttributesObj);
-  }, [
-    localUserDefinedSamplesInitialized,
-    setUserDefinedAttributes,
-    sampleTypeContext,
-    setSampleAttributes,
-  ]);
-
-  // add the user defined attributes to the global attributes
-  useEffect(() => {
-    // add the user defined attributes to the global attributes
-    let newSampleAttributes: any = {};
-
-    if (sampleTypeContext.status === 'success') {
-      newSampleAttributes = { ...sampleTypeContext.data.sampleAttributes };
-    }
-
-    Object.keys(userDefinedAttributes.sampleTypes).forEach((key) => {
-      newSampleAttributes[key] =
-        userDefinedAttributes.sampleTypes[key].attributes;
-    });
-
-    // Update totsSampleAttributes variable on the window object. This is a workaround
-    // to an issue where the sampleAttributes state variable is not available within esri
-    // event handlers.
-    (window as any).totsSampleAttributes = newSampleAttributes;
-
-    setSampleAttributes(newSampleAttributes);
-  }, [
-    localUserDefinedSamplesInitialized,
-    userDefinedAttributes,
-    sampleTypeContext,
-    setSampleAttributes,
-  ]);
-
-  // Saves the url layers to browser storage everytime they change
-  useEffect(() => {
-    if (!localUserDefinedSamplesInitialized) return;
-    writeToStorage(key, userDefinedAttributes, setOptions);
-  }, [userDefinedAttributes, localUserDefinedSamplesInitialized, setOptions]);
-}
-
-// Uses browser storage for holding the size and expand status of the bottom table.
-function useTablePanelStorage() {
-  const key = 'tots_table_panel';
-
-  const { setOptions } = useContext(DialogContext);
-  const {
-    tablePanelExpanded,
-    setTablePanelExpanded,
-    tablePanelHeight,
-    setTablePanelHeight,
-  } = useContext(NavigationContext);
-
-  // Retreives table info data from browser storage when the app loads
-  const [tablePanelInitialized, setTablePanelInitialized] = useState(false);
-  useEffect(() => {
-    if (tablePanelInitialized) return;
-
-    setTablePanelInitialized(true);
-
-    const tablePanelStr = readFromStorage(key);
-    if (!tablePanelStr) {
-      // if no key in browser storage, leave as default and say initialized
-      setTablePanelExpanded(false);
-      setTablePanelHeight(200);
-      return;
-    }
-
-    const tablePanel = JSON.parse(tablePanelStr);
-
-    // save table panel info
-    setTablePanelExpanded(tablePanel.expanded);
-    setTablePanelHeight(tablePanel.height);
-  }, [tablePanelInitialized, setTablePanelExpanded, setTablePanelHeight]);
-
-  useEffect(() => {
-    if (!tablePanelInitialized) return;
-
-    const tablePanel: object = {
-      expanded: tablePanelExpanded,
-      height: tablePanelHeight,
-    };
-    writeToStorage(key, tablePanel, setOptions);
-  }, [tablePanelExpanded, tablePanelHeight, tablePanelInitialized, setOptions]);
-}
-
-type SampleMetaDataType = {
-  publishSampleTableMetaData: ServiceMetaDataType | null;
-  sampleTableDescription: string;
-  sampleTableName: string;
-  selectedService: ServiceMetaDataType | null;
-};
-
-// Uses browser storage for holding the currently selected sample layer.
-function usePublishStorage() {
-  const key = 'tots_sample_type_selections';
-  const key2 = 'tots_sample_table_metadata';
-  const key3 = 'tots_publish_samples_mode';
-  const key4 = 'tots_output_settings';
-
-  const { setOptions } = useContext(DialogContext);
-  const {
-    publishSamplesMode,
-    setPublishSamplesMode,
-    publishSampleTableMetaData,
-    setPublishSampleTableMetaData,
-    sampleTableDescription,
-    setSampleTableDescription,
-    sampleTableName,
-    setSampleTableName,
-    sampleTypeSelections,
-    setSampleTypeSelections,
-    selectedService,
-    setSelectedService,
-    includePartialPlan,
-    setIncludePartialPlan,
-    includePartialPlanWebMap,
-    setIncludePartialPlanWebMap,
-    includePartialPlanWebScene,
-    setIncludePartialPlanWebScene,
-    includeCustomSampleTypes,
-    setIncludeCustomSampleTypes,
-    webMapReferenceLayerSelections,
-    setWebMapReferenceLayerSelections,
-    webSceneReferenceLayerSelections,
-    setWebSceneReferenceLayerSelections,
+    setDefaultConfigureOutput,
+    setWebMapRefOptions,
+    setWebSceneRefOptions,
+    webMapRefOptions,
+    webSceneRefOptions,
   } = useContext(PublishContext);
+  const {
+    edits,
+    layers,
+    map,
+    portalLayers,
+    referenceLayers,
+    selectedScenario,
+    urlLayers,
+  } = useContext(SketchContext);
 
-  type OutputSettingsType = {
-    includePartialPlan: boolean;
-    includePartialPlanWebMap: boolean;
-    includePartialPlanWebScene: boolean;
-    includeCustomSampleTypes: boolean;
-    webMapReferenceLayerSelections: any[];
-    webSceneReferenceLayerSelections: any[];
-  };
-
-  // Retreives the selected sample layer (sketchLayer) from browser storage
-  // when the app loads
-  const [localSampleTypeInitialized, setLocalSampleTypeInitialized] =
-    useState(false);
+  // store default configure output
   useEffect(() => {
-    if (localSampleTypeInitialized) return;
+    let includeAoiCharacterization = false;
+    let includePlan = false;
+    let includePlanWebMap = isDecon() ? false : true;
+    let includePlanWebScene = isDecon() ? false : true;
+    let includeStagingAreas = false;
+    const selectedAoiCharacterizations: Selections = [];
+    const selectedStagingAreas: Selections = [];
+    let webMapReferenceLayerSelections: ReferenceLayerSelections[] = [];
+    let webSceneReferenceLayerSelections: ReferenceLayerSelections[] = [];
 
-    setLocalSampleTypeInitialized(true);
+    edits.edits.forEach((edit) => {
+      if (['scenario', 'scenario-decon'].includes(edit.type)) {
+        includePlan = true;
+      }
 
-    // set the selected scenario first
-    const sampleSelectionsStr = readFromStorage(key);
-    if (sampleSelectionsStr) {
-      const sampleSelections = JSON.parse(sampleSelectionsStr);
-      setSampleTypeSelections(sampleSelections as SampleTypeOptions);
-    }
+      if (edit.type === 'layer-aoi-analysis') {
+        includeAoiCharacterization = true;
+        selectedAoiCharacterizations.push({
+          label: edit.name,
+          value: edit.layerId,
+        });
+      }
 
-    // set the selected scenario first
-    const sampleMetaDataStr = readFromStorage(key2);
-    if (sampleMetaDataStr) {
-      const sampleMetaData: SampleMetaDataType = JSON.parse(sampleMetaDataStr);
-      setPublishSampleTableMetaData(sampleMetaData.publishSampleTableMetaData);
-      setSampleTableDescription(sampleMetaData.sampleTableDescription);
-      setSampleTableName(sampleMetaData.sampleTableName);
-      setSelectedService(sampleMetaData.selectedService);
-    }
+      if (edit.type === 'layer' && edit.layerType === 'Staging Area Mask') {
+        includeStagingAreas = true;
+        selectedStagingAreas.push({
+          label: edit.name,
+          value: edit.layerId,
+        });
+      }
+    });
 
-    // set the selected scenario first
-    const publishSamplesMode = readFromStorage(key3);
-    if (publishSamplesMode !== null) {
-      setPublishSamplesMode(publishSamplesMode as any);
-    }
-
-    // set the publish output settings
-    const outputSettingsStr = readFromStorage(key4);
-    if (outputSettingsStr !== null) {
-      const outputSettings: OutputSettingsType = JSON.parse(outputSettingsStr);
-      setIncludePartialPlan(outputSettings.includePartialPlan);
-      setIncludePartialPlanWebMap(outputSettings.includePartialPlanWebMap);
-      setIncludePartialPlanWebScene(outputSettings.includePartialPlanWebScene);
-      setIncludeCustomSampleTypes(outputSettings.includeCustomSampleTypes);
-      setWebMapReferenceLayerSelections(
-        outputSettings.webMapReferenceLayerSelections,
+    if (includePlan && map) {
+      const output = getDefaultWebMapSceneSelections(
+        map,
+        selectedScenario,
+        webMapRefOptions,
+        webSceneRefOptions,
       );
-      setWebSceneReferenceLayerSelections(
-        outputSettings.webSceneReferenceLayerSelections,
-      );
+      webMapReferenceLayerSelections = output.webMapReferenceLayerSelections;
+      webSceneReferenceLayerSelections =
+        output.webSceneReferenceLayerSelections;
     }
-  }, [
-    localSampleTypeInitialized,
-    setIncludeCustomSampleTypes,
-    setIncludePartialPlan,
-    setIncludePartialPlanWebMap,
-    setIncludePartialPlanWebScene,
-    setPublishSamplesMode,
-    setPublishSampleTableMetaData,
-    setSampleTableDescription,
-    setSampleTableName,
-    setSampleTypeSelections,
-    setSelectedService,
-    setWebMapReferenceLayerSelections,
-    setWebSceneReferenceLayerSelections,
-  ]);
 
-  // Saves the selected sample layer (sketchLayer) to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
+    if (webMapReferenceLayerSelections.length > 0) includePlanWebMap = true;
+    if (webSceneReferenceLayerSelections.length > 0) includePlanWebScene = true;
 
-    writeToStorage(key, sampleTypeSelections, setOptions);
-  }, [sampleTypeSelections, localSampleTypeInitialized, setOptions]);
+    selectedAoiCharacterizations.sort((a, b) => a.label.localeCompare(b.label));
+    selectedStagingAreas.sort((a, b) => a.label.localeCompare(b.label));
 
-  // Saves the selected scenario to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
-
-    const data = {
-      publishSampleTableMetaData,
-      sampleTableDescription,
-      sampleTableName,
-      selectedService,
-    };
-    writeToStorage(key2, data, setOptions);
-  }, [
-    localSampleTypeInitialized,
-    publishSampleTableMetaData,
-    sampleTableDescription,
-    sampleTableName,
-    selectedService,
-    setOptions,
-  ]);
-
-  // Saves the selected scenario to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
-
-    writeToStorage(key3, publishSamplesMode, setOptions);
-  }, [publishSamplesMode, localSampleTypeInitialized, setOptions]);
-
-  // Saves the publish output settings to browser storage whenever it changes
-  useEffect(() => {
-    if (!localSampleTypeInitialized) return;
-
-    const settings: OutputSettingsType = {
-      includePartialPlan,
-      includePartialPlanWebMap,
-      includePartialPlanWebScene,
-      includeCustomSampleTypes,
+    setDefaultConfigureOutput({
+      includeAoiCharacterization,
+      includeCustomSampleTypes: false,
+      includePlan,
+      includePlanWebMap,
+      includePlanWebScene,
+      includeStagingAreas,
+      selectedAoiCharacterizations,
+      selectedStagingAreas,
       webMapReferenceLayerSelections,
       webSceneReferenceLayerSelections,
-    };
-
-    writeToStorage(key4, settings, setOptions);
+    });
   }, [
-    includePartialPlan,
-    includePartialPlanWebMap,
-    includePartialPlanWebScene,
-    includeCustomSampleTypes,
-    localSampleTypeInitialized,
-    setOptions,
-    webMapReferenceLayerSelections,
-    webSceneReferenceLayerSelections,
+    edits,
+    layers,
+    map,
+    selectedScenario,
+    setDefaultConfigureOutput,
+    webMapRefOptions,
+    webSceneRefOptions,
+  ]);
+
+  useEffect(() => {
+    const webMapRefLayers: ReferenceLayerSelections[] = [];
+    const webSceneRefLayers: ReferenceLayerSelections[] = [];
+
+    const applicableLayerTypesAgoWebMap = [
+      'Feature Service',
+      'Image Service',
+      'KML',
+      'Map Service',
+      'Vector Tile Service',
+      'WMS',
+    ];
+    const applicableLayerTypesAgoWebScene = [
+      'Feature Service',
+      'Image Service',
+      'Map Service',
+      'Scene Service',
+      'Vector Tile Service',
+    ];
+    portalLayers.forEach((l) => {
+      if (l.type === 'tots') return;
+
+      const item: ReferenceLayerSelections = {
+        label: l.label,
+        id: l.id,
+        value: l.url,
+        layerType: l.layerType,
+        type: 'arcgis',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
+      if (applicableLayerTypesAgoWebMap.includes(l.layerType)) {
+        item.onWebMap = 1;
+        webMapRefLayers.push(item);
+      }
+
+      if (applicableLayerTypesAgoWebScene.includes(l.layerType)) {
+        item.onWebScene = 1;
+        webSceneRefLayers.push(item);
+      }
+    });
+
+    const applicableLayerTypesUrlWebMap = [
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'map-image',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebMap = ['CSV', 'GeoRSS', 'KML', 'WMS'];
+    const applicableLayerTypesUrlWebScene = [
+      'building-scene',
+      'feature',
+      'imagery',
+      'imagery-tile',
+      'integrated-mesh',
+      'map-image',
+      'point-cloud',
+      'scene',
+      'tile',
+    ];
+    const applicableUrlTypesUrlWebScene = ['CSV'];
+    urlLayers.forEach((l) => {
+      if (l.layerType === 'stream') return;
+
+      const item: ReferenceLayerSelections = {
+        label: l.label,
+        id: l.layerId,
+        value: l.url,
+        layerType: l.layerType,
+        urlType: l.type,
+        type: 'url',
+        onWebMap: 0,
+        onWebScene: 0,
+      };
+
+      if (
+        applicableUrlTypesUrlWebMap.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebMap.includes(l.layerType))
+      ) {
+        item.onWebMap = 1;
+        webMapRefLayers.push(item);
+      }
+
+      if (
+        applicableUrlTypesUrlWebScene.includes(l.type) ||
+        (l.type === 'ArcGIS' &&
+          applicableLayerTypesUrlWebScene.includes(l.layerType))
+      ) {
+        item.onWebScene = 1;
+        webSceneRefLayers.push(item);
+      }
+    });
+
+    // add in file reference layers
+    referenceLayers.forEach((l) => {
+      const item: ReferenceLayerSelections = {
+        label: l.title,
+        id: l.layerId,
+        value: l.layerId,
+        layer: l,
+        type: 'file',
+        onWebMap: 1,
+        onWebScene: 1,
+      };
+      webMapRefLayers.push(item);
+      webSceneRefLayers.push(item);
+    });
+
+    webMapRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+    webSceneRefLayers.sort((a, b) => a.label.localeCompare(b.label));
+
+    setWebMapRefOptions(webMapRefLayers);
+    setWebSceneRefOptions(webSceneRefLayers);
+  }, [
+    portalLayers,
+    referenceLayers,
+    setWebMapRefOptions,
+    setWebSceneRefOptions,
+    urlLayers,
   ]);
 }
 
-// Uses browser storage for holding the display mode (points or polygons) selection.
-function useDisplayModeStorage() {
-  const key = 'tots_display_mode';
-
-  const { setOptions } = useContext(DialogContext);
-  const {
-    displayDimensions,
-    setDisplayDimensions,
-    displayGeometryType,
-    setDisplayGeometryType,
-    terrain3dUseElevation,
-    setTerrain3dUseElevation,
-    terrain3dVisible,
-    setTerrain3dVisible,
-    viewUnderground3d,
-    setViewUnderground3d,
-  } = useContext(SketchContext);
-
-  // Retreives display mode data from browser storage when the app loads
-  const [localDisplayModeInitialized, setLocalDisplayModeInitialized] =
-    useState(false);
-  useEffect(() => {
-    if (localDisplayModeInitialized) return;
-
-    setLocalDisplayModeInitialized(true);
-
-    const displayModeStr = readFromStorage(key);
-    if (!displayModeStr) {
-      setDisplayDimensions('2d');
-      setDisplayGeometryType('points');
-      setTerrain3dUseElevation(true);
-      setTerrain3dVisible(true);
-      setViewUnderground3d(false);
-      return;
+// A generic state management helper. Used for preserving
+// state locally to the component.
+type MemoryStateType<T> = { [key: string]: T };
+let memoryState: MemoryStateType<unknown> = {};
+export function useMemoryState<T>(
+  key: string,
+  initialState: T,
+): [T, Dispatch<SetStateAction<T>>] {
+  const [state, setState] = useState<T>(() => {
+    const hasMemoryValue = Object.prototype.hasOwnProperty.call(
+      memoryState,
+      key,
+    );
+    if (hasMemoryValue) {
+      return memoryState[key];
+    } else {
+      return typeof initialState === 'function' ? initialState() : initialState;
     }
+  });
 
-    const displayMode = JSON.parse(displayModeStr);
+  function onChange(nextState: T) {
+    memoryState[key] = nextState;
+    setState(nextState);
+  }
 
-    setDisplayDimensions(displayMode.dimensions);
-    setDisplayGeometryType(displayMode.geometryType);
-    setTerrain3dUseElevation(displayMode.terrain3dUseElevation);
-    setTerrain3dVisible(displayMode.terrain3dVisible);
-    setViewUnderground3d(displayMode.viewUnderground3d);
-  }, [
-    localDisplayModeInitialized,
-    setDisplayDimensions,
-    setDisplayGeometryType,
-    setTerrain3dUseElevation,
-    setTerrain3dVisible,
-    setViewUnderground3d,
-  ]);
-
-  useEffect(() => {
-    if (!localDisplayModeInitialized) return;
-
-    const displayMode: object = {
-      dimensions: displayDimensions,
-      geometryType: displayGeometryType,
-      terrain3dUseElevation,
-      terrain3dVisible,
-      viewUnderground3d,
-    };
-    writeToStorage(key, displayMode, setOptions);
-  }, [
-    displayDimensions,
-    displayGeometryType,
-    localDisplayModeInitialized,
-    setOptions,
-    terrain3dUseElevation,
-    terrain3dVisible,
-    viewUnderground3d,
-  ]);
+  return [state, onChange as Dispatch<SetStateAction<T>>];
 }
 
-// Saves/Retrieves data to browser storage
-export function useSessionStorage() {
-  useTrainingModeStorage();
-  useGraphicColor();
-  useEditsLayerStorage();
-  useReferenceLayerStorage();
-  useUrlLayerStorage();
-  usePortalLayerStorage();
-  useMapExtentStorage();
-  useMapPositionStorage();
-  useHomeWidgetStorage();
-  useSamplesLayerStorage();
-  useContaminationMapStorage();
-  useGenerateRandomMaskStorage();
-  useCalculateSettingsStorage();
-  useCurrentTabSettings();
-  useBasemapStorage();
-  useUserDefinedSampleOptionsStorage();
-  useUserDefinedSampleAttributesStorage();
-  useTablePanelStorage();
-  usePublishStorage();
-  useDisplayModeStorage();
+// Used to abort fetch requests
+export function useAbort() {
+  const abortController = useRef(new AbortController());
+  const getAbortController = useCallback(() => {
+    if (abortController.current.signal.aborted) {
+      abortController.current = new AbortController();
+    }
+    return abortController.current;
+  }, []);
+
+  const abort = useCallback(() => {
+    getAbortController().abort();
+  }, [getAbortController]);
+
+  useEffect(() => {
+    return function cleanup() {
+      abortController.current.abort();
+    };
+  }, [getAbortController]);
+
+  const getSignal = useCallback(
+    () => getAbortController().signal,
+    [getAbortController],
+  );
+
+  return { abort, getSignal };
 }

@@ -36,6 +36,7 @@ export type AttributesType = {
 export type ReferenceLayerSelections =
   | {
       id: string;
+      totsLayerId: string;
       label: string;
       layerType: PortalLayerTypes;
       onWebMap: number;
@@ -45,6 +46,7 @@ export type ReferenceLayerSelections =
     }
   | {
       id: string;
+      totsLayerId: string;
       label: string;
       layerType: string;
       onWebMap: number;
@@ -55,10 +57,21 @@ export type ReferenceLayerSelections =
     }
   | {
       id: string;
+      totsLayerId: string;
       label: string;
       layer: any;
       onWebMap: number;
       onWebScene: number;
       type: 'file';
+      value: string;
+    }
+  | {
+      id: string;
+      totsLayerId: string;
+      label: string;
+      layer: any;
+      onWebMap: number;
+      onWebScene: number;
+      type: 'tots';
       value: string;
     };

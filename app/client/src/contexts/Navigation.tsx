@@ -13,7 +13,7 @@ import { PanelType, PanelValueType } from 'config/navigation';
 // types
 import { GoToOptions } from 'types/Navigation';
 
-var globalTrainingMode = false;
+let globalTrainingMode = false;
 
 type NavigateType = {
   currentPanel: PanelType | null;

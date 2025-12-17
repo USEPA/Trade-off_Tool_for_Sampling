@@ -1,0 +1,311 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "description": "Production",
+      "url": "https://tots.epa.gov"
+    },
+    {
+      "description": "Staging",
+      "url": "https://tots-stage.app.cloud.gov"
+    },
+    {
+      "description": "Development",
+      "url": "https://tots-dev.app.cloud.gov"
+    },
+    {
+      "description": "Developer",
+      "url": " http://localhost:{port}",
+      "variables": {
+        "port": {
+          "default": "3002"
+        }
+      }
+    }
+  ],
+  "info": {
+    "description": "",
+    "version": "4.0.0",
+    "title": "US EPA Trade-off Tool for Sampling (TOTS)",
+    "termsOfService": "https://edg.epa.gov/EPA_Data_License.html",
+    "contact": {
+      "name": "US EPA Homeland Security Research Program (HSRP)"
+    },
+    "license": {
+      "name": "Creative Commons Zero Public Domain Dedication",
+      "url": "https://edg.epa.gov/EPA_Data_License.html"
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about TOTS",
+    "url": ""
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Trade-off Tool for Sampling (TOTS)"],
+        "description": "Check the status of the web server.",
+        "summary": "Web server health check",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HealthSuccess"
+          }
+        }
+      }
+    },
+    "/api/lookupFiles": {
+      "get": {
+        "tags": ["Trade-off Tool for Sampling (TOTS)"],
+        "description": "Get configuration items for TOTS.",
+        "summary": "Fetch TOTS UI content",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/LookupFilesSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/supportedBrowsers": {
+      "get": {
+        "tags": ["Trade-off Tool for Sampling (TOTS)"],
+        "description": "Get a list of browsers supported by the TOTS.",
+        "summary": "Fetch supported browsers",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportedBrowsersSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/tots/userGuide": {
+      "get": {
+        "tags": ["Trade-off Tool for Sampling (TOTS)"],
+        "description": "Get the user guide for TOTS.",
+        "summary": "Fetch user guide",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UserGuideSuccess"
+          }
+        }
+      }
+    },
+    "/api/tods/userGuide": {
+      "get": {
+        "tags": ["Trade-off Tool for Decontamination Strategies (TODS)"],
+        "description": "Get the user guide for TODS.",
+        "summary": "Fetch user guide",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UserGuideSuccess"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "HealthSuccess": {
+        "description": "The web server is up.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "UP"
+                }
+              },
+              "required": ["status"]
+            }
+          }
+        }
+      },
+      "LookupFilesSuccess": {
+        "description": "",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "deconBuildingClassFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "deconBuildingFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "deconMaterialFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "deconTechFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "deconWasteFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "defaultGsg": {
+                  "type": "string"
+                },
+                "layerProps": {
+                  "type": "object",
+                  "properties": {
+                    "additionalTableFields": {
+                      "type": "object"
+                    },
+                    "defaultCalculateResultsTableFields": {
+                      "type": "object"
+                    },
+                    "defaultCalculateSettingsTableFields": {
+                      "type": "object"
+                    },
+                    "defaultDeconCalculationResultsTableFields": {
+                      "type": "object"
+                    },
+                    "defaultDeconOperationDetailsTableFields": {
+                      "type": "object"
+                    },
+                    "defaultDeconOperationSettingsTableFields": {
+                      "type": "object"
+                    },
+                    "defaultImageryAnalysisFields": {
+                      "type": "object"
+                    },
+                    "defaultBuildingLayerFields": {
+                      "type": "object"
+                    },
+                    "defaultDeconMaskLayerFields": {
+                      "type": "object"
+                    },
+                    "defaultAoiInfoTableFields": {
+                      "type": "object"
+                    },
+                    "defaultAoiStagingAreaMaskLayerFields": {
+                      "type": "object"
+                    },
+                    "defaultContaminationMapLayerFields": {
+                      "type": "object"
+                    },
+                    "defaultFields": {
+                      "type": "object"
+                    },
+                    "defaultLayerProps": {
+                      "type": "object"
+                    },
+                    "defaultReferenceTableFields": {
+                      "type": "object"
+                    },
+                    "defaultTableProps": {
+                      "type": "object"
+                    },
+                    "webMapFieldProps": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "notifications": {
+                  "type": "object"
+                },
+                "sampleMetadata": {
+                  "type": "object",
+                  "properties": {
+                    "areaTolerance": {
+                      "type": "integer"
+                    },
+                    "attributesToCheck": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "sampleAttributes": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "services": {
+                  "type": "object"
+                },
+                "technologyTypes": {
+                  "type": "object"
+                }
+              },
+              "required": ["status"]
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "An internal server error occurred.",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SupportedBrowsersSuccess": {
+        "description": "",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "chrome": {
+                  "type": "integer",
+                  "example": 115
+                },
+                "edge": {
+                  "type": "integer",
+                  "example": 115
+                },
+                "firefox": {
+                  "type": "integer",
+                  "example": 115
+                },
+                "safari": {
+                  "type": "integer",
+                  "example": 16
+                }
+              },
+              "required": ["chrome", "edge", "firefox", "safari"]
+            }
+          }
+        }
+      },
+      "UserGuideSuccess": {
+        "description": "",
+        "content": {
+          "application/pdf": {
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "description": "Output returned as a PDF file attachment"
+            }
+          }
+        }
+      }
+    }
+  }
+}

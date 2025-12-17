@@ -1,6 +1,7 @@
-import "@testing-library/cypress/add-commands";
-import { Options } from "cypress-image-snapshot";
-import { addMatchImageSnapshotCommand } from "cypress-image-snapshot/command";
+import '@testing-library/cypress/add-commands';
+import { Options } from 'cypress-image-snapshot';
+import { addMatchImageSnapshotCommand } from 'cypress-image-snapshot/command';
+import { initializeDb, readFromStorage, setIndexedDbValue } from './utilities';
 
 addMatchImageSnapshotCommand();
 
@@ -11,20 +12,21 @@ declare global {
        * Custom command to select DOM element by data-cy attribute.
        * @example cy.dataCy('greeting')
        */
-      displayMode(
-        dimensions: string,
-        shape: string,
-        terrain3d?: boolean
-      ): Chainable<Element>;
       loadPage(initial?: boolean, url?: string): Chainable<Element>;
       login(): Chainable<Element>;
       mapLoadDelay(): Chainable<Element>;
       matchSnapshot(name?: string, options?: Options): Chainable<Element>;
+      setDisplayMode(
+        dimensions: string,
+        shape: string,
+        terrain3d?: boolean,
+      ): Chainable<Element>;
+      setIndexedDbValue(key: string, value: any): Chainable<Element>;
       upload(file: any, fileName: string, type?: string): Chainable<Element>;
       validateSession(
         key: string,
         point: string | boolean,
-        value: string | boolean
+        value: string | boolean,
       ): Chainable<Element>;
     }
   }
@@ -38,19 +40,19 @@ declare global {
  * @param fileName - The name of the file being uploaded
  */
 Cypress.Commands.add(
-  "upload",
+  'upload',
   {
-    prevSubject: "element",
+    prevSubject: 'element',
   },
   (subject, file: any, fileName: string, type: string) => {
     // we need access window to create a file below
     cy.window().then((window) => {
       // Convert the file to a blob (if necessary) and upload
       let contents = file;
-      if (type === "blob" || !type) {
+      if (type === 'blob' || !type) {
         contents = Cypress.Blob.base64StringToBlob(file);
       }
-      if (type === "json") {
+      if (type === 'json') {
         contents = JSON.stringify(file);
       }
 
@@ -59,12 +61,12 @@ Cypress.Commands.add(
       const testFile = new window.File([contents], fileName);
 
       // trigger the drop event on the react-dropzone component
-      cy.wrap(subject).trigger("drop", {
+      cy.wrap(subject).trigger('drop', {
         force: true,
-        dataTransfer: { files: [testFile], types: ["Files"] },
+        dataTransfer: { files: [testFile], types: ['Files'] },
       });
     });
-  }
+  },
 );
 
 /**
@@ -75,64 +77,72 @@ Cypress.Commands.add(
  * @param options (optional) - Additional options for the snapshot
  */
 Cypress.Commands.add(
-  "matchSnapshot",
+  'matchSnapshot',
   {
-    prevSubject: "element",
+    prevSubject: 'element',
   },
   (subject, name: string, options: Options) => {
     cy.wrap(subject).matchImageSnapshot(`${Cypress.browser.family}-${name}`, {
-      comparisonMethod: "ssim",
-      failureThresholdType: "percent",
+      comparisonMethod: 'ssim',
+      failureThresholdType: 'percent',
       failureThreshold: 0.01,
       ...options,
     });
-  }
+  },
 );
 
 // mapLoadDelay -> make delay for map load
-Cypress.Commands.add("mapLoadDelay", () => {
-  cy.visit("/");
+Cypress.Commands.add('mapLoadDelay', () => {
+  cy.visit('/');
   cy.wait(30000);
-  cy.findByRole("button", { name: "OK" }).click({ force: true });
+  cy.findByRole('button', { name: 'OK' }).click({ force: true });
   cy.wait(500);
 });
 
 Cypress.Commands.add(
-  "displayMode",
+  'setDisplayMode',
   (dimensions: string, shape: string, terrain3d: boolean = true) => {
-    sessionStorage.setItem(
-      "tots_display_mode",
-      JSON.stringify({
+    cy.then(() =>
+      cy.setIndexedDbValue('display_mode', {
         dimensions,
         geometryType: shape,
         terrain3dVisible: terrain3d,
         terrain3dUseElevation: true,
         viewUnderground3d: false,
-      })
+      }),
     );
-  }
+  },
 );
+
+Cypress.Commands.add('setIndexedDbValue', (key: string, value: any) => {
+  cy.then(() => setIndexedDbValue(key, value));
+});
 
 Cypress.Commands.add(
-  "validateSession",
+  'validateSession',
   (key: string, point: string | boolean, value: string | boolean) => {
-    const keyObject = sessionStorage.getItem(key);
-    if (typeof point === "string") {
-      cy.wrap(JSON.parse(keyObject)[point]).should("equal", value);
-    } else {
-      cy.wrap(JSON.parse(keyObject)).should("equal", value);
-    }
-  }
+    cy.window().then(() => {
+      return readFromStorage(key).then((keyObject) => {
+        if (typeof point === 'string') {
+          cy.wrap(keyObject[point]).should('equal', value);
+        } else {
+          cy.wrap(keyObject).should('equal', value);
+        }
+      });
+    });
+  },
 );
 
-Cypress.Commands.add("loadPage", (initial: boolean, url: string) => {
+Cypress.Commands.add('loadPage', (initial: boolean, url: string) => {
+  sessionStorage.setItem('tots-session-id', 'tots-cypress-testing');
+
   if (initial) {
-    sessionStorage.clear();
+    initializeDb();
   }
-  cy.visit(url ? url : "/");
+  cy.visit(url ? url : '/');
   cy.wait(10000);
 });
 
-Cypress.Commands.add("login", () => {
-  sessionStorage.setItem("esriJSAPIOAuth", JSON.stringify(Cypress.env()));
+Cypress.Commands.add('login', () => {
+  sessionStorage.setItem('esriJSAPIOAuth', JSON.stringify(Cypress.env()));
 });

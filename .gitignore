@@ -17,6 +17,7 @@ coverage/
 app/cypress/screenshots/
 app/cypress/videos/
 app/cypress/downloads/
+app/combined_coverage_reports
 cypress.env.json
 
 # production
@@ -38,3 +39,6 @@ other_resources/**/Index
 other_resources/**/scratch
 other_resources/**/ImportLog
 other_resources/**/~*.xlsx
+
+# cached content
+/app/server/app/public/data/cache

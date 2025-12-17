@@ -13,6 +13,11 @@ type Props = {
 function ShowLessMore({ text, charLimit }: Props) {
   const [truncated, setTruncated] = useState(true);
 
+  function buttonClick(ev: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    ev.preventDefault();
+    setTruncated(!truncated);
+  }
+
   if (typeof text === 'string') {
     if (!text) return <Fragment />;
     if (text.length < charLimit) return <Fragment>{text}</Fragment>;
@@ -20,10 +25,7 @@ function ShowLessMore({ text, charLimit }: Props) {
     return (
       <Fragment>
         {truncated ? `${text.substring(0, charLimit)}...` : text}
-        <button
-          css={linkButtonStyles}
-          onClick={(ev) => setTruncated(!truncated)}
-        >
+        <button css={linkButtonStyles} onClick={buttonClick}>
           Show {truncated ? 'more' : 'less'}
         </button>
       </Fragment>
@@ -34,10 +36,7 @@ function ShowLessMore({ text, charLimit }: Props) {
     return (
       <Fragment>
         {truncated ? '...' : text}
-        <button
-          css={linkButtonStyles}
-          onClick={(ev) => setTruncated(!truncated)}
-        >
+        <button css={linkButtonStyles} onClick={buttonClick}>
           Show {truncated ? 'more' : 'less'}
         </button>
       </Fragment>

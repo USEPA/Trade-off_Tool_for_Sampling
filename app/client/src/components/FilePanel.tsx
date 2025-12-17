@@ -24,17 +24,19 @@ import ColorPicker from 'components/ColorPicker';
 import MessageBox from 'components/MessageBox';
 // contexts
 import { AuthenticationContext } from 'contexts/Authentication';
+import { CalculateContext } from 'contexts/Calculate';
 import { DialogContext } from 'contexts/Dialog';
-import {
-  useLayerProps,
-  useSampleTypesContext,
-  useServicesContext,
-} from 'contexts/LookupFiles';
+import { LookupFilesContext, useLookupFiles } from 'contexts/LookupFiles';
 import { SketchContext } from 'contexts/Sketch';
 import { NavigationContext } from 'contexts/Navigation';
 // utils
 import { appendEnvironmentObjectParam } from 'utils/arcGisRestUtils';
-import { fetchPost, fetchPostFile, geoprocessorFetch } from 'utils/fetchUtils';
+import {
+  fetchPost,
+  fetchPostFile,
+  geoprocessorFetch,
+  retryCall,
+} from 'utils/fetchUtils';
 import { useDynamicPopup } from 'utils/hooks';
 import {
   convertToPoint,
@@ -46,15 +48,21 @@ import {
   setZValues,
   updateLayerEdits,
 } from 'utils/sketchUtils';
-import { chunkArray, createErrorObject, getLayerName } from 'utils/utils';
+import {
+  chunkArray,
+  convertFileToBase64,
+  createErrorObject,
+  getNewName,
+  sentenceJoin,
+} from 'utils/utils';
 // types
 import { ScenarioEditsType } from 'types/Edits';
 import { LayerType, LayerSelectType, LayerTypeName } from 'types/Layer';
 import { ErrorType } from 'types/Misc';
+import { AppType } from 'types/Navigation';
 // config
 import { PolygonSymbol, SampleSelectType } from 'config/sampleAttributes';
 import {
-  featureNotAvailableMessage,
   fileReadErrorMessage,
   invalidFileTypeMessage,
   missingAttributesMessage,
@@ -65,6 +73,8 @@ import {
   userCanceledMessage,
   webServiceErrorMessage,
 } from 'config/errorMessages';
+// styles
+import { reactSelectStyles } from 'styles';
 
 const layerOptions: LayerSelectType[] = [
   { value: 'Contamination Map', label: 'Contamination Map' },
@@ -72,6 +82,7 @@ const layerOptions: LayerSelectType[] = [
   { value: 'Reference Layer', label: 'Reference Layer' },
   { value: 'Area of Interest', label: 'Area of Interest' },
   { value: 'VSP', label: 'VSP' },
+  { value: 'GSG', label: 'GSG' },
 ];
 
 function fileVerification(type: LayerTypeName, attributes: any) {
@@ -144,8 +155,11 @@ const fileIconTextColor = css`
 const fileIconText = css`
   ${fileIconTextColor}
   font-size: 16px;
-  margin-top: 5px;
+  margin-top: 16px;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const checkBoxStyles = css`
@@ -222,9 +236,15 @@ type UploadStatusType =
   | 'unknown-sample-type'
   | 'file-read-error';
 
-function FilePanel() {
+type Props = {
+  appType: AppType;
+};
+
+function FilePanel({ appType }: Props) {
   const { portal, userInfo } = useContext(AuthenticationContext);
+  const { setContaminationMap } = useContext(CalculateContext);
   const { setOptions } = useContext(DialogContext);
+  const { sampleTypes } = useContext(LookupFilesContext);
   const { goToOptions, setGoToOptions, trainingMode } =
     useContext(NavigationContext);
   const {
@@ -233,6 +253,7 @@ function FilePanel() {
     displayDimensions,
     edits,
     setEdits,
+    setGsgFiles,
     layers,
     setLayers,
     map,
@@ -249,10 +270,11 @@ function FilePanel() {
     setSketchLayer,
   } = useContext(SketchContext);
 
-  const getPopupTemplate = useDynamicPopup();
-  const layerProps = useLayerProps();
-  const sampleTypeContext = useSampleTypesContext();
-  const services = useServicesContext();
+  const getPopupTemplate = useDynamicPopup(appType);
+  const lookupFiles = useLookupFiles().data;
+  const layerProps = lookupFiles.layerProps;
+  const services = lookupFiles.services;
+  const technologyTypes = lookupFiles.technologyTypes;
 
   const [generalizeFeatures, setGeneralizeFeatures] = useState(false);
   const [analyzeResponse, setAnalyzeResponse] = useState<any>(null);
@@ -284,48 +306,55 @@ function FilePanel() {
 
   // Handles the user uploading a file
   const [file, setFile] = useState<any>(null);
-  const onDrop = useCallback((acceptedFiles: any) => {
-    // Do something with the files
-    if (
-      !acceptedFiles ||
-      acceptedFiles.length === 0 ||
-      !acceptedFiles[0].name
-    ) {
-      return;
-    }
+  const onDrop = useCallback(
+    (acceptedFiles: any) => {
+      // Do something with the files
+      if (
+        !acceptedFiles ||
+        acceptedFiles.length === 0 ||
+        !acceptedFiles[0].name
+      ) {
+        return;
+      }
 
-    // get the filetype
-    const file = acceptedFiles[0];
-    let fileType = '';
-    if (file.name.endsWith('.zip')) fileType = 'shapefile';
-    if (file.name.endsWith('.csv')) fileType = 'csv';
-    if (file.name.endsWith('.kml')) fileType = 'kml';
-    if (file.name.endsWith('.geojson')) fileType = 'geojson';
-    if (file.name.endsWith('.geo.json')) fileType = 'geojson';
-    if (file.name.endsWith('.gpx')) fileType = 'gpx';
+      // get the filetype
+      const file = acceptedFiles[0];
+      let fileType = '';
+      if (layerType?.value === 'GSG') {
+        if (file.name.endsWith('.gsg')) fileType = 'gsg';
+      } else {
+        if (file.name.endsWith('.zip')) fileType = 'shapefile';
+        if (file.name.endsWith('.csv')) fileType = 'csv';
+        if (file.name.endsWith('.kml')) fileType = 'kml';
+        if (file.name.endsWith('.geojson')) fileType = 'geojson';
+        if (file.name.endsWith('.geo.json')) fileType = 'geojson';
+        if (file.name.endsWith('.gpx')) fileType = 'gpx';
+      }
 
-    // set the file state
-    file['esriFileType'] = fileType;
-    setFile({
-      file,
-      lastFileName: '',
-      analyzeCalled: false,
-    });
+      // set the file state
+      file['esriFileType'] = fileType;
+      setFile({
+        file,
+        lastFileName: '',
+        analyzeCalled: false,
+      });
 
-    // reset state management values
-    setUploadStatus('fetching');
-    setError(null);
-    setAnalyzeResponse(null);
-    setGenerateResponse(null);
-    setFeaturesAdded(false);
-    setFileValidationStarted(false);
-    setFileValidated(false);
-    setMissingAttributes('');
+      // reset state management values
+      setUploadStatus('fetching');
+      setError(null);
+      setAnalyzeResponse(null);
+      setGenerateResponse(null);
+      setFeaturesAdded(false);
+      setFileValidationStarted(false);
+      setFileValidated(false);
+      setMissingAttributes('');
 
-    if (!fileType) {
-      setUploadStatus('invalid-file-type');
-    }
-  }, []);
+      if (!fileType) {
+        setUploadStatus('invalid-file-type');
+      }
+    },
+    [layerType],
+  );
 
   // Configuration for the dropzone component
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -391,6 +420,45 @@ function FilePanel() {
     }
   }, [portal, batchGeocodeServices]);
 
+  // load gsg files
+  useEffect(() => {
+    if (!file?.file?.esriFileType) return;
+    if (
+      file.file.name === file.lastFileName ||
+      file.file.esriFileType !== 'gsg'
+    ) {
+      return;
+    }
+
+    async function loadGsgFile() {
+      const base64String = await convertFileToBase64(file.file);
+      setGsgFiles((gsg) => {
+        const fileName = getNewName(
+          gsg.files.map((file) => file.path),
+          file.file.path,
+        );
+        setNewLayerName(fileName);
+
+        return {
+          ...gsg,
+          selectedIndex: gsg.selectedIndex ?? gsg.files.length,
+          files: [
+            ...gsg.files,
+            {
+              ...file.file,
+              name: fileName,
+              file: base64String,
+            },
+          ],
+        };
+      });
+
+      setUploadStatus('success');
+    }
+
+    loadGsgFile();
+  }, [file, firstGeocodeService, portal, setGsgFiles, sharingUrl]);
+
   // analyze csv files
   useEffect(() => {
     if (!file?.file?.esriFileType || !sharingUrl || file.analyzeCalled) return;
@@ -455,11 +523,11 @@ function FilePanel() {
       !file?.file?.esriFileType ||
       !sharingUrl ||
       file.file.name === file.lastFileName ||
-      !getGpMaxRecordCount ||
-      services.status !== 'success'
+      !getGpMaxRecordCount
     ) {
       return;
     }
+    if (file.file.esriFileType === 'gsg') return; // gsg doesn't need to do this
     if (file.file.esriFileType === 'kml') return; // KML doesn't need to do this
     if (file.file.esriFileType === 'csv' && !analyzeResponse) return; // CSV needs to wait for the analyze response
     if (layerType.value === 'VSP' && !sampleType) return; // VSP layers need a sample type
@@ -521,7 +589,7 @@ function FilePanel() {
       publishParameters['numberOfDigitsAfterDecimal'] = numDecimals;
     }
 
-    let fileTypeToSend = file.file.esriFileType;
+    const fileTypeToSend = file.file.esriFileType;
 
     // generate the features
     const params = {
@@ -605,7 +673,7 @@ function FilePanel() {
         });
 
         // get the list of fields
-        let fields: __esri.Field[] = [];
+        const fields: __esri.Field[] = [];
         layerDefinition.fields.forEach((field: __esri.Field) => {
           // Using Field.fromJSON to convert the Rest fields to the ArcGIS JS fields
           fields.push(Field.fromJSON(field));
@@ -618,7 +686,7 @@ function FilePanel() {
           spatialReference: {
             wkid: 3857,
           },
-          fields: layerProps.data.defaultFields,
+          fields: layerProps.defaultFields,
           features: [
             {
               attributes: {
@@ -662,10 +730,12 @@ function FilePanel() {
               };
               appendEnvironmentObjectParam(params);
 
-              const request = geoprocessorFetch({
-                url: `${services.data.totsGPServer}/VSP%20Import`,
-                inputParameters: params,
-              });
+              const request = retryCall(() =>
+                geoprocessorFetch({
+                  url: `${services.totsGPServer}/VSP%20Import`,
+                  inputParameters: params,
+                }),
+              );
               requests.push(request);
             });
 
@@ -673,7 +743,7 @@ function FilePanel() {
             Promise.all(requests)
               .then((responses) => {
                 // get the first result for filling in metadata
-                let firstResult = responses[0].results[0].value;
+                const firstResult = responses[0].results[0].value;
                 const features: any[] = [];
 
                 // build an array with all of the features
@@ -683,9 +753,7 @@ function FilePanel() {
                     innerFeatures.push({
                       geometry: feature.geometry,
                       attributes: {
-                        ...(window as any).totsSampleAttributes[
-                          localSampleType.value
-                        ],
+                        ...window.totsSampleAttributes[localSampleType.value],
                         CREATEDDATE: timestamp,
                         OBJECTID: feature.attributes.OBJECTID,
                         GLOBALID: feature.attributes.GLOBALID,
@@ -783,6 +851,7 @@ function FilePanel() {
     ) {
       return;
     }
+    if (layerType.value === 'GSG' || file.file.esriFileType === 'gsg') return;
     if (layerType.value === 'Reference Layer') return;
     if (!generateResponse) return;
     if (
@@ -790,6 +859,11 @@ function FilePanel() {
       generateResponse.featureCollection.layers.length === 0
     ) {
       setUploadStatus('no-data');
+      return;
+    }
+
+    if (!['Samples', 'VSP'].includes(layerType.value)) {
+      setFileValidated(true);
       return;
     }
 
@@ -805,8 +879,10 @@ function FilePanel() {
     const isFullGraphic = layerType.value === 'VSP' ? true : false;
 
     async function validateSamples() {
+      if (!sampleTypes) return;
+
       const output = await sampleValidation(
-        sampleTypeContext,
+        sampleTypes,
         sceneViewForArea,
         features,
         isFullGraphic,
@@ -819,7 +895,7 @@ function FilePanel() {
           ariaLabel: 'Sample Issues',
           description: sampleIssuesPopupMessage(
             output,
-            sampleTypeContext.data.areaTolerance,
+            sampleTypes.areaTolerance,
           ),
           onContinue: () => setFileValidated(true),
           onCancel: () => setUploadStatus('user-canceled'),
@@ -839,7 +915,7 @@ function FilePanel() {
     fileValidated,
     map,
     mapView,
-    sampleTypeContext,
+    sampleTypes,
     setOptions,
     sceneViewForArea,
   ]);
@@ -859,6 +935,7 @@ function FilePanel() {
     ) {
       return;
     }
+    if (layerType.value === 'GSG' || file.file.esriFileType === 'gsg') return;
     if (layerType.value === 'Reference Layer') return;
     if (!generateResponse) return;
     if (
@@ -871,8 +948,14 @@ function FilePanel() {
 
     setFeaturesAdded(true);
 
-    const popupTemplate = getPopupTemplate(layerType.value, trainingMode);
-    const layerName = getLayerName(layers, file.file.name);
+    const popupTemplate = getPopupTemplate(
+      layerType.value,
+      appType === 'decon' ? true : trainingMode,
+    );
+    const layerName = getNewName(
+      layers.map((layer) => layer.label),
+      file.file.name,
+    );
     setNewLayerName(layerName);
 
     const visible = layerType.value === 'Contamination Map' ? false : true;
@@ -937,7 +1020,7 @@ function FilePanel() {
       const graphics: __esri.Graphic[] = [];
       const hybridGraphics: __esri.Graphic[] = [];
       const points: __esri.Graphic[] = [];
-      let missingAttributes: string[] = [];
+      const missingAttributes: string[] = [];
       let unknownSampleTypes: boolean = false;
       for (const layer of generateResponse.featureCollection.layers) {
         if (
@@ -963,10 +1046,17 @@ function FilePanel() {
 
           // add sample layer specific attributes
           const timestamp = getCurrentDateTime();
-          let uuid = generateUUID();
+          const uuid = generateUUID();
+          if (layerType.value === 'Contamination Map' && appType === 'decon') {
+            graphic.attributes['CONTAMREDUCED'] = false;
+            graphic.attributes['CONTAMINATED'] =
+              graphic.attributes['CONTAMVAL'] >=
+              technologyTypes.limitOfDetection;
+            graphic.attributes['CONTAMHIT'] = false;
+          }
           if (layerType.value === 'Samples') {
             const { Notes, TYPE } = graphic.attributes;
-            if (!sampleAttributes.hasOwnProperty(TYPE)) {
+            if (!Object.prototype.hasOwnProperty.call(sampleAttributes, TYPE)) {
               unknownSampleTypes = true;
             } else {
               graphic.attributes = { ...sampleAttributes[TYPE] };
@@ -1023,7 +1113,10 @@ function FilePanel() {
 
           // set the symbol styles based on the sample/layer type
           if (
-            defaultSymbols.symbols.hasOwnProperty(graphic.attributes.TYPEUUID)
+            Object.prototype.hasOwnProperty.call(
+              defaultSymbols.symbols,
+              graphic.attributes.TYPEUUID,
+            )
           ) {
             graphic.symbol =
               defaultSymbols.symbols[graphic.attributes.TYPEUUID];
@@ -1075,12 +1168,7 @@ function FilePanel() {
       if (missingAttributes.length > 0) {
         setUploadStatus('missing-attributes');
         const sortedMissingAttributes = [...missingAttributes].sort();
-        const missingAttributesStr =
-          sortedMissingAttributes.slice(0, -1).join(', ') +
-          ' and ' +
-          sortedMissingAttributes.slice(-1);
-
-        setMissingAttributes(missingAttributesStr);
+        setMissingAttributes(sentenceJoin(sortedMissingAttributes));
         return;
       }
 
@@ -1090,6 +1178,7 @@ function FilePanel() {
 
       // make a copy of the edits context variable
       const editsCopy = updateLayerEdits({
+        appType,
         edits,
         scenario: isSamplesOrVsp ? selectedScenario : null,
         layer: layerToAdd,
@@ -1108,7 +1197,8 @@ function FilePanel() {
         map.add(hybridLayer);
 
         setSelectedScenario((selectedScenario) => {
-          if (!selectedScenario) return selectedScenario;
+          if (!selectedScenario || selectedScenario.type !== 'scenario')
+            return selectedScenario;
 
           const scenario = editsCopy.edits.find(
             (edit) =>
@@ -1130,10 +1220,14 @@ function FilePanel() {
         setSketchLayer(layerToAdd);
       }
 
+      if (layerType.value === 'Contamination Map' && appType === 'decon') {
+        setContaminationMap(layerToAdd);
+      }
+
       // zoom to the layer unless it is a contamination map
       if (graphics.length > 0 && layerType.value !== 'Contamination Map') {
         if (selectedScenario && groupLayer && isSamplesOrVsp) {
-          groupLayer.add(layerToAdd.sketchLayer);
+          if (layerToAdd.sketchLayer) groupLayer.add(layerToAdd.sketchLayer);
           if (layerToAdd.pointsLayer) {
             groupLayer.add(layerToAdd.pointsLayer);
           }
@@ -1151,6 +1245,7 @@ function FilePanel() {
 
     processItem();
   }, [
+    appType,
     defaultSymbols,
     displayDimensions,
     edits,
@@ -1167,9 +1262,11 @@ function FilePanel() {
     mapView,
     sampleAttributes,
     selectedScenario,
+    setContaminationMap,
     setSelectedScenario,
     sceneView,
     setSketchLayer,
+    technologyTypes,
     trainingMode,
   ]);
 
@@ -1186,6 +1283,7 @@ function FilePanel() {
     ) {
       return;
     }
+    if (layerType.value === 'GSG' || file.file.esriFileType === 'gsg') return;
     if (layerType.value !== 'Reference Layer') return;
     if (!generateResponse) return;
     if (
@@ -1247,7 +1345,10 @@ function FilePanel() {
         };
       }
 
-      const layerName = getLayerName(layers, file.file.name);
+      const layerName = getNewName(
+        layers.map((layer) => layer.label),
+        file.file.name,
+      );
       setNewLayerName(layerName);
       const layerProps: __esri.FeatureLayerProperties = {
         fields,
@@ -1267,9 +1368,12 @@ function FilePanel() {
         ...referenceLayers,
         {
           ...layerProps,
+          fields: layer.layerDefinition.fields,
           rawLayer: layer,
           layerId: layerToAdd.id,
           portalId: '',
+          renderer: layer.layerDefinition.drawingInfo.renderer,
+          source: layer.featureSet.features,
         },
       ]);
     });
@@ -1360,6 +1464,17 @@ function FilePanel() {
 
   const filename = file?.file?.name ? file.file.name : '';
 
+  let selectLayerOptions = layerOptions;
+  if (appType === 'decon') {
+    selectLayerOptions = selectLayerOptions.filter(
+      (option) => option.value !== 'Samples',
+    );
+  }
+  if (!trainingMode)
+    selectLayerOptions = selectLayerOptions.filter(
+      (option) => option.value !== 'Contamination Map',
+    );
+
   return (
     <div css={searchContainerStyles}>
       <label htmlFor="layer-type-select-input">Layer Type</label>
@@ -1367,19 +1482,14 @@ function FilePanel() {
         id="layer-type-select"
         inputId="layer-type-select-input"
         css={selectStyles}
+        styles={reactSelectStyles as any}
         value={layerType}
         onChange={(ev) => {
           setLayerType(ev as LayerSelectType);
           setUploadStatus('');
           setError(null);
         }}
-        options={
-          trainingMode
-            ? layerOptions
-            : layerOptions.filter(
-                (option) => option.value !== 'Contamination Map',
-              )
-        }
+        options={selectLayerOptions}
       />
       {!layerType ? (
         <Fragment>
@@ -1413,74 +1523,76 @@ function FilePanel() {
         </Fragment>
       ) : (
         <Fragment>
-          {layerType.value === 'VSP' &&
-            services.status === 'success' &&
-            sampleTypeContext.status === 'success' && (
-              <Fragment>
-                <label htmlFor="sample-type-select-input">Sample Type</label>
-                <Select
-                  id="sample-type-select"
-                  inputId="sample-type-select-input"
-                  css={selectStyles}
-                  value={sampleType}
-                  onChange={(ev) => {
-                    setSampleType(ev as SampleSelectType);
-                    setUploadStatus('');
-                  }}
-                  options={allSampleOptions}
-                />
-                {sampleType && (
-                  <p css={sectionParagraph}>
-                    Add an externally-generated Visual Sample Plan (VSP) layer
-                    to analyze and/or use in conjunction with targeted sampling.
-                    Once added, you can select this layer in the next step,{' '}
-                    <strong>Create Plan</strong>, and use it to create the
-                    Sampling Plan.
-                  </p>
-                )}
-              </Fragment>
-            )}
-          {(layerType.value === 'Samples' || layerType.value === 'VSP') &&
-            (services.status === 'fetching' ||
-              sampleTypeContext.status === 'fetching' ||
-              layerProps.status === 'fetching') && <LoadingSpinner />}
-          {layerType.value === 'Samples' &&
-            (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure' ||
-              layerProps.status === 'failure') &&
-            featureNotAvailableMessage('Samples Import')}
-          {layerType.value === 'VSP' &&
-            (services.status === 'failure' ||
-              sampleTypeContext.status === 'failure' ||
-              layerProps.status === 'failure') &&
-            featureNotAvailableMessage('VSP Import')}
+          {layerType.value === 'VSP' && (
+            <Fragment>
+              <label htmlFor="sample-type-select-input">
+                {appType === 'decon' ? 'Decon Technology' : 'Sample Type'}
+              </label>
+              <Select
+                id="sample-type-select"
+                inputId="sample-type-select-input"
+                css={selectStyles}
+                styles={reactSelectStyles as any}
+                value={sampleType}
+                onChange={(ev) => {
+                  setSampleType(ev as SampleSelectType);
+                  setUploadStatus('');
+                }}
+                options={allSampleOptions}
+              />
+              {sampleType && (
+                <p css={sectionParagraph}>
+                  Add an externally-generated Visual Sample Plan (VSP) layer to
+                  analyze and/or use in conjunction with{' '}
+                  {appType === 'decon'
+                    ? 'targeted decon applications'
+                    : 'targeted sampling'}
+                  . Once added, you can select this layer in the next step,{' '}
+                  <strong>
+                    Create {appType === 'decon' ? 'Decon' : ''} Plan
+                  </strong>
+                  , and use it to create the{' '}
+                  {appType === 'decon' ? 'Decon' : 'Sampling'} Plan.
+                </p>
+              )}
+            </Fragment>
+          )}
           {(layerType.value === 'Area of Interest' ||
             layerType.value === 'Reference Layer' ||
             layerType.value === 'Contamination Map' ||
-            (layerType.value === 'Samples' &&
-              services.status === 'success' &&
-              sampleTypeContext.status === 'success' &&
-              layerProps.status === 'success') ||
-            (layerType.value === 'VSP' &&
-              sampleType &&
-              services.status === 'success' &&
-              sampleTypeContext.status === 'success' &&
-              layerProps.status === 'success')) && (
+            layerType.value === 'Samples' ||
+            layerType.value === 'GSG' ||
+            (layerType.value === 'VSP' && sampleType)) && (
             <Fragment>
               {uploadStatus === 'fetching' && <LoadingSpinner />}
               {uploadStatus !== 'fetching' && (
                 <Fragment>
                   {layerType.value === 'Contamination Map' && (
                     <Fragment>
-                      <p css={sectionParagraph}>
-                        Polygon layer containing the area of contamination as
-                        well as the concentration of the contamination. This
-                        layer can be compared against the sampling plan to see
-                        how well the sample locations are placed to predict the
-                        contamination. Once added, you can select this layer in
-                        the <strong>Calculate Resources</strong> step and then
-                        view the comparison against your sampling plan.
-                      </p>
+                      {appType === 'sampling' && (
+                        <p css={sectionParagraph}>
+                          Polygon layer containing the area of contamination as
+                          well as the concentration of the contamination. This
+                          layer can be compared against the sampling plan to see
+                          how well the sample locations are placed to predict
+                          the contamination. Once added, you can select this
+                          layer in the <strong>Calculate Resources</strong> step
+                          and then view the comparison against your sampling
+                          plan.
+                        </p>
+                      )}
+                      {appType === 'decon' && (
+                        <p css={sectionParagraph}>
+                          Polygon layer containing the area of contamination as
+                          well as the concentration of the contamination. This
+                          layer is used to assess the effectiveness of the
+                          decontamination technology applications that are
+                          included in a Decon Plan to remove or reduce the
+                          contamination. Once added, you can select this layer
+                          in the <strong>Calculate Resources</strong> step and
+                          then view the comparison against your decon plan.
+                        </p>
+                      )}
                       <div css={sectionParagraph}>
                         <MessageBox
                           severity="warning"
@@ -1506,14 +1618,25 @@ function FilePanel() {
                   )}
                   {layerType.value === 'Samples' && (
                     <Fragment>
-                      <p css={sectionParagraph}>
-                        Layer containing pre-existing samples to use as a
-                        starting point in the next step,{' '}
-                        <strong>Create Plan</strong>. The Sample layer must
-                        include the <strong>TYPE</strong> (Sponge, Micro Vac,
-                        Wet Vac, Robot, Aggressive Air, or Swab) attribute to be
-                        uploaded.
-                      </p>
+                      {appType === 'sampling' && (
+                        <p css={sectionParagraph}>
+                          Layer containing pre-existing samples to use as a
+                          starting point in the next step,{' '}
+                          <strong>Create Plan</strong>. The Sample layer must
+                          include the <strong>TYPE</strong> (Sponge, Micro Vac,
+                          Wet Vac, Robot, Aggressive Air, or Swab) attribute to
+                          be uploaded.
+                        </p>
+                      )}
+                      {appType === 'decon' && (
+                        <p css={sectionParagraph}>
+                          Layer containing pre-existing decon applications to
+                          use as a starting point in the next step,{' '}
+                          <strong>Create Plan</strong>. The Decon layer must
+                          include the <strong>TYPE</strong> (Chlorine Dioxide
+                          Gas, Methyl Bromide, etc.) attribute to be uploaded.
+                        </p>
+                      )}
                     </Fragment>
                   )}
                   {layerType.value === 'Reference Layer' && (
@@ -1535,7 +1658,8 @@ function FilePanel() {
                               format imagery using standard Esri desktop-based
                               tools (e.g., ArcGIS Pro) and then cache and share
                               the imagery as a tiled map service in ArcGIS
-                              Online for display within TOTS.
+                              Online for display within{' '}
+                              {appType === 'decon' ? 'TODS' : 'TOTS'}.
                             </p>
                           }
                         />
@@ -1546,10 +1670,15 @@ function FilePanel() {
                     <Fragment>
                       <p css={sectionParagraph}>
                         A polygon file that bounds the extent of your project
-                        area. This layer is used to bound where samples are
-                        plotted when using the{' '}
-                        <strong>Add Multiple Random Samples</strong> feature in
-                        the next step, <strong>Create Plan</strong>.
+                        area.
+                        {appType === 'sampling' && (
+                          <Fragment>
+                            This layer is used to bound where samples are
+                            plotted when using the{' '}
+                            <strong>Add Multiple Random Samples</strong> feature
+                            in the next step, <strong>Create Plan</strong>.
+                          </Fragment>
+                        )}
                       </p>
                     </Fragment>
                   )}
@@ -1557,6 +1686,15 @@ function FilePanel() {
                     <p>
                       <strong>WARNING</strong>: VSP Imports can take up to two
                       minutes to complete.
+                    </p>
+                  )}
+                  {layerType.value === 'GSG' && (
+                    <p css={sectionParagraph}>
+                      Ground Sampled Group (gsg) is a file format used for
+                      machine learning workflows. TODS will use this file for
+                      performing imagery analysis. This file isn't required but
+                      providing one can help the accuracy of the imagery
+                      analysis results.
                     </p>
                   )}
                   {uploadStatus === 'invalid-file-type' &&
@@ -1594,19 +1732,23 @@ function FilePanel() {
                       }}
                     />
                   )}
-                  <input
-                    id="generalize-features-input"
-                    type="checkbox"
-                    css={checkBoxStyles}
-                    checked={generalizeFeatures}
-                    onChange={(ev) =>
-                      setGeneralizeFeatures(!generalizeFeatures)
-                    }
-                  />
-                  <label htmlFor="generalize-features-input">
-                    Generalize features for web display
-                  </label>
-                  <br />
+                  {layerType.value !== 'GSG' && (
+                    <Fragment>
+                      <input
+                        id="generalize-features-input"
+                        type="checkbox"
+                        css={checkBoxStyles}
+                        checked={generalizeFeatures}
+                        onChange={(_ev) =>
+                          setGeneralizeFeatures(!generalizeFeatures)
+                        }
+                      />
+                      <label htmlFor="generalize-features-input">
+                        Generalize features for web display
+                      </label>
+                      <br />
+                    </Fragment>
+                  )}
                   <div {...getRootProps({ className: 'dropzone' })}>
                     <input
                       id="tots-dropzone"
@@ -1617,14 +1759,20 @@ function FilePanel() {
                       <p>Drop the files here ...</p>
                     ) : (
                       <div css={fileIconTextColor}>
-                        <div>
-                          <FileIcon label="Shape File" />
-                          <FileIcon label="CSV" />
-                          <FileIcon label="KML" />
-                          <br />
-                          <FileIcon label="GPX" />
-                          <FileIcon label="Geo JSON" />
-                        </div>
+                        {layerType.value === 'GSG' ? (
+                          <div>
+                            <FileIcon label="GSG" />
+                          </div>
+                        ) : (
+                          <div>
+                            <FileIcon label="Shape File" />
+                            <FileIcon label="CSV" />
+                            <FileIcon label="KML" />
+                            <br />
+                            <FileIcon label="GPX" />
+                            <FileIcon label="Geo JSON" />
+                          </div>
+                        )}
                         <br />
                         <label htmlFor="tots-dropzone">Drop or Browse</label>
                         <br />

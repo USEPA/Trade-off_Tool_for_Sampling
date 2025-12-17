@@ -157,7 +157,7 @@ function CalculateResults() {
         return;
       }
 
-      layer.sketchLayer.visible = false;
+      if (layer.sketchLayer) layer.sketchLayer.visible = false;
     });
 
     // get the sample layers for the selected scenario
@@ -250,13 +250,15 @@ function CalculateResults() {
 
       // get the data url
       const url = canvas.toDataURL('image/jpeg');
-      url
-        ? setBase64Screenshot({
-            image: url,
-            height: img.height,
-            width: img.width,
-          })
-        : setDownloadStatus('base64-failure');
+      if (url) {
+        setBase64Screenshot({
+          image: url,
+          height: img.height,
+          width: img.width,
+        });
+      } else {
+        setDownloadStatus('base64-failure');
+      }
 
       // Clean up
       canvas = null;
@@ -367,30 +369,29 @@ function CalculateResults() {
       summarySheet.getCell(8, 1).value = 'Total Number of User-Defined Samples';
       summarySheet.getCell(8, 2).font = defaultFont;
       summarySheet.getCell(8, 2).value =
-        calculateResults.data['Total Number of User-Defined Samples'];
+        calculateResults.data['NUM_USER_SAMPLES'];
 
       summarySheet.getCell(9, 1).font = labelFont;
       summarySheet.getCell(9, 1).value = 'Total Number of Samples';
       summarySheet.getCell(9, 2).font = defaultFont;
-      summarySheet.getCell(9, 2).value =
-        calculateResults.data['Total Number of Samples'];
+      summarySheet.getCell(9, 2).value = calculateResults.data['NUM_SAMPLES'];
 
       summarySheet.getCell(10, 1).font = labelFont;
       summarySheet.getCell(10, 1).value = 'Total Cost';
       summarySheet.getCell(10, 2).font = defaultFont;
       summarySheet.getCell(10, 2).numFmt = currencyNumberFormat;
-      summarySheet.getCell(10, 2).value = calculateResults.data['Total Cost'];
+      summarySheet.getCell(10, 2).value = calculateResults.data['TOTAL_COST'];
 
       summarySheet.getCell(11, 1).font = labelFont;
       summarySheet.getCell(11, 1).value = 'Total Time (days)';
       summarySheet.getCell(11, 2).font = defaultFont;
-      summarySheet.getCell(11, 2).value = calculateResults.data['Total Time'];
+      summarySheet.getCell(11, 2).value = calculateResults.data['TOTAL_TIME'];
 
       summarySheet.getCell(12, 1).font = labelFont;
       summarySheet.getCell(12, 1).value = 'Limiting Time Factor';
       summarySheet.getCell(12, 2).font = defaultFont;
       summarySheet.getCell(12, 2).value =
-        calculateResults.data['Limiting Time Factor'];
+        calculateResults.data['LIMITING_TIME_FACTOR'];
 
       // col 3 & 4
       summarySheet.mergeCells(7, 3, 7, 4);
@@ -403,27 +404,26 @@ function CalculateResults() {
         'Total Required Sampling Time (team hrs)';
       summarySheet.getCell(8, 4).font = defaultFont;
       summarySheet.getCell(8, 4).value =
-        calculateResults.data['Total Required Sampling Time'];
+        calculateResults.data['TOTAL_SAMPLING_TIME'];
 
       summarySheet.getCell(9, 3).font = labelFont;
       summarySheet.getCell(9, 3).value = 'Time to Complete Sampling (days)';
       summarySheet.getCell(9, 4).font = defaultFont;
-      summarySheet.getCell(9, 4).value =
-        calculateResults.data['Time to Complete Sampling'];
+      summarySheet.getCell(9, 4).value = calculateResults.data['SAMPLING_TIME'];
 
       summarySheet.getCell(10, 3).font = labelFont;
       summarySheet.getCell(10, 3).value = 'Total Sampling Labor Cost';
       summarySheet.getCell(10, 4).font = defaultFont;
       summarySheet.getCell(10, 4).numFmt = currencyNumberFormat;
       summarySheet.getCell(10, 4).value =
-        calculateResults.data['Total Sampling Labor Cost'];
+        calculateResults.data['TOTAL_SAMPLING_LABOR_COST'];
 
       summarySheet.getCell(11, 3).font = labelFont;
       summarySheet.getCell(11, 3).value = 'Total Sampling Material Cost';
       summarySheet.getCell(11, 4).font = defaultFont;
       summarySheet.getCell(11, 4).numFmt = currencyNumberFormat;
       summarySheet.getCell(11, 4).value =
-        calculateResults.data['Sampling Material Cost'];
+        calculateResults.data['SAMPLING_MATERIAL_COST'];
 
       // col 5 & 6
       summarySheet.mergeCells(7, 5, 7, 6);
@@ -435,28 +435,25 @@ function CalculateResults() {
       summarySheet.getCell(8, 5).value =
         'Total Required Analysis Time (lab hrs)';
       summarySheet.getCell(8, 6).font = defaultFont;
-      summarySheet.getCell(8, 6).value =
-        calculateResults.data['Time to Analyze'];
+      summarySheet.getCell(8, 6).value = calculateResults.data['TTA'];
 
       summarySheet.getCell(9, 5).font = labelFont;
       summarySheet.getCell(9, 5).value = 'Time to Complete Analyses (days)';
       summarySheet.getCell(9, 6).font = defaultFont;
       summarySheet.getCell(9, 6).value =
-        calculateResults.data['Time to Complete Analyses'];
+        calculateResults.data['LAB_ANALYSIS_TIME'];
 
       summarySheet.getCell(10, 5).font = labelFont;
       summarySheet.getCell(10, 5).value = 'Total Analysis Labor Cost';
       summarySheet.getCell(10, 6).font = defaultFont;
       summarySheet.getCell(10, 6).numFmt = currencyNumberFormat;
-      summarySheet.getCell(10, 6).value =
-        calculateResults.data['Analysis Labor Cost'];
+      summarySheet.getCell(10, 6).value = calculateResults.data['ALC'];
 
       summarySheet.getCell(11, 5).font = labelFont;
       summarySheet.getCell(11, 5).value = 'Total Analysis Material Cost';
       summarySheet.getCell(11, 6).font = defaultFont;
       summarySheet.getCell(11, 6).numFmt = currencyNumberFormat;
-      summarySheet.getCell(11, 6).value =
-        calculateResults.data['Analysis Material Cost'];
+      summarySheet.getCell(11, 6).value = calculateResults.data['AMC'];
 
       // add the map screenshot
       const screenshotImageId = workbook.addImage({
@@ -581,7 +578,7 @@ function CalculateResults() {
       };
       resultsSheet.getCell(4, 2).font = defaultFont;
       resultsSheet.getCell(4, 2).value =
-        calculateResults.data['Total Sampled Area'];
+        calculateResults.data['TOTAL_SAMPLED_AREA'];
 
       resultsSheet.getCell(5, 1).value = {
         richText: [
@@ -601,8 +598,7 @@ function CalculateResults() {
 
       resultsSheet.getCell(6, 1).font = labelFont;
       resultsSheet.getCell(6, 1).value = 'Percent of Area Sampled';
-      const percentAreaSampled =
-        calculateResults.data['Percent of Area Sampled'];
+      const percentAreaSampled = calculateResults.data['PCT_AREA_SAMPLED'];
       if (percentAreaSampled) {
         resultsSheet.getCell(6, 2).font = defaultFont;
         resultsSheet.getCell(6, 2).value = percentAreaSampled;
@@ -618,13 +614,13 @@ function CalculateResults() {
       resultsSheet.getCell(4, 3).value = 'Sampling Hours per Day';
       resultsSheet.getCell(4, 4).font = defaultFont;
       resultsSheet.getCell(4, 4).value =
-        calculateResults.data['Sampling Hours per Day'];
+        calculateResults.data['SAMPLING_HOURS'];
 
       resultsSheet.getCell(5, 3).font = labelFont;
       resultsSheet.getCell(5, 3).value = 'Sampling Personnel Hours per Day';
       resultsSheet.getCell(5, 4).font = defaultFont;
       resultsSheet.getCell(5, 4).value =
-        calculateResults.data['Sampling Personnel hours per Day'];
+        calculateResults.data['NUM_SAMPLING_HOURS'];
 
       resultsSheet.getCell(6, 3).font = labelFont;
       resultsSheet.getCell(6, 3).value =
@@ -636,41 +632,39 @@ function CalculateResults() {
       resultsSheet.getCell(7, 3).font = labelFont;
       resultsSheet.getCell(7, 3).value = 'Time to Prepare Kits (person hours)';
       resultsSheet.getCell(7, 4).font = defaultFont;
-      resultsSheet.getCell(7, 4).value =
-        calculateResults.data['Time to Prepare Kits'];
+      resultsSheet.getCell(7, 4).value = calculateResults.data['TTPK'];
 
       resultsSheet.getCell(8, 3).font = labelFont;
       resultsSheet.getCell(8, 3).value = 'Time to Collect (person hours)';
       resultsSheet.getCell(8, 4).font = defaultFont;
-      resultsSheet.getCell(8, 4).value =
-        calculateResults.data['Time to Collect'];
+      resultsSheet.getCell(8, 4).value = calculateResults.data['TTC'];
 
       resultsSheet.getCell(9, 3).font = labelFont;
       resultsSheet.getCell(9, 3).value = 'Sampling Material Cost';
       resultsSheet.getCell(9, 4).font = defaultFont;
       resultsSheet.getCell(9, 4).numFmt = currencyNumberFormat;
       resultsSheet.getCell(9, 4).value =
-        calculateResults.data['Sampling Material Cost'];
+        calculateResults.data['SAMPLING_MATERIAL_COST'];
 
       resultsSheet.getCell(10, 3).font = labelFont;
       resultsSheet.getCell(10, 3).value = 'Sampling Personnel Labor Cost';
       resultsSheet.getCell(10, 4).font = defaultFont;
       resultsSheet.getCell(10, 4).numFmt = currencyNumberFormat;
       resultsSheet.getCell(10, 4).value =
-        calculateResults.data['Sampling Personnel Labor Cost'];
+        calculateResults.data['SAMPLING_LABOR_COST'];
 
       resultsSheet.getCell(11, 3).font = labelFont;
       resultsSheet.getCell(11, 3).value = 'Time to Complete Sampling (days)';
       resultsSheet.getCell(11, 4).font = defaultFont;
       resultsSheet.getCell(11, 4).value =
-        calculateResults.data['Time to Complete Sampling'];
+        calculateResults.data['SAMPLING_TIME'];
 
       resultsSheet.getCell(12, 3).font = labelFont;
       resultsSheet.getCell(12, 3).value = 'Total Sampling Labor Cost';
       resultsSheet.getCell(12, 4).font = defaultFont;
       resultsSheet.getCell(12, 4).numFmt = currencyNumberFormat;
       resultsSheet.getCell(12, 4).value =
-        calculateResults.data['Total Sampling Labor Cost'];
+        calculateResults.data['TOTAL_SAMPLING_LABOR_COST'];
 
       // col 5 & 6
       resultsSheet.mergeCells(3, 5, 3, 6);
@@ -682,42 +676,46 @@ function CalculateResults() {
       resultsSheet.getCell(4, 5).value = 'Time to Complete Analyses (days)';
       resultsSheet.getCell(4, 6).font = defaultFont;
       resultsSheet.getCell(4, 6).value =
-        calculateResults.data['Time to Complete Analyses'];
+        calculateResults.data['LAB_ANALYSIS_TIME'];
 
       resultsSheet.getCell(5, 5).font = labelFont;
       resultsSheet.getCell(5, 5).value = 'Time to Analyze (person hours)';
       resultsSheet.getCell(5, 6).font = defaultFont;
-      resultsSheet.getCell(5, 6).value =
-        calculateResults.data['Time to Analyze'];
+      resultsSheet.getCell(5, 6).value = calculateResults.data['TTA'];
 
       resultsSheet.getCell(6, 5).font = labelFont;
       resultsSheet.getCell(6, 5).value = 'Analysis Labor Cost';
       resultsSheet.getCell(6, 6).font = defaultFont;
       resultsSheet.getCell(6, 6).numFmt = currencyNumberFormat;
-      resultsSheet.getCell(6, 6).value =
-        calculateResults.data['Analysis Labor Cost'];
+      resultsSheet.getCell(6, 6).value = calculateResults.data['ALC'];
 
       resultsSheet.getCell(7, 5).font = labelFont;
       resultsSheet.getCell(7, 5).value = 'Analysis Material Cost';
       resultsSheet.getCell(7, 6).font = defaultFont;
       resultsSheet.getCell(7, 6).numFmt = currencyNumberFormat;
-      resultsSheet.getCell(7, 6).value =
-        calculateResults.data['Analysis Material Cost'];
+      resultsSheet.getCell(7, 6).value = calculateResults.data['AMC'];
 
       resultsSheet.getCell(8, 5).font = labelFont;
       resultsSheet.getCell(8, 5).value = 'Total Waste Volume (L)';
       resultsSheet.getCell(8, 6).font = defaultFont;
-      resultsSheet.getCell(8, 6).value = calculateResults.data['Waste Volume'];
+      resultsSheet.getCell(8, 6).value =
+        calculateResults.data['WASTE_VOLUME_SOLID_LITERS'];
 
       resultsSheet.getCell(9, 5).font = labelFont;
       resultsSheet.getCell(9, 5).value = 'Total Waste Weight (lbs)';
       resultsSheet.getCell(9, 6).font = defaultFont;
-      resultsSheet.getCell(9, 6).value = calculateResults.data['Waste Weight'];
+      resultsSheet.getCell(9, 6).value =
+        calculateResults.data['WASTE_WEIGHT_SOLID_POUNDS'];
     }
 
     function addSampleSheet() {
       // only here to satisfy typescript
-      if (!map || !selectedScenario || selectedScenario.layers.length === 0) {
+      if (
+        !map ||
+        !selectedScenario ||
+        selectedScenario.type !== 'scenario' ||
+        selectedScenario.layers.length === 0
+      ) {
         return;
       }
 
@@ -859,46 +857,44 @@ function CalculateResults() {
             <h4>Sampling Plan</h4>
             <LabelValue
               label="Total Number of User-Defined Samples"
-              value={
-                calculateResults.data['Total Number of User-Defined Samples']
-              }
+              value={calculateResults.data['NUM_USER_SAMPLES']}
             />
             <LabelValue
               label="Total Number of Samples"
-              value={calculateResults.data['Total Number of Samples']}
+              value={calculateResults.data['NUM_SAMPLES']}
             />
             <LabelValue
               label="Total Cost ($)"
-              value={calculateResults.data['Total Cost']}
+              value={calculateResults.data['TOTAL_COST']}
               isMonetary={true}
             />
             <LabelValue
               label="Total Time (days)"
-              value={calculateResults.data['Total Time']}
+              value={calculateResults.data['TOTAL_TIME']}
             />
             <LabelValue
               label="Limiting Time Factor"
-              value={calculateResults.data['Limiting Time Factor']}
+              value={calculateResults.data['LIMITING_TIME_FACTOR']}
             />
             <hr css={resourceTallySeparator} />
 
             <h4>Sampling Operation</h4>
             <LabelValue
               label="Total Required Sampling Time (team hrs)"
-              value={calculateResults.data['Total Required Sampling Time']}
+              value={calculateResults.data['TOTAL_SAMPLING_TIME']}
             />
             <LabelValue
               label="Time to Complete Sampling (days)"
-              value={calculateResults.data['Time to Complete Sampling']}
+              value={calculateResults.data['SAMPLING_TIME']}
             />
             <LabelValue
               label="Total Sampling Labor Cost ($)"
-              value={calculateResults.data['Total Sampling Labor Cost']}
+              value={calculateResults.data['TOTAL_SAMPLING_LABOR_COST']}
               isMonetary={true}
             />
             <LabelValue
               label="Total Sampling Material Cost ($)"
-              value={calculateResults.data['Sampling Material Cost']}
+              value={calculateResults.data['SAMPLING_MATERIAL_COST']}
               isMonetary={true}
             />
             <hr css={resourceTallySeparator} />
@@ -906,20 +902,20 @@ function CalculateResults() {
             <h4>Analysis Operation</h4>
             <LabelValue
               label="Total Required Analysis Time (lab hrs)"
-              value={calculateResults.data['Time to Analyze']}
+              value={calculateResults.data['TTA']}
             />
             <LabelValue
               label="Time to Complete Analyses (days)"
-              value={calculateResults.data['Time to Complete Analyses']}
+              value={calculateResults.data['LAB_ANALYSIS_TIME']}
             />
             <LabelValue
               label="Total Analysis Labor Cost ($)"
-              value={calculateResults.data['Analysis Labor Cost']}
+              value={calculateResults.data['ALC']}
               isMonetary={true}
             />
             <LabelValue
               label="Total Analysis Material Cost ($)"
-              value={calculateResults.data['Analysis Material Cost']}
+              value={calculateResults.data['AMC']}
               isMonetary={true}
             />
             <br />
@@ -932,7 +928,7 @@ function CalculateResults() {
                   Total Sampled Area (ft<sup>2</sup>)
                 </Fragment>
               }
-              value={calculateResults.data['Total Sampled Area']}
+              value={calculateResults.data['TOTAL_SAMPLED_AREA']}
             />
             <LabelValue
               label={
@@ -944,18 +940,18 @@ function CalculateResults() {
             />
             <LabelValue
               label="Percent of Area Sampled"
-              value={calculateResults.data['Percent of Area Sampled']}
+              value={calculateResults.data['PCT_AREA_SAMPLED']}
             />
             <hr css={resourceTallySeparator} />
 
             <h4>Sampling</h4>
             <LabelValue
               label="Sampling Hours per Day"
-              value={calculateResults.data['Sampling Hours per Day']}
+              value={calculateResults.data['SAMPLING_HOURS']}
             />
             <LabelValue
               label="Sampling Personnel Hours per Day"
-              value={calculateResults.data['Sampling Personnel hours per Day']}
+              value={calculateResults.data['NUM_SAMPLING_HOURS']}
             />
             <LabelValue
               label="User Specified Sampling Team Labor Cost ($)"
@@ -966,29 +962,29 @@ function CalculateResults() {
             />
             <LabelValue
               label="Time to Prepare Kits (person hours)"
-              value={calculateResults.data['Time to Prepare Kits']}
+              value={calculateResults.data['TTPK']}
             />
             <LabelValue
               label="Time to Collect (person hours)"
-              value={calculateResults.data['Time to Collect']}
+              value={calculateResults.data['TTC']}
             />
             <LabelValue
               label="Sampling Material Cost ($)"
-              value={calculateResults.data['Sampling Material Cost']}
+              value={calculateResults.data['SAMPLING_MATERIAL_COST']}
               isMonetary={true}
             />
             <LabelValue
               label="Sampling Personnel Labor Cost ($)"
-              value={calculateResults.data['Sampling Personnel Labor Cost']}
+              value={calculateResults.data['SAMPLING_LABOR_COST']}
               isMonetary={true}
             />
             <LabelValue
               label="Time to Complete Sampling (days)"
-              value={calculateResults.data['Time to Complete Sampling']}
+              value={calculateResults.data['SAMPLING_TIME']}
             />
             <LabelValue
               label="Total Sampling Labor Cost ($)"
-              value={calculateResults.data['Total Sampling Labor Cost']}
+              value={calculateResults.data['TOTAL_SAMPLING_LABOR_COST']}
               isMonetary={true}
             />
             <hr css={resourceTallySeparator} />
@@ -996,29 +992,29 @@ function CalculateResults() {
             <h4>Analysis</h4>
             <LabelValue
               label="Time to Complete Analyses (days)"
-              value={calculateResults.data['Time to Complete Analyses']}
+              value={calculateResults.data['LAB_ANALYSIS_TIME']}
             />
             <LabelValue
               label="Time to Analyze (person hours)"
-              value={calculateResults.data['Time to Analyze']}
+              value={calculateResults.data['TTA']}
             />
             <LabelValue
               label="Analysis Labor Cost ($)"
-              value={calculateResults.data['Analysis Labor Cost']}
+              value={calculateResults.data['ALC']}
               isMonetary={true}
             />
             <LabelValue
               label="Analysis Material Cost ($)"
-              value={calculateResults.data['Analysis Material Cost']}
+              value={calculateResults.data['AMC']}
               isMonetary={true}
             />
             <LabelValue
               label="Total Waste Volume (L)"
-              value={calculateResults.data['Waste Volume']}
+              value={calculateResults.data['WASTE_VOLUME_SOLID_LITERS']}
             />
             <LabelValue
               label="Total Waste Weight (lbs)"
-              value={calculateResults.data['Waste Weight']}
+              value={calculateResults.data['WASTE_WEIGHT_SOLID_POUNDS']}
             />
           </div>
           <div>
